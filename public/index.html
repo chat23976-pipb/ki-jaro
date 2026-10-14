@@ -2191,15 +2191,16 @@
 
         // Jalankan saat halaman pertama kali dibuka
         window.onload = async function() {
-            await loadDataFromMySQL();
-            const savedUser = localStorage.getItem('ki_jaro_user');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                renderDashboardLayout();
-            } else {
-                renderLogin();
-            }
-        }
+    await loadDataFromMySQL();
+    const savedUser = localStorage.getItem('ki_jaro_user');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        renderDashboardLayout();
+        switchTab('dashboard'); // Memastikan tab aktif termuat
+    } else {
+        renderLogin();
+    }
+};
 
     </script>
 </body>
