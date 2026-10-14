@@ -3312,13 +3312,12 @@
             showToast('File CSV berhasil diunduh!');
         }
 
-// === SINKRONISASI OTOMATIS KE MYSQL ===
+// === SINKRONISASI OTOMATIS & AMAN KE MYSQL ===
         async function loadDataFromMySQL() {
             try {
                 const response = await fetch('/api/load-state/main_kijaro');
                 const result = await response.json();
                 if (result.success && result.data) {
-                    // Masukkan data dari MySQL ke objek DB
                     Object.assign(DB, result.data);
                     console.log("Data berhasil dimuat dari MySQL.");
                 }
@@ -3327,10 +3326,7 @@
             }
         }
 
-        let isSaving = false;
         async function saveToMySQL() {
-            if (isSaving) return;
-            isSaving = true;
             try {
                 await fetch('/api/save-state', {
                     method: 'POST',
@@ -3340,35 +3336,40 @@
                         value: DB
                     })
                 });
-                console.log("Data otomatis tersimpan permanen di MySQL.");
+                console.log("Data otomatis tersimpan ke MySQL.");
             } catch (e) {
                 console.error("Gagal menyimpan ke MySQL:", e);
-            } finally {
-                isSaving = false;
             }
         }
 
-        // Mengaktifkan Proxy agar setiap ada perubahan data langsung simpan otomatis
-        const dbHandler = {
-            set(target, property, value) {
-                target[property] = value;
-                saveToMySQL(); 
-                return true;
-            },
-            deleteProperty(target, property) {
-                delete target[property];
-                saveToMySQL(); 
-                return true;
+        // AUTO-SAVE LISTENER: Otomatis mendeteksi setiap ada form yang disubmit / tombol simpan diklik
+        document.addEventListener('submit', async function(e) {
+            // Beri jeda sedikit agar data di objek DB sempat ter-update oleh fungsi form aslinya
+            setTimeout(async () => {
+                await saveToMySQL();
+            }, 500);
+        });
+
+        // AUTO-SAVE BACKDROP/CLICK: Menyimpan juga saat tombol aksi penting diklik
+        document.addEventListener('click', async function(e) {
+            if (e.target && (e.target.tagName === 'BUTTON' || e.target.type === 'submit')) {
+                const text = e.target.innerText.toLowerCase();
+                if (text.includes('simpan') || text.includes('tambah') || text.includes('hapus') || text.includes('update') || text.includes('validasi')) {
+                    setTimeout(async () => {
+                        await saveToMySQL();
+                    }, 600);
+                }
             }
-        };
+        });
 
         // Jalankan saat halaman pertama kali dibuka
         window.onload = async function() {
             await loadDataFromMySQL();
-            // Bungkus DB dengan Proxy setelah data dari server termuat
-            DB = new Proxy(DB, dbHandler);
             renderLogin();
         }
+    </script>
+</body>
+</html>
     </script>
 </body>
 </html>
