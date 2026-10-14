@@ -203,30 +203,26 @@
         }
 
         function handleLogin(e) {
-    e.preventDefault();
-    const u = document.getElementById('usernameInput').value.trim();
-    const p = document.getElementById('passwordInput').value.trim();
-    const found = DB.users.find(x => x.username === u && x.password === p);
-    if (found) {
-        currentUser = found;
-        // SIMPAN SESI LOGIN KE BROWSER LOCALSTORAGE
-        localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
-        
-        showToast(`Selamat datang, ${currentUser.name} (${currentUser.role.toUpperCase()})`);
-        renderDashboardLayout();
-    } else {
-        showToast('Username atau password salah!', 'error');
-    }
-}
+            e.preventDefault();
+            const u = document.getElementById('usernameInput').value.trim();
+            const p = document.getElementById('passwordInput').value.trim();
+            const found = DB.users.find(x => x.username === u && x.password === p);
+            if (found) {
+                currentUser = found;
+                localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
+                showToast(`Selamat datang, ${currentUser.name} (${currentUser.role.toUpperCase()})`);
+                renderDashboardLayout();
+            } else {
+                showToast('Username atau password salah!', 'error');
+            }
+        }
 
         function logout() {
-    currentUser = null;
-    // HAPUS SESI LOGIN DARI BROWSER
-    localStorage.removeItem('ki_jaro_user');
-    
-    renderLogin();
-    showToast('Anda telah keluar sistem.', 'info');
-}
+            currentUser = null;
+            localStorage.removeItem('ki_jaro_user');
+            renderLogin();
+            showToast('Anda telah keluar sistem.', 'info');
+        }
 
         function renderDashboardLayout() {
             const app = document.getElementById('app');
@@ -764,7 +760,7 @@
         }
         function closeRealisasiAnggaranModal() { document.getElementById('realisasiAnggaranModal').classList.remove('flex'); document.getElementById('realisasiAnggaranModal').classList.add('hidden'); }
 
-        function saveRealisasiAnggaran(e) {
+        async function saveRealisasiAnggaran(e) {
             e.preventDefault();
             const idx = parseInt(document.getElementById('editRaIndex').value);
             const tahun = document.getElementById('raTahun').value;
@@ -788,17 +784,19 @@
                 showToast('Realisasi anggaran riil berhasil disimpan!');
             }
 
+            await saveToMySQL();
             closeRealisasiAnggaranModal();
             renderRenstraView(document.getElementById('mainContent'));
         }
 
-        function deleteRealisasiAnggaran(idx) {
+        async function deleteRealisasiAnggaran(idx) {
             DB.realisasiAnggaranAdmin.splice(idx, 1);
+            await saveToMySQL();
             showToast('Realisasi anggaran dihapus.', 'info');
             renderRenstraView(document.getElementById('mainContent'));
         }
 
-        function saveRenstra(e) {
+        async function saveRenstra(e) {
             e.preventDefault();
             const isEdit = editingRenstraIndex !== -1;
 
@@ -835,12 +833,13 @@
                 if (isEdit) DB.renstraIndikatorKinerja[editingRenstraIndex] = data;
                 else DB.renstraIndikatorKinerja.push(data);
             }
+            await saveToMySQL();
             closeRenstraModal();
             showToast('Data Renstra berhasil disimpan!');
             renderRenstraView(document.getElementById('mainContent'));
         }
 
-        function deleteRenstra(type, idx) {
+        async function deleteRenstra(type, idx) {
             let canDelete = true;
             if (type === 'tujuanKemenperin') {
                 const item = DB.renstraTujuanKemenperin[idx];
@@ -866,6 +865,8 @@
                 else if (type === 'bpsdmi') DB.renstraBPSDMI.splice(idx, 1);
                 else if (type === 'sasaranKinerja') DB.renstraSasaranKinerja.splice(idx, 1);
                 else if (type === 'indikatorKinerja') DB.renstraIndikatorKinerja.splice(idx, 1);
+                
+                await saveToMySQL();
                 showToast('Data berhasil dihapus.', 'info');
                 renderRenstraView(document.getElementById('mainContent'));
             }
@@ -1022,7 +1023,7 @@
         function openDokumenModal() { document.getElementById('dokumenModal').classList.remove('hidden'); document.getElementById('dokumenModal').classList.add('flex'); }
         function closeDokumenModal() { document.getElementById('dokumenModal').classList.remove('flex'); document.getElementById('dokumenModal').classList.add('hidden'); }
         
-        function saveDokumen(e) {
+        async function saveDokumen(e) {
             e.preventDefault();
             DB.dokumenPerencanaan.push({
                 nama: document.getElementById('docNama').value,
@@ -1030,13 +1031,15 @@
                 tahun: document.getElementById('docTahun').value,
                 link: document.getElementById('docLink').value
             });
+            await saveToMySQL();
             closeDokumenModal();
             showToast('Dokumen perencanaan berhasil ditambahkan!');
             renderDokumenView(document.getElementById('mainContent'));
         }
 
-        function deleteDokumen(idx) {
+        async function deleteDokumen(idx) {
             DB.dokumenPerencanaan.splice(idx, 1);
+            await saveToMySQL();
             showToast('Dokumen dihapus.', 'info');
             renderDokumenView(document.getElementById('mainContent'));
         }
@@ -2072,7 +2075,7 @@
         }
         function closeCascadingDirModal() { document.getElementById('cascadingDirModal').classList.remove('flex'); document.getElementById('cascadingDirModal').classList.add('hidden'); }
         
-        function saveCascadingDir(e) {
+        async function saveCascadingDir(e) {
             e.preventDefault();
             const tahun = document.getElementById('dirTahunTarget').value;
             const sel = document.getElementById('dirIndikatorRenstra');
@@ -2099,12 +2102,13 @@
                 timKeys: checked,
                 status: 'Aktif'
             });
+            await saveToMySQL();
             closeCascadingDirModal();
             showToast('Cascading Direktur berhasil disimpan!');
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        function confirmDeleteCascadingDir(idx) {
+        async function confirmDeleteCascadingDir(idx) {
             const item = DB.cascadingDirektur[idx];
             if (confirm(`Apakah Anda yakin ingin menghapus cascading indikator "${item.target}"?\nMenghapus ini juga akan menghapus cascading lanjutan di Ketua Tim Kerja yang terkait, serta data capaian dan risiko unit terkait.`)) {
                 DB.cascadingTim = DB.cascadingTim.filter(ct => ct.targetDirektur !== item.target);
@@ -2112,6 +2116,7 @@
                 DB.risiko = DB.risiko.filter(r => r.targetDirektur !== item.target);
                 
                 DB.cascadingDirektur.splice(idx, 1);
+                await saveToMySQL();
                 showToast('Cascading Direktur dan data terkait berhasil dihapus.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
@@ -2120,7 +2125,7 @@
         function openCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('hidden'); document.getElementById('cascadingTimModal').classList.add('flex'); }
         function closeCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('flex'); document.getElementById('cascadingTimModal').classList.add('hidden'); }
 
-        function saveCascadingTim(e) {
+        async function saveCascadingTim(e) {
             e.preventDefault();
             const tahun = document.getElementById('timTahunTarget').value;
             const targetDir = document.getElementById('timDirRef').value;
@@ -2140,15 +2145,17 @@
                 timKey: currentUser.timKey,
                 unitTargets: checkedUnits
             });
+            await saveToMySQL();
             closeCascadingTimModal();
             showToast('Cascading ke Unit/Prodi berhasil disimpan!');
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        function confirmDeleteCascadingTim(idx) {
+        async function confirmDeleteCascadingTim(idx) {
             const item = DB.cascadingTim[idx];
             if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}"?`)) {
                 DB.cascadingTim.splice(idx, 1);
+                await saveToMySQL();
                 showToast('Cascading Tim dihapus.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
@@ -2232,9 +2239,7 @@
                                             </td>
                                             <td class="p-4 space-y-2">
                                                 <div class="flex items-center space-x-2">
-                                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                                        c.status === 'Valid' ? 'bg-emerald-50 text-emerald-700' : c.status === 'Tidak Valid' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
-                                                    }">${c.status}</span>
+                                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${ c.status === 'Valid' ? 'bg-emerald-50 text-emerald-700' : c.status === 'Tidak Valid' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700' }">${c.status}</span>
 
                                                     ${isKaUnit ? `
                                                         ${c.status === 'Valid' ? `
@@ -2265,8 +2270,7 @@
                                                                 </button>
                                                             </div>
                                                         ` : `
-                                                            <p class="text-slate-600 text-[11px]"><strong>Status Tindak Lanjut Unit:</strong> <span class="font-semibold text-primary-700">${c.statusTindakLanjut || 'Belum Ditindaklanjuti'}</span></p>
-                                                            ${c.linkBuktiTindakLanjut ? `<a href="${c.linkBuktiTindakLanjut}" target="_blank" class="text-blue-600 underline block mt-0.5 text-[10px]"><i class="fa-solid fa-link mr-1"></i> Bukti Tindak Lanjut</a>` : ''}
+                                                            <p class="text-slate-600 text-[11px]"><strong>Status Tindak Lanjut Unit:</strong> <span class="font-semibold text-primary-700">${c.statusTindakLanjut \vert{}\vert{} 'Belum Ditindaklanjuti'}</span></p>${c.linkBuktiTindakLanjut ? `<a href="${c.linkBuktiTindakLanjut}" target="_blank" class="text-blue-600 underline block mt-0.5 text-[10px]"><i class="fa-solid fa-link mr-1"></i> Bukti Tindak Lanjut</a>` : ''}
                                                         `}
                                                     </div>
                                                 ` : ''}
@@ -2295,7 +2299,7 @@
                                         const dirObj = DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur);
                                         const satuan = dirObj ? (dirObj.satuan || '%') : '%';
                                         const targetVal = dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100;
-                                        return `<option value="${ct.targetDirektur}" data-tahun="${ct.tahun || '2025'}" data-satuan="${satuan}" data-targetval="${targetVal}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun: ${ct.tahun || '2025'})</option>`;
+                                        return `<option value="${ct.targetDirektur}" data-tahun="${ct.tahun \vert{}\vert{} '2025'}" data-satuan="${satuan}" data-targetval="${targetVal}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun:${ct.tahun || '2025'})</option>`;
                                     }).join('')}
                                 </select>
                             </div>
@@ -2543,6 +2547,7 @@
                 showToast('Capaian kinerja berhasil diinput & disinkronkan ke Google Sheets!');
             }
 
+            await saveToMySQL();
             closeCapaianModal();
             renderCapaianView(document.getElementById('mainContent'));
         }
@@ -2575,6 +2580,7 @@
                 DB.capaian[idx].penyesuaian = checkedPenyesuaian;
                 await syncToGoogleSheets('Validasi Kinerja', DB.capaian[idx]);
             }
+            await saveToMySQL();
             closeValidateModal();
             showToast(`Status capaian berhasil diubah menjadi: ${statusVal}`);
             renderCapaianView(document.getElementById('mainContent'));
@@ -2600,6 +2606,7 @@
                 DB.capaian[idx].linkBuktiTindakLanjut = document.getElementById('inputLinkBuktiTindakLanjut').value;
                 await syncToGoogleSheets('Update Tindak Lanjut Unit', DB.capaian[idx]);
             }
+            await saveToMySQL();
             closeTindakLanjutModal();
             showToast('Status & bukti tindak lanjut berhasil diperbarui!');
             renderCapaianView(document.getElementById('mainContent'));
@@ -2691,7 +2698,7 @@
                                             <td class="p-3 text-slate-600">${r.dampak}</td>
                                             <td class="p-3 text-center font-bold text-rose-600">${r.skor1}</td>
                                             <td class="p-3 text-slate-600">
-                                                <span class="block"><strong>${r.adaPengendalian}:</strong> ${r.uraianPengendalian}</span>
+                                                <span class="block"><strong>${r.adaPengendalian}:</strong>${r.uraianPengendalian}</span>
                                                 <span class="text-[10px] text-emerald-600 font-semibold">Memadai: ${r.memadai}</span>
                                             </td>
                                             <td class="p-3 text-center font-bold text-emerald-600">${r.skor2}</td>
@@ -2719,7 +2726,7 @@
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator Kinerja yang Dicascading ke Anda</label>
                                 <select id="rIndikatorRef" required class="w-full p-3 bg-slate-50 border rounded-xl">
-                                    ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => `<option value="${ct.targetDirektur}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun: ${ct.tahun || '2025'})</option>`).join('')}
+                                    ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => `<option value="${ct.targetDirektur}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun:${ct.tahun || '2025'})</option>`).join('')}
                                 </select>
                             </div>
                             <div>
@@ -2830,495 +2837,14 @@
 
             DB.risiko.push(newRisiko);
             await syncToGoogleSheets('Program Kerja dan Peta Resiko', newRisiko);
+            await saveToMySQL();
 
             closeRisikoModal();
             showToast('Data risiko berhasil diinput & disinkronkan ke Google Sheets!');
             renderRisikoView(document.getElementById('mainContent'));
         }
 
-        function renderTindakLanjutMonitorView(container) {
-            document.getElementById('pageTitle').innerText = 'Monitoring Tindak Lanjut & Scoreboard Pencapaian';
-            const isDirektur = currentUser.role === 'direktur';
-            const isTim = currentUser.role === 'tim_kerja';
-
-            let list = DB.capaian;
-            if (isTim) {
-                list = DB.capaian.filter(c => c.timKey === currentUser.timKey);
-            }
-
-            if (filterTindakLanjutTahun !== 'Semua') {
-                list = list.filter(c => (c.tahun || '2025') === filterTindakLanjutTahun);
-            }
-
-            let totalCapaianList = list.length;
-            let tindakLanjutDone = list.filter(c => c.statusTindakLanjut === 'Sudah Ditindaklanjuti').length;
-            let percentTindakLanjut = totalCapaianList > 0 ? Math.round((tindakLanjutDone / totalCapaianList) * 100) : 0;
-
-            let validCount = list.filter(c => c.status === 'Valid').length;
-            let percentValid = totalCapaianList > 0 ? Math.round((validCount / totalCapaianList) * 100) : 0;
-
-            container.innerHTML = `
-                <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                        <div>
-                            <h3 class="font-bold text-slate-900 text-base">Filter Tahun Monitoring Tindak Lanjut</h3>
-                        </div>
-                        <div>
-                            <select onchange="filterTindakLanjutTahun = this.value; renderTindakLanjutMonitorView(document.getElementById('mainContent'));" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                <option value="Semua" ${filterTindakLanjutTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                <option value="2025" ${filterTindakLanjutTahun === '2025' ? 'selected' : ''}>2025</option>
-                                <option value="2026" ${filterTindakLanjutTahun === '2026' ? 'selected' : ''}>2026</option>
-                                <option value="2027" ${filterTindakLanjutTahun === '2027' ? 'selected' : ''}>2027</option>
-                                <option value="2028" ${filterTindakLanjutTahun === '2028' ? 'selected' : ''}>2028</option>
-                                <option value="2029" ${filterTindakLanjutTahun === '2029' ? 'selected' : ''}>2029</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-                            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">
-                                <i class="fa-solid fa-square-check"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold text-slate-500 uppercase">Progres Tindak Lanjut Unit (${filterTindakLanjutTahun})</p>
-                                <h3 class="text-2xl font-bold text-slate-900 mt-1">${percentTindakLanjut}%</h3>
-                                <span class="text-xs text-emerald-600 font-medium">${tindakLanjutDone} dari ${totalCapaianList} Selesai Ditindaklanjuti</span>
-                            </div>
-                        </div>
-
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-                            <div class="w-12 h-12 rounded-xl bg-blue-50 text-primary-600 flex items-center justify-center text-xl font-bold">
-                                <i class="fa-solid fa-circle-check"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold text-slate-500 uppercase">Rasio Indikator Tervalidasi (${filterTindakLanjutTahun})</p>
-                                <h3 class="text-2xl font-bold text-slate-900 mt-1">${percentValid}%</h3>
-                                <span class="text-xs text-primary-600 font-medium">${validCount} dari ${totalCapaianList} Valid</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <table class="w-full text-left border-collapse text-sm">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                    <th class="p-4">Unit / Prodi</th>
-                                    <th class="p-4">Indikator / Program</th>
-                                    <th class="p-4">Arahan / Rekomendasi Pimpinan</th>
-                                    <th class="p-4">Status Tindak Lanjut Unit</th>
-                                    <th class="p-4">Link Bukti</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                ${list.length === 0 ? `
-                                    <tr><td colspan="5" class="p-8 text-center text-slate-400">Belum ada data capaian pada tahun ${filterTindakLanjutTahun}.</td></tr>
-                                ` : list.map(c => `
-                                    <tr class="hover:bg-slate-50 transition-all">
-                                        <td class="p-4 font-semibold text-slate-800">${c.unit}</td>
-                                        <td class="p-4">
-                                            <p class="font-bold text-slate-900 text-xs">${c.targetDirektur}</p>
-                                            <p class="text-xs text-slate-500">${c.program}</p>
-                                        </td>
-                                        <td class="p-4 text-xs text-slate-700">${c.rekomendasi || '<span class="text-slate-400 italic">Belum ada arahan</span>'}</td>
-                                        <td class="p-4">
-                                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                                c.statusTindakLanjut === 'Sudah Ditindaklanjuti' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-                                            }">${c.statusTindakLanjut || 'Belum Ditindaklanjuti'}</span>
-                                        </td>
-                                        <td class="p-4 text-xs">
-                                            ${c.linkBuktiTindakLanjut ? `<a href="${c.linkBuktiTindakLanjut}" target="_blank" class="text-blue-600 underline font-semibold flex items-center space-x-1"><i class="fa-solid fa-link"></i><span>Buka Bukti</span></a>` : '<span class="text-slate-400">-</span>'}
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderAdminView(container) {
-            document.getElementById('pageTitle').innerText = 'Manajemen Pejabat, Pengguna & Hak Akses (Admin)';
-            container.innerHTML = `
-                <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
-                        <div>
-                            <h3 class="font-bold text-slate-900 text-base">Pengaturan Akun Pejabat & Unit Kerja</h3>
-                            <p class="text-xs text-slate-500">Direktur, 3 Tim Kerja, dan 12 Ketua Unit/Prodi (Tambah, Edit, Hapus)</p>
-                        </div>
-                        <button onclick="openUserModal('add')" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                            <i class="fa-solid fa-user-plus"></i>
-                            <span>Tambah User Baru</span>
-                        </button>
-                    </div>
-
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <table class="w-full text-left border-collapse text-sm">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                    <th class="p-4">Nama Pejabat</th>
-                                    <th class="p-4">Username</th>
-                                    <th class="p-4">Role Akses</th>
-                                    <th class="p-4">Tim Kerja / Unit Terkait</th>
-                                    <th class="p-4 text-center">Aksi (Edit / Hapus / Reset)</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                ${DB.users.map((u, idx) => `
-                                    <tr class="hover:bg-slate-50 transition-all">
-                                        <td class="p-4 font-semibold text-slate-900">${u.name}</td>
-                                        <td class="p-4 text-slate-600">${u.username}</td>
-                                        <td class="p-4"><span class="px-2.5 py-1 bg-blue-50 text-primary-700 text-xs font-semibold rounded-full uppercase">${u.role}</span></td>
-                                        <td class="p-4 text-slate-600">${u.timKey ? u.timKey + ' / ' : ''}${u.unit}</td>
-                                        <td class="p-4 text-center space-x-2">
-                                            <button onclick="openUserModal('edit', ${idx})" class="px-2.5 py-1 bg-blue-100 hover:bg-blue-200 text-primary-700 text-xs font-semibold rounded-lg" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                            <button onclick="confirmDeleteUser(${idx})" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-600 text-xs font-semibold rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                                            <button onclick="resetPassword(${idx})" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-semibold rounded-lg" title="Reset Pass"><i class="fa-solid fa-key"></i></button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Modal User Add/Edit -->
-                <div id="userModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-                        <div class="flex justify-between items-center border-b pb-4">
-                            <h3 id="userModalTitle" class="font-bold text-slate-900 text-base">Tambah / Edit Pejabat Sistem</h3>
-                            <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-                        </div>
-                        <form onsubmit="saveUser(event)" class="space-y-4 text-sm">
-                            <input type="hidden" id="editUserIndex" value="-1">
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap & Gelar</label>
-                                <input type="text" id="uName" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Nama Pejabat">
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Username</label>
-                                    <input type="text" id="uUsername" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="username">
-                                </div>
-                                <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Password</label>
-                                    <input type="password" id="uPassword" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="••••••••">
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Role</label>
-                                    <select id="uRole" class="w-full p-3 bg-slate-50 border rounded-xl">
-                                        <option value="admin">Admin</option>
-                                        <option value="direktur">Direktur</option>
-                                        <option value="tim_kerja">Ketua Tim Kerja</option>
-                                        <option value="ketua_unit">Ketua Prodi / Unit</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Tim Kerja</label>
-                                    <select id="uTimKey" class="w-full p-3 bg-slate-50 border rounded-xl">
-                                        ${DB.timKerjaList.map(t => `<option value="${t}">${t}</option>`).join('')}
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Nama Unit / Prodi Terkait</label>
-                                <input type="text" id="uUnit" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: Prodi TMIP / UPPM">
-                            </div>
-                            <div class="flex justify-end space-x-3 pt-2">
-                                <button type="button" onclick="closeUserModal()" class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-medium">Batal</button>
-                                <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium">Simpan Pejabat</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            `;
-        }
-
-        function openUserModal(mode, idx = -1) {
-            document.getElementById('userModal').classList.remove('hidden');
-            document.getElementById('userModal').classList.add('flex');
-            if (mode === 'edit' && idx !== -1) {
-                const u = DB.users[idx];
-                document.getElementById('userModalTitle').innerText = 'Edit Pejabat Sistem';
-                document.getElementById('editUserIndex').value = idx;
-                document.getElementById('uName').value = u.name;
-                document.getElementById('uUsername').value = u.username;
-                document.getElementById('uPassword').value = u.password;
-                document.getElementById('uRole').value = u.role;
-                document.getElementById('uTimKey').value = u.timKey || DB.timKerjaList[0];
-                document.getElementById('uUnit').value = u.unit;
-            } else {
-                document.getElementById('userModalTitle').innerText = 'Tambah Pejabat Sistem';
-                document.getElementById('editUserIndex').value = -1;
-                document.getElementById('uName').value = '';
-                document.getElementById('uUsername').value = '';
-                document.getElementById('uPassword').value = '';
-                document.getElementById('uRole').value = 'ketua_unit';
-                document.getElementById('uUnit').value = '';
-            }
-        }
-        function closeUserModal() { document.getElementById('userModal').classList.remove('flex'); document.getElementById('userModal').classList.add('hidden'); }
-        
-        function saveUser(e) {
-            e.preventDefault();
-            const idx = parseInt(document.getElementById('editUserIndex').value);
-            const userData = {
-                id: idx !== -1 ? DB.users[idx].id : 'u' + (DB.users.length + 1),
-                name: document.getElementById('uName').value,
-                username: document.getElementById('uUsername').value,
-                password: document.getElementById('uPassword').value,
-                role: document.getElementById('uRole').value,
-                timKey: document.getElementById('uTimKey').value,
-                unit: document.getElementById('uUnit').value
-            };
-
-            if (idx !== -1) {
-                DB.users[idx] = userData;
-                showToast('Data pejabat berhasil diperbarui!');
-            } else {
-                DB.users.push(userData);
-                showToast('Pejabat baru berhasil ditambahkan!');
-            }
-            closeUserModal();
-            renderAdminView(document.getElementById('mainContent'));
-        }
-
-        function confirmDeleteUser(idx) {
-            const u = DB.users[idx];
-            if (u.username === 'admin') {
-                showToast('Akun Administrator utama tidak dapat dihapus!', 'error');
-                return;
-            }
-            if (confirm(`Apakah Anda yakin ingin menghapus user "${u.name}" (${u.username})?`)) {
-                DB.users.splice(idx, 1);
-                showToast('User berhasil dihapus.', 'info');
-                renderAdminView(document.getElementById('mainContent'));
-            }
-        }
-
-        function resetPassword(idx) {
-            DB.users[idx].password = '123456';
-            showToast(`Password untuk ${DB.users[idx].name} direset menjadi: 123456`);
-        }
-
-        function renderLaporanView(container) {
-            document.getElementById('pageTitle').innerText = 'Cetak Laporan Kinerja (Ekspor PDF) & Ekspor CSV';
-            
-            const isKaUnit = currentUser.role === 'ketua_unit';
-            const isTim = currentUser.role === 'tim_kerja';
-
-            let validCapaian = DB.capaian.filter(c => c.status === 'Valid');
-            if (isKaUnit) {
-                validCapaian = validCapaian.filter(c => c.unit === currentUser.unit);
-            } else if (isTim) {
-                validCapaian = validCapaian.filter(c => c.timKey === currentUser.timKey);
-            }
-
-            container.innerHTML = `
-                <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto space-y-6 no-print">
-                        <div class="flex flex-col md:flex-row items-center justify-between gap-4 border-b pb-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900 text-base">Pengaturan Ekspor & Download PDF & Ekspor CSV</h3>
-                                <p class="text-xs text-slate-500">Sesuaikan filter triwulan, kolom CSV, dan nama penandatangan dokumen</p>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <select id="printPeriode" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                    <option value="Semua">Semua Periode</option>
-                                    <option value="TW 1">Triwulan 1</option>
-                                    <option value="TW 2">Triwulan 2</option>
-                                    <option value="TW 3">Triwulan 3</option>
-                                    <option value="TW 4">Triwulan 4</option>
-                                    <option value="Tahunan">Tahunan</option>
-                                </select>
-                                <button onclick="triggerPrintPDF()" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow flex items-center space-x-2">
-                                    <i class="fa-solid fa-file-pdf"></i>
-                                    <span>Ekspor & Download PDF</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Custom Signatures Configuration (3 Signatures) -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">Tanda Tangan 1 (Mengetahui)</label>
-                                <input type="text" id="customJabatan1" value="Direktur" class="w-full p-2 bg-white border rounded-lg text-xs mb-1">
-                                <input type="text" id="customNama1" value="Prof. Dr. H. Direktur, M.Si." class="w-full p-2 bg-white border rounded-lg text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">Tanda Tangan 2 (Menyetujui)</label>
-                                <input type="text" id="customJabatan2" value="Ketua Tim Kerja" class="w-full p-2 bg-white border rounded-lg text-xs mb-1">
-                                <input type="text" id="customNama2" value="Dr. Ahmad Akademik, M.T." class="w-full p-2 bg-white border rounded-lg text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">Tanda Tangan 3 (Penyusun)</label>
-                                <input type="text" id="customJabatan3" value="Ketua Unit / Prodi" class="w-full p-2 bg-white border rounded-lg text-xs mb-1">
-                                <input type="text" id="customNama3" value="${currentUser.name}" class="w-full p-2 bg-white border rounded-lg text-xs">
-                            </div>
-                        </div>
-
-                        <!-- CSV Column Selection Checkboxes -->
-                        <div class="border-t pt-4 space-y-3">
-                            <h4 class="font-bold text-slate-800 text-sm">Pilih Kolom untuk Ekspor CSV</h4>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_unit" checked class="rounded text-primary-600"><span>Unit / Prodi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_indikator" checked class="rounded text-primary-600"><span>Indikator Utama</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_program" checked class="rounded text-primary-600"><span>Program Kerja</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_periode" checked class="rounded text-primary-600"><span>Periode & Satuan</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_target" checked class="rounded text-primary-600"><span>Target & Realisasi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_status" checked class="rounded text-primary-600"><span>Status Validasi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_tindak" checked class="rounded text-primary-600"><span>Tindak Lanjut</span></label>
-                            </div>
-                            <button onclick="downloadCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-2">
-                                <i class="fa-solid fa-file-excel"></i>
-                                <span>Download CSV (Sesuai Kolom Terpilih)</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="printableArea" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto space-y-6">
-                        <div class="text-center border-b pb-6">
-                            <h2 class="text-xl font-bold text-slate-900 uppercase">Laporan Capaian Kinerja</h2>
-                            <p class="text-sm text-slate-600 mt-1">Ki-Jaro (Kinerja-Jawara-Petro) - Sistem Informasi Kinerja & Manajemen Risiko</p>
-                            <p id="printPeriodeTitle" class="text-xs text-primary-700 font-semibold mt-1">Periode: Semua Periode | Unit: ${currentUser.unit}</p>
-                            <p class="text-xs text-slate-400 mt-0.5">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', {dateStyle: 'full'})}</p>
-                        </div>
-
-                        <div class="space-y-4 text-sm">
-                            <h3 class="font-bold text-slate-900 text-base border-l-4 border-primary-600 pl-3">Rekapitulasi Capaian Program Kerja (Tervalidasi)</h3>
-                            <table class="w-full text-left border-collapse text-xs">
-                                <thead class="bg-slate-50 border">
-                                    <tr>
-                                        <th class="p-2 border">Unit / Prodi</th>
-                                        <th class="p-2 border">Indikator Utama</th>
-                                        <th class="p-2 border">Program Kerja</th>
-                                        <th class="p-2 border">Triwulan / Satuan</th>
-                                        <th class="p-2 border">Target / Realisasi</th>
-                                        <th class="p-2 border">Status & Tindak Lanjut</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="printTableBody">
-                                    ${validCapaian.length === 0 ? '<tr><td colspan="6" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi</td></tr>' : validCapaian.map(c => `
-                                        <tr>
-                                            <td class="p-2 border">${c.unit}</td>
-                                            <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
-                                            <td class="p-2 border font-medium">${c.program}</td>
-                                            <td class="p-2 border">${c.triwulan} (${c.satuan || '%'})</td>
-                                            <td class="p-2 border">${c.target} / ${c.realisasi}</td>
-                                            <td class="p-2 border">
-                                                <span class="font-semibold text-emerald-700">${c.status}</span>
-                                                <span class="block text-[10px] text-slate-600">Tindak Lanjut: ${c.statusTindakLanjut || 'Belum'}</span>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="pt-8 grid grid-cols-3 gap-4 text-center text-xs">
-                            <div>
-                                <p class="mb-16"><span id="lblJabatan1" class="border-b border-dotted pb-0.5 block">Direktur</span><br><strong id="lblNama1" class="mt-1 block">Prof. Dr. H. Direktur, M.Si.</strong></p>
-                            </div>
-                            <div>
-                                <p class="mb-16"><span id="lblJabatan2" class="border-b border-dotted pb-0.5 block">Ketua Tim Kerja</span><br><strong id="lblNama2" class="mt-1 block">Dr. Ahmad Akademik, M.T.</strong></p>
-                            </div>
-                            <div>
-                                <p class="mb-16"><span id="lblJabatan3" class="border-b border-dotted pb-0.5 block">Ketua Unit / Prodi</span><br><strong id="lblNama3" class="mt-1 block">${currentUser.name}</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function triggerPrintPDF() {
-            const periode = document.getElementById('printPeriode').value;
-            document.getElementById('printPeriodeTitle').innerText = `Periode: ${periode} | Unit: ${currentUser.unit}`;
-            
-            document.getElementById('lblJabatan1').innerText = document.getElementById('customJabatan1').value;
-            document.getElementById('lblNama1').innerText = document.getElementById('customNama1').value;
-            document.getElementById('lblJabatan2').innerText = document.getElementById('customJabatan2').value;
-            document.getElementById('lblNama2').innerText = document.getElementById('customNama2').value;
-            document.getElementById('lblJabatan3').innerText = document.getElementById('customJabatan3').value;
-            document.getElementById('lblNama3').innerText = document.getElementById('customNama3').value;
-
-            const isKaUnit = currentUser.role === 'ketua_unit';
-            const isTim = currentUser.role === 'tim_kerja';
-
-            let validCapaian = DB.capaian.filter(c => c.status === 'Valid');
-            if (periode !== 'Semua') {
-                validCapaian = validCapaian.filter(c => c.triwulan === periode);
-            }
-            if (isKaUnit) {
-                validCapaian = validCapaian.filter(c => c.unit === currentUser.unit);
-            } else if (isTim) {
-                validCapaian = validCapaian.filter(c => c.timKey === currentUser.timKey);
-            }
-
-            const tbody = document.getElementById('printTableBody');
-            tbody.innerHTML = validCapaian.length === 0 ? '<tr><td colspan="6" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi untuk periode ini</td></tr>' : validCapaian.map(c => `
-                <tr>
-                    <td class="p-2 border">${c.unit}</td>
-                    <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
-                    <td class="p-2 border font-medium">${c.program}</td>
-                    <td class="p-2 border">${c.triwulan} (${c.satuan || '%'})</td>
-                    <td class="p-2 border">${c.target} / ${c.realisasi}</td>
-                    <td class="p-2 border">
-                        <span class="font-semibold text-emerald-700">${c.status}</span>
-                        <span class="block text-[10px] text-slate-600">Tindak Lanjut: ${c.statusTindakLanjut || 'Belum'}</span>
-                    </td>
-                </tr>
-            `).join('');
-
-            window.print();
-        }
-
-        function downloadCSV() {
-            const chk_unit = document.getElementById('chk_unit').checked;
-            const chk_indikator = document.getElementById('chk_indikator').checked;
-            const chk_program = document.getElementById('chk_program').checked;
-            const chk_periode = document.getElementById('chk_periode').checked;
-            const chk_target = document.getElementById('chk_target').checked;
-            const chk_status = document.getElementById('chk_status').checked;
-            const chk_tindak = document.getElementById('chk_tindak').checked;
-
-            let headers = [];
-            if (chk_unit) headers.push("Unit");
-            if (chk_indikator) headers.push("Indikator Utama");
-            if (chk_program) headers.push("Program Kerja");
-            if (chk_periode) headers.push("Periode");
-            if (chk_target) headers.push("Target", "Realisasi");
-            if (chk_status) headers.push("Status Validasi");
-            if (chk_tindak) headers.push("Tindak Lanjut");
-
-            let csvRows = [headers.join(",")];
-            DB.capaian.forEach(c => {
-                let row = [];
-                if (chk_unit) row.push(`"${c.unit}"`);
-                if (chk_indikator) row.push(`"${c.targetDirektur}"`);
-                if (chk_program) row.push(`"${c.program}"`);
-                if (chk_periode) row.push(`"${c.triwulan}"`);
-                if (chk_target) row.push(c.target, c.realisasi);
-                if (chk_status) row.push(`"${c.status}"`);
-                if (chk_tindak) row.push(`"${c.statusTindakLanjut}"`);
-                csvRows.push(row.join(","));
-            });
-
-            const blob = new Blob([csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.setAttribute('href', url);
-            a.setAttribute('download', 'laporan_ki_jaro.csv');
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            showToast('File CSV berhasil diunduh!');
-        }
-
-// === SINKRONISASI OTOMATIS & AMAN KE MYSQL ===
+        // === SINKRONISASI OTOMATIS & AMAN KE MYSQL ===
         async function loadDataFromMySQL() {
             try {
                 const response = await fetch('/api/load-state/main_kijaro');
@@ -3334,7 +2860,7 @@
 
         async function saveToMySQL() {
             try {
-                await fetch('/api/save-state', {
+                const res = await fetch('/api/save-state', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -3342,41 +2868,20 @@
                         value: DB
                     })
                 });
-                console.log("Data otomatis tersimpan ke MySQL.");
+                const json = await res.json();
+                console.log("Respon Save MySQL:", json);
             } catch (e) {
                 console.error("Gagal menyimpan ke MySQL:", e);
             }
         }
 
-        // AUTO-SAVE LISTENER: Otomatis mendeteksi setiap ada form yang disubmit / tombol simpan diklik
-        document.addEventListener('submit', async function(e) {
-            // Beri jeda sedikit agar data di objek DB sempat ter-update oleh fungsi form aslinya
-            setTimeout(async () => {
-                await saveToMySQL();
-            }, 500);
-        });
-
-        // AUTO-SAVE BACKDROP/CLICK: Menyimpan juga saat tombol aksi penting diklik
-        document.addEventListener('click', async function(e) {
-            if (e.target && (e.target.tagName === 'BUTTON' || e.target.type === 'submit')) {
-                const text = e.target.innerText.toLowerCase();
-                if (text.includes('simpan') || text.includes('tambah') || text.includes('hapus') || text.includes('update') || text.includes('validasi')) {
-                    setTimeout(async () => {
-                        await saveToMySQL();
-                    }, 600);
-                }
-            }
-        });
-
-        /// Jalankan saat halaman pertama kali dibuka
+        // Jalankan saat halaman pertama kali dibuka
         window.onload = async function() {
             await loadDataFromMySQL();
-            
-            // CEK APAKAH ADA SESI LOGIN YANG TERSIMPAN
             const savedUser = localStorage.getItem('ki_jaro_user');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
-                renderDashboardLayout(); // Langsung masuk dashboard tanpa ke menu login
+                renderDashboardLayout();
             } else {
                 renderLogin();
             }
