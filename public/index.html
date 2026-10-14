@@ -203,24 +203,30 @@
         }
 
         function handleLogin(e) {
-            e.preventDefault();
-            const u = document.getElementById('usernameInput').value.trim();
-            const p = document.getElementById('passwordInput').value.trim();
-            const found = DB.users.find(x => x.username === u && x.password === p);
-            if (found) {
-                currentUser = found;
-                showToast(`Selamat datang, ${currentUser.name} (${currentUser.role.toUpperCase()})`);
-                renderDashboardLayout();
-            } else {
-                showToast('Username atau password salah!', 'error');
-            }
-        }
+    e.preventDefault();
+    const u = document.getElementById('usernameInput').value.trim();
+    const p = document.getElementById('passwordInput').value.trim();
+    const found = DB.users.find(x => x.username === u && x.password === p);
+    if (found) {
+        currentUser = found;
+        // SIMPAN SESI LOGIN KE BROWSER LOCALSTORAGE
+        localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
+        
+        showToast(`Selamat datang, ${currentUser.name} (${currentUser.role.toUpperCase()})`);
+        renderDashboardLayout();
+    } else {
+        showToast('Username atau password salah!', 'error');
+    }
+}
 
         function logout() {
-            currentUser = null;
-            renderLogin();
-            showToast('Anda telah keluar sistem.', 'info');
-        }
+    currentUser = null;
+    // HAPUS SESI LOGIN DARI BROWSER
+    localStorage.removeItem('ki_jaro_user');
+    
+    renderLogin();
+    showToast('Anda telah keluar sistem.', 'info');
+}
 
         function renderDashboardLayout() {
             const app = document.getElementById('app');
@@ -3362,14 +3368,20 @@
             }
         });
 
-        // Jalankan saat halaman pertama kali dibuka
+        /// Jalankan saat halaman pertama kali dibuka
         window.onload = async function() {
             await loadDataFromMySQL();
-            renderLogin();
+            
+            // CEK APAKAH ADA SESI LOGIN YANG TERSIMPAN
+            const savedUser = localStorage.getItem('ki_jaro_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                renderDashboardLayout(); // Langsung masuk dashboard tanpa ke menu login
+            } else {
+                renderLogin();
+            }
         }
-    </script>
-</body>
-</html>
+
     </script>
 </body>
 </html>
