@@ -7,12 +7,40 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js & Chart.js DataLabels Plugin -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        if (typeof tailwind !== 'undefined') {
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: {
+                                50: '#eff6ff',
+                                100: '#dbeafe',
+                                500: '#3b82f6',
+                                600: '#2563eb',
+                                700: '#1d4ed8',
+                                800: '#1e40af',
+                                900: '#1e3a8a',
+                            },
+                            navy: {
+                                800: '#0f172a',
+                                900: '#090d16',
+                            }
+                        },
+                        fontFamily: {
+                            sans: ['Inter', 'sans-serif'],
+                        }
+                    }
+                }
+            };
+        }
+    </script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; }
         .transition-all { transition: all 0.3s ease; }
@@ -26,40 +54,12 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
 
-    <!-- Form Login Langsung Tampil Tanpa Loading Screen -->
     <div id="app" class="flex-1 flex flex-col">
-        <div class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 flex items-center justify-center p-4">
-            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-8 border border-white/20 text-center">
-                <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-3 p-2">
-                    <img src="logo_poltek-removebg-preview.png" alt="Logo Poltek" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/80x80/2563eb/ffffff?text=Ki-Jaro'">
-                </div>
-                <h1 class="text-2xl font-bold text-slate-900">Ki-Jaro</h1>
-                <p class="text-xs text-blue-700 font-semibold uppercase tracking-wider mb-6">kinerja-jawara-petro</p>
-
-                <form onsubmit="handleLogin(event)" class="space-y-4 text-left">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Username</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-user"></i></span>
-                            <input type="text" id="usernameInput" required 
-                                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-800" placeholder="Masukkan username">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Password</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-lock"></i></span>
-                            <input type="password" id="passwordInput" required 
-                                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-800" placeholder="Masukkan password">
-                        </div>
-                    </div>
-
-                    <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2">
-                        <span>Masuk Sistem</span>
-                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                    </button>
-                </form>
+        <div class="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4">
+            <div class="text-center space-y-3">
+                <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-400"></i>
+                <h2 class="text-lg font-bold">Memuat Sistem Ki-Jaro...</h2>
+                <p class="text-xs text-slate-400">Politeknik Industri Petrokimia Banten</p>
             </div>
         </div>
     </div>
@@ -69,14 +69,18 @@
 
     <script>
         // ============================================================================
-        // 1. DEFAULT MASTER DATABASE
+        // 1. MASTER AKUN DEFAULT (SELALU TERKUNCI & ANTI-TERHAPUS)
         // ============================================================================
-        var DEFAULT_USERS = [
+        const DEFAULT_USERS = [
             { id: 'u1', username: 'admin', password: '123', name: 'Administrator Sistem', role: 'admin', unit: 'Pusat Data & Sistem' },
             { id: 'u2', username: 'direktur', password: '123', name: 'Prof. Dr. H. Direktur, M.Si.', role: 'direktur', unit: 'Pimpinan Tertinggi' },
+            
+            // 3 Tim Kerja
             { id: 'u3', username: 'tim_akademik', password: '123', name: 'Dr. Ahmad Akademik, M.T.', role: 'tim_kerja', timKey: 'Akademik', unit: 'Tim Kerja Akademik' },
             { id: 'u4', username: 'tim_umum', password: '123', name: 'Dra. Hj. Siti Umum, M.Si.', role: 'tim_kerja', timKey: 'Umum dan Keuangan', unit: 'Tim Kerja Umum dan Keuangan' },
             { id: 'u5', username: 'tim_kemahasiswaan', password: '123', name: 'Budi Kemahasiswaan, M.Pd.', role: 'tim_kerja', timKey: 'Kemahasiswaan dan Kerjasama', unit: 'Tim Kerja Kemahasiswaan dan Kerjasama' },
+
+            // 12 Ketua Unit / Prodi / Subbag
             { id: 'u6', username: 'prodi_tmip', password: '123', name: 'Ketua Prodi TMIP', role: 'ketua_unit', unit: 'Prodi TMIP', timKey: 'Akademik' },
             { id: 'u7', username: 'prodi_tiip', password: '123', name: 'Ketua Prodi TIIP', role: 'ketua_unit', unit: 'Prodi TIIP', timKey: 'Akademik' },
             { id: 'u8', username: 'prodi_tpip', password: '123', name: 'Ketua Prodi TPIP', role: 'ketua_unit', unit: 'Prodi TPIP', timKey: 'Akademik' },
@@ -91,22 +95,22 @@
             { id: 'u17', username: 'subbag_akademik', password: '123', name: 'Kasubbag Akademik', role: 'ketua_unit', unit: 'Subbag Akademik Kemahasiswaan dan Kerjasama', timKey: 'Umum dan Keuangan' }
         ];
 
-        var DEFAULT_TIM_LIST = ['Akademik', 'Umum dan Keuangan', 'Kemahasiswaan dan Kerjasama'];
-        var DEFAULT_UNIT_LIST = [
+        const DEFAULT_TIM_LIST = ['Akademik', 'Umum dan Keuangan', 'Kemahasiswaan dan Kerjasama'];
+        const DEFAULT_UNIT_LIST = [
             'Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 
             'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 
             'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'
         ];
-        var DEFAULT_DOKUMEN = [
+        const DEFAULT_DOKUMEN = [
             { nama: 'Renstra Politeknik Industri Petrokimia Banten 2025-2029', kategori: 'Renstra', tahun: '2025-2029', link: '#' },
             { nama: 'RKA-KL Politeknik Industri Petrokimia Banten', kategori: 'RKA-KL', tahun: '2025', link: '#' },
             { nama: 'Panduan IKU & Pengukuran Kinerja', kategori: 'IKU', tahun: '2025', link: '#' }
         ];
 
-        var DB = {
+        let DB = {
             users: JSON.parse(JSON.stringify(DEFAULT_USERS)),
-            timKerjaList: DEFAULT_TIM_LIST.slice(),
-            unitList: DEFAULT_UNIT_LIST.slice(),
+            timKerjaList: [...DEFAULT_TIM_LIST],
+            unitList: [...DEFAULT_UNIT_LIST],
             renstraTujuanKemenperin: [], 
             renstraBPSDMI: [],           
             renstraSasaranKinerja: [],   
@@ -121,25 +125,58 @@
             lastUpdated: 0
         };
 
-        var currentUser = null;
-        var activeTab = 'dashboard';
-        var chartInstances = {};
-        var isServerConnected = false;
+        let currentUser = null;
+        let activeTab = 'dashboard';
+        let chartInstances = {};
+        let isServerConnected = false;
         
-        var filterDashboardTahun = '2025';
-        var filterDashboardTriwulan = 'Semua';
-        var filterDashboardTim = 'Semua';
-        var filterDashboardUnit = 'Semua';
+        let filterDashboardTahun = '2025';
+        let filterDashboardTriwulan = 'Semua';
+        let filterDashboardTim = 'Semua';
+        let filterDashboardUnit = 'Semua';
 
-        var filterCapaianTahun = 'Semua';
-        var filterCapaianTriwulan = 'Semua';
-        var filterRisikoTahun = 'Semua';
+        let filterChartTahun = '2025';
+        let filterChartTriwulan = 'Semua';
+        let filterChartTim = 'Semua';
+        let filterChartUnit = 'Semua';
+        let filterChartIndikator = 'Semua';
 
-        var LS_DB_KEY = 'ki_jaro_master_db';
+        let filterCapaianTahun = 'Semua';
+        let filterCapaianTriwulan = 'Semua';
+        let filterRisikoTahun = 'Semua';
+        let filterTindakLanjutTahun = 'Semua';
 
         // ============================================================================
-        // 2. SAFE DATA MERGE & PERSISTENCE (MYSQL + LOCALSTORAGE)
+        // 2. SAFE DATA MERGE & PERSISTENCE (PASTIKAN 17 AKUN BAWAAN SELALU ADA)
         // ============================================================================
+        const LS_DB_KEY = 'ki_jaro_master_db';
+
+        function ensureDefaultUsersExist(customUsers) {
+            const merged = [...DEFAULT_USERS.map(u => ({ ...u }))];
+            if (Array.isArray(customUsers)) {
+                customUsers.forEach(cu => {
+                    if (!cu || !cu.username) return;
+                    const idx = merged.findIndex(m => String(m.username).toLowerCase() === String(cu.username).toLowerCase());
+                    if (idx !== -1) {
+                        // Update user yang sudah ada, tapi pastikan password tidak kosong
+                        merged[idx] = {
+                            ...merged[idx],
+                            ...cu,
+                            username: String(cu.username).trim(),
+                            password: cu.password !== undefined && String(cu.password).trim() !== '' ? String(cu.password).trim() : merged[idx].password
+                        };
+                    } else {
+                        merged.push({
+                            ...cu,
+                            username: String(cu.username).trim(),
+                            password: String(cu.password || '123').trim()
+                        });
+                    }
+                });
+            }
+            return merged;
+        }
+
         function sanitizeAndMergeDB(incoming) {
             if (!incoming || typeof incoming !== 'object') return;
 
@@ -149,27 +186,21 @@
                 incoming = incoming.data;
             }
 
-            if (Array.isArray(incoming.users) && incoming.users.length > 0) {
-                DB.users = incoming.users;
-            } else if (!Array.isArray(DB.users) || DB.users.length === 0) {
-                DB.users = JSON.parse(JSON.stringify(DEFAULT_USERS));
-            }
+            DB.users = ensureDefaultUsersExist(incoming.users);
+            DB.timKerjaList = (Array.isArray(incoming.timKerjaList) && incoming.timKerjaList.length > 0) ? incoming.timKerjaList : [...DEFAULT_TIM_LIST];
+            DB.unitList = (Array.isArray(incoming.unitList) && incoming.unitList.length > 0) ? incoming.unitList : [...DEFAULT_UNIT_LIST];
 
-            DB.timKerjaList = (Array.isArray(incoming.timKerjaList) && incoming.timKerjaList.length > 0) ? incoming.timKerjaList : DEFAULT_TIM_LIST.slice();
-            DB.unitList = (Array.isArray(incoming.unitList) && incoming.unitList.length > 0) ? incoming.unitList : DEFAULT_UNIT_LIST.slice();
-
-            var arrayFields = [
+            const arrayFields = [
                 'renstraTujuanKemenperin', 'renstraBPSDMI', 'renstraSasaranKinerja', 'renstraIndikatorKinerja',
                 'cascadingDirektur', 'cascadingTim', 'capaian', 'risiko', 'realisasiAnggaranAdmin'
             ];
-            for (var i = 0; i < arrayFields.length; i++) {
-                var field = arrayFields[i];
+            arrayFields.forEach(field => {
                 if (Array.isArray(incoming[field])) {
                     DB[field] = incoming[field];
                 } else if (!Array.isArray(DB[field])) {
                     DB[field] = [];
                 }
-            }
+            });
 
             if (Array.isArray(incoming.dokumenPerencanaan)) {
                 DB.dokumenPerencanaan = incoming.dokumenPerencanaan;
@@ -184,8 +215,6 @@
 
         function countTotalRecords(obj) {
             if (!obj || typeof obj !== 'object') return 0;
-            if (obj.value && typeof obj.value === 'object') obj = obj.value;
-            if (obj.data && typeof obj.data === 'object') obj = obj.data;
             return (
                 (Array.isArray(obj.renstraTujuanKemenperin) ? obj.renstraTujuanKemenperin.length : 0) +
                 (Array.isArray(obj.renstraBPSDMI) ? obj.renstraBPSDMI.length : 0) +
@@ -201,9 +230,9 @@
 
         function loadFromLocalCache() {
             try {
-                var raw = localStorage.getItem(LS_DB_KEY);
+                const raw = localStorage.getItem(LS_DB_KEY);
                 if (raw) {
-                    var parsed = JSON.parse(raw);
+                    const parsed = JSON.parse(raw);
                     sanitizeAndMergeDB(parsed);
                     return parsed;
                 }
@@ -221,20 +250,33 @@
             }
         }
 
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 4500) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (err) {
+                clearTimeout(id);
+                throw err;
+            }
+        }
+
         async function loadDataFromMySQL() {
-            var localCopy = loadFromLocalCache();
-            var localRecords = countTotalRecords(localCopy);
-            var localTime = localCopy && localCopy.lastUpdated ? Number(localCopy.lastUpdated) : 0;
+            const localCopy = loadFromLocalCache();
+            const localRecords = countTotalRecords(localCopy);
+            const localTime = localCopy && localCopy.lastUpdated ? Number(localCopy.lastUpdated) : 0;
 
             try {
-                var response = await fetch('/api/load-state/main_kijaro?t=' + Date.now(), {
+                const response = await fetchWithTimeout('/api/load-state/main_kijaro?t=' + Date.now(), {
                     method: 'GET',
                     headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-                });
+                }, 4500);
 
                 if (response.ok) {
-                    var result = await response.json();
-                    var serverData = null;
+                    const result = await response.json();
+                    let serverData = null;
 
                     if (result && result.data) {
                         serverData = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
@@ -245,27 +287,25 @@
                     }
 
                     if (serverData && typeof serverData === 'object') {
-                        var serverRecords = countTotalRecords(serverData);
-                        var serverTime = Number(serverData.lastUpdated || 0);
+                        const serverRecords = countTotalRecords(serverData);
+                        const serverTime = Number(serverData.lastUpdated || 0);
 
-                        if (serverRecords > 0 || serverTime >= localTime) {
+                        if (serverRecords > 0 && serverTime >= localTime) {
                             sanitizeAndMergeDB(serverData);
                             saveToLocalCache();
                         } else if (localRecords > 0 && serverRecords === 0) {
                             await pushStateToMySQL();
+                        } else {
+                            sanitizeAndMergeDB(serverData);
+                            saveToLocalCache();
                         }
-                        isServerConnected = true;
-                        updateStatusIndicator();
-                        return true;
-                    } else if (localRecords > 0) {
-                        await pushStateToMySQL();
                         isServerConnected = true;
                         updateStatusIndicator();
                         return true;
                     }
                 }
             } catch (e) {
-                console.warn("Info Koneksi MySQL:", e);
+                console.warn("Info Koneksi MySQL:", e.message);
             }
 
             isServerConnected = false;
@@ -274,16 +314,16 @@
         }
 
         async function pushStateToMySQL() {
-            var res = await fetch('/api/save-state', {
+            const res = await fetchWithTimeout('/api/save-state', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     key: 'main_kijaro',
                     value: DB
                 })
-            });
+            }, 5000);
             if (!res.ok) throw new Error('HTTP ' + res.status);
-            var json = await res.json();
+            const json = await res.json();
             isServerConnected = true;
             updateStatusIndicator();
             return json;
@@ -297,19 +337,19 @@
             } catch (e) {
                 isServerConnected = false;
                 updateStatusIndicator();
-                console.warn("Disimpan di memori lokal browser:", e);
+                console.warn("Tersimpan di Browser Lokal. Sinkronisasi MySQL tertunda:", e.message);
             }
         }
 
         function updateStatusIndicator() {
-            var el = document.getElementById('dbStatusBadge');
+            const el = document.getElementById('dbStatusBadge');
             if (!el) return;
             if (isServerConnected) {
                 el.className = "px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[11px] font-semibold flex items-center space-x-1.5";
-                el.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>MySQL Sync Aktif</span>';
+                el.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>MySQL Sync Aktif</span>`;
             } else {
                 el.className = "px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[11px] font-semibold flex items-center space-x-1.5";
-                el.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>Tersimpan Lokal</span>';
+                el.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>Tersimpan Lokal</span>`;
             }
         }
 
@@ -317,10 +357,10 @@
         // 3. UTILITIES
         // ============================================================================
         function calculateSkorRisiko(p, d) {
-            var val = (parseInt(p, 10) || 1) * (parseInt(d, 10) || 1);
-            var kuadran = '';
-            var warna = '';
-            var level = '';
+            const val = (parseInt(p) || 1) * (parseInt(d) || 1);
+            let kuadran = '';
+            let warna = '';
+            let level = '';
 
             if (val >= 20) { level = 'Sangat Tinggi (5)'; kuadran = 'Kuadran IV (Sangat Tinggi)'; warna = 'bg-rose-600 text-white'; }
             else if (val >= 15) { level = 'Tinggi (4)'; kuadran = 'Kuadran III (Tinggi)'; warna = 'bg-amber-500 text-white'; }
@@ -328,27 +368,27 @@
             else if (val >= 7) { level = 'Rendah (2)'; kuadran = 'Kuadran I (Rendah)'; warna = 'bg-emerald-500 text-white'; }
             else { level = 'Sangat Rendah (1)'; kuadran = 'Kuadran I (Sangat Rendah)'; warna = 'bg-blue-500 text-white'; }
 
-            return { skor: val, level: level, kuadran: kuadran, warna: warna };
+            return { skor: val, level, kuadran, warna };
         }
 
-        function showToast(message, type) {
-            if (!type) type = 'success';
-            var container = document.getElementById('toastContainer');
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
             if (!container) return;
-            var toast = document.createElement('div');
-            toast.className = 'px-4 py-3 rounded-xl text-white shadow-lg flex items-center space-x-3 transition-all ' + (
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded-xl text-white shadow-lg flex items-center space-x-3 transition-all transform translate-y-2 opacity-0 ${
                 type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-blue-600'
-            );
-            var icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info';
-            toast.innerHTML = '<i class="fa-solid ' + icon + ' text-lg"></i><span class="text-sm font-medium">' + message + '</span>';
+            }`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info'} text-lg"></i><span class="text-sm font-medium">${message}</span>`;
             container.appendChild(toast);
-            setTimeout(function() {
-                toast.remove();
+            setTimeout(() => { toast.classList.remove('translate-y-2', 'opacity-0'); }, 50);
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
             }, 3500);
         }
 
         function destroyActiveCharts() {
-            Object.keys(chartInstances).forEach(function(k) {
+            Object.keys(chartInstances).forEach(k => {
                 try {
                     if (chartInstances[k]) chartInstances[k].destroy();
                 } catch (e) {}
@@ -357,10 +397,10 @@
         }
 
         // ============================================================================
-        // 4. LOGIN & LAYOUT
+        // 4. LOGIN ANTI-GAGAL & LAYOUT UTAMA
         // ============================================================================
         function renderLogin() {
-            var app = document.getElementById('app');
+            const app = document.getElementById('app');
             if (!app) return;
             app.innerHTML = `
                 <div class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 flex items-center justify-center p-4">
@@ -376,8 +416,8 @@
                                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Username</label>
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-user"></i></span>
-                                    <input type="text" id="usernameInput" required 
-                                        class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-800" placeholder="Masukkan username">
+                                    <input type="text" id="usernameInput" required autocomplete="username" autocapitalize="none"
+                                        class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-800" placeholder="Contoh: admin / direktur / tim_akademik">
                                 </div>
                             </div>
 
@@ -385,8 +425,11 @@
                                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Password</label>
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-lock"></i></span>
-                                    <input type="password" id="passwordInput" required 
-                                        class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-800" placeholder="Masukkan password">
+                                    <input type="password" id="passwordInput" required autocomplete="current-password"
+                                        class="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-800" placeholder="Default: 123">
+                                    <button type="button" onclick="togglePassVisibility()" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600">
+                                        <i id="passEyeIcon" class="fa-solid fa-eye"></i>
+                                    </button>
                                 </div>
                             </div>
 
@@ -395,26 +438,88 @@
                                 <i class="fa-solid fa-arrow-right-to-bracket"></i>
                             </button>
                         </form>
+
+                        <!-- Panel Bantuan Login Cepat & Reset Cache -->
+                        <div class="mt-6 pt-5 border-t border-slate-200 text-left">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[11px] font-bold text-slate-500 uppercase">Klik Cepat Isi Akun (Password: 123):</span>
+                                <button type="button" onclick="resetAuthAccounts()" class="text-[11px] text-rose-600 hover:underline font-semibold">Reset Akun Default</button>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" onclick="quickFillLogin('admin','123')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-semibold transition-all">admin</button>
+                                <button type="button" onclick="quickFillLogin('direktur','123')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-semibold transition-all">direktur</button>
+                                <button type="button" onclick="quickFillLogin('tim_akademik','123')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-semibold transition-all">tim_akademik</button>
+                                <button type="button" onclick="quickFillLogin('tim_umum','123')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-semibold transition-all">tim_umum</button>
+                                <button type="button" onclick="quickFillLogin('prodi_tmip','123')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-semibold transition-all">prodi_tmip</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
         }
 
-        function handleLogin(e) {
-            e.preventDefault();
-            var u = document.getElementById('usernameInput').value.trim();
-            var p = document.getElementById('passwordInput').value.trim();
-            if (!Array.isArray(DB.users) || DB.users.length === 0) {
-                DB.users = JSON.parse(JSON.stringify(DEFAULT_USERS));
+        function togglePassVisibility() {
+            const inp = document.getElementById('passwordInput');
+            const icon = document.getElementById('passEyeIcon');
+            if (!inp) return;
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                if (icon) icon.className = 'fa-solid fa-eye-slash';
+            } else {
+                inp.type = 'password';
+                if (icon) icon.className = 'fa-solid fa-eye';
             }
-            var found = DB.users.find(function(x) { return x.username === u && x.password === p; });
+        }
+
+        function quickFillLogin(u, p) {
+            const uEl = document.getElementById('usernameInput');
+            const pEl = document.getElementById('passwordInput');
+            if (uEl && pEl) {
+                uEl.value = u;
+                pEl.value = p;
+                handleLogin(new Event('submit'));
+            }
+        }
+
+        async function resetAuthAccounts() {
+            DB.users = JSON.parse(JSON.stringify(DEFAULT_USERS));
+            await saveToMySQL();
+            showToast('Seluruh 17 akun berhasil di-reset ke password: 123', 'info');
+        }
+
+        function handleLogin(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            const uInput = document.getElementById('usernameInput');
+            const pInput = document.getElementById('passwordInput');
+            if (!uInput || !pInput) return;
+
+            const u = String(uInput.value || '').trim().toLowerCase();
+            const p = String(pInput.value || '').trim();
+
+            // Pastikan daftar user siempre valid
+            DB.users = ensureDefaultUsersExist(DB.users);
+
+            // 1. Cari di DB.users (Case-Insensitive untuk username)
+            let found = DB.users.find(x =>
+                String(x.username || '').trim().toLowerCase() === u &&
+                String(x.password || '').trim() === p
+            );
+
+            // 2. Fallback: Cari di DEFAULT_USERS jika di DB.users sempat terubah/rusak dari server
+            if (!found) {
+                found = DEFAULT_USERS.find(x =>
+                    String(x.username || '').trim().toLowerCase() === u &&
+                    String(x.password || '').trim() === p
+                );
+            }
+
             if (found) {
                 currentUser = found;
                 localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
-                showToast('Selamat datang, ' + currentUser.name);
+                showToast(`Selamat datang, ${currentUser.name} (${(currentUser.role || '').toUpperCase()})`);
                 renderDashboardLayout();
             } else {
-                showToast('Username atau password salah!', 'error');
+                showToast(`Login gagal! Username "${u}" atau password tidak cocok.`, 'error');
             }
         }
 
@@ -430,19 +535,20 @@
                 renderLogin();
                 return;
             }
-            var app = document.getElementById('app');
-            var roleLabels = {
+            const app = document.getElementById('app');
+            const roleLabels = {
                 admin: 'Administrator Sistem',
                 direktur: 'Direktur',
                 tim_kerja: 'Ketua Tim Kerja',
                 ketua_unit: 'Ketua Prodi / Subbag / Unit'
             };
 
-            var isKaUnit = currentUser.role === 'ketua_unit';
-            var userInitial = (currentUser.name || 'U').charAt(0).toUpperCase();
+            const isKaUnit = currentUser.role === 'ketua_unit';
+            const userInitial = (currentUser.name || 'U').charAt(0).toUpperCase();
 
             app.innerHTML = `
                 <div class="min-h-screen flex bg-slate-100">
+                    <!-- Sidebar -->
                     <aside class="w-72 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20 no-print shrink-0">
                         <div class="p-6 border-b border-slate-800 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shrink-0">
@@ -466,6 +572,7 @@
                             </div>
                         </div>
 
+                        <!-- Navigation Links -->
                         <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto text-sm">
                             <a href="javascript:void(0)" data-tab="dashboard" onclick="switchTab('dashboard')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all">
                                 <i class="fa-solid fa-chart-pie w-5"></i>
@@ -517,6 +624,7 @@
                             </a>
                         </nav>
 
+                        <!-- Footer Sidebar -->
                         <div class="p-4 border-t border-slate-800">
                             <button onclick="logout()" class="w-full flex items-center justify-center space-x-2 py-2.5 px-4 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl font-medium transition-all text-sm">
                                 <i class="fa-solid fa-right-from-bracket"></i>
@@ -525,6 +633,7 @@
                         </div>
                     </aside>
 
+                    <!-- Main Content Area -->
                     <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
                         <header class="bg-white border-b border-slate-200 px-8 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-10 shadow-sm no-print">
                             <div class="flex items-center space-x-4">
@@ -560,7 +669,7 @@
             activeTab = tab;
             destroyActiveCharts();
 
-            document.querySelectorAll('.nav-link').forEach(function(el) {
+            document.querySelectorAll('.nav-link').forEach(el => {
                 if (el.getAttribute('data-tab') === tab) {
                     el.className = 'nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all bg-blue-600 text-white font-semibold shadow-lg';
                 } else {
@@ -568,18 +677,23 @@
                 }
             });
 
-            var content = document.getElementById('mainContent');
+            const content = document.getElementById('mainContent');
             if (!content) return;
 
-            if (tab === 'dashboard') renderDashboardView(content);
-            else if (tab === 'renstra') renderRenstraView(content);
-            else if (tab === 'dokumen') renderDokumenView(content);
-            else if (tab === 'cascading') renderCascadingView(content);
-            else if (tab === 'capaian') renderCapaianView(content);
-            else if (tab === 'risiko') renderRisikoView(content);
-            else if (tab === 'tindaklanjut') renderTindakLanjutMonitorView(content);
-            else if (tab === 'admin') renderAdminView(content);
-            else if (tab === 'laporan') renderLaporanView(content);
+            try {
+                if (tab === 'dashboard') renderDashboardView(content);
+                else if (tab === 'renstra') renderRenstraView(content);
+                else if (tab === 'dokumen') renderDokumenView(content);
+                else if (tab === 'cascading') renderCascadingView(content);
+                else if (tab === 'capaian') renderCapaianView(content);
+                else if (tab === 'risiko') renderRisikoView(content);
+                else if (tab === 'tindaklanjut') renderTindakLanjutMonitorView(content);
+                else if (tab === 'admin') renderAdminView(content);
+                else if (tab === 'laporan') renderLaporanView(content);
+            } catch (err) {
+                console.error("Render View Error:", err);
+                content.innerHTML = `<div class="p-6 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-sm">Terjadi kesalahan tampilan: ${err.message}</div>`;
+            }
         }
 
         // ============================================================================
@@ -587,13 +701,16 @@
         // ============================================================================
         function renderRenstraView(container) {
             document.getElementById('pageTitle').innerText = currentUser.role === 'admin' ? 'Input & Manajemen Renstra (Tier 1-4)' : 'View Renstra (Hierarki Kemenperin s.d Indikator)';
-            var isAdmin = currentUser.role === 'admin';
+            const isAdmin = currentUser.role === 'admin';
 
             container.innerHTML = `
                 <div class="space-y-8">
+                    <!-- A. Tujuan Kemenperin -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">A. Tujuan / Sasaran Strategis Kementerian Perindustrian (Tier 1)</h3>
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">A. Tujuan / Sasaran Strategis Kementerian Perindustrian (Tier 1)</h3>
+                            </div>
                             ${isAdmin ? `<button onclick="openRenstraModal('tujuanKemenperin')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow">Tambah Tujuan Kemenperin</button>` : ''}
                         </div>
                         <div class="overflow-x-auto">
@@ -609,10 +726,11 @@
                                     ${DB.renstraTujuanKemenperin.length === 0 ? '<tr><td colspan="3" class="p-4 text-center text-slate-400">Belum ada data.</td></tr>' : DB.renstraTujuanKemenperin.map((item, idx) => `
                                         <tr class="hover:bg-slate-50">
                                             <td class="p-3 text-center font-bold text-blue-700">${item.kode}</td>
-                                            <td class="p-3 font-semibold text-slate-900">${item.sasaran}</td>${isAdmin ? `
+                                            <td class="p-3 font-semibold text-slate-900">${item.sasaran}</td>
+                                            ${isAdmin ? `
                                                 <td class="p-3 text-center space-x-1">
-                                                    <button onclick="openRenstraModal('tujuanKemenperin', ${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="deleteRenstra('tujuanKemenperin', ${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button>
+                                                    <button onclick="openRenstraModal('tujuanKemenperin', ${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="deleteRenstra('tujuanKemenperin', ${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -622,9 +740,12 @@
                         </div>
                     </div>
 
+                    <!-- B. Sasaran Program BPSDMI -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">B. Sasaran Program dan Indikator BPSDMI (Tier 2)</h3>
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">B. Sasaran Program dan Indikator BPSDMI (Tier 2)</h3>
+                            </div>
                             ${isAdmin ? `<button onclick="openRenstraModal('bpsdmi')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow">Tambah Sasaran BPSDMI</button>` : ''}
                         </div>
                         <div class="overflow-x-auto">
@@ -639,15 +760,16 @@
                                 </thead>
                                 <tbody class="divide-y">
                                     ${DB.renstraBPSDMI.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada data.</td></tr>' : DB.renstraBPSDMI.map((item, idx) => {
-                                        var parent = DB.renstraTujuanKemenperin.find(p => p.id === item.tujuanKemenperinId);
+                                        const parent = DB.renstraTujuanKemenperin.find(p => p.id === item.tujuanKemenperinId);
                                         return `
                                             <tr class="hover:bg-slate-50">
                                                 <td class="p-3 text-center font-bold text-blue-700">${item.kode}</td>
                                                 <td class="p-3 text-slate-600">${parent ? parent.kode + ' - ' + parent.sasaran : '-'}</td>
-                                                <td class="p-3 font-semibold text-slate-900">${item.sasaran}</td>${isAdmin ? `
+                                                <td class="p-3 font-semibold text-slate-900">${item.sasaran}</td>
+                                                ${isAdmin ? `
                                                     <td class="p-3 text-center space-x-1">
-                                                        <button onclick="openRenstraModal('bpsdmi', ${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded"><i class="fa-solid fa-pen"></i></button>
-                                                        <button onclick="deleteRenstra('bpsdmi', ${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button>
+                                                        <button onclick="openRenstraModal('bpsdmi', ${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="deleteRenstra('bpsdmi', ${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                     </td>
                                                 ` : ''}
                                             </tr>
@@ -658,9 +780,12 @@
                         </div>
                     </div>
 
+                    <!-- C. Sasaran Kinerja -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">C. Tujuan / Sasaran Kinerja (Tier 3)</h3>
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">C. Tujuan / Sasaran Kinerja (Tier 3)</h3>
+                            </div>
                             ${isAdmin ? `<button onclick="openRenstraModal('sasaranKinerja')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow">Tambah Sasaran Kinerja</button>` : ''}
                         </div>
                         <div class="overflow-x-auto">
@@ -675,15 +800,16 @@
                                 </thead>
                                 <tbody class="divide-y">
                                     ${DB.renstraSasaranKinerja.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada data.</td></tr>' : DB.renstraSasaranKinerja.map((item, idx) => {
-                                        var parent = DB.renstraBPSDMI.find(p => p.id === item.bpsdmiId);
+                                        const parent = DB.renstraBPSDMI.find(p => p.id === item.bpsdmiId);
                                         return `
                                             <tr class="hover:bg-slate-50">
                                                 <td class="p-3 text-center font-bold text-blue-700">${item.kode}</td>
                                                 <td class="p-3 text-slate-600">${parent ? parent.kode + ' - ' + parent.sasaran : '-'}</td>
-                                                <td class="p-3 font-semibold text-slate-900">${item.sasaranKinerja}</td>${isAdmin ? `
+                                                <td class="p-3 font-semibold text-slate-900">${item.sasaranKinerja}</td>
+                                                ${isAdmin ? `
                                                     <td class="p-3 text-center space-x-1">
-                                                        <button onclick="openRenstraModal('sasaranKinerja', ${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded"><i class="fa-solid fa-pen"></i></button>
-                                                        <button onclick="deleteRenstra('sasaranKinerja', ${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button>
+                                                        <button onclick="openRenstraModal('sasaranKinerja', ${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="deleteRenstra('sasaranKinerja', ${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                     </td>
                                                 ` : ''}
                                             </tr>
@@ -694,6 +820,7 @@
                         </div>
                     </div>
 
+                    <!-- D. Indikator Kinerja & Target 5 Tahun & Anggaran -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
                             <div>
@@ -710,17 +837,17 @@
                                         <th class="p-3">Sasaran Kinerja</th>
                                         <th class="p-3">Nama Indikator Kinerja</th>
                                         <th class="p-3 text-center">Satuan</th>
-                                        <th class="p-3 text-center">2025</th>
-                                        <th class="p-3 text-center">2026</th>
-                                        <th class="p-3 text-center">2027</th>
-                                        <th class="p-3 text-center">2028</th>
-                                        <th class="p-3 text-center">2029</th>
+                                        <th class="p-3 text-center">2025 (Target/Pagu)</th>
+                                        <th class="p-3 text-center">2026 (Target/Pagu)</th>
+                                        <th class="p-3 text-center">2027 (Target/Pagu)</th>
+                                        <th class="p-3 text-center">2028 (Target/Pagu)</th>
+                                        <th class="p-3 text-center">2029 (Target/Pagu)</th>
                                         ${isAdmin ? '<th class="p-3 text-center">Aksi</th>' : ''}
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y">
                                     ${DB.renstraIndikatorKinerja.length === 0 ? '<tr><td colspan="10" class="p-4 text-center text-slate-400">Belum ada indikator kinerja terinput.</td></tr>' : DB.renstraIndikatorKinerja.map((item, idx) => {
-                                        var parent = DB.renstraSasaranKinerja.find(p => p.id === item.sasaranKinerjaId);
+                                        const parent = DB.renstraSasaranKinerja.find(p => p.id === item.sasaranKinerjaId);
                                         return `
                                             <tr class="hover:bg-slate-50">
                                                 <td class="p-3 text-center font-bold text-blue-700">${item.kodeIndikator}</td>
@@ -731,10 +858,11 @@
                                                 <td class="p-3 text-center">T: ${item.target2026}<br><span class="text-[10px] text-emerald-700 font-bold">Rp ${Number(item.anggaran2026 || 0).toLocaleString('id-ID')}</span></td>
                                                 <td class="p-3 text-center">T: ${item.target2027}<br><span class="text-[10px] text-emerald-700 font-bold">Rp ${Number(item.anggaran2027 || 0).toLocaleString('id-ID')}</span></td>
                                                 <td class="p-3 text-center">T: ${item.target2028}<br><span class="text-[10px] text-emerald-700 font-bold">Rp ${Number(item.anggaran2028 || 0).toLocaleString('id-ID')}</span></td>
-                                                <td class="p-3 text-center">T: ${item.target2029}<br><span class="text-[10px] text-emerald-700 font-bold">Rp ${Number(item.anggaran2029 \vert{}\vert{} 0).toLocaleString('id-ID')}</span></td>${isAdmin ? `
+                                                <td class="p-3 text-center">T: ${item.target2029}<br><span class="text-[10px] text-emerald-700 font-bold">Rp ${Number(item.anggaran2029 || 0).toLocaleString('id-ID')}</span></td>
+                                                ${isAdmin ? `
                                                     <td class="p-3 text-center space-x-1">
-                                                        <button onclick="openRenstraModal('indikatorKinerja', ${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded"><i class="fa-solid fa-pen"></i></button>
-                                                        <button onclick="deleteRenstra('indikatorKinerja', ${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button>
+                                                        <button onclick="openRenstraModal('indikatorKinerja', ${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="deleteRenstra('indikatorKinerja', ${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                     </td>
                                                 ` : ''}
                                             </tr>
@@ -746,10 +874,12 @@
                     </div>
 
                     ${isAdmin ? `
+                        <!-- E. Admin Input Realisasi Anggaran -->
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                             <div class="flex justify-between items-center border-b pb-4">
                                 <div>
                                     <h3 class="font-bold text-slate-900 text-base">E. Input Realisasi Anggaran Riil per Indikator, Tahun & Triwulan</h3>
+                                    <p class="text-xs text-slate-500">Realisasi triwulanan (TW 4 dianggap realisasi tahunan penuh). Mendukung edit & hapus.</p>
                                 </div>
                                 <button onclick="openRealisasiAnggaranModal('add')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow">Input Realisasi Anggaran</button>
                             </div>
@@ -760,17 +890,17 @@
                                             <th class="p-3">Tahun</th>
                                             <th class="p-3">Triwulan</th>
                                             <th class="p-3">Indikator Kinerja</th>
-                                            <th class="p-3 text-center">Pagu Anggaran</th>
-                                            <th class="p-3 text-center">Realisasi Anggaran Riil</th>
-                                            <th class="p-3 text-center">% Realisasi</th>
+                                            <th class="p-3 text-center">Pagu Anggaran (Rp)</th>
+                                            <th class="p-3 text-center">Realisasi Anggaran Riil (Rp)</th>
+                                            <th class="p-3 text-center">% Realisasi Anggaran</th>
                                             <th class="p-3 text-center">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
-                                        ${DB.realisasiAnggaranAdmin.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-slate-400">Belum ada realisasi anggaran.</td></tr>' : DB.realisasiAnggaranAdmin.map((ra, idx) => {
-                                            var ik = DB.renstraIndikatorKinerja.find(x => x.id === ra.indikatorId);
-                                            var pagu = ik ? (ik['anggaran' + ra.tahun] || 100000000) : 100000000;
-                                            var pReal = pagu > 0 ? ((ra.realisasiAnggaran / pagu) * 100).toFixed(1) : 0;
+                                        ${DB.realisasiAnggaranAdmin.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-slate-400">Belum ada realisasi anggaran yang diinput admin.</td></tr>' : DB.realisasiAnggaranAdmin.map((ra, idx) => {
+                                            const ik = DB.renstraIndikatorKinerja.find(x => x.id === ra.indikatorId);
+                                            const pagu = ik ? (ik['anggaran' + ra.tahun] || 100000000) : 100000000;
+                                            const pReal = pagu > 0 ? ((ra.realisasiAnggaran / pagu) * 100).toFixed(1) : 0;
                                             return `
                                                 <tr class="hover:bg-slate-50">
                                                     <td class="p-3 font-bold text-blue-700">${ra.tahun}</td>
@@ -780,8 +910,8 @@
                                                     <td class="p-3 text-center font-bold text-emerald-700">Rp ${Number(ra.realisasiAnggaran).toLocaleString('id-ID')}</td>
                                                     <td class="p-3 text-center font-bold">${pReal}%</td>
                                                     <td class="p-3 text-center space-x-1">
-                                                        <button onclick="openRealisasiAnggaranModal('edit', ${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded"><i class="fa-solid fa-pen"></i></button>
-                                                        <button onclick="deleteRealisasiAnggaran(${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button>
+                                                        <button onclick="openRealisasiAnggaranModal('edit', ${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="deleteRealisasiAnggaran(${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                     </td>
                                                 </tr>
                                             `;
@@ -793,6 +923,7 @@
                     ` : ''}
                 </div>
 
+                <!-- Renstra Modal -->
                 <div id="renstraModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-4">
@@ -803,6 +934,7 @@
                     </div>
                 </div>
 
+                <!-- Realisasi Anggaran Admin Modal -->
                 <div id="realisasiAnggaranModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
@@ -814,19 +946,26 @@
                             <div>
                                 <label class="block font-semibold mb-1">Tahun Anggaran</label>
                                 <select id="raTahun" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold">
-                                    <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                    <option value="2028">2028</option>
+                                    <option value="2029">2029</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1">Triwulan / Periode</label>
                                 <select id="raTriwulan" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold">
-                                    <option value="TW 1">TW 1</option><option value="TW 2">TW 2</option><option value="TW 3">TW 3</option><option value="TW 4">TW 4</option>
+                                    <option value="TW 1">Triwulan 1 (TW 1)</option>
+                                    <option value="TW 2">Triwulan 2 (TW 2)</option>
+                                    <option value="TW 3">Triwulan 3 (TW 3)</option>
+                                    <option value="TW 4">Triwulan 4 (TW 4 - Capaian Tahunan)</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1">Pilih Indikator Kinerja</label>
                                 <select id="raIndikatorId" required class="w-full p-3 bg-slate-50 border rounded-xl">
-                                    ${DB.renstraIndikatorKinerja.map(ik => `<option value="${ik.id}">${ik.kodeIndikator} -${ik.namaIndikator}</option>`).join('')}
+                                    ${DB.renstraIndikatorKinerja.map(ik => `<option value="${ik.id}">${ik.kodeIndikator} - ${ik.namaIndikator}</option>`).join('')}
                                 </select>
                             </div>
                             <div>
@@ -843,11 +982,10 @@
             `;
         }
 
-        var currentRenstraType = '';
-        var editingRenstraIndex = -1;
+        let currentRenstraType = '';
+        let editingRenstraIndex = -1;
 
-        function openRenstraModal(type, idx) {
-            if (idx === undefined) idx = -1;
+        function openRenstraModal(type, idx = -1) {
             if (type === 'bpsdmi' && DB.renstraTujuanKemenperin.length === 0) {
                 showToast('Isi Tujuan Kemenperin (Tier 1) terlebih dahulu!', 'error');
                 return;
@@ -863,48 +1001,50 @@
 
             currentRenstraType = type;
             editingRenstraIndex = idx;
-            var modal = document.getElementById('renstraModal');
-            var titleEl = document.getElementById('renstraModalTitle');
-            var formEl = document.getElementById('renstraFormElement');
+            const modal = document.getElementById('renstraModal');
+            const titleEl = document.getElementById('renstraModalTitle');
+            const formEl = document.getElementById('renstraFormElement');
             modal.classList.remove('hidden'); modal.classList.add('flex');
 
-            var isEdit = idx !== -1;
+            const isEdit = idx !== -1;
 
             if (type === 'tujuanKemenperin') {
-                var item = isEdit ? DB.renstraTujuanKemenperin[idx] : { kode: '', sasaran: '' };
+                const item = isEdit ? DB.renstraTujuanKemenperin[idx] : { kode: '', sasaran: '' };
                 titleEl.innerText = isEdit ? 'Edit Tujuan Kemenperin' : 'Input Tujuan / Sasaran Strategis Kemenperin (Tier 1)';
                 formEl.innerHTML = `
                     <div><label class="block font-semibold mb-1">Kode Tujuan</label><input type="text" id="r_kode" required value="${item.kode}" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: SS-01"></div>
-                    <div><label class="block font-semibold mb-1">Uraian Sasaran Strategis</label><textarea id="r_sasaran" rows="3" required class="w-full p-3 bg-slate-50 border rounded-xl">${item.sasaran}</textarea></div>
+                    <div><label class="block font-semibold mb-1">Uraian Sasaran Strategis</label><textarea id="r_sasaran" rows="3" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Uraian sasaran...">${item.sasaran}</textarea></div>
                     <div class="flex justify-end space-x-2 pt-2"><button type="button" onclick="closeRenstraModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl">Simpan</button></div>
                 `;
             } else if (type === 'bpsdmi') {
-                var item = isEdit ? DB.renstraBPSDMI[idx] : { tujuanKemenperinId: '', kode: '', sasaran: '' };
+                const item = isEdit ? DB.renstraBPSDMI[idx] : { tujuanKemenperinId: '', kode: '', sasaran: '' };
                 titleEl.innerText = isEdit ? 'Edit Sasaran Program BPSDMI' : 'Input Sasaran Program BPSDMI (Tier 2)';
                 formEl.innerHTML = `
-                    <div><label class="block font-semibold mb-1">Pilih Tujuan Kemenperin</label><select id="r_parent" required class="w-full p-3 bg-slate-50 border rounded-xl">${DB.renstraTujuanKemenperin.map(x => `<option value="${x.id}" ${item.tujuanKemenperinId === x.id ? 'selected' : ''}>${x.kode} -${x.sasaran}</option>`).join('')}</select></div>
+                    <div><label class="block font-semibold mb-1">Pilih Tujuan Kemenperin (Intervensi)</label><select id="r_parent" required class="w-full p-3 bg-slate-50 border rounded-xl">${DB.renstraTujuanKemenperin.map(x => `<option value="${x.id}" ${item.tujuanKemenperinId === x.id ? 'selected' : ''}>${x.kode} - ${x.sasaran}</option>`).join('')}</select></div>
                     <div><label class="block font-semibold mb-1">Kode Sasaran BPSDMI</label><input type="text" id="r_kode" required value="${item.kode}" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: SP-01"></div>
-                    <div><label class="block font-semibold mb-1">Uraian Sasaran Program BPSDMI</label><textarea id="r_sasaran" rows="3" required class="w-full p-3 bg-slate-50 border rounded-xl">${item.sasaran}</textarea></div>
+                    <div><label class="block font-semibold mb-1">Uraian Sasaran Program BPSDMI</label><textarea id="r_sasaran" rows="3" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Uraian sasaran BPSDMI...">${item.sasaran}</textarea></div>
                     <div class="flex justify-end space-x-2 pt-2"><button type="button" onclick="closeRenstraModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl">Simpan</button></div>
                 `;
             } else if (type === 'sasaranKinerja') {
-                var item = isEdit ? DB.renstraSasaranKinerja[idx] : { bpsdmiId: '', kode: '', sasaranKinerja: '' };
+                const item = isEdit ? DB.renstraSasaranKinerja[idx] : { bpsdmiId: '', kode: '', sasaranKinerja: '' };
                 titleEl.innerText = isEdit ? 'Edit Sasaran Kinerja' : 'Input Tujuan / Sasaran Kinerja Satker (Tier 3)';
                 formEl.innerHTML = `
-                    <div><label class="block font-semibold mb-1">Pilih Sasaran BPSDMI</label><select id="r_parent" required class="w-full p-3 bg-slate-50 border rounded-xl">${DB.renstraBPSDMI.map(x => `<option value="${x.id}" ${item.bpsdmiId === x.id ? 'selected' : ''}>${x.kode} -${x.sasaran}</option>`).join('')}</select></div>
+                    <div><label class="block font-semibold mb-1">Pilih Sasaran BPSDMI (Intervensi)</label><select id="r_parent" required class="w-full p-3 bg-slate-50 border rounded-xl">${DB.renstraBPSDMI.map(x => `<option value="${x.id}" ${item.bpsdmiId === x.id ? 'selected' : ''}>${x.kode} - ${x.sasaran}</option>`).join('')}</select></div>
                     <div><label class="block font-semibold mb-1">Kode Sasaran Kinerja</label><input type="text" id="r_kode" required value="${item.kode}" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: SK-01"></div>
-                    <div><label class="block font-semibold mb-1">Uraian Tujuan / Sasaran Kinerja</label><textarea id="r_sasaranKinerja" rows="3" required class="w-full p-3 bg-slate-50 border rounded-xl">${item.sasaranKinerja}</textarea></div>
+                    <div><label class="block font-semibold mb-1">Uraian Tujuan / Sasaran Kinerja</label><textarea id="r_sasaranKinerja" rows="3" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Uraian sasaran kinerja satker...">${item.sasaranKinerja}</textarea></div>
                     <div class="flex justify-end space-x-2 pt-2"><button type="button" onclick="closeRenstraModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl">Simpan</button></div>
                 `;
             } else if (type === 'indikatorKinerja') {
-                var item = isEdit ? DB.renstraIndikatorKinerja[idx] : { sasaranKinerjaId: '', kodeIndikator: '', namaIndikator: '', satuan: '%', target2025: 100, target2026: 100, target2027: 100, target2028: 100, target2029: 100, anggaran2025: 0, anggaran2026: 0, anggaran2027: 0, anggaran2028: 0, anggaran2029: 0 };
-                titleEl.innerText = isEdit ? 'Edit Indikator Kinerja' : 'Input Indikator Kinerja & Target 5 Tahun (Tier 4)';
+                const item = isEdit ? DB.renstraIndikatorKinerja[idx] : { sasaranKinerjaId: '', kodeIndikator: '', namaIndikator: '', satuan: '%', target2025: 100, target2026: 100, target2027: 100, target2028: 100, target2029: 100, anggaran2025: 0, anggaran2026: 0, anggaran2027: 0, anggaran2028: 0, anggaran2029: 0 };
+                titleEl.innerText = isEdit ? 'Edit Indikator Kinerja & Anggaran' : 'Input Indikator Kinerja & Target 5 Tahun (Tier 4)';
                 formEl.innerHTML = `
-                    <div><label class="block font-semibold mb-1">Pilih Sasaran Kinerja</label><select id="r_parent" required class="w-full p-3 bg-slate-50 border rounded-xl">${DB.renstraSasaranKinerja.map(x => `<option value="${x.id}" ${item.sasaranKinerjaId === x.id ? 'selected' : ''}>${x.kode} -${x.sasaranKinerja}</option>`).join('')}</select></div>
+                    <div><label class="block font-semibold mb-1">Pilih Sasaran Kinerja (Intervensi)</label><select id="r_parent" required class="w-full p-3 bg-slate-50 border rounded-xl">${DB.renstraSasaranKinerja.map(x => `<option value="${x.id}" ${item.sasaranKinerjaId === x.id ? 'selected' : ''}>${x.kode} - ${x.sasaranKinerja}</option>`).join('')}</select></div>
                     <div><label class="block font-semibold mb-1">Kode Indikator</label><input type="text" id="r_kodeIndikator" required value="${item.kodeIndikator}" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: IK-01"></div>
-                    <div><label class="block font-semibold mb-1">Nama Indikator Kinerja</label><textarea id="r_namaIndikator" rows="2" required class="w-full p-3 bg-slate-50 border rounded-xl">${item.namaIndikator}</textarea></div>
-                    <div><label class="block font-semibold mb-1">Satuan</label><input type="text" id="r_satuan" required value="${item.satuan}" class="w-full p-3 bg-slate-50 border rounded-xl"></div>
+                    <div><label class="block font-semibold mb-1">Nama Indikator Kinerja</label><textarea id="r_namaIndikator" rows="2" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Nama indikator utama...">${item.namaIndikator}</textarea></div>
+                    <div><label class="block font-semibold mb-1">Satuan</label><input type="text" id="r_satuan" required value="${item.satuan}" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="%, Dokumen, Orang"></div>
+                    
                     <div class="space-y-3 bg-slate-50 p-4 rounded-xl border">
+                        <h4 class="font-bold text-xs text-slate-700">Target & Alokasi Pagu Anggaran 2025 - 2029</h4>
                         <div class="grid grid-cols-2 gap-2">
                             <div><label class="block text-xs font-semibold mb-1">Target 2025</label><input type="number" step="any" id="r_2025" required value="${item.target2025}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
                             <div><label class="block text-xs font-semibold mb-1">Pagu 2025 (Rp)</label><input type="number" id="r_ang2025" required value="${item.anggaran2025 || 0}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
@@ -932,40 +1072,57 @@
         }
         function closeRenstraModal() { document.getElementById('renstraModal').classList.remove('flex'); document.getElementById('renstraModal').classList.add('hidden'); }
 
-        function openRealisasiAnggaranModal(mode, idx) {
-            if (idx === undefined) idx = -1;
+        function openRealisasiAnggaranModal(mode, idx = -1) {
             if (DB.renstraIndikatorKinerja.length === 0) {
                 showToast('Belum ada Indikator Kinerja Renstra terinput!', 'error');
                 return;
             }
-            var modal = document.getElementById('realisasiAnggaranModal');
-            modal.classList.remove('hidden'); modal.classList.add('flex');
+            const modal = document.getElementById('realisasiAnggaranModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
             document.getElementById('editRaIndex').value = idx;
             if (mode === 'edit' && idx !== -1) {
-                var item = DB.realisasiAnggaranAdmin[idx];
+                document.getElementById('raModalTitle').innerText = 'Edit Realisasi Anggaran Riil';
+                const item = DB.realisasiAnggaranAdmin[idx];
                 document.getElementById('raTahun').value = item.tahun;
                 document.getElementById('raTriwulan').value = item.triwulan;
                 document.getElementById('raIndikatorId').value = item.indikatorId;
                 document.getElementById('raNilai').value = item.realisasiAnggaran;
+            } else {
+                document.getElementById('raModalTitle').innerText = 'Input Realisasi Anggaran Riil';
+                document.getElementById('editRaIndex').value = -1;
+                document.getElementById('raNilai').value = '45000000';
             }
         }
         function closeRealisasiAnggaranModal() { document.getElementById('realisasiAnggaranModal').classList.remove('flex'); document.getElementById('realisasiAnggaranModal').classList.add('hidden'); }
 
         async function saveRealisasiAnggaran(e) {
             e.preventDefault();
-            var idx = parseInt(document.getElementById('editRaIndex').value, 10);
-            var raObj = {
+            const idx = parseInt(document.getElementById('editRaIndex').value);
+            const tahun = document.getElementById('raTahun').value;
+            const triwulan = document.getElementById('raTriwulan').value;
+            const indikatorId = document.getElementById('raIndikatorId').value;
+            const realisasiAnggaran = parseFloat(document.getElementById('raNilai').value) || 0;
+
+            const raObj = {
                 id: idx !== -1 ? DB.realisasiAnggaranAdmin[idx].id : 'ra_' + Date.now(),
-                tahun: document.getElementById('raTahun').value,
-                triwulan: document.getElementById('raTriwulan').value,
-                indikatorId: document.getElementById('raIndikatorId').value,
-                realisasiAnggaran: parseFloat(document.getElementById('raNilai').value) || 0
+                tahun,
+                triwulan,
+                indikatorId,
+                realisasiAnggaran
             };
-            if (idx !== -1) DB.realisasiAnggaranAdmin[idx] = raObj;
-            else DB.realisasiAnggaranAdmin.push(raObj);
+
+            if (idx !== -1) {
+                DB.realisasiAnggaranAdmin[idx] = raObj;
+                showToast('Realisasi anggaran berhasil diperbarui!');
+            } else {
+                DB.realisasiAnggaranAdmin.push(raObj);
+                showToast('Realisasi anggaran riil berhasil disimpan!');
+            }
+
             await saveToMySQL();
             closeRealisasiAnggaranModal();
-            showToast('Realisasi anggaran berhasil disimpan!');
             renderRenstraView(document.getElementById('mainContent'));
         }
 
@@ -978,32 +1135,32 @@
 
         async function saveRenstra(e) {
             e.preventDefault();
-            var isEdit = editingRenstraIndex !== -1;
+            const isEdit = editingRenstraIndex !== -1;
 
             if (currentRenstraType === 'tujuanKemenperin') {
-                var data = { id: isEdit ? DB.renstraTujuanKemenperin[editingRenstraIndex].id : 'tk_' + Date.now(), kode: document.getElementById('r_kode').value, sasaran: document.getElementById('r_sasaran').value };
+                const data = { id: isEdit ? DB.renstraTujuanKemenperin[editingRenstraIndex].id : 'tk_' + Date.now(), kode: document.getElementById('r_kode').value, sasaran: document.getElementById('r_sasaran').value };
                 if (isEdit) DB.renstraTujuanKemenperin[editingRenstraIndex] = data;
                 else DB.renstraTujuanKemenperin.push(data);
             } else if (currentRenstraType === 'bpsdmi') {
-                var data = { id: isEdit ? DB.renstraBPSDMI[editingRenstraIndex].id : 'bp_' + Date.now(), tujuanKemenperinId: document.getElementById('r_parent').value, kode: document.getElementById('r_kode').value, sasaran: document.getElementById('r_sasaran').value };
+                const data = { id: isEdit ? DB.renstraBPSDMI[editingRenstraIndex].id : 'bp_' + Date.now(), tujuanKemenperinId: document.getElementById('r_parent').value, kode: document.getElementById('r_kode').value, sasaran: document.getElementById('r_sasaran').value };
                 if (isEdit) DB.renstraBPSDMI[editingRenstraIndex] = data;
                 else DB.renstraBPSDMI.push(data);
             } else if (currentRenstraType === 'sasaranKinerja') {
-                var data = { id: isEdit ? DB.renstraSasaranKinerja[editingRenstraIndex].id : 'sk_' + Date.now(), bpsdmiId: document.getElementById('r_parent').value, kode: document.getElementById('r_kode').value, sasaranKinerja: document.getElementById('r_sasaranKinerja').value };
+                const data = { id: isEdit ? DB.renstraSasaranKinerja[editingRenstraIndex].id : 'sk_' + Date.now(), bpsdmiId: document.getElementById('r_parent').value, kode: document.getElementById('r_kode').value, sasaranKinerja: document.getElementById('r_sasaranKinerja').value };
                 if (isEdit) DB.renstraSasaranKinerja[editingRenstraIndex] = data;
                 else DB.renstraSasaranKinerja.push(data);
             } else if (currentRenstraType === 'indikatorKinerja') {
-                var data = {
+                const data = {
                     id: isEdit ? DB.renstraIndikatorKinerja[editingRenstraIndex].id : 'ik_' + Date.now(),
                     sasaranKinerjaId: document.getElementById('r_parent').value,
                     kodeIndikator: document.getElementById('r_kodeIndikator').value,
                     namaIndikator: document.getElementById('r_namaIndikator').value,
                     satuan: document.getElementById('r_satuan').value,
-                    target2025: parseFloat(document.getElementById('r_2025').value) || 0,
-                    target2026: parseFloat(document.getElementById('r_2026').value) || 0,
-                    target2027: parseFloat(document.getElementById('r_2027').value) || 0,
-                    target2028: parseFloat(document.getElementById('r_2028').value) || 0,
-                    target2029: parseFloat(document.getElementById('r_2029').value) || 0,
+                    target2025: parseFloat(document.getElementById('r_2025').value),
+                    target2026: parseFloat(document.getElementById('r_2026').value),
+                    target2027: parseFloat(document.getElementById('r_2027').value),
+                    target2028: parseFloat(document.getElementById('r_2028').value),
+                    target2029: parseFloat(document.getElementById('r_2029').value),
                     anggaran2025: parseFloat(document.getElementById('r_ang2025').value) || 0,
                     anggaran2026: parseFloat(document.getElementById('r_ang2026').value) || 0,
                     anggaran2027: parseFloat(document.getElementById('r_ang2027').value) || 0,
@@ -1020,14 +1177,36 @@
         }
 
         async function deleteRenstra(type, idx) {
-            if (!confirm('Hapus data Renstra ini?')) return;
-            if (type === 'tujuanKemenperin') DB.renstraTujuanKemenperin.splice(idx, 1);
-            else if (type === 'bpsdmi') DB.renstraBPSDMI.splice(idx, 1);
-            else if (type === 'sasaranKinerja') DB.renstraSasaranKinerja.splice(idx, 1);
-            else if (type === 'indikatorKinerja') DB.renstraIndikatorKinerja.splice(idx, 1);
-            await saveToMySQL();
-            showToast('Data berhasil dihapus.', 'info');
-            renderRenstraView(document.getElementById('mainContent'));
+            let canDelete = true;
+            if (type === 'tujuanKemenperin') {
+                const item = DB.renstraTujuanKemenperin[idx];
+                if (DB.renstraBPSDMI.some(b => b.tujuanKemenperinId === item.id)) canDelete = false;
+            } else if (type === 'bpsdmi') {
+                const item = DB.renstraBPSDMI[idx];
+                if (DB.renstraSasaranKinerja.some(s => s.bpsdmiId === item.id)) canDelete = false;
+            } else if (type === 'sasaranKinerja') {
+                const item = DB.renstraSasaranKinerja[idx];
+                if (DB.renstraIndikatorKinerja.some(i => i.sasaranKinerjaId === item.id)) canDelete = false;
+            } else if (type === 'indikatorKinerja') {
+                const item = DB.renstraIndikatorKinerja[idx];
+                if (DB.cascadingDirektur.some(c => c.indikatorId === item.id)) canDelete = false;
+            }
+
+            if (!canDelete) {
+                showToast('Data ini tidak dapat dihapus karena sudah digunakan dalam cascading!', 'error');
+                return;
+            }
+
+            if (confirm('Apakah Anda yakin ingin menghapus data Renstra ini?')) {
+                if (type === 'tujuanKemenperin') DB.renstraTujuanKemenperin.splice(idx, 1);
+                else if (type === 'bpsdmi') DB.renstraBPSDMI.splice(idx, 1);
+                else if (type === 'sasaranKinerja') DB.renstraSasaranKinerja.splice(idx, 1);
+                else if (type === 'indikatorKinerja') DB.renstraIndikatorKinerja.splice(idx, 1);
+                
+                await saveToMySQL();
+                showToast('Data berhasil dihapus.', 'info');
+                renderRenstraView(document.getElementById('mainContent'));
+            }
         }
 
         // ============================================================================
@@ -1035,7 +1214,7 @@
         // ============================================================================
         function renderDokumenView(container) {
             document.getElementById('pageTitle').innerText = 'Dokumen Perencanaan Visi, Misi, Tujuan & Dokumen Utama';
-            var isAdmin = currentUser.role === 'admin';
+            const isAdmin = currentUser.role === 'admin';
 
             container.innerHTML = `
                 <div class="space-y-8">
@@ -1044,38 +1223,80 @@
                             <h2 class="text-xl font-bold text-slate-900">VISI, MISI & TUJUAN</h2>
                             <p class="text-xs text-blue-700 font-semibold uppercase tracking-wider mt-0.5">Politeknik Industri Petrokimia Banten</p>
                         </div>
+
                         <div class="space-y-4 text-sm text-slate-700">
                             <div>
                                 <h3 class="font-bold text-base text-blue-800">VISI</h3>
                                 <p class="mt-1 bg-slate-50 p-4 rounded-xl border italic">"Sebagai penyelenggara pendidikan vokasi industri yang unggul (excellence) dan berdaya saing global di bidang Industri Petrokimia pada tahun 2030"</p>
                             </div>
+
+                            <div>
+                                <h3 class="font-bold text-base text-blue-800">MISI</h3>
+                                <ol class="list-decimal list-inside space-y-1.5 mt-2 bg-slate-50 p-4 rounded-xl border">
+                                    <li>Menyelenggarakan Pendidikan Tinggi Vokasi Industri sistem ganda pembelajaran Science, Technology, Engineering, and Mathematics (STEM) berstandar global.</li>
+                                    <li>Melaksanakan penelitian terapan untuk pemecahan masalah di sektor industri prioritas.</li>
+                                    <li>Melaksanakan pengabdian masyarakat dalam pengembangan ekosistem industri kecil dan menengah.</li>
+                                    <li>Mengembangankan kompetensi transformasi digital "industri 4.0" melalui pembangunan Digital Capability Centre (DCC) sebagai Satelit Pusat Inovasi Industri Digital Industri (PIDI) 4.0.</li>
+                                    <li>Membangun dan mengembangkan kelembagaan inkubator bisnis industri yang terintegrasi dengan pemangku kepentingan terkait.</li>
+                                    <li>Mengembangkan skema kompetensi dan uji kompetensi.</li>
+                                    <li>Mengembangkan kelas industri untuk memenuhi kebutuhan tenaga kerja industri (tailor made).</li>
+                                </ol>
+                            </div>
+
+                            <div>
+                                <h3 class="font-bold text-base text-blue-800">TUJUAN</h3>
+                                <ul class="space-y-2 mt-2 bg-slate-50 p-4 rounded-xl border">
+                                    <li><strong>a.</strong> Menghasilkan lulusan diploma, sarjana terapan, magister terapan dan/atau doctor terapan yang kompeten sesuai kebutuhan industri dengan menerapkan pembelajaran Science, Technology, Engineering, and Mathematics (STEM) berstandar global dan pendidikan sistem ganda.</li>
+                                    <li><strong>b.</strong> Menghasilkan penelitian terapan untuk pemecahan permasalahan di sektor industri Petrokimia.</li>
+                                    <li><strong>c.</strong> Menghasilkan kegiatan pengabdian masyarakat dalam pengembangan ekosistem Industri Kecil dan Menengah.</li>
+                                    <li><strong>d.</strong> Mewujudkan layanan transformasi digital industri 4.0 melalui pembangunan unit pengembangan (Capability Centre) 4.0 sebagai Satelit PIDI 4.0.</li>
+                                    <li><strong>e.</strong> Menghasilkan wirausaha industri melalui inkubator bisnis industri yang terintegrasi dengan pemangku kepentingan terkait.</li>
+                                    <li><strong>f.</strong> Meningkatnya skema kompetensi dan uji kompetensi di Politeknik Industri Petrokimia Banten.</li>
+                                    <li><strong>g.</strong> Mewujudkan kelas industri untuk memenuhi kebutuhan tenaga kerja industri (tailor made).</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-                        <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">Daftar Dokumen Perencanaan & Rencana Strategis</h3>
-                            ${isAdmin ? `<button onclick="openDokumenModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow">Tambah Dokumen</button>` : ''}
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">Daftar Dokumen Perencanaan & Rencana Strategis</h3>
+                                <p class="text-xs text-slate-500">Kelola dan urutkan dokumen perencanaan institusi</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <select id="sortDokumenBy" onchange="renderDokumenView(document.getElementById('mainContent'))" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                    <option value="nama">Urutkan Berdasarkan Nama</option>
+                                    <option value="tahun">Urutkan Berdasarkan Tahun</option>
+                                    <option value="kategori">Urutkan Berdasarkan Kategori</option>
+                                </select>
+                                ${isAdmin ? `<button onclick="openDokumenModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow">Tambah Dokumen</button>` : ''}
+                            </div>
                         </div>
+
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead class="bg-slate-50 text-slate-700 font-semibold border-b">
                                     <tr>
                                         <th class="p-3">Nama Dokumen</th>
-                                        <th class="p-3">Kategori</th>
-                                        <th class="p-3 text-center">Tahun</th>
-                                        <th class="p-3">Link</th>
+                                        <th class="p-3">Kategori Dokumen</th>
+                                        <th class="p-3 text-center">Periode / Tahun</th>
+                                        <th class="p-3">Link Dokumen</th>
                                         ${isAdmin ? '<th class="p-3 text-center">Aksi</th>' : ''}
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y">
-                                    ${(DB.dokumenPerencanaan || []).map((d, idx) => `
+                                    ${getSortedDokumen().length === 0 ? '<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada dokumen perencanaan terinput.</td></tr>' : getSortedDokumen().map((d) => `
                                         <tr class="hover:bg-slate-50">
                                             <td class="p-3 font-semibold text-slate-900">${d.nama}</td>
                                             <td class="p-3"><span class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full font-medium text-[10px]">${d.kategori}</span></td>
                                             <td class="p-3 text-center font-bold text-slate-700">${d.tahun}</td>
-                                            <td class="p-3"><a href="${d.link}" target="_blank" class="text-blue-600 underline">Buka Dokumen</a></td>
-                                            ${isAdmin ? `<td class="p-3 text-center"><button onclick="deleteDokumen(${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button></td>` : ''}
+                                            <td class="p-3"><a href="${d.link}" target="_blank" class="text-blue-600 underline font-medium"><i class="fa-solid fa-link mr-1"></i> Buka Dokumen</a></td>
+                                            ${isAdmin ? `
+                                                <td class="p-3 text-center">
+                                                    <button onclick="deleteDokumen(${d._origIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                </td>
+                                            ` : ''}
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -1084,17 +1305,39 @@
                     </div>
                 </div>
 
+                <!-- Modal Tambah Dokumen -->
                 <div id="dokumenModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-                        <h3 class="font-bold text-slate-900 text-base border-b pb-3">Tambah Dokumen Perencanaan</h3>
-                        <form onsubmit="saveDokumen(event)" class="space-y-3 text-sm">
-                            <div><label class="block font-semibold mb-1">Nama Dokumen</label><input type="text" id="docNama" required class="w-full p-2.5 bg-slate-50 border rounded-xl"></div>
-                            <div><label class="block font-semibold mb-1">Kategori</label><select id="docKategori" class="w-full p-2.5 bg-slate-50 border rounded-xl"><option value="Renstra">Renstra</option><option value="RKA-KL">RKA-KL</option><option value="IKU">IKU</option><option value="Lainnya">Lainnya</option></select></div>
-                            <div><label class="block font-semibold mb-1">Tahun</label><input type="text" id="docTahun" required class="w-full p-2.5 bg-slate-50 border rounded-xl"></div>
-                            <div><label class="block font-semibold mb-1">Link URL</label><input type="url" id="docLink" required class="w-full p-2.5 bg-slate-50 border rounded-xl"></div>
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <h3 class="font-bold text-slate-900 text-base">Tambah Dokumen Perencanaan</h3>
+                            <button onclick="closeDokumenModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <form onsubmit="saveDokumen(event)" class="space-y-4 text-sm">
+                            <div>
+                                <label class="block font-semibold mb-1">Nama Dokumen</label>
+                                <input type="text" id="docNama" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: Renstra Politeknik 2025-2029">
+                            </div>
+                            <div>
+                                <label class="block font-semibold mb-1">Kategori Dokumen</label>
+                                <select id="docKategori" class="w-full p-3 bg-slate-50 border rounded-xl">
+                                    <option value="Renstra">Renstra</option>
+                                    <option value="RKA-KL">RKA-KL</option>
+                                    <option value="IKU">IKU</option>
+                                    <option value="SOP & Pedoman">SOP & Pedoman</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-semibold mb-1">Periode / Tahun</label>
+                                <input type="text" id="docTahun" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 2025-2029 / 2025">
+                            </div>
+                            <div>
+                                <label class="block font-semibold mb-1">Link Dokumen (URL)</label>
+                                <input type="url" id="docLink" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="https://drive.google.com/...">
+                            </div>
                             <div class="flex justify-end space-x-2 pt-2">
                                 <button type="button" onclick="closeDokumenModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button>
-                                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl">Simpan</button>
+                                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl">Simpan Dokumen</button>
                             </div>
                         </form>
                     </div>
@@ -1102,8 +1345,18 @@
             `;
         }
 
+        function getSortedDokumen() {
+            const sortBy = document.getElementById('sortDokumenBy') ? document.getElementById('sortDokumenBy').value : 'nama';
+            let docs = (DB.dokumenPerencanaan || []).map((d, idx) => ({ ...d, _origIdx: idx }));
+            if (sortBy === 'nama') docs.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+            else if (sortBy === 'tahun') docs.sort((a, b) => (a.tahun || '').localeCompare(b.tahun || ''));
+            else if (sortBy === 'kategori') docs.sort((a, b) => (a.kategori || '').localeCompare(b.kategori || ''));
+            return docs;
+        }
+
         function openDokumenModal() { document.getElementById('dokumenModal').classList.remove('hidden'); document.getElementById('dokumenModal').classList.add('flex'); }
         function closeDokumenModal() { document.getElementById('dokumenModal').classList.remove('flex'); document.getElementById('dokumenModal').classList.add('hidden'); }
+        
         async function saveDokumen(e) {
             e.preventDefault();
             DB.dokumenPerencanaan.push({
@@ -1114,12 +1367,14 @@
             });
             await saveToMySQL();
             closeDokumenModal();
-            showToast('Dokumen disimpan!');
+            showToast('Dokumen perencanaan berhasil ditambahkan!');
             renderDokumenView(document.getElementById('mainContent'));
         }
+
         async function deleteDokumen(idx) {
             DB.dokumenPerencanaan.splice(idx, 1);
             await saveToMySQL();
+            showToast('Dokumen dihapus.', 'info');
             renderDokumenView(document.getElementById('mainContent'));
         }
 
@@ -1129,19 +1384,1264 @@
         function renderDashboardView(container) {
             document.getElementById('pageTitle').innerText = 'Dashboard Capaian Kinerja & Peta Risiko';
             
-            var validCapaian = (DB.capaian || []).filter(c => c.status === 'Valid');
+            let validCapaian = (DB.capaian || []).filter(c => c.status === 'Valid');
             if (filterDashboardTahun !== 'Semua') validCapaian = validCapaian.filter(c => c.tahun === filterDashboardTahun);
             if (filterDashboardTriwulan !== 'Semua') validCapaian = validCapaian.filter(c => c.triwulan === filterDashboardTriwulan);
             if (filterDashboardTim !== 'Semua') validCapaian = validCapaian.filter(c => c.timKey === filterDashboardTim);
             if (filterDashboardUnit !== 'Semua') validCapaian = validCapaian.filter(c => c.unit === filterDashboardUnit);
 
-            var filteredCascading = DB.cascadingDirektur || [];
+            let filteredCascading = DB.cascadingDirektur || [];
             if (filterDashboardTahun !== 'Semua') filteredCascading = filteredCascading.filter(c => c.tahun === filterDashboardTahun);
             if (filterDashboardTim !== 'Semua') filteredCascading = filteredCascading.filter(c => (c.timKeys || []).includes(filterDashboardTim));
 
-            var totalValidIndikator = filteredCascading.length;
-            var achievedCount = 0;
+            let totalValidIndikator = filteredCascading.length;
+            let achievedCount = 0;
             filteredCascading.forEach(cd => {
-                var matched = validCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun);
+                let matched = validCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun);
+                if (filterDashboardTriwulan !== 'Semua') matched = matched.filter(c => c.triwulan === filterDashboardTriwulan);
                 if (matched.length > 0) {
-                    var avgReal = matched.reduce((a,b)=>a+Number(b.realisasi || 0),0)/
+                    const avgReal = matched.reduce((a,b)=>a+Number(b.realisasi || 0),0)/matched.length;
+                    const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
+                    if (avgReal >= targetVal) achievedCount++;
+                }
+            });
+
+            let myFilteredCascading = filteredCascading;
+            let myValidCapaian = validCapaian;
+            if (currentUser.role === 'ketua_unit') {
+                myValidCapaian = validCapaian.filter(c => c.unit === currentUser.unit);
+                const assignedTargets = (DB.cascadingTim || []).filter(ct => (ct.unitTargets || []).includes(currentUser.unit)).map(ct => ct.targetDirektur);
+                myFilteredCascading = filteredCascading.filter(cd => assignedTargets.includes(cd.target));
+            } else if (currentUser.role === 'tim_kerja') {
+                myValidCapaian = validCapaian.filter(c => c.timKey === currentUser.timKey);
+                myFilteredCascading = filteredCascading.filter(cd => (cd.timKeys || []).includes(currentUser.timKey));
+            }
+            
+            let roleAchievedCount = 0;
+            let roleTotalIndikator = myFilteredCascading.length;
+            myFilteredCascading.forEach(cd => {
+                let matched = myValidCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun);
+                if (filterDashboardTriwulan !== 'Semua') matched = matched.filter(c => c.triwulan === filterDashboardTriwulan);
+                if (matched.length > 0) {
+                    const avgReal = matched.reduce((a,b)=>a+Number(b.realisasi || 0),0)/matched.length;
+                    const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
+                    if (avgReal >= targetVal) roleAchievedCount++;
+                }
+            });
+
+            let effectiveCount = 0;
+            let efficientCount = 0;
+            let filteredRealisasiAdmin = DB.realisasiAnggaranAdmin || [];
+            if (filterDashboardTahun !== 'Semua') filteredRealisasiAdmin = filteredRealisasiAdmin.filter(ra => ra.tahun === filterDashboardTahun);
+            if (filterDashboardTriwulan !== 'Semua') filteredRealisasiAdmin = filteredRealisasiAdmin.filter(ra => ra.triwulan === filterDashboardTriwulan);
+            filteredRealisasiAdmin.forEach(ra => {
+                const ik = DB.renstraIndikatorKinerja.find(x => x.id === ra.indikatorId);
+                const pagu = ik ? (ik['anggaran' + ra.tahun] || 100000000) : 100000000;
+                const realAnggaran = ra.realisasiAnggaran;
+                const pAnggaran = pagu > 0 ? (realAnggaran / pagu) * 100 : 0;
+                const match = DB.capaian.filter(c => ik && c.targetDirektur === ik.namaIndikator && c.tahun === ra.tahun && c.triwulan === ra.triwulan && c.status === 'Valid');
+                const pOutput = match.length > 0 ? (match.reduce((a,b)=>a+Number(b.realisasi || 0),0)/match.length) : 0;
+                
+                const targetVal = ik ? ik['target' + ra.tahun] : 100;
+                if (pOutput >= targetVal) effectiveCount++;
+                if (pOutput >= pAnggaran) efficientCount++;
+            });
+
+            let unitScores = {};
+            DB.unitList.forEach(u => {
+                if (filterDashboardUnit !== 'Semua' && u !== filterDashboardUnit) return;
+                const unitCaps = validCapaian.filter(c => c.unit === u);
+                if (unitCaps.length > 0) {
+                    const avg = unitCaps.reduce((a,b)=>a+Number(b.realisasi || 0),0)/unitCaps.length;
+                    unitScores[u] = avg;
+                }
+            });
+            let sortedUnits = Object.entries(unitScores).sort((a,b) => b[1] - a[1]);
+            let bestUnit = sortedUnits.length > 0 ? `${sortedUnits[0][0]} (${sortedUnits[0][1].toFixed(1)}%)` : 'Belum ada data';
+            let worstUnit = sortedUnits.length > 0 ? `${sortedUnits[sortedUnits.length-1][0]} (${sortedUnits[sortedUnits.length-1][1].toFixed(1)}%)` : 'Belum ada data';
+
+            let filteredRisiko = DB.risiko || [];
+            if (filterDashboardTim !== 'Semua') filteredRisiko = filteredRisiko.filter(r => r.timKey === filterDashboardTim);
+            if (filterDashboardUnit !== 'Semua') filteredRisiko = filteredRisiko.filter(r => r.unit === filterDashboardUnit);
+
+            container.innerHTML = `
+                <div class="space-y-8">
+                    <!-- Filter Bar -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-sm">Filter Dashboard Terpadu</h3>
+                            <p class="text-[11px] text-slate-500">Menyaring seluruh tabel, grafik, & peta risiko</p>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tahun</label>
+                            <select onchange="filterDashboardTahun = this.value; renderDashboardView(document.getElementById('mainContent'));" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                <option value="Semua" ${filterDashboardTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
+                                <option value="2025" ${filterDashboardTahun === '2025' ? 'selected' : ''}>2025</option>
+                                <option value="2026" ${filterDashboardTahun === '2026' ? 'selected' : ''}>2026</option>
+                                <option value="2027" ${filterDashboardTahun === '2027' ? 'selected' : ''}>2027</option>
+                                <option value="2028" ${filterDashboardTahun === '2028' ? 'selected' : ''}>2028</option>
+                                <option value="2029" ${filterDashboardTahun === '2029' ? 'selected' : ''}>2029</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Triwulan / Periode</label>
+                            <select onchange="filterDashboardTriwulan = this.value; renderDashboardView(document.getElementById('mainContent'));" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                <option value="Semua" ${filterDashboardTriwulan === 'Semua' ? 'selected' : ''}>Semua Triwulan</option>
+                                <option value="TW 1" ${filterDashboardTriwulan === 'TW 1' ? 'selected' : ''}>Triwulan 1</option>
+                                <option value="TW 2" ${filterDashboardTriwulan === 'TW 2' ? 'selected' : ''}>Triwulan 2</option>
+                                <option value="TW 3" ${filterDashboardTriwulan === 'TW 3' ? 'selected' : ''}>Triwulan 3</option>
+                                <option value="TW 4" ${filterDashboardTriwulan === 'TW 4' ? 'selected' : ''}>Triwulan 4</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tim Kerja</label>
+                            <select onchange="filterDashboardTim = this.value; renderDashboardView(document.getElementById('mainContent'));" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                <option value="Semua" ${filterDashboardTim === 'Semua' ? 'selected' : ''}>Semua Tim Kerja</option>
+                                ${DB.timKerjaList.map(t => `<option value="${t}" ${filterDashboardTim === t ? 'selected' : ''}>${t}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Prodi / Subbag / Unit</label>
+                            <select onchange="filterDashboardUnit = this.value; renderDashboardView(document.getElementById('mainContent'));" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                <option value="Semua" ${filterDashboardUnit === 'Semua' ? 'selected' : ''}>Semua Unit</option>
+                                ${DB.unitList.map(u => `<option value="${u}" ${filterDashboardUnit === u ? 'selected' : ''}>${u}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-8 gap-4">
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-bullseye"></i></div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Tercapai</p>
+                                <h3 class="text-sm font-bold text-slate-900 mt-0.5">${achievedCount} dari ${totalValidIndikator}</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Tercapai (Role)</p>
+                                <h3 class="text-sm font-bold text-slate-900 mt-0.5">${roleAchievedCount} dari ${roleTotalIndikator}</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-check-double"></i></div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Jumlah Efektif</p>
+                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${effectiveCount}</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-scale-balanced"></i></div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Jumlah Efisien</p>
+                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${efficientCount}</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-award"></i></div>
+                            <div class="overflow-hidden">
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Unit Terbaik</p>
+                                <h3 class="text-[11px] font-bold text-slate-900 mt-0.5 truncate">${bestUnit}</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="overflow-hidden">
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Unit Terendah</p>
+                                <h3 class="text-[11px] font-bold text-slate-900 mt-0.5 truncate">${worstUnit}</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-sitemap"></i></div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Risiko Aktif</p>
+                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${filteredRisiko.length}</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-square-check"></i></div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Target Tercapai</p>
+                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${achievedCount}</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${DB.cascadingDirektur.length === 0 ? `
+                        <div class="bg-blue-50 border border-blue-200 p-8 rounded-2xl text-center space-y-4">
+                            <i class="fa-solid fa-circle-info text-blue-600 text-4xl"></i>
+                            <h3 class="font-bold text-slate-900 text-lg">Mulai Cascading Indikator Kinerja Bertahap</h3>
+                            <p class="text-sm text-slate-600 max-w-xl mx-auto">Sistem belum memiliki data cascading. Silakan isi Renstra terlebih dahulu (oleh Admin), lalu login sebagai <strong>Direktur</strong> untuk melakukan cascading ke Ketua Tim Kerja.</p>
+                            <button onclick="switchTab('renstra')" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-md">Buka Menu Renstra</button>
+                        </div>
+                    ` : `
+                        <!-- Master KPI Table -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">Tabel Master Indikator Kinerja (Direktur & Unit Terkait)</h3>
+                                <p class="text-xs text-slate-500">Memuat indikator kinerja, target, satuan, tim kerja, PIC, % realisasi output, status tercapai/tidak, serta permasalahan</p>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                            <th class="p-3 text-center">No</th>
+                                            <th class="p-3">Indikator Kinerja</th>
+                                            <th class="p-3 text-center">Target</th>
+                                            <th class="p-3 text-center">Satuan</th>
+                                            <th class="p-3">Tim Kerja</th>
+                                            <th class="p-3">PIC (Unit / Prodi)</th>
+                                            <th class="p-3 text-center">% Realisasi Output</th>
+                                            <th class="p-3 text-center">Status</th>
+                                            <th class="p-3">Permasalahan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        ${filteredCascading.map((cd, index) => {
+                                            let matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun && c.status === 'Valid');
+                                            const picNames = [...new Set(matchedCap.map(c => c.unit))].join(', ') || 'Belum di-assign';
+                                            const timKeyStr = (cd.timKeys || []).join(', ');
+                                            const permasalahanStr = matchedCap.map(c => c.permasalahan).filter(Boolean).join('; ') || '-';
+                                            const realisasiVal = matchedCap.length > 0 ? matchedCap.reduce((a,b)=>a+Number(b.realisasi || 0),0)/matchedCap.length : 0;
+                                            const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
+                                            const pRealOutput = targetVal > 0 ? ((realisasiVal / targetVal) * 100).toFixed(2) : 0;
+                                            const isTercapai = matchedCap.length > 0 && realisasiVal >= targetVal;
+
+                                            return `
+                                                <tr class="hover:bg-slate-50 transition-all">
+                                                    <td class="p-3 text-center font-semibold text-slate-600">${index + 1}</td>
+                                                    <td class="p-3 font-bold text-slate-900">${cd.target}</td>
+                                                    <td class="p-3 text-center font-semibold text-blue-700">${targetVal}</td>
+                                                    <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 rounded text-[11px] font-semibold">${cd.satuan || '%'}</span></td>
+                                                    <td class="p-3 font-medium text-purple-700">${timKeyStr}</td>
+                                                    <td class="p-3 font-medium text-slate-700">${picNames}</td>
+                                                    <td class="p-3 text-center font-bold text-emerald-600">${pRealOutput}%</td>
+                                                    <td class="p-3 text-center">
+                                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                                                            ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
+                                                        </span>
+                                                    </td>
+                                                    <td class="p-3 text-slate-500">${permasalahanStr}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Charts -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                            <div class="border-b pb-4">
+                                <h3 class="font-bold text-slate-900 text-base">Grafik Capaian Indikator Utama (Line Chart)</h3>
+                            </div>
+                            <div class="relative min-h-[320px]">
+                                <canvas id="capaianChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                                <h3 class="font-bold text-slate-900 text-base mb-4">Peta Risiko (Sebelum Pengendalian / Inherent)</h3>
+                                <div class="flex-1 relative min-h-[300px]"><canvas id="petaRisikoPreChart"></canvas></div>
+                            </div>
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                                <h3 class="font-bold text-slate-900 text-base mb-4">Peta Risiko (Sesudah Pengendalian / Residu)</h3>
+                                <div class="flex-1 relative min-h-[300px]"><canvas id="petaRisikoResiduChart"></canvas></div>
+                            </div>
+                        </div>
+                    `}
+                </div>
+            `;
+
+            if (DB.cascadingDirektur.length > 0 && typeof Chart !== 'undefined') {
+                setTimeout(() => {
+                    try {
+                        const c1 = document.getElementById('capaianChart');
+                        if (!c1) return;
+                        const twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+                        const dataPoints = twPeriods.map(tw => {
+                            const sub = validCapaian.filter(c => c.triwulan === tw);
+                            return sub.length > 0 ? Number((sub.reduce((a,b)=>a+Number(b.realisasi || 0),0)/sub.length).toFixed(1)) : 0;
+                        });
+
+                        chartInstances.c1 = new Chart(c1.getContext('2d'), {
+                            type: 'line',
+                            data: {
+                                labels: ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'],
+                                datasets: [{
+                                    label: 'Rata-rata Realisasi Kinerja (%)',
+                                    data: dataPoints,
+                                    borderColor: '#2563eb',
+                                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                                    borderWidth: 3,
+                                    fill: true,
+                                    tension: 0.3
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false }
+                        });
+
+                        const cPre = document.getElementById('petaRisikoPreChart');
+                        if (cPre) {
+                            chartInstances.cPre = new Chart(cPre.getContext('2d'), {
+                                type: 'bubble',
+                                data: {
+                                    datasets: [{
+                                        label: 'Inherent Risk',
+                                        data: filteredRisiko.map(r => ({ x: r.damp1, y: r.prob1, r: Math.max(10, r.skor1) })),
+                                        backgroundColor: 'rgba(239, 68, 68, 0.7)'
+                                    }]
+                                },
+                                options: {
+                                    responsive: true, maintainAspectRatio: false,
+                                    scales: { x: { min: 0.5, max: 5.5 }, y: { min: 0.5, max: 5.5 } }
+                                }
+                            });
+                        }
+
+                        const cRes = document.getElementById('petaRisikoResiduChart');
+                        if (cRes) {
+                            chartInstances.cRes = new Chart(cRes.getContext('2d'), {
+                                type: 'bubble',
+                                data: {
+                                    datasets: [{
+                                        label: 'Residual Risk',
+                                        data: filteredRisiko.map(r => ({ x: r.damp2, y: r.prob2, r: Math.max(10, r.skor2) })),
+                                        backgroundColor: 'rgba(16, 185, 129, 0.7)'
+                                    }]
+                                },
+                                options: {
+                                    responsive: true, maintainAspectRatio: false,
+                                    scales: { x: { min: 0.5, max: 5.5 }, y: { min: 0.5, max: 5.5 } }
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        console.warn("Chart render warning:", err);
+                    }
+                }, 100);
+            }
+        }
+
+        // ============================================================================
+        // 8. CASCADING VIEW
+        // ============================================================================
+        function renderCascadingView(container) {
+            document.getElementById('pageTitle').innerText = 'Cascading Indikator Kinerja Bertahap';
+            const isDirektur = currentUser.role === 'direktur' || currentUser.role === 'admin';
+            const isKetuaTim = currentUser.role === 'tim_kerja' || currentUser.role === 'admin';
+
+            let displayCascadingTim = (DB.cascadingTim || []).map((c, idx) => ({ ...c, _origIdx: idx }));
+            if (currentUser.role === 'tim_kerja') {
+                displayCascadingTim = displayCascadingTim.filter(c => c.timKey === currentUser.timKey);
+            }
+
+            container.innerHTML = `
+                <div class="space-y-8">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">1. Cascading Direktur ke Ketua Tim Kerja (Dari Renstra Tier 4)</h3>
+                                <p class="text-xs text-slate-500">Direktur memilih tahun dan Indikator Kinerja dari Renstra untuk diturunkan ke Ketua Tim Kerja.</p>
+                            </div>
+                            ${isDirektur ? `<button onclick="openCascadingDirModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-md">Tambah Cascading Direktur</button>` : ''}
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                        <th class="p-4">Tahun & Sasaran Kinerja (Renstra)</th>
+                                        <th class="p-4 text-center">Target</th>
+                                        <th class="p-4 text-center">Satuan</th>
+                                        <th class="p-4 text-center">Pagu Anggaran</th>
+                                        <th class="p-4">Tim Kerja Terpilih</th>
+                                        ${isDirektur ? '<th class="p-4 text-center">Aksi</th>' : ''}
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${DB.cascadingDirektur.length === 0 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada cascading dari Direktur.</td></tr>` : DB.cascadingDirektur.map((c, idx) => `
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-4">
+                                                <span class="px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold text-xs rounded mr-2">Tahun: ${c.tahun || '2025'}</span>
+                                                <span class="font-semibold text-slate-900">${c.target}</span>
+                                            </td>
+                                            <td class="p-4 text-center font-bold text-blue-700">${c.targetVal !== undefined ? c.targetVal : 100}</td>
+                                            <td class="p-4 text-center"><span class="px-2.5 py-1 bg-slate-100 rounded text-xs font-semibold">${c.satuan || '%'}</span></td>
+                                            <td class="p-4 text-center font-bold text-emerald-700">Rp ${Number(c.anggaran || 0).toLocaleString('id-ID')}</td>
+                                            <td class="p-4">
+                                                <div class="flex flex-wrap gap-1.5">
+                                                    ${(c.timKeys || []).map(t => `<span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${t}</span>`).join('')}
+                                                </div>
+                                            </td>
+                                            ${isDirektur ? `<td class="p-4 text-center"><button onclick="confirmDeleteCascadingDir(${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button></td>` : ''}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag</h3>
+                                <p class="text-xs text-slate-500">Ketua Tim Kerja menurunkan indikator ke unit/prodi/subbag.</p>
+                            </div>
+                            ${isKetuaTim ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-md">Tambah Cascading ke Unit</button>` : ''}
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                        <th class="p-4">Tim Kerja Pelaksana</th>
+                                        <th class="p-4">Tahun</th>
+                                        <th class="p-4">Indikator Rujukan</th>
+                                        <th class="p-4">Unit / Prodi Tujuan</th>
+                                        ${isKetuaTim ? '<th class="p-4 text-center">Aksi</th>' : ''}
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${displayCascadingTim.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan ke unit/prodi.</td></tr>` : displayCascadingTim.map((c) => `
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
+                                            <td class="p-4 font-bold text-blue-700">${c.tahun || '2025'}</td>
+                                            <td class="p-4 font-semibold text-slate-900">${c.targetDirektur}</td>
+                                            <td class="p-4">
+                                                <div class="flex flex-wrap gap-1.5">
+                                                    ${(c.unitTargets || []).map(u => `<span class="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">${u}</span>`).join('')}
+                                                </div>
+                                            </td>
+                                            ${isKetuaTim ? `<td class="p-4 text-center"><button onclick="confirmDeleteCascadingTim(${c._origIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button></td>` : ''}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Cascading Direktur -->
+                <div id="cascadingDirModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Direktur</h3>
+                            <button onclick="closeCascadingDirModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <form onsubmit="saveCascadingDir(event)" class="space-y-4 text-sm">
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Pilih Tahun Target</label>
+                                <select id="dirTahunTarget" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold" onchange="updateDirRenstraOptions(this.value)">
+                                    <option value="2025">2025</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                    <option value="2028">2028</option>
+                                    <option value="2029">2029</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator Kinerja dari Renstra (Tier 4)</label>
+                                <select id="dirIndikatorRenstra" required class="w-full p-3 bg-slate-50 border rounded-xl" onchange="updateDirAnggaranPreview()"></select>
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border flex justify-between items-center text-xs">
+                                <div><span class="text-slate-500 block">Target:</span><strong id="previewTargetVal" class="text-blue-700 text-sm">100</strong></div>
+                                <div class="text-right"><span class="text-slate-500 block">Pagu Anggaran:</span><strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong></div>
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-2">Pilih Ketua Tim Kerja</label>
+                                <div class="space-y-2 bg-slate-50 p-3 rounded-xl border">
+                                    ${DB.timKerjaList.map(t => `<label class="flex items-center space-x-3 cursor-pointer"><input type="checkbox" name="timCheck" value="${t}" class="w-4 h-4 text-blue-600 rounded"><span class="text-slate-700 font-medium">${t}</span></label>`).join('')}
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-3 pt-2">
+                                <button type="button" onclick="closeCascadingDirModal()" class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-medium">Batal</button>
+                                <button type="submit" class="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium">Simpan Cascading</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Modal Cascading Tim -->
+                <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <h3 class="font-bold text-slate-900 text-base">Cascading Indikator ke Unit / Prodi</h3>
+                            <button onclick="closeCascadingTimModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <form onsubmit="saveCascadingTim(event)" class="space-y-4 text-sm">
+                            ${currentUser.role === 'admin' ? `
+                                <div>
+                                    <label class="block font-semibold mb-1">Pilih Tim Kerja</label>
+                                    <select id="timPelaksanaSelect" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold" onchange="updateTimDirRefOptions(document.getElementById('timTahunTarget').value)">
+                                        ${DB.timKerjaList.map(t => `<option value="${t}">${t}</option>`).join('')}
+                                    </select>
+                                </div>
+                            ` : `<input type="hidden" id="timPelaksanaSelect" value="${currentUser.timKey || 'Akademik'}">`}
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Pilih Tahun</label>
+                                <select id="timTahunTarget" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold" onchange="updateTimDirRefOptions(this.value)">
+                                    <option value="2025">2025</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                    <option value="2028">2028</option>
+                                    <option value="2029">2029</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator dari Direktur</label>
+                                <select id="timDirRef" required class="w-full p-3 bg-slate-50 border rounded-xl"></select>
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-2">Pilih Unit / Prodi Tujuan</label>
+                                <div class="space-y-2 bg-slate-50 p-3 rounded-xl border max-h-48 overflow-y-auto">
+                                    ${DB.unitList.map(u => `<label class="flex items-center space-x-3 cursor-pointer"><input type="checkbox" name="unitCheck" value="${u}" class="w-4 h-4 text-blue-600 rounded"><span class="text-slate-700 font-medium">${u}</span></label>`).join('')}
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-3 pt-2">
+                                <button type="button" onclick="closeCascadingTimModal()" class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-medium">Batal</button>
+                                <button type="submit" class="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium">Simpan Cascading Unit</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            setTimeout(() => {
+                const yrDir = document.getElementById('dirTahunTarget');
+                if (yrDir) updateDirRenstraOptions(yrDir.value);
+                const yrEl = document.getElementById('timTahunTarget');
+                if (yrEl) updateTimDirRefOptions(yrEl.value);
+            }, 50);
+        }
+
+        function updateDirRenstraOptions(tahun) {
+            const sel = document.getElementById('dirIndikatorRenstra');
+            if (!sel) return;
+            const matching = DB.renstraIndikatorKinerja || [];
+            sel.innerHTML = matching.length === 0 ? '<option value="">Belum ada Indikator Renstra</option>' : matching.map(ik => {
+                const target = ik['target' + tahun] !== undefined ? ik['target' + tahun] : 100;
+                const anggaran = ik['anggaran' + tahun] !== undefined ? ik['anggaran' + tahun] : 0;
+                return `<option value="${ik.id}" data-nama="${ik.namaIndikator}" data-satuan="${ik.satuan}" data-target="${target}" data-anggaran="${anggaran}">${ik.kodeIndikator} - ${ik.namaIndikator} (${ik.satuan})</option>`;
+            }).join('');
+            updateDirAnggaranPreview();
+        }
+
+        function updateDirAnggaranPreview() {
+            const sel = document.getElementById('dirIndikatorRenstra');
+            if (!sel || sel.options.length === 0 || !sel.options[sel.selectedIndex]) return;
+            const opt = sel.options[sel.selectedIndex];
+            const target = opt.getAttribute('data-target') || '100';
+            const anggaran = parseFloat(opt.getAttribute('data-anggaran') || '0');
+            document.getElementById('previewTargetVal').innerText = target;
+            document.getElementById('previewAnggaranVal').innerText = `Rp ${Number(anggaran).toLocaleString('id-ID')}`;
+        }
+
+        function updateTimDirRefOptions(tahun) {
+            const sel = document.getElementById('timDirRef');
+            if (!sel) return;
+            const timEl = document.getElementById('timPelaksanaSelect');
+            const activeTimKey = timEl ? timEl.value : currentUser.timKey;
+            const matching = (DB.cascadingDirektur || []).filter(c => (c.timKeys || []).includes(activeTimKey) && (c.tahun || '2025') === tahun);
+            sel.innerHTML = matching.length === 0 ? '<option value="">Tidak ada indikator dicascading pada tahun ini</option>' : matching.map(c => `<option value="${c.target}">${c.target}</option>`).join('');
+        }
+
+        function openCascadingDirModal() {
+            if (DB.renstraIndikatorKinerja.length === 0) {
+                showToast('Belum ada data Indikator Kinerja di Renstra!', 'error');
+                return;
+            }
+            document.getElementById('cascadingDirModal').classList.remove('hidden'); document.getElementById('cascadingDirModal').classList.add('flex');
+            const yrDir = document.getElementById('dirTahunTarget');
+            if (yrDir) updateDirRenstraOptions(yrDir.value);
+        }
+        function closeCascadingDirModal() { document.getElementById('cascadingDirModal').classList.remove('flex'); document.getElementById('cascadingDirModal').classList.add('hidden'); }
+        
+        async function saveCascadingDir(e) {
+            e.preventDefault();
+            const tahun = document.getElementById('dirTahunTarget').value;
+            const sel = document.getElementById('dirIndikatorRenstra');
+            const opt = sel.options[sel.selectedIndex];
+            const indikatorName = opt.getAttribute('data-nama');
+            const satuan = opt.getAttribute('data-satuan');
+            const targetVal = parseFloat(opt.getAttribute('data-target')) || 100;
+            const anggaran = parseFloat(opt.getAttribute('data-anggaran')) || 0;
+            const checked = Array.from(document.querySelectorAll('input[name="timCheck"]:checked')).map(el => el.value);
+            
+            if (checked.length === 0) {
+                showToast('Pilih minimal 1 Ketua Tim Kerja!', 'error');
+                return;
+            }
+
+            DB.cascadingDirektur.push({
+                id: 'cd_' + Date.now(),
+                indikatorId: sel.value,
+                tahun: tahun,
+                target: indikatorName,
+                targetVal: targetVal,
+                satuan: satuan,
+                anggaran: anggaran,
+                timKeys: checked,
+                status: 'Aktif'
+            });
+            await saveToMySQL();
+            closeCascadingDirModal();
+            showToast('Cascading Direktur berhasil disimpan!');
+            renderCascadingView(document.getElementById('mainContent'));
+        }
+
+        async function confirmDeleteCascadingDir(idx) {
+            const item = DB.cascadingDirektur[idx];
+            if (confirm(`Hapus cascading indikator "${item.target}"?`)) {
+                DB.cascadingDirektur.splice(idx, 1);
+                await saveToMySQL();
+                showToast('Cascading Direktur dihapus.', 'info');
+                renderCascadingView(document.getElementById('mainContent'));
+            }
+        }
+
+        function openCascadingTimModal() {
+            document.getElementById('cascadingTimModal').classList.remove('hidden');
+            document.getElementById('cascadingTimModal').classList.add('flex');
+            const yrEl = document.getElementById('timTahunTarget');
+            if (yrEl) updateTimDirRefOptions(yrEl.value);
+        }
+        function closeCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('flex'); document.getElementById('cascadingTimModal').classList.add('hidden'); }
+
+        async function saveCascadingTim(e) {
+            e.preventDefault();
+            const tahun = document.getElementById('timTahunTarget').value;
+            const targetDir = document.getElementById('timDirRef').value;
+            const timEl = document.getElementById('timPelaksanaSelect');
+            const activeTimKey = timEl ? timEl.value : currentUser.timKey;
+
+            if (!targetDir) {
+                showToast('Pilih indikator rujukan yang valid!', 'error');
+                return;
+            }
+            const checkedUnits = Array.from(document.querySelectorAll('input[name="unitCheck"]:checked')).map(el => el.value);
+            if (checkedUnits.length === 0) {
+                showToast('Pilih minimal 1 Unit / Prodi tujuan!', 'error');
+                return;
+            }
+            DB.cascadingTim.push({
+                id: 'ct_' + Date.now(),
+                tahun: tahun,
+                targetDirektur: targetDir,
+                timKey: activeTimKey,
+                unitTargets: checkedUnits
+            });
+            await saveToMySQL();
+            closeCascadingTimModal();
+            showToast('Cascading ke Unit/Prodi berhasil disimpan!');
+            renderCascadingView(document.getElementById('mainContent'));
+        }
+
+        async function confirmDeleteCascadingTim(idx) {
+            if (confirm('Hapus cascading unit ini?')) {
+                DB.cascadingTim.splice(idx, 1);
+                await saveToMySQL();
+                showToast('Cascading Tim dihapus.', 'info');
+                renderCascadingView(document.getElementById('mainContent'));
+            }
+        }
+
+        // ============================================================================
+        // 9. CAPAIAN KINERJA & VALIDASI VIEW
+        // ============================================================================
+        function renderCapaianView(container) {
+            document.getElementById('pageTitle').innerText = 'Capaian Kinerja & Validasi';
+            const canValidate = currentUser.role === 'admin' || currentUser.role === 'direktur' || currentUser.role === 'tim_kerja';
+
+            let list = (DB.capaian || []).map((c, idx) => ({ ...c, _origIdx: idx }));
+            if (currentUser.role === 'ketua_unit') list = list.filter(c => c.unit === currentUser.unit);
+            else if (currentUser.role === 'tim_kerja') list = list.filter(c => c.timKey === currentUser.timKey);
+            if (filterCapaianTahun !== 'Semua') list = list.filter(c => c.tahun === filterCapaianTahun);
+            if (filterCapaianTriwulan !== 'Semua') list = list.filter(c => c.triwulan === filterCapaianTriwulan);
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base">Daftar Realisasi Capaian Kinerja</h3>
+                            <p class="text-xs text-slate-500">Input capaian kinerja triwulanan, bukti dukung, kendala, dan tindak lanjut</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <select onchange="filterCapaianTahun = this.value; renderCapaianView(document.getElementById('mainContent'));" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                <option value="Semua" ${filterCapaianTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
+                                <option value="2025" ${filterCapaianTahun === '2025' ? 'selected' : ''}>2025</option>
+                                <option value="2026" ${filterCapaianTahun === '2026' ? 'selected' : ''}>2026</option>
+                                <option value="2027" ${filterCapaianTahun === '2027' ? 'selected' : ''}>2027</option>
+                                <option value="2028" ${filterCapaianTahun === '2028' ? 'selected' : ''}>2028</option>
+                                <option value="2029" ${filterCapaianTahun === '2029' ? 'selected' : ''}>2029</option>
+                            </select>
+                            <button onclick="openCapaianModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow">Input Capaian Kinerja</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead class="bg-slate-50 text-slate-700 font-semibold border-b">
+                                    <tr>
+                                        <th class="p-3">Tahun / TW</th>
+                                        <th class="p-3">Unit / Tim</th>
+                                        <th class="p-3">Indikator Kinerja</th>
+                                        <th class="p-3 text-center">Realisasi</th>
+                                        <th class="p-3">Permasalahan & RTL</th>
+                                        <th class="p-3">Bukti</th>
+                                        <th class="p-3 text-center">Status</th>
+                                        <th class="p-3 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    ${list.length === 0 ? `<tr><td colspan="8" class="p-6 text-center text-slate-400">Belum ada data capaian kinerja.</td></tr>` : list.map(c => `
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-3 font-bold text-blue-700">${c.tahun} -${c.triwulan}</td>
+                                            <td class="p-3"><div class="font-bold text-slate-900">${c.unit}</div><div class="text-[10px] text-purple-700">${c.timKey}</div></td>
+                                            <td class="p-3 font-semibold text-slate-900">${c.targetDirektur}</td>
+                                            <td class="p-3 text-center font-bold text-blue-700 text-sm">${c.realisasi}</td>
+                                            <td class="p-3"><div>Kendala: ${c.permasalahan || '-'}</div><div class="text-emerald-700">RTL: ${c.tindakLanjut || '-'}</div></td>
+                                            <td class="p-3">${c.buktiLink ? `<a href="${c.buktiLink}" target="_blank" class="text-blue-600 underline">Bukti</a>` : '-'}</td>
+                                            <td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-[10px] font-bold ${c.status === 'Valid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${c.status || 'Pending'}</span></td>
+                                            <td class="p-3 text-center space-x-1 whitespace-nowrap">
+                                                ${canValidate ? `<button onclick="validateCapaian(${c._origIdx}, 'Valid')" class="p-1.5 bg-emerald-100 text-emerald-700 rounded" title="Validasi"><i class="fa-solid fa-check"></i></button>` : ''}
+                                                <button onclick="openCapaianModal(${c._origIdx})" class="p-1.5 bg-blue-100 text-blue-700 rounded"><i class="fa-solid fa-pen"></i></button>
+                                                <button onclick="deleteCapaian(${c._origIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="capaianModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <h3 class="font-bold text-slate-900 text-base">Input Capaian Kinerja</h3>
+                            <button onclick="closeCapaianModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <form onsubmit="saveCapaian(event)" class="space-y-3 text-sm">
+                            <input type="hidden" id="editCapaianIdx" value="-1">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-semibold mb-1">Tahun</label>
+                                    <select id="capTahun" class="w-full p-2.5 bg-slate-50 border rounded-xl font-semibold">
+                                        <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-semibold mb-1">Triwulan</label>
+                                    <select id="capTriwulan" class="w-full p-2.5 bg-slate-50 border rounded-xl font-semibold">
+                                        <option value="TW 1">TW 1</option><option value="TW 2">TW 2</option><option value="TW 3">TW 3</option><option value="TW 4">TW 4</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-semibold mb-1">Unit Pelaksana</label>
+                                    <select id="capUnit" class="w-full p-2.5 bg-slate-50 border rounded-xl">
+                                        ${DB.unitList.map(u => `<option value="${u}" ${currentUser.unit === u ? 'selected' : ''}>${u}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-semibold mb-1">Tim Kerja</label>
+                                    <select id="capTimKey" class="w-full p-2.5 bg-slate-50 border rounded-xl">
+                                        ${DB.timKerjaList.map(t => `<option value="${t}" ${currentUser.timKey === t ? 'selected' : ''}>${t}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block font-semibold mb-1">Indikator Kinerja</label>
+                                <select id="capIndikator" required class="w-full p-2.5 bg-slate-50 border rounded-xl">
+                                    ${getIndikatorList().map(ind => `<option value="${ind}">${ind}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><label class="block font-semibold mb-1">Nilai Realisasi</label><input type="number" step="any" id="capRealisasi" required value="100" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold"></div>
+                                <div><label class="block font-semibold mb-1">Link Bukti (URL)</label><input type="url" id="capBukti" class="w-full p-2.5 bg-slate-50 border rounded-xl" placeholder="https://..."></div>
+                            </div>
+                            <div><label class="block font-semibold mb-1">Permasalahan / Kendala</label><textarea id="capPermasalahan" rows="2" class="w-full p-2.5 bg-slate-50 border rounded-xl"></textarea></div>
+                            <div><label class="block font-semibold mb-1">Rencana Tindak Lanjut (RTL)</label><textarea id="capTindakLanjut" rows="2" class="w-full p-2.5 bg-slate-50 border rounded-xl"></textarea></div>
+                            <div class="flex justify-end space-x-2 pt-2">
+                                <button type="button" onclick="closeCapaianModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button>
+                                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-semibold">Simpan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getIndikatorList() {
+            const s = new Set();
+            (DB.cascadingDirektur || []).forEach(c => { if (c.target) s.add(c.target); });
+            (DB.renstraIndikatorKinerja || []).forEach(ik => { if (ik.namaIndikator) s.add(ik.namaIndikator); });
+            return Array.from(s);
+        }
+
+        function openCapaianModal(idx = -1) {
+            if (getIndikatorList().length === 0) {
+                showToast('Tambahkan Indikator di menu Renstra terlebih dahulu!', 'error');
+                return;
+            }
+            const m = document.getElementById('capaianModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            document.getElementById('editCapaianIdx').value = idx;
+            if (idx !== -1 && DB.capaian[idx]) {
+                const c = DB.capaian[idx];
+                document.getElementById('capTahun').value = c.tahun || '2025';
+                document.getElementById('capTriwulan').value = c.triwulan || 'TW 1';
+                document.getElementById('capUnit').value = c.unit;
+                document.getElementById('capTimKey').value = c.timKey;
+                document.getElementById('capIndikator').value = c.targetDirektur;
+                document.getElementById('capRealisasi').value = c.realisasi;
+                document.getElementById('capBukti').value = c.buktiLink || '';
+                document.getElementById('capPermasalahan').value = c.permasalahan || '';
+                document.getElementById('capTindakLanjut').value = c.tindakLanjut || '';
+            }
+        }
+        function closeCapaianModal() { document.getElementById('capaianModal').classList.remove('flex'); document.getElementById('capaianModal').classList.add('hidden'); }
+
+        async function saveCapaian(e) {
+            e.preventDefault();
+            const idx = parseInt(document.getElementById('editCapaianIdx').value);
+            const obj = {
+                id: idx !== -1 ? DB.capaian[idx].id : 'cap_' + Date.now(),
+                tahun: document.getElementById('capTahun').value,
+                triwulan: document.getElementById('capTriwulan').value,
+                unit: document.getElementById('capUnit').value,
+                timKey: document.getElementById('capTimKey').value,
+                targetDirektur: document.getElementById('capIndikator').value,
+                realisasi: parseFloat(document.getElementById('capRealisasi').value) || 0,
+                buktiLink: document.getElementById('capBukti').value.trim(),
+                permasalahan: document.getElementById('capPermasalahan').value.trim(),
+                tindakLanjut: document.getElementById('capTindakLanjut').value.trim(),
+                status: idx !== -1 ? DB.capaian[idx].status : 'Valid',
+                statusTL: idx !== -1 ? (DB.capaian[idx].statusTL || 'Proses') : 'Proses'
+            };
+            if (idx !== -1) DB.capaian[idx] = obj;
+            else DB.capaian.push(obj);
+            await saveToMySQL();
+            closeCapaianModal();
+            showToast('Capaian kinerja disimpan!');
+            renderCapaianView(document.getElementById('mainContent'));
+        }
+
+        async function validateCapaian(idx, status) {
+            if (!DB.capaian[idx]) return;
+            DB.capaian[idx].status = status;
+            await saveToMySQL();
+            showToast('Status capaian divalidasi!');
+            renderCapaianView(document.getElementById('mainContent'));
+        }
+
+        async function deleteCapaian(idx) {
+            if (!confirm('Hapus data capaian ini?')) return;
+            DB.capaian.splice(idx, 1);
+            await saveToMySQL();
+            showToast('Capaian dihapus.', 'info');
+            renderCapaianView(document.getElementById('mainContent'));
+        }
+
+        // ============================================================================
+        // 10. RISIKO VIEW
+        // ============================================================================
+        function renderRisikoView(container) {
+            document.getElementById('pageTitle').innerText = 'Peta Risiko & Register Mitigasi';
+            let list = (DB.risiko || []).map((r, idx) => ({ ...r, _origIdx: idx }));
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base">Register Risiko & Mitigasi</h3>
+                            <p class="text-xs text-slate-500">Analisis risiko sebelum pengendalian (Inherent) dan sesudah pengendalian (Residu)</p>
+                        </div>
+                        <button onclick="openRisikoModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow">Tambah Risiko</button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead class="bg-slate-50 text-slate-700 font-semibold border-b">
+                                    <tr>
+                                        <th class="p-3">Unit / Tim</th>
+                                        <th class="p-3">Indikator</th>
+                                        <th class="p-3">Pernyataan Risiko & Dampak</th>
+                                        <th class="p-3 text-center">Skor Awal</th>
+                                        <th class="p-3">Mitigasi</th>
+                                        <th class="p-3 text-center">Skor Residu</th>
+                                        <th class="p-3 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    ${list.length === 0 ? `<tr><td colspan="7" class="p-6 text-center text-slate-400">Belum ada data risiko.</td></tr>` : list.map(r => `
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-3 font-bold text-slate-900">${r.unit}<div class="text-[10px] text-purple-700">${r.timKey}</div></td>
+                                            <td class="p-3">${r.targetDirektur || '-'}</td>
+                                            <td class="p-3"><strong>${r.pernyataan}</strong><div class="text-slate-500">Dampak: ${r.dampak}</div></td>
+                                            <td class="p-3 text-center"><span class="px-2 py-1 rounded font-bold ${r.warnaPre \vert{}\vert{} 'bg-rose-600 text-white'}">${r.skor1}</span></td>
+                                            <td class="p-3">${r.mitigasi || '-'}</td>
+                                            <td class="p-3 text-center"><span class="px-2 py-1 rounded font-bold ${r.warnaResidu \vert{}\vert{} 'bg-emerald-600 text-white'}">${r.skor2}</span></td>
+                                            <td class="p-3 text-center space-x-1">
+                                                <button onclick="openRisikoModal(${r._origIdx})" class="p-1.5 bg-blue-100 text-blue-700 rounded"><i class="fa-solid fa-pen"></i></button>
+                                                <button onclick="deleteRisiko(${r._origIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="risikoModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-3 my-8">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <h3 class="font-bold text-slate-900 text-base">Input Register Risiko</h3>
+                            <button onclick="closeRisikoModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <form onsubmit="saveRisiko(event)" class="space-y-3 text-sm">
+                            <input type="hidden" id="editRisikoIdx" value="-1">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><label class="block font-semibold mb-1">Unit</label><select id="risUnit" class="w-full p-2.5 bg-slate-50 border rounded-xl">${DB.unitList.map(u => `<option value="${u}">${u}</option>`).join('')}</select></div>
+                                <div><label class="block font-semibold mb-1">Tim Kerja</label><select id="risTimKey" class="w-full p-2.5 bg-slate-50 border rounded-xl">${DB.timKerjaList.map(t => `<option value="${t}">${t}</option>`).join('')}</select></div>
+                            </div>
+                            <div><label class="block font-semibold mb-1">Indikator Terkait</label><select id="risIndikator" class="w-full p-2.5 bg-slate-50 border rounded-xl">${getIndikatorList().map(i => `<option value="${i}">${i}</option>`).join('')}</select></div>
+                            <div><label class="block font-semibold mb-1">Pernyataan Risiko</label><input type="text" id="risPernyataan" required class="w-full p-2.5 bg-slate-50 border rounded-xl"></div>
+                            <div><label class="block font-semibold mb-1">Dampak</label><input type="text" id="risDampak" required class="w-full p-2.5 bg-slate-50 border rounded-xl"></div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><label class="block text-xs font-bold mb-1">Probabilitas Awal (1-5)</label><input type="number" min="1" max="5" id="risProb1" required value="4" class="w-full p-2 bg-slate-50 border rounded-lg"></div>
+                                <div><label class="block text-xs font-bold mb-1">Dampak Awal (1-5)</label><input type="number" min="1" max="5" id="risDamp1" required value="4" class="w-full p-2 bg-slate-50 border rounded-lg"></div>
+                            </div>
+                            <div><label class="block font-semibold mb-1">Langkah Mitigasi</label><textarea id="risMitigasi" rows="2" required class="w-full p-2.5 bg-slate-50 border rounded-xl"></textarea></div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><label class="block text-xs font-bold mb-1">Probabilitas Residu (1-5)</label><input type="number" min="1" max="5" id="risProb2" required value="2" class="w-full p-2 bg-slate-50 border rounded-lg"></div>
+                                <div><label class="block text-xs font-bold mb-1">Dampak Residu (1-5)</label><input type="number" min="1" max="5" id="risDamp2" required value="2" class="w-full p-2 bg-slate-50 border rounded-lg"></div>
+                            </div>
+                            <div class="flex justify-end space-x-2 pt-2">
+                                <button type="button" onclick="closeRisikoModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button>
+                                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-semibold">Simpan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openRisikoModal(idx = -1) {
+            const m = document.getElementById('risikoModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            document.getElementById('editRisikoIdx').value = idx;
+            if (idx !== -1 && DB.risiko[idx]) {
+                const r = DB.risiko[idx];
+                document.getElementById('risUnit').value = r.unit;
+                document.getElementById('risTimKey').value = r.timKey;
+                document.getElementById('risIndikator').value = r.targetDirektur || '';
+                document.getElementById('risPernyataan').value = r.pernyataan;
+                document.getElementById('risDampak').value = r.dampak;
+                document.getElementById('risProb1').value = r.prob1;
+                document.getElementById('risDamp1').value = r.damp1;
+                document.getElementById('risMitigasi').value = r.mitigasi || '';
+                document.getElementById('risProb2').value = r.prob2;
+                document.getElementById('risDamp2').value = r.damp2;
+            }
+        }
+        function closeRisikoModal() { document.getElementById('risikoModal').classList.remove('flex'); document.getElementById('risikoModal').classList.add('hidden'); }
+
+        async function saveRisiko(e) {
+            e.preventDefault();
+            const idx = parseInt(document.getElementById('editRisikoIdx').value);
+            const p1 = parseInt(document.getElementById('risProb1').value) || 1;
+            const d1 = parseInt(document.getElementById('risDamp1').value) || 1;
+            const p2 = parseInt(document.getElementById('risProb2').value) || 1;
+            const d2 = parseInt(document.getElementById('risDamp2').value) || 1;
+            const pre = calculateSkorRisiko(p1, d1);
+            const res = calculateSkorRisiko(p2, d2);
+
+            const obj = {
+                id: idx !== -1 ? DB.risiko[idx].id : 'ris_' + Date.now(),
+                unit: document.getElementById('risUnit').value,
+                timKey: document.getElementById('risTimKey').value,
+                targetDirektur: document.getElementById('risIndikator').value,
+                pernyataan: document.getElementById('risPernyataan').value.trim(),
+                dampak: document.getElementById('risDampak').value.trim(),
+                prob1: p1, damp1: d1, skor1: pre.skor, warnaPre: pre.warna,
+                mitigasi: document.getElementById('risMitigasi').value.trim(),
+                prob2: p2, damp2: d2, skor2: res.skor, warnaResidu: res.warna
+            };
+            if (idx !== -1) DB.risiko[idx] = obj;
+            else DB.risiko.push(obj);
+            await saveToMySQL();
+            closeRisikoModal();
+            showToast('Risiko disimpan!');
+            renderRisikoView(document.getElementById('mainContent'));
+        }
+
+        async function deleteRisiko(idx) {
+            if (!confirm('Hapus risiko ini?')) return;
+            DB.risiko.splice(idx, 1);
+            await saveToMySQL();
+            showToast('Risiko dihapus.', 'info');
+            renderRisikoView(document.getElementById('mainContent'));
+        }
+
+        // ============================================================================
+        // 11. MONITORING TINDAK LANJUT VIEW
+        // ============================================================================
+        function renderTindakLanjutMonitorView(container) {
+            document.getElementById('pageTitle').innerText = 'Monitoring Tindak Lanjut';
+            const list = (DB.capaian || []).map((c, idx) => ({ ...c, _origIdx: idx }));
+
+            container.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                    <h3 class="font-bold text-slate-900 text-base">Monitoring Rencana Tindak Lanjut (RTL) Atas Permasalahan Kinerja</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead class="bg-slate-50 text-slate-700 font-semibold border-b">
+                                <tr>
+                                    <th class="p-3">Periode & Unit</th>
+                                    <th class="p-3">Indikator Kinerja</th>
+                                    <th class="p-3">Permasalahan</th>
+                                    <th class="p-3">Rencana Tindak Lanjut</th>
+                                    <th class="p-3 text-center">Status TL</th>
+                                    <th class="p-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${list.length === 0 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data tindak lanjut.</td></tr>` : list.map(c => `
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="p-3 font-bold">${c.tahun} (${c.triwulan}) -${c.unit}</td>
+                                        <td class="p-3 font-semibold">${c.targetDirektur}</td>
+                                        <td class="p-3 text-rose-600">${c.permasalahan || '-'}</td>
+                                        <td class="p-3 text-emerald-700">${c.tindakLanjut || '-'}</td>
+                                        <td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-[10px] font-bold ${c.statusTL === 'Selesai' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${c.statusTL || 'Proses'}</span></td>
+                                        <td class="p-3 text-center"><button onclick="toggleStatusTL(${c._origIdx})" class="px-3 py-1 bg-blue-50 text-blue-700 rounded font-semibold">Ubah Status</button></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function toggleStatusTL(idx) {
+            if (!DB.capaian[idx]) return;
+            DB.capaian[idx].statusTL = DB.capaian[idx].statusTL === 'Selesai' ? 'Proses' : 'Selesai';
+            await saveToMySQL();
+            showToast('Status Tindak Lanjut diperbarui!');
+            renderTindakLanjutMonitorView(document.getElementById('mainContent'));
+        }
+
+        // ============================================================================
+        // 12. ADMIN VIEW
+        // ============================================================================
+        function renderAdminView(container) {
+            document.getElementById('pageTitle').innerText = 'Manajemen Pejabat & User';
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base">Daftar Akun Pejabat & User Sistem</h3>
+                            <p class="text-xs text-slate-500">Kelola akun login pengguna</p>
+                        </div>
+                        <button onclick="openUserModal()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl text-xs shadow">Tambah User</button>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead class="bg-slate-50 font-semibold border-b">
+                                <tr>
+                                    <th class="p-3">Nama Pejabat</th>
+                                    <th class="p-3">Username</th>
+                                    <th class="p-3">Password</th>
+                                    <th class="p-3">Role</th>
+                                    <th class="p-3">Unit</th>
+                                    <th class="p-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${(DB.users || []).map((u, idx) => `
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="p-3 font-bold">${u.name}</td>
+                                        <td class="p-3 font-mono text-blue-700">${u.username}</td>
+                                        <td class="p-3 font-mono">${u.password}</td>
+                                        <td class="p-3 uppercase font-semibold">${u.role}</td>
+                                        <td class="p-3">${u.unit}</td>
+                                        <td class="p-3 text-center space-x-1">
+                                            <button onclick="openUserModal(${idx})" class="p-1.5 bg-blue-100 text-blue-700 rounded"><i class="fa-solid fa-pen"></i></button>
+                                            ${u.username !== 'admin' ? `<button onclick="deleteUser(${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button>` : ''}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="userModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-3">
+                        <h3 class="font-bold text-slate-900 text-base border-b pb-3">Form User</h3>
+                        <form onsubmit="saveUser(event)" class="space-y-3 text-sm">
+                            <input type="hidden" id="editUserIdx" value="-1">
+                            <div><label class="block font-semibold mb-1">Nama Pejabat</label><input type="text" id="usrName" required class="w-full p-2.5 bg-slate-50 border rounded-xl"></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block font-semibold mb-1">Username</label><input type="text" id="usrUsername" required class="w-full p-2.5 bg-slate-50 border rounded-xl"></div>
+                                <div><label class="block font-semibold mb-1">Password</label><input type="text" id="usrPassword" required value="123" class="w-full p-2.5 bg-slate-50 border rounded-xl"></div>
+                            </div>
+                            <div><label class="block font-semibold mb-1">Role</label><select id="usrRole" class="w-full p-2.5 bg-slate-50 border rounded-xl"><option value="ketua_unit">Ketua Unit</option><option value="tim_kerja">Ketua Tim Kerja</option><option value="direktur">Direktur</option><option value="admin">Admin</option></select></div>
+                            <div><label class="block font-semibold mb-1">Unit</label><input type="text" id="usrUnit" required class="w-full p-2.5 bg-slate-50 border rounded-xl"></div>
+                            <div class="flex justify-end space-x-2 pt-2">
+                                <button type="button" onclick="document.getElementById('userModal').classList.add('hidden')" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button>
+                                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl">Simpan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openUserModal(idx = -1) {
+            const m = document.getElementById('userModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            document.getElementById('editUserIdx').value = idx;
+            if (idx !== -1 && DB.users[idx]) {
+                const u = DB.users[idx];
+                document.getElementById('usrName').value = u.name;
+                document.getElementById('usrUsername').value = u.username;
+                document.getElementById('usrPassword').value = u.password;
+                document.getElementById('usrRole').value = u.role;
+                document.getElementById('usrUnit').value = u.unit;
+            }
+        }
+
+        async function saveUser(e) {
+            e.preventDefault();
+            const idx = parseInt(document.getElementById('editUserIdx').value);
+            const obj = {
+                id: idx !== -1 ? DB.users[idx].id : 'u_' + Date.now(),
+                name: document.getElementById('usrName').value.trim(),
+                username: document.getElementById('usrUsername').value.trim(),
+                password: document.getElementById('usrPassword').value.trim(),
+                role: document.getElementById('usrRole').value,
+                unit: document.getElementById('usrUnit').value.trim()
+            };
+            if (idx !== -1) DB.users[idx] = obj;
+            else DB.users.push(obj);
+            await saveToMySQL();
+            document.getElementById('userModal').classList.add('hidden');
+            showToast('User disimpan!');
+            renderAdminView(document.getElementById('mainContent'));
+        }
+
+        async function deleteUser(idx) {
+            if (!confirm('Hapus user ini?')) return;
+            DB.users.splice(idx, 1);
+            await saveToMySQL();
+            renderAdminView(document.getElementById('mainContent'));
+        }
+
+        // ============================================================================
+        // 13. LAPORAN PDF VIEW
+        // ============================================================================
+        function renderLaporanView(container) {
+            document.getElementById('pageTitle').innerText = 'Ekspor & Download PDF';
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center no-print">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base">Cetak Laporan Resmi Kinerja & Risiko</h3>
+                            <p class="text-xs text-slate-500">Klik tombol di samping untuk mencetak atau menyimpan sebagai PDF</p>
+                        </div>
+                        <button onclick="window.print()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm shadow"><i class="fa-solid fa-print mr-2"></i>Cetak / Download PDF</button>
+                    </div>
+
+                    <div id="printableArea" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6 text-xs">
+                        <div class="text-center border-b-2 border-slate-800 pb-4">
+                            <h2 class="text-base font-bold uppercase">KEMENTERIAN PERINDUSTRIAN REPUBLIK INDONESIA</h2>
+                            <h3 class="text-sm font-bold uppercase text-blue-800">POLITEKNIK INDUSTRI PETROKIMIA BANTEN</h3>
+                            <p class="text-slate-600 mt-1">Laporan Capaian Kinerja & Manajemen Risiko (Ki-Jaro)</p>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold mb-2">I. Rekapitulasi Capaian Kinerja</h4>
+                            <table class="w-full border-collapse border border-slate-300">
+                                <thead class="bg-slate-100">
+                                    <tr>
+                                        <th class="border border-slate-300 p-2">Periode</th>
+                                        <th class="border border-slate-300 p-2">Unit</th>
+                                        <th class="border border-slate-300 p-2">Indikator</th>
+                                        <th class="border border-slate-300 p-2 text-center">Realisasi</th>
+                                        <th class="border border-slate-300 p-2">Kendala & RTL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${(DB.capaian || []).length === 0 ? `<tr><td colspan="5" class="p-4 text-center">Belum ada data.</td></tr>` : DB.capaian.map(c => `
+                                        <tr>
+                                            <td class="border border-slate-300 p-2">${c.tahun} -${c.triwulan}</td>
+                                            <td class="border border-slate-300 p-2">${c.unit}</td>
+                                            <td class="border border-slate-300 p-2">${c.targetDirektur}</td>
+                                            <td class="border border-slate-300 p-2 text-center font-bold">${c.realisasi}</td>
+                                            <td class="border border-slate-300 p-2">${c.permasalahan \vert{}\vert{} '-'} /${c.tindakLanjut || '-'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================================================
+        // 14. SAFE STARTUP
+        // ============================================================================
+        function initApp() {
+            try {
+                loadFromLocalCache();
+                DB.users = ensureDefaultUsersExist(DB.users);
+
+                const savedUserRaw = localStorage.getItem('ki_jaro_user');
+                if (savedUserRaw) {
+                    const parsed = JSON.parse(savedUserRaw);
+                    if (parsed && parsed.username) {
+                        currentUser = DB.users.find(u => String(u.username).toLowerCase() === String(parsed.username).toLowerCase()) || parsed;
+                    }
+                }
+
+                if (currentUser && currentUser.name) {
+                    renderDashboardLayout();
+                } else {
+                    renderLogin();
+                }
+
+                loadDataFromMySQL().then((updated) => {
+                    DB.users = ensureDefaultUsersExist(DB.users);
+                    if (updated && currentUser && currentUser.name) {
+                        switchTab(activeTab);
+                    }
+                });
+            } catch (err) {
+                console.error("Critical Init Error:", err);
+                localStorage.removeItem('ki_jaro_user');
+                renderLogin();
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+</body>
+</html>
