@@ -60,7 +60,7 @@
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2"></div>
 
     <script>
-        const DB = {
+        let DB = {
             users: [
                 { id: 'u1', username: 'admin', password: '123', name: 'Administrator Sistem', role: 'admin', unit: 'Pusat Data & Sistem' },
                 { id: 'u2', username: 'direktur', password: '123', name: 'Prof. Dr. H. Direktur, M.Si.', role: 'direktur', unit: 'Pimpinan Tertinggi' },
@@ -3312,12 +3312,13 @@
             showToast('File CSV berhasil diunduh!');
         }
 
-// === SINKRONISASI KE MYSQL YANG AMAN & BERSIH ===
+// === SINKRONISASI OTOMATIS KE MYSQL ===
         async function loadDataFromMySQL() {
             try {
                 const response = await fetch('/api/load-state/main_kijaro');
                 const result = await response.json();
                 if (result.success && result.data) {
+                    // Masukkan data dari MySQL ke objek DB
                     Object.assign(DB, result.data);
                     console.log("Data berhasil dimuat dari MySQL.");
                 }
@@ -3326,7 +3327,10 @@
             }
         }
 
+        let isSaving = false;
         async function saveToMySQL() {
+            if (isSaving) return;
+            isSaving = true;
             try {
                 await fetch('/api/save-state', {
                     method: 'POST',
@@ -3336,33 +3340,35 @@
                         value: DB
                     })
                 });
-                console.log("Data tersimpan permanen di MySQL.");
+                console.log("Data otomatis tersimpan permanen di MySQL.");
             } catch (e) {
                 console.error("Gagal menyimpan ke MySQL:", e);
+            } finally {
+                isSaving = false;
             }
         }
 
-        // Panggil fungsi muat data lalu tampilkan halaman login saat web dibuka
+        // Mengaktifkan Proxy agar setiap ada perubahan data langsung simpan otomatis
+        const dbHandler = {
+            set(target, property, value) {
+                target[property] = value;
+                saveToMySQL(); 
+                return true;
+            },
+            deleteProperty(target, property) {
+                delete target[property];
+                saveToMySQL(); 
+                return true;
+            }
+        };
+
+        // Jalankan saat halaman pertama kali dibuka
         window.onload = async function() {
             await loadDataFromMySQL();
+            // Bungkus DB dengan Proxy setelah data dari server termuat
+            DB = new Proxy(DB, dbHandler);
             renderLogin();
         }
-        async function saveCapaian(e) {
-    e.preventDefault();
-    // ... proses input data capaian ...
-
-    DB.capaian.push(newCapaian);
-    
-    // Tambahkan baris ini agar tersimpan permanen ke MySQL
-    await saveToMySQL();
-
-    closeCapaianModal();
-    showToast('Capaian kinerja berhasil disimpan!');
-    renderCapaianView(document.getElementById('mainContent'));
-}
-    </script>
-</body>
-</html>
     </script>
 </body>
 </html>
