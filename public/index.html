@@ -3312,7 +3312,36 @@
             showToast('File CSV berhasil diunduh!');
         }
 
-        window.onload = function() {
+        // === FUNGSI SINKRONISASI KE MYSQL ===
+        async function loadDataFromMySQL() {
+            try {
+                const response = await fetch('/api/data');
+                const cloudData = await response.json();
+                if (cloudData) {
+                    Object.assign(DB, cloudData);
+                    console.log("Data berhasil dimuat dari MySQL.");
+                }
+            } catch (e) {
+                console.error("Gagal memuat dari MySQL:", e);
+            }
+        }
+
+        async function saveToMySQL() {
+            try {
+                await fetch('/api/data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(DB)
+                });
+                console.log("Data tersimpan permanen di MySQL.");
+            } catch (e) {
+                console.error("Gagal menyimpan ke MySQL:", e);
+            }
+        }
+
+        window.onload = async function() {
+            // Muat data dari MySQL lebih dulu sebelum halaman menampilkan login/dashboard
+            await loadDataFromMySQL();
             renderLogin();
         }
     </script>
