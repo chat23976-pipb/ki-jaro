@@ -3312,59 +3312,57 @@
             showToast('File CSV berhasil diunduh!');
         }
 
-// === SINKRONISASI OTOMATIS KE MYSQL ===
-async function loadDataFromMySQL() {
-    try {
-        const response = await fetch('/api/load-state/main_kijaro');
-        const result = await response.json();
-        if (result.success && result.data) {
-            Object.assign(DB, result.data);
-            console.log("Data berhasil dimuat dari MySQL.");
+// === SINKRONISASI KE MYSQL YANG AMAN & BERSIH ===
+        async function loadDataFromMySQL() {
+            try {
+                const response = await fetch('/api/load-state/main_kijaro');
+                const result = await response.json();
+                if (result.success && result.data) {
+                    Object.assign(DB, result.data);
+                    console.log("Data berhasil dimuat dari MySQL.");
+                }
+            } catch (e) {
+                console.error("Gagal memuat dari MySQL:", e);
+            }
         }
-    } catch (e) {
-        console.error("Gagal memuat dari MySQL:", e);
-    }
+
+        async function saveToMySQL() {
+            try {
+                await fetch('/api/save-state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        key: 'main_kijaro',
+                        value: DB
+                    })
+                });
+                console.log("Data tersimpan permanen di MySQL.");
+            } catch (e) {
+                console.error("Gagal menyimpan ke MySQL:", e);
+            }
+        }
+
+        // Panggil fungsi muat data lalu tampilkan halaman login saat web dibuka
+        window.onload = async function() {
+            await loadDataFromMySQL();
+            renderLogin();
+        }
+        async function saveCapaian(e) {
+    e.preventDefault();
+    // ... proses input data capaian ...
+
+    DB.capaian.push(newCapaian);
+    
+    // Tambahkan baris ini agar tersimpan permanen ke MySQL
+    await saveToMySQL();
+
+    closeCapaianModal();
+    showToast('Capaian kinerja berhasil disimpan!');
+    renderCapaianView(document.getElementById('mainContent'));
 }
-
-// Fungsi simpan otomatis yang akan mendeteksi perubahan data
-let isSaving = false;
-async function saveToMySQL() {
-    if (isSaving) return;
-    isSaving = true;
-    try {
-        await fetch('/api/save-state', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                key: 'main_kijaro',
-                value: DB
-            })
-        });
-        console.log("Data otomatis tersimpan permanen di MySQL.");
-    } catch (e) {
-        console.error("Gagal menyimpan ke MySQL:", e);
-    } finally {
-        isSaving = false;
-    }
-}
-
-// Membungkus objek DB dengan Proxy agar setiap ada perubahan langsung otomatis sync ke MySQL
-const handler = {
-    set(target, property, value) {
-        target[property] = value;
-        saveToMySQL(); // Otomatis simpan ke MySQL tanpa perlu panggil manual di 17 fungsi!
-        return true;
-    },
-    deleteProperty(target, property) {
-        delete target[property];
-        saveToMySQL(); // Otomatis simpan saat ada data yang dihapus
-        return true;
-    }
-};
-
-// Mengubah DB menjadi reaktif
-// (Catatan: Pastikan inisialisasi DB menggunakan let DB = { ... } di atas jika ingin diproxy, 
-// atau cukup panggil saveToMySQL() di 4 fungsi utama aksi simpan utama saja agar lebih aman).
+    </script>
+</body>
+</html>
     </script>
 </body>
 </html>
