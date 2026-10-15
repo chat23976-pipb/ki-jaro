@@ -3072,46 +3072,64 @@
                 document.getElementById('uUnit').value = '';
             }
         }
-        function closeUserModal() { document.getElementById('userModal').classList.remove('flex'); document.getElementById('userModal').classList.add('hidden'); }
+       // Fungsi otomatis menyamakan daftar DB.unitList dengan unit milik user ber-role ketua_unit
+    function syncUnitListFromUsers() {
+        const defaultUnits = [
+            'Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 
+            'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 
+            'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'
+        ];
+        const userUnits = DB.users
+            .filter(u => u.role === 'ketua_unit' && u.unit && u.unit.trim() !== '')
+            .map(u => u.unit.trim());
         
-        async function saveUser(e) {
-            e.preventDefault();
-            const idx = parseInt(document.getElementById('editUserIndex').value);
-            const userData = {
-                id: idx !== -1 ? DB.users[idx].id : 'u' + (DB.users.length + 1),
-                name: document.getElementById('uName').value,
-                username: document.getElementById('uUsername').value,
-                password: document.getElementById('uPassword').value,
-                role: document.getElementById('uRole').value,
-                timKey: document.getElementById('uTimKey').value,
-                unit: document.getElementById('uUnit').value
-            };
+        // Gabungkan unit bawaan dengan unit baru dari user tanpa duplikat
+        DB.unitList = Array.from(new Set([...defaultUnits, ...userUnits]));
+    }
 
-            if (idx !== -1) {
-                DB.users[idx] = userData;
-                showToast('Data pejabat berhasil diperbarui!');
-            } else {
-                DB.users.push(userData);
-                showToast('Pejabat baru berhasil ditambahkan!');
-            }
+    async function saveUser(e) {
+        e.preventDefault();
+        const idx = parseInt(document.getElementById('editUserIndex').value);
+        const userData = {
+            id: idx !== -1 ? DB.users[idx].id : 'u' + (Date.now()),
+            name: document.getElementById('uName').value.trim(),
+            username: document.getElementById('uUsername').value.trim(),
+            password: document.getElementById('uPassword').value.trim(),
+            role: document.getElementById('uRole').value,
+            timKey: document.getElementById('uTimKey').value,
+            unit: document.getElementById('uUnit').value.trim()
+        };
+
+        if (idx !== -1) {
+            DB.users[idx] = userData;
+            showToast('Data pejabat berhasil diperbarui!');
+        } else {
+            DB.users.push(userData);
+            showToast('Pejabat baru berhasil ditambahkan!');
+        }
+
+        // Sinkronkan unit baru ke DB.unitList agar muncul di Cascading & Dashboard
+        syncUnitListFromUsers();
+
+        await saveToMySQL();
+        closeUserModal();
+        renderAdminView(document.getElementById('mainContent'));
+    }
+
+    async function confirmDeleteUser(idx) {
+        const u = DB.users[idx];
+        if (u.username === 'admin') {
+            showToast('Akun Administrator utama tidak dapat dihapus!', 'error');
+            return;
+        }
+        if (confirm(`Apakah Anda yakin ingin menghapus user "${u.name}" (${u.username})?`)) {
+            DB.users.splice(idx, 1);
+            syncUnitListFromUsers();
             await saveToMySQL();
-            closeUserModal();
+            showToast('User berhasil dihapus.', 'info');
             renderAdminView(document.getElementById('mainContent'));
         }
-
-        async function confirmDeleteUser(idx) {
-            const u = DB.users[idx];
-            if (u.username === 'admin') {
-                showToast('Akun Administrator utama tidak dapat dihapus!', 'error');
-                return;
-            }
-            if (confirm(`Apakah Anda yakin ingin menghapus user "${u.name}" (${u.username})?`)) {
-                DB.users.splice(idx, 1);
-                await saveToMySQL();
-                showToast('User berhasil dihapus.', 'info');
-                renderAdminView(document.getElementById('mainContent'));
-            }
-        }
+    }
 
         async function resetPassword(idx) {
             DB.users[idx].password = '123456';
