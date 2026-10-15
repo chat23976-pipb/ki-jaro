@@ -1498,7 +1498,7 @@
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
                                         ${DB.renstraIndikatorKinerja.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada indikator Renstra</td></tr>` : DB.renstraIndikatorKinerja.map(ik => {
-                                            const pagu = ik.anggaran2025 || 100000000;
+                                            const pagu = ik.anggaran2025 || 0;
                                             const totalReal = DB.realisasiAnggaranAdmin.filter(ra => ra.indikatorId === ik.id).reduce((a,b)=>a+b.realisasiAnggaran,0);
                                             const pReal = pagu > 0 ? ((totalReal / pagu) * 100).toFixed(1) : 0;
                                             const sisa = pagu - totalReal;
