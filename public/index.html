@@ -205,217 +205,244 @@
             }, 3500);
         }
 
+// =========================================================================
+// VARIABEL GLOBAL UNTUK CHART LANDING PAGE (Tambahkan di luar fungsi)
+// =========================================================================
+let filterLandingTahun = '2025';
+let filterLandingTriwulan = 'Semua';
+let landingChartInstance = null;
+
+// =========================================================================
+// FUNGSI RENDER LOGIN / TAMPILAN DEPAN
+// =========================================================================
 function renderLogin() {
     const app = document.getElementById('app');
     app.innerHTML = `
-        <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/40 text-slate-800 flex flex-col justify-between selection:bg-primary-100 selection:text-primary-800 font-sans">
+        <div class="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-100 selection:text-blue-900 font-sans">
             
-            <!-- Navbar Header Elegan (Light Style ala Portal Kemenperin) -->
-            <header class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 sm:px-10 py-3.5 sticky top-0 z-30 shadow-xs">
+            <!-- Navbar Header Seamless (Tanpa Border) -->
+            <header class="bg-transparent px-6 sm:px-12 py-6 absolute top-0 w-full z-30">
                 <div class="max-w-7xl mx-auto flex items-center justify-between">
-                    <div class="flex items-center space-x-3.5">
-                        <div class="w-10 h-10 rounded-xl bg-blue-50 p-1 flex items-center justify-center border border-blue-100 shadow-xs">
-                            <img src="WhatsApp Image 2026-10-15 at 18.51.14.jpeg" alt="Logo" class="w-full h-full object-contain">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-600/30">
+                            K
                         </div>
                         <div>
-                            <div class="flex items-center space-x-2">
-                                <h1 class="text-slate-900 font-black text-lg tracking-tight">Ki-Jaro</h1>
-                                <span class="px-2 py-0.5 text-[10px] font-bold bg-primary-50 text-primary-700 border border-primary-200/60 rounded-full uppercase">Kinerja & Risiko</span>
-                            </div>
-                            <p class="text-[11px] font-medium text-slate-500">Politeknik Industri Petrokimia Banten</p>
+                            <h1 class="text-slate-900 font-black text-xl tracking-tight leading-none">Ki-Jaro</h1>
+                            <p class="text-[11px] font-semibold text-blue-600 mt-1">Politeknik Industri Petrokimia Banten</p>
                         </div>
-                    </div>
-                    <div class="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600">
-                        <span class="flex items-center text-primary-700 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-100">
-                            <i class="fa-solid fa-circle-check mr-1.5 text-emerald-500"></i> Sistem Terintegrasi BPSDMI
-                        </span>
                     </div>
                 </div>
             </header>
 
-            <!-- Main Hero & Login Area -->
-            <main class="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-12 flex-1 flex flex-col justify-center">
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            <!-- Main Hero & Content -->
+            <main class="max-w-7xl mx-auto w-full px-4 sm:px-8 pt-28 pb-8 flex-1 flex flex-col justify-center">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
                     
-                    <!-- SISI KIRI (DOMINAN, BESAR & SMOOTH) -->
-                    <div class="lg:col-span-7 space-y-6">
-                        
-                        <div class="space-y-3">
-                            <span class="text-xs font-bold text-primary-600 tracking-wider uppercase bg-primary-50 px-3 py-1 rounded-full border border-primary-100">
-                                PORTAL KINERJA & MANAJEMEN RISIKO
+                    <!-- SISI KIRI: Teks & Gambar Besar Seamless -->
+                    <div class="lg:col-span-7 space-y-8">
+                        <div class="space-y-4 pr-0 sm:pr-8">
+                            <span class="text-xs font-bold text-blue-600 tracking-wider uppercase bg-blue-100/50 px-3 py-1.5 rounded-full">
+                                Sistem Informasi Kinerja & Manajemen Risiko
                             </span>
-                            <h2 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-                                Wujudkan Tata Kelola <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-700">Pendidikan Vokasi Industri</span> Unggul
+                            <h2 class="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight">
+                                Ki-Jaro <br>
+                                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 text-3xl sm:text-4xl lg:text-5xl">(Kinerja-Jawara-Petro)</span>
                             </h2>
-                            <p class="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl">
-                                Akses data capaian indikator strategis Kemenperin, cascading bertahap ke program kerja unit, dan pantau mitigasi risiko realtime di lingkungan Politeknik Industri Petrokimia Banten.
+                            <p class="text-slate-600 text-base sm:text-lg leading-relaxed max-w-2xl">
+                                Akses data capaian indikator kinerja institusi, cascading bertahap, dan pemantauan manajemen risiko secara terpadu di lingkungan kampus.
                             </p>
                         </div>
 
-                        <!-- Gambar Utama Tampilan Depan (Besar, Mewah, Smooth Rounded) -->
-                        <div class="relative bg-white rounded-3xl p-3 border border-slate-200/90 shadow-xl shadow-slate-200/50 group overflow-hidden">
-                            <div class="overflow-hidden rounded-2xl bg-slate-50">
-                                <img src="gambar tampilan depan.jpeg" alt="Ilustrasi Petrokimia Banten" 
-                                    class="w-full h-64 sm:h-80 object-cover object-center transform group-hover:scale-[1.02] transition-transform duration-500" 
-                                    onerror="this.src='https://placehold.co/900x500/f8fafc/2563eb?text=Politeknik+Industri+Petrokimia+Banten'">
+                        <!-- Gambar Dominan Full Besar Seamless (Tanpa Border, Rounded Halus) -->
+                        <div class="w-full overflow-hidden rounded-[2.5rem] shadow-2xl shadow-slate-300/60 bg-transparent">
+                            <img src="gambar tampilan depan.jpeg" alt="Ilustrasi Petrokimia Banten" 
+                                class="w-full h-[400px] sm:h-[480px] lg:h-[550px] object-cover object-center transform hover:scale-105 transition-transform duration-700" 
+                                onerror="this.src='https://placehold.co/1000x800/f8fafc/2563eb?text=Politeknik+Industri+Petrokimia+Banten'">
+                        </div>
+                    </div>
+
+                    <!-- SISI KANAN: Form Login & Grafik -->
+                    <div class="lg:col-span-5 flex flex-col space-y-8">
+                        
+                        <!-- Form Login (Seamless Soft Shadow) -->
+                        <div class="bg-white rounded-[2.5rem] p-8 sm:p-10 shadow-2xl shadow-slate-200/70">
+                            <div class="mb-8">
+                                <h3 class="text-2xl font-black text-slate-900 tracking-tight">Masuk Sistem</h3>
+                                <p class="text-sm font-medium text-slate-500 mt-1">Silakan masuk menggunakan akun terdaftar</p>
                             </div>
 
-                            <!-- Floating Badge Maskot di Pojok Gambar -->
-                            <div class="absolute bottom-6 left-6 right-6 sm:right-auto bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-lg flex items-center space-x-3">
-                                <img src="WhatsApp Image 2026-10-15 at 18.51.14.jpeg" alt="Maskot" class="w-10 h-10 object-contain">
+                            <form onsubmit="handleLogin(event)" class="space-y-5">
                                 <div>
-                                    <p class="text-xs font-bold text-slate-900">Maskot Jawara Petro</p>
-                                    <p class="text-[10px] text-slate-500">Mendukung sinergi & efisiensi kinerja institusi</p>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-5 text-slate-400 text-sm">
+                                            <i class="fa-solid fa-user"></i>
+                                        </span>
+                                        <input type="text" id="usernameInput" required 
+                                            class="w-full pl-12 pr-5 py-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-800 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all outline-none border-none"
+                                            placeholder="Username">
+                                    </div>
                                 </div>
-                            </div>
+
+                                <div>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-5 text-slate-400 text-sm">
+                                            <i class="fa-solid fa-lock"></i>
+                                        </span>
+                                        <input type="password" id="passwordInput" required 
+                                            class="w-full pl-12 pr-5 py-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-800 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all outline-none border-none"
+                                            placeholder="Password">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl shadow-xl shadow-blue-500/30 transition-all flex items-center justify-center space-x-2 text-sm mt-4">
+                                    <span>Masuk Dashboard</span>
+                                    <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+                                </button>
+                            </form>
                         </div>
 
-                        <!-- Mini Line Chart Dashboard Capaian (Gaya Terang & Bersih) -->
-                        <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-md shadow-slate-200/40">
-                            <div class="flex items-center justify-between mb-2 pb-2 border-b border-slate-100">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-7 h-7 rounded-lg bg-blue-50 text-primary-600 flex items-center justify-center text-xs">
-                                        <i class="fa-solid fa-chart-line"></i>
-                                    </div>
-                                    <h4 class="font-bold text-xs sm:text-sm text-slate-900">Grafik Capaian Indikator Utama (Line Chart)</h4>
+                        <!-- Grafik Capaian dengan Filter (Seamless) -->
+                        <div class="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-2xl shadow-slate-200/70 flex flex-col">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                <div>
+                                    <h4 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                        <i class="fa-solid fa-chart-line text-blue-600"></i> Capaian Indikator
+                                    </h4>
                                 </div>
-                                <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full">
-                                    Tahun Anggaran 2025
-                                </span>
+
+                                <!-- Filter Interaktif Seamless -->
+                                <div class="flex items-center space-x-1 bg-slate-50 p-1.5 rounded-xl border-none">
+                                    <select id="landingFilterTahun" onchange="filterLandingTahun = this.value; updateLandingChart();" 
+                                        class="p-1.5 bg-transparent text-slate-700 text-xs font-bold outline-none cursor-pointer border-none appearance-none">
+                                        <option value="2025" selected>2025</option>
+                                        <option value="2026">2026</option>
+                                        <option value="2027">2027</option>
+                                        <option value="2028">2028</option>
+                                        <option value="2029">2029</option>
+                                    </select>
+                                    <div class="w-px h-4 bg-slate-300"></div>
+                                    <select id="landingFilterTriwulan" onchange="filterLandingTriwulan = this.value; updateLandingChart();" 
+                                        class="p-1.5 bg-transparent text-slate-700 text-xs font-bold outline-none cursor-pointer border-none appearance-none">
+                                        <option value="Semua" selected>Semua TW</option>
+                                        <option value="TW 1">TW 1</option>
+                                        <option value="TW 2">TW 2</option>
+                                        <option value="TW 3">TW 3</option>
+                                        <option value="TW 4">TW 4</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 pr-2 pointer-events-none"></i>
+                                </div>
                             </div>
-                            <div class="h-44 sm:h-48 relative">
+
+                            <div class="h-40 relative w-full">
                                 <canvas id="landingPreviewChart"></canvas>
                             </div>
                         </div>
 
                     </div>
-
-                    <!-- SISI KANAN (FORM LOGIN ELEGAN & CLEAN) -->
-                    <div class="lg:col-span-5">
-                        <div class="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/90 shadow-2xl shadow-blue-900/5 relative overflow-hidden">
-                            <!-- Aksen Header Kartu -->
-                            <div class="text-center space-y-1 mb-8">
-                                <div class="w-14 h-14 mx-auto bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner mb-3 border border-primary-100">
-                                    <i class="fa-solid fa-fingerprint"></i>
-                                </div>
-                                <h3 class="text-2xl font-black text-slate-900 tracking-tight">Masuk Sistem</h3>
-                                <p class="text-xs font-medium text-slate-500">Silakan login menggunakan akun dinas Anda</p>
-                            </div>
-
-                            <form onsubmit="handleLogin(event)" class="space-y-4">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Username</label>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 text-sm">
-                                            <i class="fa-solid fa-user"></i>
-                                        </span>
-                                        <input type="text" id="usernameInput" required 
-                                            class="w-full pl-10 pr-4 py-3.5 bg-slate-50/70 border border-slate-200 rounded-2xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none"
-                                            placeholder="Masukkan username">
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Password</label>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 text-sm">
-                                            <i class="fa-solid fa-lock"></i>
-                                        </span>
-                                        <input type="password" id="passwordInput" required 
-                                            class="w-full pl-10 pr-4 py-3.5 bg-slate-50/70 border border-slate-200 rounded-2xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none"
-                                            placeholder="••••••••">
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="w-full py-3.5 bg-primary-600 hover:bg-primary-700 active:scale-[0.99] text-white font-bold rounded-2xl shadow-lg shadow-primary-500/25 transition-all flex items-center justify-center space-x-2 text-sm mt-2">
-                                    <span>Masuk ke Dashboard</span>
-                                    <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
-                                </button>
-                            </form>
-
-                            <div class="mt-8 pt-5 border-t border-slate-100 bg-slate-50/70 -mx-8 -mb-8 p-6 text-left">
-                                <p class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1.5">
-                                    <i class="fa-solid fa-circle-info text-primary-600"></i> Akun Pengujian Cepat:
-                                </p>
-                                <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-600 font-mono">
-                                    <div class="bg-white p-2 rounded-xl border border-slate-200/80">admin / 123</div>
-                                    <div class="bg-white p-2 rounded-xl border border-slate-200/80">direktur / 123</div>
-                                    <div class="bg-white p-2 rounded-xl border border-slate-200/80">tim_akademik / 123</div>
-                                    <div class="bg-white p-2 rounded-xl border border-slate-200/80">prodi_tmip / 123</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
             </main>
 
-            <!-- Footer Bersih & Minimalis -->
-            <footer class="bg-white border-t border-slate-200/80 py-4 text-center text-xs text-slate-500">
-                &copy; 2025 Politeknik Industri Petrokimia Banten &bull; Sistem Terpadu Ki-Jaro
+            <!-- Footer -->
+            <footer class="bg-transparent py-6 text-center text-xs font-medium text-slate-400">
+                &copy; 2026 Politeknik Industri Petrokimia Banten &bull; Sistem Terpadu Ki-Jaro
             </footer>
 
         </div>
     `;
 
-    // Render Preview Line Chart Capaian Bertema Light
-    setTimeout(() => {
-        const canvas = document.getElementById('landingPreviewChart');
-        if (!canvas) return;
-        
-        const twData = ['TW 1', 'TW 2', 'TW 3', 'TW 4'].map(tw => {
-            const m = DB.capaian.filter(c => c.triwulan === tw && c.status === 'Valid');
-            return m.length > 0 ? (m.reduce((a, b) => a + b.realisasi, 0) / m.length) : (tw === 'TW 1' ? 82.5 : tw === 'TW 2' ? 88.0 : tw === 'TW 3' ? 92.4 : 98.2);
-        });
+    // Render Chart secara asinkron agar DOM ter-load penuh
+    setTimeout(updateLandingChart, 100);
+}
 
-        new Chart(canvas.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'],
-                datasets: [{
-                    label: 'Realisasi Rata-Rata',
-                    data: twData,
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                    fill: true,
-                    tension: 0.35,
-                    borderWidth: 3,
-                    pointRadius: 5,
-                    pointHoverRadius: 7,
-                    pointBackgroundColor: '#2563eb',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2
-                }]
-            },
-            plugins: [ChartDataLabels],
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { 
-                        beginAtZero: true, 
-                        max: 120, 
-                        ticks: { color: '#64748b', font: { size: 10, weight: '500' } }, 
-                        grid: { color: '#f1f5f9' } 
-                    },
-                    x: { 
-                        ticks: { color: '#64748b', font: { size: 10, weight: '500' } }, 
-                        grid: { display: false } 
-                    }
+// =========================================================================
+// FUNGSI UPDATE CHART LANDING PAGE
+// =========================================================================
+function updateLandingChart() {
+    const canvas = document.getElementById('landingPreviewChart');
+    if (!canvas) return;
+
+    let labels = [];
+    let dataPoints = [];
+
+    // Logika pengisian data berdasarkan filter
+    if (filterLandingTriwulan === 'Semua') {
+        labels = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+        dataPoints = ['TW 1', 'TW 2', 'TW 3', 'TW 4'].map(tw => {
+            const matches = DB.capaian.filter(c => (c.tahun || '2025') === filterLandingTahun && c.triwulan === tw && c.status === 'Valid');
+            if (matches.length > 0) return Number((matches.reduce((a, b) => a + b.realisasi, 0) / matches.length).toFixed(1));
+            // Data fallback jika kosong (tampilan default)
+            return tw === 'TW 1' ? 82.5 : tw === 'TW 2' ? 88.0 : tw === 'TW 3' ? 92.4 : 98.2;
+        });
+    } else {
+        const matchingCD = DB.cascadingDirektur.filter(cd => (cd.tahun || '2025') === filterLandingTahun);
+        if (matchingCD.length > 0) {
+            labels = matchingCD.map(cd => cd.target.length > 15 ? cd.target.substring(0, 15) + '...' : cd.target);
+            dataPoints = matchingCD.map(cd => {
+                const m = DB.capaian.filter(c => c.targetDirektur === cd.target && (c.tahun || '2025') === filterLandingTahun && c.triwulan === filterLandingTriwulan && c.status === 'Valid');
+                return m.length > 0 ? Number((m.reduce((a, b) => a + b.realisasi, 0) / m.length).toFixed(1)) : 85.0;
+            });
+        } else {
+            labels = [filterLandingTriwulan];
+            dataPoints = [90];
+        }
+    }
+
+    if (landingChartInstance) {
+        landingChartInstance.destroy();
+    }
+
+    landingChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Capaian (%)',
+                data: dataPoints,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                fill: true,
+                tension: 0.4, // Membuat grafik smooth melengkung
+                borderWidth: 3,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: '#2563eb',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2
+            }]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    max: 120, 
+                    ticks: { color: '#94a3b8', font: { size: 10, weight: '500' } }, 
+                    grid: { color: '#f1f5f9' },
+                    border: { display: false }
                 },
-                plugins: {
-                    legend: { display: false },
-                    datalabels: { 
-                        align: 'top', 
-                        color: '#1e40af', 
-                        font: { weight: 'bold', size: 11 }, 
-                        formatter: v => v + '%' 
-                    }
+                x: { 
+                    ticks: { color: '#64748b', font: { size: 10, weight: '500' } }, 
+                    grid: { display: false },
+                    border: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                datalabels: { 
+                    align: 'top', 
+                    color: '#1e40af', 
+                    font: { weight: 'bold', size: 11 }, 
+                    formatter: v => v + '%' 
                 }
             }
-        });
-    }, 100);
+        }
+    });
 }
+```
+</ElicitationsGroup>
         function handleLogin(e) {
             e.preventDefault();
             const u = document.getElementById('usernameInput').value.trim();
