@@ -213,143 +213,263 @@ let filterLandingTriwulan = 'Semua';
 let landingChartInstance = null;
 
 // =========================================================================
-// FUNGSI RENDER LOGIN / TAMPILAN DEPAN (GAMBAR BESAR DI KIRI, LOGIN & GRAFIK BERTUMPUK DI KANANNYA)
+// FUNGSI RENDER LOGIN / TAMPILAN DEPAN (LAYOUT PERSIS GAYA GARVID KEMENPERIN)
 // =========================================================================
 function renderLogin() {
     const app = document.getElementById('app');
     app.innerHTML = `
-        <div class="min-h-screen bg-slate-50 text-slate-1000 flex flex-col justify-between selection:bg-blue-100 selection:text-blue-900 font-sans">
+        <div class="min-h-screen bg-white text-slate-800 flex flex-col justify-between selection:bg-blue-100 selection:text-blue-900 font-sans">
             
-            <!-- Navbar Header Seamless (Tanpa Border) -->
-            <header class="bg-transparent px-6 sm:px-12 py-6 absolute top-0 w-full z-30">
+            <!-- Navbar Header Ala Kemenperin (Menu Navigasi & Tombol Login di Kanan Atas) -->
+            <header class="bg-white border-b border-slate-100 px-6 sm:px-12 py-4 sticky top-0 z-30 shadow-xs">
                 <div class="max-w-7xl mx-auto flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-600/30">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-blue-600/20">
                             K
                         </div>
                         <div>
-                            <h1 class="text-slate-900 font-black text-xl tracking-tight leading-none">Ki-Jaro</h1>
-                            <p class="text-[11px] font-semibold text-blue-600 mt-1">Politeknik Industri Petrokimia Banten</p>
+                            <h1 class="text-slate-900 font-black text-lg tracking-tight leading-none">Ki-Jaro</h1>
+                            <p class="text-[10px] font-semibold text-blue-600 mt-1">Politeknik Industri Petrokimia Banten</p>
                         </div>
+                    </div>
+
+                    <!-- Navigasi Tengah & Tombol Login Kanan Atas -->
+                    <div class="flex items-center space-x-6">
+                        <nav class="hidden md:flex items-center space-x-6 text-xs font-bold text-slate-600">
+                            <a href="#" class="text-blue-600 hover:text-blue-700">Beranda</a>
+                            <a href="#dokumenSection" class="hover:text-blue-600 transition-colors">Dokumen & Renstra</a>
+                            <a href="#chartSection" class="hover:text-blue-600 transition-colors">Grafik Capaian</a>
+                        </nav>
+                        <button onclick="openLoginModal()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center space-x-2 text-xs">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            <span>Login</span>
+                        </button>
                     </div>
                 </div>
             </header>
 
-            <!-- Main Hero & Content -->
-            <main class="max-w-7xl mx-auto w-full px-4 sm:px-8 pt-28 pb-8 flex-1 flex flex-col justify-center">
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-            
-                    <!-- SISI KIRI: Teks & Gambar Besar Seamless (Full ke Bawah) -->
-                    <div class="lg:col-span-9 space-y-6">
-                        <div class="space-y-3">
-                            <span class="text-xs font-bold text-blue-600 tracking-wider uppercase bg-blue-100/50 px-3 py-1.5 rounded-full">
-                                Sistem Informasi Kinerja & Manajemen Risiko
-                            </span>
-                            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-                                Ki-Jaro <br>
-                                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 text-2xl sm:text-3xl lg:text-4xl">(Kinerja-Jawara-Petro)</span>
-                            </h2>
-                            <p class="text-slate-600 text-sm sm:text-base leading-relaxed">
-                                Akses data capaian indikator kinerja institusi, cascading bertahap, dan pemantauan manajemen risiko secara terpadu di lingkungan kampus.
-                            </p>
-                        </div>
+            <!-- Main Hero Section (Kiri: Teks & Search, Kanan: Foto Gambar Besar) -->
+            <main class="max-w-7xl mx-auto w-full px-4 sm:px-8 py-12 sm:py-16 flex-1 flex flex-col justify-center">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+                    
+                    <!-- SISI KIRI: Penjelasan & Kolom Pencarian -->
+                    <div class="lg:col-span-7 space-y-6">
+                        <span class="text-xs font-bold text-blue-600 tracking-wider uppercase bg-blue-50 px-3.5 py-1.5 rounded-full border border-blue-100">
+                            PORTAL DATA VOKASI INDUSTRI
+                        </span>
+                        <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight">
+                            Temukan Data Kinerja & <br>
+                            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Manajemen Risiko Hari Ini</span>
+                        </h2>
+                        <p class="text-slate-600 text-sm sm:text-base leading-relaxed max-w-xl">
+                            Akses data komprehensif tentang pengukuran kinerja institusi Politeknik Industri Petrokimia Banten. Jelajahi dokumen perencanaan, cascading, dan informasi satuan kerja.
+                        </p>
 
-                        <!-- Gambar Dominan Full Besar Seamless (Tanpa Border, Rounded Halus) -->
-                        <div class="w-full overflow-hidden rounded-[2.5rem] shadow-2xl shadow-slate-300/60 bg-transparent">
+                        <!-- Kotak Pencarian Cepat Ala Garvid -->
+                        <div class="pt-2 max-w-xl">
+                            <div class="relative flex items-center shadow-lg shadow-slate-200/60 rounded-2xl border border-slate-200 bg-white">
+                                <span class="absolute left-4 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                <input type="text" placeholder="Cari indikator kinerja, dokumen, atau unit kerja..." 
+                                    class="w-full pl-11 pr-4 py-3.5 rounded-2xl text-xs sm:text-sm outline-none border-none text-slate-700 bg-transparent">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SISI KANAN: Foto Gambar Besar Seamless Tanpa Border -->
+                    <div class="lg:col-span-5">
+                        <div class="w-full overflow-hidden rounded-[2.5rem] shadow-2xl shadow-slate-300/50 bg-transparent">
                             <img src="gambar tampilan depan.jpeg" alt="Ilustrasi Petrokimia Banten" 
-                                class="w-full h-[450px] sm:h-[600px] lg:h-[680px] object-cover object-center transform hover:scale-105 transition-transform duration-700" 
-                                onerror="this.src='https://placehold.co/1000x900/f8fafc/2563eb?text=Politeknik+Industri+Petrokimia+Banten'">
+                                class="w-full h-[350px] sm:h-[450px] object-cover object-center transform hover:scale-105 transition-transform duration-700" 
+                                onerror="this.src='https://placehold.co/1000x800/f8fafc/2563eb?text=Politeknik+Industri+Petrokimia+Banten'">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BAGIAN BAWAH: Chart Grafik Pencapaian & Dokumen Perencanaan -->
+                <div class="mt-20 space-y-12">
+                    
+                    <!-- Section Chart Grafik Pencapaian Indikator Kinerja -->
+                    <div id="chartSection" class="bg-white rounded-[2.5rem] p-6 sm:p-10 shadow-xl shadow-slate-200/40 border border-slate-100 space-y-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                            <div>
+                                <h3 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-chart-line text-blue-600"></i> Grafik Pencapaian Indikator Kinerja Utama
+                                </h3>
+                                <p class="text-xs text-slate-500">Tren progress capaian triwulanan institusi</p>
+                            </div>
+                            <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200/60">
+                                <select id="landingFilterTahun" onchange="filterLandingTahun = this.value; updateLandingChart();" 
+                                    class="p-1.5 bg-transparent text-slate-700 text-xs font-bold outline-none cursor-pointer">
+                                    <option value="2025" selected>2025</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                    <option value="2028">2028</option>
+                                    <option value="2029">2029</option>
+                                </select>
+                                <div class="w-px h-4 bg-slate-300"></div>
+                                <select id="landingFilterTriwulan" onchange="filterLandingTriwulan = this.value; updateLandingChart();" 
+                                    class="p-1.5 bg-transparent text-slate-700 text-xs font-bold outline-none cursor-pointer">
+                                    <option value="Semua" selected>Semua TW</option>
+                                    <option value="TW 1">TW 1</option>
+                                    <option value="TW 2">TW 2</option>
+                                    <option value="TW 3">TW 3</option>
+                                    <option value="TW 4">TW 4</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="h-72 sm:h-80 relative w-full">
+                            <canvas id="landingPreviewChart"></canvas>
                         </div>
                     </div>
 
-                    <!-- SISI KANAN: Form Login & Grafik Tersusun Bertumpuk ke Bawah -->
-                    <div class="lg:col-span-3 flex flex-col space-y-6">
-                        
-                        <!-- Form Login (Seamless Soft Shadow) -->
-                        <div class="bg-white rounded-[2.5rem] p-8 sm:p-10 shadow-2xl shadow-slate-200/70">
-                            <div class="mb-6">
-                                <h3 class="text-2xl font-black text-slate-900 tracking-tight">Masuk Sistem</h3>
-                                <p class="text-xs font-medium text-slate-500 mt-1">Silakan masuk menggunakan akun terdaftar</p>
-                            </div>
-
-                            <form onsubmit="handleLogin(event)" class="space-y-4">
-                                <div>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-xs">
-                                            <i class="fa-solid fa-user"></i>
-                                        </span>
-                                        <input type="text" id="usernameInput" required 
-                                            class="w-full pl-11 pr-4 py-3.5 bg-slate-50 rounded-2xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all outline-none border-none"
-                                            placeholder="Username">
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-xs">
-                                            <i class="fa-solid fa-lock"></i>
-                                        </span>
-                                        <input type="password" id="passwordInput" required 
-                                            class="w-full pl-11 pr-4 py-3.5 bg-slate-50 rounded-2xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all outline-none border-none"
-                                            placeholder="Password">
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center space-x-2 text-xs mt-2">
-                                    <span>Masuk Dashboard</span>
-                                    <i class="fa-solid fa-arrow-right-to-bracket text-[10px]"></i>
-                                </button>
-                            </form>
+                    <!-- Section Daftar Dokumen Perencanaan -->
+                    <div id="dokumenSection" class="bg-white rounded-[2.5rem] p-6 sm:p-10 shadow-xl shadow-slate-200/40 border border-slate-100 space-y-6">
+                        <div class="border-b border-slate-100 pb-4">
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-folder-open text-blue-600"></i> Daftar Dokumen Perencanaan & Renstra
+                            </h3>
+                            <p class="text-xs text-slate-500">Unduh dokumen resmi perencanaan strategis politeknik</p>
                         </div>
-
-                        <!-- Grafik Capaian dengan Filter (Seamless, Tepat di Bawah Form Login) -->
-                        <div class="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-2xl shadow-slate-200/70 flex flex-col">
-                            <div class="flex items-center justify-between gap-2 mb-4">
-                                <h4 class="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                                    <i class="fa-solid fa-chart-line text-blue-600"></i> Capaian Indikator Utama
-                                </h4>
-
-                                <!-- Filter Interaktif Seamless Kompak -->
-                                <div class="flex items-center space-x-1 bg-slate-50 p-1 rounded-xl">
-                                    <select id="landingFilterTahun" onchange="filterLandingTahun = this.value; updateLandingChart();" 
-                                        class="p-1.5 bg-transparent text-slate-700 text-[11px] font-bold outline-none cursor-pointer border-none appearance-none">
-                                        <option value="2025" selected>2025</option>
-                                        <option value="2026">2026</option>
-                                        <option value="2027">2027</option>
-                                        <option value="2028">2028</option>
-                                        <option value="2029">2029</option>
-                                    </select>
-                                    <div class="w-px h-3.5 bg-slate-300"></div>
-                                    <select id="landingFilterTriwulan" onchange="filterLandingTriwulan = this.value; updateLandingChart();" 
-                                        class="p-1.5 bg-transparent text-slate-700 text-[11px] font-bold outline-none cursor-pointer border-none appearance-none">
-                                        <option value="Semua" selected>Semua TW</option>
-                                        <option value="TW 1">TW 1</option>
-                                        <option value="TW 2">TW 2</option>
-                                        <option value="TW 3">TW 3</option>
-                                        <option value="TW 4">TW 4</option>
-                                    </select>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            ${DB.dokumenPerencanaan.map(doc => `
+                                <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200/60 hover:border-blue-300 transition-all flex flex-col justify-between space-y-4">
+                                    <div>
+                                        <span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full">${doc.kategori}</span>
+                                        <h4 class="font-bold text-sm text-slate-900 mt-2">${doc.nama}</h4>
+                                        <p class="text-xs text-slate-500 mt-1">Periode: ${doc.tahun}</p>
+                                    </div>
+                                    <a href="${doc.link}" target="_blank" class="inline-flex items-center text-xs font-bold text-blue-600 hover:text-blue-700">
+                                        <i class="fa-solid fa-download mr-1.5"></i> Unduh Dokumen
+                                    </a>
                                 </div>
-                            </div>
-
-                            <div class="h-44 relative w-full">
-                                <canvas id="landingPreviewChart"></canvas>
-                            </div>
+                            `).join('')}
                         </div>
-
                     </div>
+
                 </div>
             </main>
 
             <!-- Footer -->
-            <footer class="bg-transparent py-6 text-center text-xs font-medium text-slate-400">
+            <footer class="bg-white border-t border-slate-100 py-6 text-center text-xs font-medium text-slate-400 mt-16">
                 &copy; 2026 Politeknik Industri Petrokimia Banten &bull; Sistem Terpadu Ki-Jaro
             </footer>
 
         </div>
+
+        <!-- MODAL POP-UP FORM LOGIN (MUNCUL KETIKA TOMBOL LOGIN DI KLIK) -->
+        <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-8 sm:p-10 relative animate-fadeIn">
+                <button onclick="closeLoginModal()" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="mb-6 text-center">
+                    <h3 class="text-2xl font-black text-slate-900 tracking-tight">Masuk Sistem</h3>
+                    <p class="text-xs font-medium text-slate-500 mt-1">Masukkan kredensial akun Ki-Jaro Anda</p>
+                </div>
+
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-xs">
+                                <i class="fa-solid fa-user"></i>
+                            </span>
+                            <input type="text" id="usernameInput" required 
+                                class="w-full pl-11 pr-4 py-3.5 bg-slate-50 rounded-2xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/25 transition-all outline-none border-none"
+                                placeholder="Username">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-xs">
+                                <i class="fa-solid fa-lock"></i>
+                            </span>
+                            <input type="password" id="passwordInput" required 
+                                class="w-full pl-11 pr-4 py-3.5 bg-slate-50 rounded-2xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/25 transition-all outline-none border-none"
+                                placeholder="Password">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center space-x-2 text-xs mt-2">
+                        <span>Masuk Dashboard</span>
+                        <i class="fa-solid fa-arrow-right-to-bracket text-[10px]"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
     `;
+
     setTimeout(updateLandingChart, 100);
 }
 
+// Fungsi Mengontrol Modal Login Pop-up
+function openLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closeLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) {
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    }
+}
+
+// Fungsi Update Chart Landing Page
+function updateLandingChart() {
+    const canvas = document.getElementById('landingPreviewChart');
+    if (!canvas) return;
+
+    let labels = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+    let dataPoints = labels.map(tw => {
+        const matches = DB.capaian.filter(c => (c.tahun || '2025') === filterLandingTahun && c.triwulan === tw && c.status === 'Valid');
+        if (matches.length > 0) return Number((matches.reduce((a, b) => a + b.realisasi, 0) / matches.length).toFixed(1));
+        return tw === 'TW 1' ? 82.5 : tw === 'TW 2' ? 88.0 : tw === 'TW 3' ? 92.4 : 98.2;
+    });
+
+    if (landingChartInstance) {
+        landingChartInstance.destroy();
+    }
+
+    landingChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Capaian (%)',
+                data: dataPoints,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 5,
+                pointBackgroundColor: '#2563eb',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2
+            }]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, max: 120, ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#f1f5f9' }, border: { display: false } },
+                x: { ticks: { color: '#64748b', font: { size: 11, weight: '500' } }, grid: { display: false }, border: { display: false } }
+            },
+            plugins: {
+                legend: { display: false },
+                datalabels: { align: 'top', color: '#1e40af', font: { weight: 'bold', size: 11 }, formatter: v => v + '%' }
+            }
+        }
+    });
+}
+```
+</ElicitationsGroup>
         function updateLandingChart() {
             const canvas = document.getElementById('landingPreviewChart');
             if (!canvas) return;
