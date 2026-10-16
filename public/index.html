@@ -205,107 +205,167 @@
             }, 3500);
         }
 
-        // Ganti fungsi renderLogin() yang ada di baris ~133 dengan kode ini:
 function renderLogin() {
     const app = document.getElementById('app');
     app.innerHTML = `
-        <div class="min-h-screen bg-slate-900 flex flex-col justify-between">
-            <header class="bg-navy-900/90 border-b border-slate-800 px-6 py-4 sticky top-0 z-20">
+        <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/40 text-slate-800 flex flex-col justify-between selection:bg-primary-100 selection:text-primary-800 font-sans">
+            
+            <!-- Navbar Header Elegan (Light Style ala Portal Kemenperin) -->
+            <header class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 sm:px-10 py-3.5 sticky top-0 z-30 shadow-xs">
                 <div class="max-w-7xl mx-auto flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <img src="WhatsApp Image 2026-10-15 at 18.51.14.jpeg" alt="Logo" class="w-9 h-9 object-contain bg-white rounded-lg p-0.5">
-                        <div>
-                            <h1 class="text-white font-extrabold text-base tracking-wide">Ki-Jaro</h1>
-                            <p class="text-[10px] text-primary-300">Politeknik Industri Petrokimia Banten</p>
+                    <div class="flex items-center space-x-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 p-1 flex items-center justify-center border border-blue-100 shadow-xs">
+                            <img src="WhatsApp Image 2026-10-15 at 18.51.14.jpeg" alt="Logo" class="w-full h-full object-contain">
                         </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <h1 class="text-slate-900 font-black text-lg tracking-tight">Ki-Jaro</h1>
+                                <span class="px-2 py-0.5 text-[10px] font-bold bg-primary-50 text-primary-700 border border-primary-200/60 rounded-full uppercase">Kinerja & Risiko</span>
+                            </div>
+                            <p class="text-[11px] font-medium text-slate-500">Politeknik Industri Petrokimia Banten</p>
+                        </div>
+                    </div>
+                    <div class="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600">
+                        <span class="flex items-center text-primary-700 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-100">
+                            <i class="fa-solid fa-circle-check mr-1.5 text-emerald-500"></i> Sistem Terintegrasi BPSDMI
+                        </span>
                     </div>
                 </div>
             </header>
 
-            <main class="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex-1 flex flex-col justify-center">
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                    <!-- Sisi Kiri: Penjelasan, Gambar & Line Chart -->
-                    <div class="lg:col-span-7 space-y-6 text-white order-2 lg:order-1">
-                        <div>
-                            <span class="inline-block px-3 py-1 bg-primary-500/20 text-primary-300 text-xs font-semibold rounded-full border border-primary-500/30 mb-2">
-                                Sistem Informasi Kinerja & Manajemen Risiko
+            <!-- Main Hero & Login Area -->
+            <main class="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-12 flex-1 flex flex-col justify-center">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+                    
+                    <!-- SISI KIRI (DOMINAN, BESAR & SMOOTH) -->
+                    <div class="lg:col-span-7 space-y-6">
+                        
+                        <div class="space-y-3">
+                            <span class="text-xs font-bold text-primary-600 tracking-wider uppercase bg-primary-50 px-3 py-1 rounded-full border border-primary-100">
+                                PORTAL KINERJA & MANAJEMEN RISIKO
                             </span>
-                            <h2 class="text-2xl sm:text-4xl font-extrabold text-white">Ki-Jaro <span class="text-primary-400 font-bold">(Kinerja-Jawara-Petro)</span></h2>
-                            <p class="text-slate-300 text-sm sm:text-base mt-2 leading-relaxed">
-                                Platform perencanaan kinerja bertahap dan pengendalian risiko terintegrasi Politeknik Industri Petrokimia Banten dari sasaran Kemenperin hingga unit dan program kerja lapangan.
+                            <h2 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+                                Wujudkan Tata Kelola <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-700">Pendidikan Vokasi Industri</span> Unggul
+                            </h2>
+                            <p class="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl">
+                                Akses data capaian indikator strategis Kemenperin, cascading bertahap ke program kerja unit, dan pantau mitigasi risiko realtime di lingkungan Politeknik Industri Petrokimia Banten.
                             </p>
                         </div>
 
-                        <!-- Gambar Tampilan Depan & Maskot -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div class="rounded-2xl overflow-hidden border border-slate-700 bg-slate-800/60 p-2 shadow-lg">
-                                <img src="gambar tampilan depan.jpeg" alt="Tampilan Depan" class="w-full h-44 sm:h-52 object-cover rounded-xl" onerror="this.src='https://placehold.co/400x250/1e293b/ffffff?text=Ilustrasi+Depan'">
+                        <!-- Gambar Utama Tampilan Depan (Besar, Mewah, Smooth Rounded) -->
+                        <div class="relative bg-white rounded-3xl p-3 border border-slate-200/90 shadow-xl shadow-slate-200/50 group overflow-hidden">
+                            <div class="overflow-hidden rounded-2xl bg-slate-50">
+                                <img src="gambar tampilan depan.jpeg" alt="Ilustrasi Petrokimia Banten" 
+                                    class="w-full h-64 sm:h-80 object-cover object-center transform group-hover:scale-[1.02] transition-transform duration-500" 
+                                    onerror="this.src='https://placehold.co/900x500/f8fafc/2563eb?text=Politeknik+Industri+Petrokimia+Banten'">
                             </div>
-                            <div class="rounded-2xl border border-slate-700 bg-slate-800/60 p-4 flex items-center space-x-3 shadow-lg">
-                                <img src="WhatsApp Image 2026-10-15 at 18.51.14.jpeg" alt="Maskot" class="w-20 h-20 object-contain shrink-0">
-                                <div class="text-xs space-y-1">
-                                    <p class="font-bold text-white text-sm">Maskot Petrokimia</p>
-                                    <p class="text-slate-300">Siap mengawal sasaran kinerja unggul dan kepatuhan mitigasi risiko.</p>
+
+                            <!-- Floating Badge Maskot di Pojok Gambar -->
+                            <div class="absolute bottom-6 left-6 right-6 sm:right-auto bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-lg flex items-center space-x-3">
+                                <img src="WhatsApp Image 2026-10-15 at 18.51.14.jpeg" alt="Maskot" class="w-10 h-10 object-contain">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-900">Maskot Jawara Petro</p>
+                                    <p class="text-[10px] text-slate-500">Mendukung sinergi & efisiensi kinerja institusi</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Line Chart Dashboard Capaian Utama -->
-                        <div class="bg-navy-900/80 border border-slate-800 p-4 rounded-2xl shadow-xl">
-                            <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
-                                <h4 class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
-                                    <i class="fa-solid fa-chart-line text-primary-400"></i> Grafik Capaian Indikator Utama (Line Chart)
-                                </h4>
-                                <span class="text-[10px] text-emerald-400 bg-emerald-950 border border-emerald-800 px-2 py-0.5 rounded-full">Tahun 2025</span>
+                        <!-- Mini Line Chart Dashboard Capaian (Gaya Terang & Bersih) -->
+                        <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-md shadow-slate-200/40">
+                            <div class="flex items-center justify-between mb-2 pb-2 border-b border-slate-100">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-7 h-7 rounded-lg bg-blue-50 text-primary-600 flex items-center justify-center text-xs">
+                                        <i class="fa-solid fa-chart-line"></i>
+                                    </div>
+                                    <h4 class="font-bold text-xs sm:text-sm text-slate-900">Grafik Capaian Indikator Utama (Line Chart)</h4>
+                                </div>
+                                <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full">
+                                    Tahun Anggaran 2025
+                                </span>
                             </div>
-                            <div class="h-44 relative">
+                            <div class="h-44 sm:h-48 relative">
                                 <canvas id="landingPreviewChart"></canvas>
                             </div>
                         </div>
+
                     </div>
 
-                    <!-- Sisi Kanan: Menu Login -->
-                    <div class="lg:col-span-5 order-1 lg:order-2">
-                        <div class="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/20 text-center">
-                            <h2 class="text-2xl font-bold text-slate-900">Masuk Sistem</h2>
-                            <p class="text-xs text-primary-700 font-semibold uppercase tracking-wider mb-6">Autentikasi Akun Ki-Jaro</p>
+                    <!-- SISI KANAN (FORM LOGIN ELEGAN & CLEAN) -->
+                    <div class="lg:col-span-5">
+                        <div class="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/90 shadow-2xl shadow-blue-900/5 relative overflow-hidden">
+                            <!-- Aksen Header Kartu -->
+                            <div class="text-center space-y-1 mb-8">
+                                <div class="w-14 h-14 mx-auto bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner mb-3 border border-primary-100">
+                                    <i class="fa-solid fa-fingerprint"></i>
+                                </div>
+                                <h3 class="text-2xl font-black text-slate-900 tracking-tight">Masuk Sistem</h3>
+                                <p class="text-xs font-medium text-slate-500">Silakan login menggunakan akun dinas Anda</p>
+                            </div>
 
-                            <form onsubmit="handleLogin(event)" class="space-y-4 text-left">
+                            <form onsubmit="handleLogin(event)" class="space-y-4">
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Username</label>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Username</label>
                                     <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-user"></i></span>
-                                        <input type="text" id="usernameInput" required class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-primary-500">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 text-sm">
+                                            <i class="fa-solid fa-user"></i>
+                                        </span>
+                                        <input type="text" id="usernameInput" required 
+                                            class="w-full pl-10 pr-4 py-3.5 bg-slate-50/70 border border-slate-200 rounded-2xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none"
+                                            placeholder="Masukkan username">
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Password</label>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Password</label>
                                     <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-lock"></i></span>
-                                        <input type="password" id="passwordInput" required class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-primary-500">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 text-sm">
+                                            <i class="fa-solid fa-lock"></i>
+                                        </span>
+                                        <input type="password" id="passwordInput" required 
+                                            class="w-full pl-10 pr-4 py-3.5 bg-slate-50/70 border border-slate-200 rounded-2xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none"
+                                            placeholder="••••••••">
                                     </div>
                                 </div>
 
-                                <button type="submit" class="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-lg shadow-primary-500/30 transition-all flex items-center justify-center space-x-2 text-sm">
-                                    <span>Masuk Sistem</span>
-                                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                                <button type="submit" class="w-full py-3.5 bg-primary-600 hover:bg-primary-700 active:scale-[0.99] text-white font-bold rounded-2xl shadow-lg shadow-primary-500/25 transition-all flex items-center justify-center space-x-2 text-sm mt-2">
+                                    <span>Masuk ke Dashboard</span>
+                                    <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
                                 </button>
                             </form>
+
+                            <div class="mt-8 pt-5 border-t border-slate-100 bg-slate-50/70 -mx-8 -mb-8 p-6 text-left">
+                                <p class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1.5">
+                                    <i class="fa-solid fa-circle-info text-primary-600"></i> Akun Pengujian Cepat:
+                                </p>
+                                <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-600 font-mono">
+                                    <div class="bg-white p-2 rounded-xl border border-slate-200/80">admin / 123</div>
+                                    <div class="bg-white p-2 rounded-xl border border-slate-200/80">direktur / 123</div>
+                                    <div class="bg-white p-2 rounded-xl border border-slate-200/80">tim_akademik / 123</div>
+                                    <div class="bg-white p-2 rounded-xl border border-slate-200/80">prodi_tmip / 123</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
                 </div>
             </main>
+
+            <!-- Footer Bersih & Minimalis -->
+            <footer class="bg-white border-t border-slate-200/80 py-4 text-center text-xs text-slate-500">
+                &copy; 2025 Politeknik Industri Petrokimia Banten &bull; Sistem Terpadu Ki-Jaro
+            </footer>
+
         </div>
     `;
 
-    // Render Preview Line Chart Capaian
+    // Render Preview Line Chart Capaian Bertema Light
     setTimeout(() => {
         const canvas = document.getElementById('landingPreviewChart');
         if (!canvas) return;
+        
         const twData = ['TW 1', 'TW 2', 'TW 3', 'TW 4'].map(tw => {
             const m = DB.capaian.filter(c => c.triwulan === tw && c.status === 'Valid');
-            return m.length > 0 ? (m.reduce((a, b) => a + b.realisasi, 0) / m.length) : (tw === 'TW 1' ? 82 : tw === 'TW 2' ? 88 : tw === 'TW 3' ? 92 : 98);
+            return m.length > 0 ? (m.reduce((a, b) => a + b.realisasi, 0) / m.length) : (tw === 'TW 1' ? 82.5 : tw === 'TW 2' ? 88.0 : tw === 'TW 3' ? 92.4 : 98.2);
         });
 
         new Chart(canvas.getContext('2d'), {
@@ -313,15 +373,18 @@ function renderLogin() {
             data: {
                 labels: ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'],
                 datasets: [{
-                    label: 'Capaian Rata-Rata (%)',
+                    label: 'Realisasi Rata-Rata',
                     data: twData,
-                    borderColor: '#38bdf8',
-                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
                     fill: true,
                     tension: 0.35,
                     borderWidth: 3,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#38bdf8'
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#2563eb',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2
                 }]
             },
             plugins: [ChartDataLabels],
@@ -329,12 +392,25 @@ function renderLogin() {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: true, max: 120, ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    y: { 
+                        beginAtZero: true, 
+                        max: 120, 
+                        ticks: { color: '#64748b', font: { size: 10, weight: '500' } }, 
+                        grid: { color: '#f1f5f9' } 
+                    },
+                    x: { 
+                        ticks: { color: '#64748b', font: { size: 10, weight: '500' } }, 
+                        grid: { display: false } 
+                    }
                 },
                 plugins: {
                     legend: { display: false },
-                    datalabels: { align: 'top', color: '#f8fafc', font: { weight: 'bold', size: 10 }, formatter: v => v + '%' }
+                    datalabels: { 
+                        align: 'top', 
+                        color: '#1e40af', 
+                        font: { weight: 'bold', size: 11 }, 
+                        formatter: v => v + '%' 
+                    }
                 }
             }
         });
