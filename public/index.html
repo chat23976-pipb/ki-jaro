@@ -402,7 +402,7 @@ let landingChartInstance = null;
             setTimeout(updateLandingChart, 100);
         }
 
-        function openLoginModal() {
+       function openLoginModal() {
             const modal = document.getElementById('loginModal');
             if (modal) {
                 modal.classList.remove('hidden');
@@ -417,56 +417,55 @@ let landingChartInstance = null;
                 modal.classList.add('hidden');
             }
         }
+
         function updateLandingChart() {
-    const canvas = document.getElementById('landingPreviewChart');
-    if (!canvas) return;
+            const canvas = document.getElementById('landingPreviewChart');
+            if (!canvas) return;
 
-    let labels = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
-    let dataPoints = labels.map(tw => {
-        const matches = DB.capaian.filter(c => (c.tahun || '2025') === filterLandingTahun && c.triwulan === tw && c.status === 'Valid');
-        if (matches.length > 0) return Number((matches.reduce((a, b) => a + b.realisasi, 0) / matches.length).toFixed(1));
-        return tw === 'TW 1' ? 82.5 : tw === 'TW 2' ? 88.0 : tw === 'TW 3' ? 92.4 : 98.2;
-    });
+            let labels = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+            let dataPoints = labels.map(tw => {
+                const matches = DB.capaian.filter(c => (c.tahun || '2025') === filterLandingTahun && c.triwulan === tw && c.status === 'Valid');
+                if (matches.length > 0) return Number((matches.reduce((a, b) => a + b.realisasi, 0) / matches.length).toFixed(1));
+                return tw === 'TW 1' ? 82.5 : tw === 'TW 2' ? 88.0 : tw === 'TW 3' ? 92.4 : 98.2;
+            });
 
-    if (landingChartInstance) {
-        landingChartInstance.destroy();
-    }
-
-    landingChartInstance = new Chart(canvas.getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Capaian (%)',
-                data: dataPoints,
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                fill: true,
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 5,
-                pointBackgroundColor: '#2563eb',
-                pointBorderColor: '#ffffff',
-                pointBorderWidth: 2
-            }]
-        },
-        plugins: [ChartDataLabels],
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true, max: 120, ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#f1f5f9' }, border: { display: false } },
-                x: { ticks: { color: '#64748b', font: { size: 11, weight: '500' } }, grid: { display: false }, border: { display: false } }
-            },
-            plugins: {
-                legend: { display: false },
-                datalabels: { align: 'top', color: '#1e40af', font: { weight: 'bold', size: 11 }, formatter: v => v + '%' }
+            if (landingChartInstance) {
+                landingChartInstance.destroy();
             }
+
+            landingChartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Capaian (%)',
+                        data: dataPoints,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#2563eb',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 120, ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#f1f5f9' }, border: { display: false } },
+                        x: { ticks: { color: '#64748b', font: { size: 11, weight: '500' } }, grid: { display: false }, border: { display: false } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: { align: 'top', color: '#1e40af', font: { weight: 'bold', size: 11 }, formatter: v => v + '%' }
+                    }
+                }
+            });
         }
-    });
-}
-```
-</ElicitationsGroup>
         function updateLandingChart() {
             const canvas = document.getElementById('landingPreviewChart');
             if (!canvas) return;
