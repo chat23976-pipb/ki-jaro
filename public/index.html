@@ -2190,11 +2190,18 @@ let landingChartInstance = null;
                 return;
             }
 
-            // Normalisasi data lama agar tidak hilang jika properti tahun belum ada
+            // Deklarasi aman untuk filter dan sort jika belum ada
+            if (typeof filterCascadingTahun === 'undefined') window.filterCascadingTahun = 'Semua';
+            if (typeof sortCascadingDirCol === 'undefined') window.sortCascadingDirCol = 'target';
+            if (typeof sortCascadingDirAsc === 'undefined') window.sortCascadingDirAsc = true;
+            if (typeof sortCascadingTimCol === 'undefined') window.sortCascadingTimCol = 'targetDirektur';
+            if (typeof sortCascadingTimAsc === 'undefined') window.sortCascadingTimAsc = true;
+
+            // Normalisasi data lama agar tidak hilang
             DB.cascadingDirektur.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
             DB.cascadingTim.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
 
-            // Filter data cascading Direktur berdasarkan filterCascadingTahun
+            // Filter data cascading Direktur
             let filteredDir = [...DB.cascadingDirektur];
             if (filterCascadingTahun !== 'Semua') {
                 filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
@@ -2204,12 +2211,6 @@ let landingChartInstance = null;
             filteredDir.sort((a, b) => {
                 let valA = a[sortCascadingDirCol] || '';
                 let valB = b[sortCascadingDirCol] || '';
-                if (sortCascadingDirCol === 'kodeIndikator') {
-                    const ikA = DB.renstraIndikatorKinerja.find(x => x.id === a.indikatorId || x.namaIndikator === a.target);
-                    const ikB = DB.renstraIndikatorKinerja.find(x => x.id === b.indikatorId || x.namaIndikator === b.target);
-                    valA = ikA ? ikA.kodeIndikator : '';
-                    valB = ikB ? ikB.kodeIndikator : '';
-                }
                 if (typeof valA === 'string') return sortCascadingDirAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
                 return sortCascadingDirAsc ? valA - valB : valB - valA;
             });
