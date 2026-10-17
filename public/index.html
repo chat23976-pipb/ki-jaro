@@ -3753,17 +3753,28 @@ let landingChartInstance = null;
 
         // === SINKRONISASI STABIL & LENGKAP KE MYSQL ===
         async function loadDataFromMySQL() {
-            try {
-                const response = await fetch('/api/load-state/main_kijaro');
-                const result = await response.json();
-                if (result.success && result.data) {
-                    Object.assign(DB, result.data);
-                    console.log("Data berhasil dimuat dari MySQL.");
-                }
-            } catch (e) {
-                console.error("Gagal memuat dari MySQL:", e);
-            }
+    try {
+        const response = await fetch('/api/load-state/main_kijaro');
+        const result = await response.json();
+        if (result.success && result.data) {
+            // Gabungkan data server dengan default DB agar properti yang kosong tidak undefined
+            DB = { ...DB, ...result.data };
+            
+            // Pastikan array penting tidak bernilai null/undefined
+            if (!DB.users) DB.users = [];
+            if (!DB.cascadingDirektur) DB.cascadingDirektur = [];
+            if (!DB.cascadingTim) DB.cascadingTim = [];
+            if (!DB.capaian) DB.capaian = [];
+            if (!DB.risiko) DB.risiko = [];
+            if (!DB.renstraIndikatorKinerja) DB.renstraIndikatorKinerja = [];
+            if (!DB.realisasiAnggaranAdmin) DB.realisasiAnggaranAdmin = [];
+            
+            console.log("Data berhasil dimuat dari MySQL.");
         }
+    } catch (e) {
+        console.error("Gagal memuat dari MySQL, menggunakan state default:", e);
+    }
+}
 
         async function saveToMySQL() {
             try {
