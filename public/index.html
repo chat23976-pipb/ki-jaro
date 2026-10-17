@@ -2506,14 +2506,14 @@ ${isKaUnit ? `
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Status Validasi</label>
                                 <select id="validateStatusChoice" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold">
-                                    <option value="Valid" class="text-emerald-700">Valid (Masuk Dashboard Utama Kinerja)</option>
-                                    <option value="Tidak Valid" class="text-rose-700">Tidak Valid (Ditolak / Perbaikan)</option>
-                                </select>
+    <option value="Valid" class="text-emerald-700">Valid</option>
+    <option value="Tidak Valid" class="text-rose-700">Tidak Valid</option>
+</select>
                             </div>
                             <div class="bg-slate-50 p-3 rounded-xl border text-xs mb-3">
-                            <span class="font-bold text-slate-700 block mb-1"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> Keterangan Permasalahan dari Unit:</span>
-                            <p id="validatePermasalahanText" class="text-slate-600 italic">-</p>
-                            </div>
+    <span class="font-bold text-slate-700 block mb-1"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> Keterangan Permasalahan dari Unit:</span>
+    <p id="validatePermasalahanText" class="text-slate-600 italic">-</p>
+</div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-2">Penyesuaian (Checklist)</label>
                                 <div class="space-y-2 bg-slate-50 p-3 rounded-xl border">
@@ -2714,38 +2714,48 @@ async function confirmDeleteCapaian(id) {
         }
 
         function openValidateModal(id) {
-            document.getElementById('validateCapaianId').value = id;
-            const found = DB.capaian.find(c => c.id === id);
-            if (found) {
-                document.getElementById('validateStatusChoice').value = found.status === 'Valid' ? 'Valid' : 'Tidak Valid';
-                document.getElementById('validateComment').value = found.rekomendasi || '';
-                document.querySelectorAll('input[name="penyesuaianCheck"]').forEach(chk => {
-                    chk.checked = found.penyesuaian && found.penyesuaian.includes(chk.value);
-                });
-            }
-            document.getElementById('validateModal').classList.remove('hidden');
-            document.getElementById('validateModal').classList.add('flex');
+    document.getElementById('validateCapaianId').value = id;
+    const found = DB.capaian.find(c => c.id === id);
+    if (found) {
+        document.getElementById('validateStatusChoice').value = found.status === 'Valid' ? 'Valid' : 'Tidak Valid';
+        document.getElementById('validateComment').value = found.rekomendasi || '';
+        
+        // Menampilkan teks permasalahan dari unit ke dalam modal validasi
+        const permEl = document.getElementById('validatePermasalahanText');
+        if (permEl) {
+            permEl.innerText = found.permasalahan && found.permasalahan.trim() !== '' ? found.permasalahan : 'Tidak ada permasalahan yang diinput oleh unit.';
         }
+
+        document.querySelectorAll('input[name="penyesuaianCheck"]').forEach(chk => {
+            chk.checked = found.penyesuaian && found.penyesuaian.includes(chk.value);
+        });
+    }
+    document.getElementById('validateModal').classList.remove('hidden');
+    document.getElementById('validateModal').classList.add('flex');
+}
         function closeValidateModal() { document.getElementById('validateModal').classList.remove('flex'); document.getElementById('validateModal').classList.add('hidden'); }
 
-        async function submitValidation() {
-            const id = document.getElementById('validateCapaianId').value;
-            const statusVal = document.getElementById('validateStatusChoice').value;
-            const comment = document.getElementById('validateComment').value;
-            const checkedPenyesuaian = Array.from(document.querySelectorAll('input[name="penyesuaianCheck"]:checked')).map(el => el.value);
+async function submitValidation() {
+    const id = document.getElementById('validateCapaianId').value;
+    const rawStatusVal = document.getElementById('validateStatusChoice').value;
+    // Pastikan status yang disimpan bersih bernilai 'Valid' atau 'Tidak Valid'
+    const statusVal = rawStatusVal.toLowerCase().includes('tidak') ? 'Tidak Valid' : 'Valid';
+    
+    const comment = document.getElementById('validateComment').value;
+    const checkedPenyesuaian = Array.from(document.querySelectorAll('input[name="penyesuaianCheck"]:checked')).map(el => el.value);
 
-            const idx = DB.capaian.findIndex(c => c.id === id);
-            if (idx !== -1) {
-                DB.capaian[idx].status = statusVal;
-                DB.capaian[idx].rekomendasi = comment;
-                DB.capaian[idx].penyesuaian = checkedPenyesuaian;
-                await syncToGoogleSheets('Validasi Kinerja', DB.capaian[idx]);
-            }
-            await saveToMySQL();
-            closeValidateModal();
-            showToast(`Status capaian berhasil diubah menjadi: ${statusVal}`);
-            renderCapaianView(document.getElementById('mainContent'));
-        }
+    const idx = DB.capaian.findIndex(c => c.id === id);
+    if (idx !== -1) {
+        DB.capaian[idx].status = statusVal;
+        DB.capaian[idx].rekomendasi = comment;
+        DB.capaian[idx].penyesuaian = checkedPenyesuaian;
+        await syncToGoogleSheets('Validasi Kinerja', DB.capaian[idx]);
+    }
+    await saveToMySQL();
+    closeValidateModal();
+    showToast(`Status capaian berhasil diubah menjadi: ${statusVal}`);
+    renderCapaianView(document.getElementById('mainContent'));
+}
 
         function openTindakLanjutModal(id) {
             document.getElementById('tindakLanjutCapaianId').value = id;
