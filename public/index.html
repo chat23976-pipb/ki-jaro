@@ -104,35 +104,53 @@
 </div>
     <script>
         let DB = {
-    users: [
-        { id: 'u1', username: 'admin', password: '123', name: 'Administrator Sistem', role: 'admin', unit: 'Pusat Data & Sistem' },
-        { id: 'u2', username: 'direktur', password: '123', name: 'Dr. Supardi S.Pd., M.Pd', role: 'direktur', unit: 'Pimpinan Tertinggi' },
-        { id: 'u3', username: 'tim_akademik', password: '123', name: 'Asadian Puja Enggita S.Si., M.MT', role: 'tim_kerja', timKey: 'Akademik', unit: 'Tim Kerja Akademik' },
-        { id: 'u4', username: 'tim_umum', password: '123', name: 'Ir. Deni Saputra S.T., M.Sc', role: 'tim_kerja', timKey: 'Umum dan Keuangan', unit: 'Tim Kerja Umum dan Keuangan' },
-        { id: 'u5', username: 'tim_kemahasiswaan', password: '123', name: 'Budi Kemahasiswaan, M.Pd.', role: 'tim_kerja', timKey: 'Kemahasiswaan dan Kerjasama', unit: 'Tim Kerja Kemahasiswaan dan Kerjasama' }
-    ],
-    timKerjaList: ['Akademik', 'Umum dan Keuangan', 'Kemahasiswaan dan Kerjasama'],
-    unitList: [
-        'Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 
-        'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 
-        'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'
-    ],
-    renstraTujuanKemenperin: [], 
-    renstraBPSDMI: [],           
-    renstraSasaranKinerja: [],   
-    renstraIndikatorKinerja: [], 
-    cascadingDirektur: [],       
-    cascadingTim: [],            
-    capaian: [],                 
-    risiko: [],                  
-    realisasiAnggaranAdmin: [],  
-    dokumenPerencanaan: [
-        { nama: 'Renstra Politeknik Industri Petrokimia Banten 2025-2029', kategori: 'Renstra', tahun: '2025-2029', link: '#' },
-        { nama: 'RKA-KL Politeknik Industri Petrokimia Banten', kategori: 'RKA-KL', tahun: '2025', link: '#' },
-        { nama: 'Panduan IKU & Pengukuran Kinerja', kategori: 'IKU', tahun: '2025', link: '#' }
-    ],
-    spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1qR_zS0ZUNKW5EU2oFGCVoGBxn7m2zh5c2Cf3cP2MveA/edit?usp=sharing"
-};
+            users: [
+                { id: 'u1', username: 'admin', password: '123', name: 'Administrator Sistem', role: 'admin', unit: 'Pusat Data & Sistem' },
+                { id: 'u2', username: 'direktur', password: '123', name: 'Dr. Supardi S.Pd., M.Pd', role: 'direktur', unit: 'Pimpinan Tertinggi' },
+                
+                // 3 Tim Kerja
+                { id: 'u3', username: 'tim_akademik', password: '123', name: 'Asadian Puja Enggita S.Si., M.MT', role: 'tim_kerja', timKey: 'Akademik', unit: 'Tim Kerja Akademik' },
+                { id: 'u4', username: 'tim_umum', password: '123', name: 'Ir. Deni Saputra S.T., M.Sc', role: 'tim_kerja', timKey: 'Umum dan Keuangan', unit: 'Tim Kerja Umum dan Keuangan' },
+                { id: 'u5', username: 'tim_kemahasiswaan', password: '123', name: 'Budi Kemahasiswaan, M.Pd.', role: 'tim_kerja', timKey: 'Kemahasiswaan dan Kerjasama', unit: 'Tim Kerja Kemahasiswaan dan Kerjasama' },
+
+                // 12 Ketua Unit / Prodi / Subbag
+                { id: 'u6', username: 'prodi_tmip', password: '123', name: 'Ketua Prodi TMIP', role: 'ketua_unit', unit: 'Prodi TMIP', timKey: 'Akademik' },
+                { id: 'u7', username: 'prodi_tiip', password: '123', name: 'Ketua Prodi TIIP', role: 'ketua_unit', unit: 'Prodi TIIP', timKey: 'Akademik' },
+                { id: 'u8', username: 'prodi_tpip', password: '123', name: 'Ketua Prodi TPIP', role: 'ketua_unit', unit: 'Prodi TPIP', timKey: 'Akademik' },
+                { id: 'u9', username: 'uppm', password: '123', name: 'Kepala UPPM', role: 'ketua_unit', unit: 'UPPM', timKey: 'Akademik' },
+                { id: 'u10', username: 'lsp', password: '123', name: 'Ketua LSP', role: 'ketua_unit', unit: 'LSP', timKey: 'Kemahasiswaan dan Kerjasama' },
+                { id: 'u11', username: 'cdc', password: '123', name: 'Kepala CDC', role: 'ketua_unit', unit: 'CDC', timKey: 'Kemahasiswaan dan Kerjasama' },
+                { id: 'u12', username: 'inkubator', password: '123', name: 'Kepala Inkubator Bisnis', role: 'ketua_unit', unit: 'Inkubator Bisnis', timKey: 'Kemahasiswaan dan Kerjasama' },
+                { id: 'u13', username: 'transformasi', password: '123', name: 'Kabid Transformasi Digital', role: 'ketua_unit', unit: 'Transformasi Digital 4.0', timKey: 'Umum dan Keuangan' },
+                { id: 'u14', username: 'spm', password: '123', name: 'Kepala SPM', role: 'ketua_unit', unit: 'SPM', timKey: 'Akademik' },
+                { id: 'u15', username: 'pmb', password: '123', name: 'Kepala PMB', role: 'ketua_unit', unit: 'PMB', timKey: 'Kemahasiswaan dan Kerjasama' },
+                { id: 'u16', username: 'subbag_umum', password: '123', name: 'Kasubbag Umum & Keuangan', role: 'ketua_unit', unit: 'Subbag Umum dan Keuangan', timKey: 'Umum dan Keuangan' },
+                { id: 'u17', username: 'subbag_akademik', password: '123', name: 'Kasubbag Akademik', role: 'ketua_unit', unit: 'Subbag Akademik Kemahasiswaan dan Kerjasama', timKey: 'Umum dan Keuangan' }
+            ],
+            timKerjaList: ['Akademik', 'Umum dan Keuangan', 'Kemahasiswaan dan Kerjasama'],
+            unitList: [
+                'Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 
+                'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 
+                'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'
+            ],
+            
+            renstraTujuanKemenperin: [], 
+            renstraBPSDMI: [],           
+            renstraSasaranKinerja: [],   
+            renstraIndikatorKinerja: [], 
+
+            cascadingDirektur: [],       
+            cascadingTim: [],            
+            capaian: [],                 
+            risiko: [],                  
+            realisasiAnggaranAdmin: [],  
+            dokumenPerencanaan: [
+                { nama: 'Renstra Politeknik Industri Petrokimia Banten 2025-2029', kategori: 'Renstra', tahun: '2025-2029', link: '#' },
+                { nama: 'RKA-KL Politeknik Industri Petrokimia Banten', kategori: 'RKA-KL', tahun: '2025', link: '#' },
+                { nama: 'Panduan IKU & Pengukuran Kinerja', kategori: 'IKU', tahun: '2025', link: '#' }
+            ],
+            spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1qR_zS0ZUNKW5EU2oFGCVoGBxn7m2zh5c2Cf3cP2MveA/edit?usp=sharing"
+        };
 
         let currentUser = null;
         let activeTab = 'dashboard';
@@ -195,7 +213,7 @@ let filterLandingTriwulan = 'Semua';
 let landingChartInstance = null;
 
 // =========================================================================
-        // TAMPILAN AWAL
+        // TAMPILAN AWAL (GAYA GARVID KEMENPERIN: HEADER NAVBAR + TOMBOL LOGIN KANAN ATAS)
         // =========================================================================
         function renderLogin() {
             const app = document.getElementById('app');
@@ -1560,89 +1578,87 @@ let landingChartInstance = null;
                         </div>
                     </div>
 
-    
+                    <div class="grid grid-cols-1 md:grid-cols-8 gap-4">
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-blue-50 text-primary-600 flex items-center justify-center text-base font-bold shrink-0">
+                                <i class="fa-solid fa-bullseye"></i>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Tercapai</p>
+                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${achievedCount} dari ${totalValidIndikator} tercapai</h3>
+                            </div>
+                        </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-50 text-primary-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-bullseye"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Tercapai</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${achievedCount} dari ${totalValidIndikator} tercapai</h3>
-        </div>
-    </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Tercapai (Role)</p>
+                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${roleAchievedCount} dari ${roleTotalIndikator} tercapai</h3>
+                            </div>
+                        </div>
 
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-circle-check"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Tercapai (Role)</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${roleAchievedCount} dari ${roleTotalIndikator} tercapai</h3>
-        </div>
-    </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0">
+                                <i class="fa-solid fa-check-double"></i>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Jumlah Efektif</p>
+                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${effectiveCount}</h3>
+                            </div>
+                        </div>
 
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-check-double"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Jumlah Efektif</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${effectiveCount}</h3>
-        </div>
-    </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base font-bold shrink-0">
+                                <i class="fa-solid fa-scale-balanced"></i>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Jumlah Efisien</p>
+                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${efficientCount}</h3>
+                            </div>
+                        </div>
 
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-scale-balanced"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Jumlah Efisien</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${efficientCount}</h3>
-        </div>
-    </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0">
+                                <i class="fa-solid fa-award"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Unit Terbaik</p>
+                                <h3 class="text-[11px] font-bold text-slate-900 mt-0.5 truncate">${bestUnit}</h3>
+                            </div>
+                        </div>
 
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-award"></i>
-        </div>
-        <div class="overflow-hidden">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Unit Terbaik</p>
-            <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${bestUnit}</h3>
-        </div>
-    </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-base font-bold shrink-0">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Unit Terendah</p>
+                                <h3 class="text-[11px] font-bold text-slate-900 mt-0.5 truncate">${worstUnit}</h3>
+                            </div>
+                        </div>
 
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-        </div>
-        <div class="overflow-hidden">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Unit Terendah</p>
-            <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${worstUnit}</h3>
-        </div>
-    </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0">
+                                <i class="fa-solid fa-sitemap"></i>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Risiko Aktif</p>
+                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${filteredRisiko.length}</h3>
+                            </div>
+                        </div>
 
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-sitemap"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Risiko Aktif</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${filteredRisiko.length}</h3>
-        </div>
-    </div>
-
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-square-check"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Target Tercapai</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${achievedCount}</h3>
-        </div>
-    </div>
-</div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-base font-bold shrink-0">
+                                <i class="fa-solid fa-square-check"></i>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Target Tercapai</p>
+                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${achievedCount}</h3>
+                            </div>
+                        </div>
+                    </div>
 
                     ${DB.cascadingDirektur.length === 0 ? `
                         <div class="bg-blue-50 border border-blue-200 p-8 rounded-2xl text-center space-y-4">
@@ -1805,7 +1821,7 @@ let landingChartInstance = null;
                                             const match = DB.capaian.filter(c => ik && c.targetDirektur === ik.namaIndikator && c.tahun === ra.tahun && c.triwulan === ra.triwulan && c.status === 'Valid');
                                             const realisasiVal = match.length > 0 ? match.reduce((a,b)=>a+b.realisasi,0)/match.length : 0;
                                             const targetVal = ik ? ik['target' + ra.tahun] : 100;
-                                            const pOutput = targetVal > 0 ? ((realisasiVal / targetVal) * 100).toFixed(2) : 0;
+                                            const pOutput = targetVal > 0 ? (realisasiVal / targetVal) * 100 : 0;
                                             const gap = pOutput - pAnggaran;
                                             const efektif = pOutput >= targetVal ? 'Efektif' : 'Tidak Efektif';
                                             const efisien = pOutput >= pAnggaran ? 'Efisien' : 'Tidak Efisien';
@@ -2163,7 +2179,7 @@ let landingChartInstance = null;
             }
         }
 
-       function renderCascadingView(container) {
+        function renderCascadingView(container) {
             document.getElementById('pageTitle').innerText = 'Cascading Indikator Kinerja Bertahap';
             const isDirektur = currentUser.role === 'direktur';
             const isKetuaTim = currentUser.role === 'tim_kerja';
@@ -2174,18 +2190,11 @@ let landingChartInstance = null;
                 return;
             }
 
-            // Deklarasi aman untuk filter dan sort jika belum ada
-            if (typeof filterCascadingTahun === 'undefined') window.filterCascadingTahun = 'Semua';
-            if (typeof sortCascadingDirCol === 'undefined') window.sortCascadingDirCol = 'target';
-            if (typeof sortCascadingDirAsc === 'undefined') window.sortCascadingDirAsc = true;
-            if (typeof sortCascadingTimCol === 'undefined') window.sortCascadingTimCol = 'targetDirektur';
-            if (typeof sortCascadingTimAsc === 'undefined') window.sortCascadingTimAsc = true;
-
-            // Normalisasi data lama agar tidak hilang
+            // Normalisasi data lama agar tidak hilang jika properti tahun belum ada
             DB.cascadingDirektur.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
             DB.cascadingTim.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
 
-            // Filter data cascading Direktur
+            // Filter data cascading Direktur berdasarkan filterCascadingTahun
             let filteredDir = [...DB.cascadingDirektur];
             if (filterCascadingTahun !== 'Semua') {
                 filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
@@ -2195,6 +2204,12 @@ let landingChartInstance = null;
             filteredDir.sort((a, b) => {
                 let valA = a[sortCascadingDirCol] || '';
                 let valB = b[sortCascadingDirCol] || '';
+                if (sortCascadingDirCol === 'kodeIndikator') {
+                    const ikA = DB.renstraIndikatorKinerja.find(x => x.id === a.indikatorId || x.namaIndikator === a.target);
+                    const ikB = DB.renstraIndikatorKinerja.find(x => x.id === b.indikatorId || x.namaIndikator === b.target);
+                    valA = ikA ? ikA.kodeIndikator : '';
+                    valB = ikB ? ikB.kodeIndikator : '';
+                }
                 if (typeof valA === 'string') return sortCascadingDirAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
                 return sortCascadingDirAsc ? valA - valB : valB - valA;
             });
@@ -3753,28 +3768,17 @@ let landingChartInstance = null;
 
         // === SINKRONISASI STABIL & LENGKAP KE MYSQL ===
         async function loadDataFromMySQL() {
-    try {
-        const response = await fetch('/api/load-state/main_kijaro');
-        const result = await response.json();
-        if (result.success && result.data) {
-            // Gabungkan data server dengan default DB agar properti yang kosong tidak undefined
-            DB = { ...DB, ...result.data };
-            
-            // Pastikan array penting tidak bernilai null/undefined
-            if (!DB.users) DB.users = [];
-            if (!DB.cascadingDirektur) DB.cascadingDirektur = [];
-            if (!DB.cascadingTim) DB.cascadingTim = [];
-            if (!DB.capaian) DB.capaian = [];
-            if (!DB.risiko) DB.risiko = [];
-            if (!DB.renstraIndikatorKinerja) DB.renstraIndikatorKinerja = [];
-            if (!DB.realisasiAnggaranAdmin) DB.realisasiAnggaranAdmin = [];
-            
-            console.log("Data berhasil dimuat dari MySQL.");
+            try {
+                const response = await fetch('/api/load-state/main_kijaro');
+                const result = await response.json();
+                if (result.success && result.data) {
+                    Object.assign(DB, result.data);
+                    console.log("Data berhasil dimuat dari MySQL.");
+                }
+            } catch (e) {
+                console.error("Gagal memuat dari MySQL:", e);
+            }
         }
-    } catch (e) {
-        console.error("Gagal memuat dari MySQL, menggunakan state default:", e);
-    }
-}
 
         async function saveToMySQL() {
             try {
