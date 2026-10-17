@@ -1578,88 +1578,87 @@ let landingChartInstance = null;
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-8 gap-4">
-                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-                            <div class="w-9 h-9 rounded-xl bg-blue-50 text-primary-600 flex items-center justify-center text-base font-bold shrink-0">
-                                <i class="fa-solid fa-bullseye"></i>
-                            </div>
-                            <div>
-                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Tercapai</p>
-                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${achievedCount} dari ${totalValidIndikator} tercapai</h3>
-                            </div>
-                        </div>
+                   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-50 text-primary-600 flex items-center justify-center text-base font-bold shrink-0">
+            <i class="fa-solid fa-bullseye"></i>
+        </div>
+        <div>
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Tercapai</p>
+            <h3 class="text-base font-bold text-slate-900 mt-0.5">${achievedCount} dari ${totalValidIndikator} tercapai</h3>
+        </div>
+    </div>
 
-                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-                            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0">
-                                <i class="fa-solid fa-circle-check"></i>
-                            </div>
-                            <div>
-                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Tercapai (Role)</p>
-                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${roleAchievedCount} dari ${roleTotalIndikator} tercapai</h3>
-                            </div>
-                        </div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div>
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Tercapai (Role)</p>
+            <h3 class="text-base font-bold text-slate-900 mt-0.5">${roleAchievedCount} dari ${roleTotalIndikator} tercapai</h3>
+        </div>
+    </div>
 
-                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-                            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0">
-                                <i class="fa-solid fa-check-double"></i>
-                            </div>
-                            <div>
-                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Jumlah Efektif</p>
-                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${effectiveCount}</h3>
-                            </div>
-                        </div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0">
+            <i class="fa-solid fa-check-double"></i>
+        </div>
+        <div>
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Jumlah Efektif</p>
+            <h3 class="text-base font-bold text-slate-900 mt-0.5">${effectiveCount}</h3>
+        </div>
+    </div>
 
-                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-                            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base font-bold shrink-0">
-                                <i class="fa-solid fa-scale-balanced"></i>
-                            </div>
-                            <div>
-                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Jumlah Efisien</p>
-                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${efficientCount}</h3>
-                            </div>
-                        </div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base font-bold shrink-0">
+            <i class="fa-solid fa-scale-balanced"></i>
+        </div>
+        <div>
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Jumlah Efisien</p>
+            <h3 class="text-base font-bold text-slate-900 mt-0.5">${efficientCount}</h3>
+        </div>
+    </div>
 
-                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-                            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0">
-                                <i class="fa-solid fa-award"></i>
-                            </div>
-                            <div class="overflow-hidden">
-                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Unit Terbaik</p>
-                                <h3 class="text-[11px] font-bold text-slate-900 mt-0.5 truncate">${bestUnit}</h3>
-                            </div>
-                        </div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0">
+            <i class="fa-solid fa-award"></i>
+        </div>
+        <div class="overflow-hidden">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Unit Terbaik</p>
+            <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${bestUnit}</h3>
+        </div>
+    </div>
 
-                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-                            <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-base font-bold shrink-0">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            <div class="overflow-hidden">
-                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Unit Terendah</p>
-                                <h3 class="text-[11px] font-bold text-slate-900 mt-0.5 truncate">${worstUnit}</h3>
-                            </div>
-                        </div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-base font-bold shrink-0">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="overflow-hidden">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Unit Terendah</p>
+            <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${worstUnit}</h3>
+        </div>
+    </div>
 
-                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-                            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0">
-                                <i class="fa-solid fa-sitemap"></i>
-                            </div>
-                            <div>
-                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Risiko Aktif</p>
-                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${filteredRisiko.length}</h3>
-                            </div>
-                        </div>
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0">
+            <i class="fa-solid fa-sitemap"></i>
+        </div>
+        <div>
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Risiko Aktif</p>
+            <h3 class="text-base font-bold text-slate-900 mt-0.5">${filteredRisiko.length}</h3>
+        </div>
+    </div>
 
-                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-                            <div class="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-base font-bold shrink-0">
-                                <i class="fa-solid fa-square-check"></i>
-                            </div>
-                            <div>
-                                <p class="text-[9px] font-semibold text-slate-500 uppercase">Target Tercapai</p>
-                                <h3 class="text-lg font-bold text-slate-900 mt-0.5">${achievedCount}</h3>
-                            </div>
-                        </div>
-                    </div>
-
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-base font-bold shrink-0">
+            <i class="fa-solid fa-square-check"></i>
+        </div>
+        <div>
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Target Tercapai</p>
+            <h3 class="text-base font-bold text-slate-900 mt-0.5">${achievedCount}</h3>
+        </div>
+    </div>
+</div>
                     ${DB.cascadingDirektur.length === 0 ? `
                         <div class="bg-blue-50 border border-blue-200 p-8 rounded-2xl text-center space-y-4">
                             <i class="fa-solid fa-circle-info text-primary-600 text-4xl"></i>
