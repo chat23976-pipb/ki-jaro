@@ -1418,7 +1418,7 @@ let landingChartInstance = null;
             renderDokumenView(document.getElementById('mainContent'));
         }
 
-        function renderDashboardView(container) {
+function renderDashboardView(container) {
             document.getElementById('pageTitle').innerText = 'Dashboard Capaian Kinerja & Peta Risiko';
             
             let validCapaian = DB.capaian.filter(c => c.status === 'Valid');
@@ -1457,7 +1457,6 @@ let landingChartInstance = null;
                 }
             });
 
-            // Role-filtered achieved count scorecard
             let myFilteredCascading = filteredCascading;
             let myValidCapaian = validCapaian;
             if (currentUser.role === 'ketua_unit') {
@@ -1485,6 +1484,8 @@ let landingChartInstance = null;
 
             let effectiveCount = 0;
             let efficientCount = 0;
+            
+            // === FILTER REALISASI ANGGARAN BERDASARKAN FILTER TERPADU ===
             let filteredRealisasiAdmin = DB.realisasiAnggaranAdmin;
             if (filterDashboardTahun !== 'Semua') {
                 filteredRealisasiAdmin = filteredRealisasiAdmin.filter(ra => ra.tahun === filterDashboardTahun);
@@ -1492,6 +1493,7 @@ let landingChartInstance = null;
             if (filterDashboardTriwulan !== 'Semua') {
                 filteredRealisasiAdmin = filteredRealisasiAdmin.filter(ra => ra.triwulan === filterDashboardTriwulan);
             }
+
             filteredRealisasiAdmin.forEach(ra => {
                 const ik = DB.renstraIndikatorKinerja.find(x => x.id === ra.indikatorId);
                 const pagu = ik ? (ik['anggaran' + ra.tahun] || 100000000) : 100000000;
@@ -1518,12 +1520,11 @@ let landingChartInstance = null;
             let bestUnit = sortedUnits.length > 0 ? `${sortedUnits[0][0]} (${sortedUnits[0][1].toFixed(1)}%)` : 'Belum ada data';
             let worstUnit = sortedUnits.length > 0 ? `${sortedUnits[sortedUnits.length-1][0]} (${sortedUnits[sortedUnits.length-1][1].toFixed(1)}%)` : 'Belum ada data';
 
+            // === FILTER RISIKO BERDASARKAN FILTER TERPADU (Tahun, Tim, Unit) ===
             let filteredRisiko = DB.risiko;
-const activeRiskYear = (typeof filterRisikoTahun !== 'undefined' && filterRisikoTahun !== 'Semua') ? filterRisikoTahun : filterDashboardTahun;
-
-if (activeRiskYear !== 'Semua') {
-    filteredRisiko = filteredRisiko.filter(r => (r.tahun || '2025') === activeRiskYear);
-}
+            if (filterDashboardTahun !== 'Semua') {
+                filteredRisiko = filteredRisiko.filter(r => (r.tahun || '2025') === filterDashboardTahun);
+            }
             if (filterDashboardTim !== 'Semua') {
                 filteredRisiko = filteredRisiko.filter(r => r.timKey === filterDashboardTim);
             }
@@ -1576,87 +1577,65 @@ if (activeRiskYear !== 'Semua') {
                         </div>
                     </div>
 
-                   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-50 text-primary-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-bullseye"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Tercapai</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${achievedCount} dari ${totalValidIndikator} tercapai</h3>
-        </div>
-    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 text-primary-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-bullseye"></i></div>
+                            <div>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Tercapai</p>
+                                <h3 class="text-base font-bold text-slate-900 mt-0.5">${achievedCount} dari ${totalValidIndikator} tercapai</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+                            <div>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Tercapai (Role)</p>
+                                <h3 class="text-base font-bold text-slate-900 mt-0.5">${roleAchievedCount} dari ${roleTotalIndikator} tercapai</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-check-double"></i></div>
+                            <div>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Jumlah Efektif</p>
+                                <h3 class="text-base font-bold text-slate-900 mt-0.5">${effectiveCount}</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-scale-balanced"></i></div>
+                            <div>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Jumlah Efisien</p>
+                                <h3 class="text-base font-bold text-slate-900 mt-0.5">${efficientCount}</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-award"></i></div>
+                            <div class="overflow-hidden">
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Unit Terbaik</p>
+                                <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${bestUnit}</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="overflow-hidden">
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Unit Terendah</p>
+                                <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${worstUnit}</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-sitemap"></i></div>
+                            <div>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Risiko Aktif</p>
+                                <h3 class="text-base font-bold text-slate-900 mt-0.5">${filteredRisiko.length}</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-square-check"></i></div>
+                            <div>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Target Tercapai</p>
+                                <h3 class="text-base font-bold text-slate-900 mt-0.5">${achievedCount}</h3>
+                            </div>
+                        </div>
+                    </div>
 
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-circle-check"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Tercapai (Role)</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${roleAchievedCount} dari ${roleTotalIndikator} tercapai</h3>
-        </div>
-    </div>
-
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-check-double"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Jumlah Efektif</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${effectiveCount}</h3>
-        </div>
-    </div>
-
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-scale-balanced"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Jumlah Efisien</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${efficientCount}</h3>
-        </div>
-    </div>
-
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-award"></i>
-        </div>
-        <div class="overflow-hidden">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Unit Terbaik</p>
-            <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${bestUnit}</h3>
-        </div>
-    </div>
-
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-        </div>
-        <div class="overflow-hidden">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Unit Terendah</p>
-            <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${worstUnit}</h3>
-        </div>
-    </div>
-
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-sitemap"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Risiko Aktif</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${filteredRisiko.length}</h3>
-        </div>
-    </div>
-
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-base font-bold shrink-0">
-            <i class="fa-solid fa-square-check"></i>
-        </div>
-        <div>
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Target Tercapai</p>
-            <h3 class="text-base font-bold text-slate-900 mt-0.5">${achievedCount}</h3>
-        </div>
-    </div>
-</div>
                     ${DB.cascadingDirektur.length === 0 ? `
                         <div class="bg-blue-50 border border-blue-200 p-8 rounded-2xl text-center space-y-4">
                             <i class="fa-solid fa-circle-info text-primary-600 text-4xl"></i>
@@ -1671,16 +1650,6 @@ if (activeRiskYear !== 'Semua') {
                                 <div>
                                     <h3 class="font-bold text-slate-900 text-base">Tabel Master Indikator Kinerja (Direktur & Unit Terkait)</h3>
                                     <p class="text-xs text-slate-500">Memuat indikator kinerja, target, satuan, tim kerja, PIC, % realisasi output, status tercapai/tidak, serta permasalahan</p>
-                                </div>
-                                <div>
-                                    <select onchange="filterDashboardTahun = this.value; renderDashboardView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                        <option value="Semua" ${filterDashboardTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                        <option value="2025" ${filterDashboardTahun === '2025' ? 'selected' : ''}>2025</option>
-                                        <option value="2026" ${filterDashboardTahun === '2026' ? 'selected' : ''}>2026</option>
-                                        <option value="2027" ${filterDashboardTahun === '2027' ? 'selected' : ''}>2027</option>
-                                        <option value="2028" ${filterDashboardTahun === '2028' ? 'selected' : ''}>2028</option>
-                                        <option value="2029" ${filterDashboardTahun === '2029' ? 'selected' : ''}>2029</option>
-                                    </select>
                                 </div>
                             </div>
                             <div class="overflow-x-auto">
@@ -1738,197 +1707,17 @@ if (activeRiskYear !== 'Semua') {
                             </div>
                         </div>
 
-                        <!-- Multi-Year Strategic Renstra Comparison Table (2025-2029) -->
+                        <!-- Charts Grid -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base">Tabel Perbandingan Realisasi Tahunan vs Target Renstra (2025 - 2029)</h3>
-                                <p class="text-xs text-slate-500">Realisasi tahunan diambil dari capaian TW IV setiap tahunnya, lengkap dengan pertumbuhan YoY (Tahun 2025 bernilai 0% karena tahun awal)</p>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                            <th class="p-3">Indikator Kinerja</th>
-                                            <th class="p-3 text-center">2025 (Target/Real)</th>
-                                            <th class="p-3 text-center">2026 (Target/Real)</th>
-                                            <th class="p-3 text-center">2027 (Target/Real)</th>
-                                            <th class="p-3 text-center">2028 (Target/Real)</th>
-                                            <th class="p-3 text-center">2029 (Target/Real)</th>
-                                            <th class="p-3 text-center">Pertumbuhan YoY</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-100">
-                                        ${DB.renstraIndikatorKinerja.length === 0 ? `<tr><td colspan="7" class="p-4 text-center text-slate-400">Belum ada indikator Renstra</td></tr>` : DB.renstraIndikatorKinerja.map(ik => {
-                                            const getReal = (tahun) => {
-                                                const match = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && c.tahun === tahun && c.triwulan === 'TW 4' && c.status === 'Valid');
-                                                if (match.length > 0) return match.reduce((a,b)=>a+b.realisasi,0)/match.length;
-                                                return 0;
-                                            };
-                                            const r25 = getReal('2025');
-                                            const r26 = getReal('2026');
-                                            const yoy26 = r26 > 0 ? (r26 - r25).toFixed(1) : '0';
-                                            const growthColor = yoy26 > 0 ? 'text-blue-600 font-bold' : yoy26 < 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold';
-
-                                            return `
-                                                <tr class="hover:bg-slate-50">
-                                                    <td class="p-3 font-semibold text-slate-900">${ik.namaIndikator}</td>
-                                                    <td class="p-3 text-center">T: ${ik.target2025}<br><span class="font-bold text-primary-700">R: ${r25}%</span></td>
-                                                    <td class="p-3 text-center">T: ${ik.target2026}<br><span class="font-bold text-primary-700">R: ${r26}%</span></td>
-                                                    <td class="p-3 text-center">T: ${ik.target2027}<br><span class="font-bold text-primary-700">R: -</span></td>
-                                                    <td class="p-3 text-center">T: ${ik.target2028}<br><span class="font-bold text-primary-700">R: -</span></td>
-                                                    <td class="p-3 text-center">T: ${ik.target2029}<br><span class="font-bold text-primary-700">R: -</span></td>
-                                                    <td class="p-3 text-center ${growthColor}">2025: 0%<br>2026+: ${yoy26}%</td>
-                                                </tr>
-                                            `;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Budget Realization & Cost-Effectiveness Table (Filtered by Year) -->
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900 text-base">Tabel Analisis Efektivitas, Efisiensi & Realisasi Anggaran (Data Riil)</h3>
-                                <p class="text-xs text-slate-500">Perbandingan realisasi output terhadap anggaran riil sesuai filter tahun aktif (${filterDashboardTahun}) & Triwulan (${filterDashboardTriwulan})</p>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                            <th class="p-3">Tahun & Triwulan</th>
-                                            <th class="p-3">Indikator Kinerja</th>
-                                            <th class="p-3 text-center">Pagu Anggaran (Rp)</th>
-                                            <th class="p-3 text-center">Realisasi Anggaran Riil (Rp)</th>
-                                            <th class="p-3 text-center">% Realisasi Anggaran</th>
-                                            <th class="p-3 text-center">% Realisasi Output</th>
-                                            <th class="p-3 text-center">GAP (Output - Anggaran)</th>
-                                            <th class="p-3 text-center">Efektivitas</th>
-                                            <th class="p-3 text-center">Efisiensi</th>
-                                            <th class="p-3 text-center">Kesimpulan</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-100">
-                                        ${filteredRealisasiAdmin.filter(ra => filterDashboardTahun === 'Semua' || ra.tahun === filterDashboardTahun).filter(ra => filterDashboardTriwulan === 'Semua' || ra.triwulan === filterDashboardTriwulan).length === 0 ? `<tr><td colspan="10" class="p-4 text-center text-slate-400">Belum ada input realisasi anggaran riil oleh Admin pada filter aktif.</td></tr>` : filteredRealisasiAdmin.filter(ra => filterDashboardTahun === 'Semua' || ra.tahun === filterDashboardTahun).filter(ra => filterDashboardTriwulan === 'Semua' || ra.triwulan === filterDashboardTriwulan).map(ra => {
-                                            const ik = DB.renstraIndikatorKinerja.find(x => x.id === ra.indikatorId);
-                                            const pagu = ik ? (ik['anggaran' + ra.tahun] || 100000000) : 100000000;
-                                            const realAnggaran = ra.realisasiAnggaran;
-                                            const pAnggaran = pagu > 0 ? (realAnggaran / pagu) * 100 : 0;
-                                            
-                                            const match = DB.capaian.filter(c => ik && c.targetDirektur === ik.namaIndikator && c.tahun === ra.tahun && c.triwulan === ra.triwulan && c.status === 'Valid');
-                                            const realisasiVal = match.length > 0 ? match.reduce((a,b)=>a+b.realisasi,0)/match.length : 0;
-                                            const targetVal = ik ? ik['target' + ra.tahun] : 100;
-                                            const pOutput = targetVal > 0 ? (realisasiVal / targetVal) * 100 : 0;
-                                            const gap = pOutput - pAnggaran;
-                                            const efektif = pOutput >= targetVal ? 'Efektif' : 'Tidak Efektif';
-                                            const efisien = pOutput >= pAnggaran ? 'Efisien' : 'Tidak Efisien';
-                                            const kesimpulan = `${efektif} & ${efisien}`;
-
-                                            return `
-                                                <tr class="hover:bg-slate-50">
-                                                    <td class="p-3">
-                                                        <span class="px-2 py-0.5 bg-blue-50 text-primary-700 font-bold text-[10px] rounded mr-1">${ra.tahun}</span>
-                                                        <span class="font-semibold text-slate-800">${ra.triwulan}</span>
-                                                    </td>
-                                                    <td class="p-3 font-semibold text-slate-900">${ik ? ik.namaIndikator : '-'}</td>
-                                                    <td class="p-3 text-center font-medium">Rp ${Number(pagu).toLocaleString('id-ID')}</td>
-                                                    <td class="p-3 text-center font-bold text-emerald-700">Rp ${Number(realAnggaran).toLocaleString('id-ID')}</td>
-                                                    <td class="p-3 text-center font-bold text-slate-700">${pAnggaran.toFixed(1)}%</td>
-                                                    <td class="p-3 text-center font-bold text-primary-700">${pOutput.toFixed(1)}%</td>
-                                                    <td class="p-3 text-center font-bold ${gap >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${gap > 0 ? '+' : ''}${gap.toFixed(1)}%</td>
-                                                    <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${efektif === 'Efektif' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">${efektif}</span></td>
-                                                    <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${efisien === 'Efisien' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">${efisien}</span></td>
-                                                    <td class="p-3 text-center font-bold text-slate-800">${kesimpulan}</td>
-                                                </tr>
-                                            `;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Budget Realization Summary Table (Pagu vs Realisasi vs Sisa) -->
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900 text-base">Tabel Realisasi Anggaran per Indikator Kinerja</h3>
-                                <p class="text-xs text-slate-500">Ringkasan Pagu Anggaran Tersedia, Realisasi Anggaran Riil, % Realisasi, dan Sisa Anggaran</p>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                            <th class="p-3">Indikator Kinerja</th>
-                                            <th class="p-3 text-center">Anggaran Tersedia (Pagu)</th>
-                                            <th class="p-3 text-center">Realisasi Anggaran</th>
-                                            <th class="p-3 text-center">% Realisasi Anggaran</th>
-                                            <th class="p-3 text-center">Sisa Anggaran</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-100">
-                                        ${DB.renstraIndikatorKinerja.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada indikator Renstra</td></tr>` : DB.renstraIndikatorKinerja.map(ik => {
-                                            const pagu = ik.anggaran2025 || 0;
-                                            const totalReal = DB.realisasiAnggaranAdmin.filter(ra => ra.indikatorId === ik.id).reduce((a,b)=>a+b.realisasiAnggaran,0);
-                                            const pReal = pagu > 0 ? ((totalReal / pagu) * 100).toFixed(1) : 0;
-                                            const sisa = pagu - totalReal;
-
-                                            return `
-                                                <tr class="hover:bg-slate-50">
-                                                    <td class="p-3 font-semibold text-slate-900">${ik.namaIndikator}</td>
-                                                    <td class="p-3 text-center font-medium">Rp ${Number(pagu).toLocaleString('id-ID')}</td>
-                                                    <td class="p-3 text-center font-bold text-emerald-700">Rp ${Number(totalReal).toLocaleString('id-ID')}</td>
-                                                    <td class="p-3 text-center font-bold">${pReal}%</td>
-                                                    <td class="p-3 text-center font-bold ${sisa >= 0 ? 'text-blue-700' : 'text-rose-600'}">Rp ${Number(sisa).toLocaleString('id-ID')}</td>
-                                                </tr>
-                                            `;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Charts Grid with Independent Filters for Line Chart -->
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
-                                <div>
-                                    <h3 class="font-bold text-slate-900 text-base">Grafik Capaian Indikator Utama (Line Chart)</h3>
-                                    <p class="text-xs text-slate-500">Dilengkapi filter khusus untuk grafik lini</p>
-                                </div>
-                                <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
-                                    <select onchange="filterChartTahun = this.value; renderDashboardView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                        <option value="Semua" ${filterChartTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                        <option value="2025" ${filterChartTahun === '2025' ? 'selected' : ''}>2025</option>
-                                        <option value="2026" ${filterChartTahun === '2026' ? 'selected' : ''}>2026</option>
-                                        <option value="2027" ${filterChartTahun === '2027' ? 'selected' : ''}>2027</option>
-                                        <option value="2028" ${filterChartTahun === '2028' ? 'selected' : ''}>2028</option>
-                                        <option value="2029" ${filterChartTahun === '2029' ? 'selected' : ''}>2029</option>
-                                    </select>
-                                    <select onchange="filterChartTriwulan = this.value; renderDashboardView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                        <option value="Semua" ${filterChartTriwulan === 'Semua' ? 'selected' : ''}>Semua Triwulan</option>
-                                        <option value="TW 1" ${filterChartTriwulan === 'TW 1' ? 'selected' : ''}>TW 1</option>
-                                        <option value="TW 2" ${filterChartTriwulan === 'TW 2' ? 'selected' : ''}>TW 2</option>
-                                        <option value="TW 3" ${filterChartTriwulan === 'TW 3' ? 'selected' : ''}>TW 3</option>
-                                        <option value="TW 4" ${filterChartTriwulan === 'TW 4' ? 'selected' : ''}>TW 4</option>
-                                    </select>
-                                    <select onchange="filterChartTim = this.value; renderDashboardView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                        <option value="Semua" ${filterChartTim === 'Semua' ? 'selected' : ''}>Semua Tim</option>
-                                        ${DB.timKerjaList.map(t => `<option value="${t}" ${filterChartTim === t ? 'selected' : ''}>${t}</option>`).join('')}
-                                    </select>
-                                    <select onchange="filterChartUnit = this.value; renderDashboardView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                        <option value="Semua" ${filterChartUnit === 'Semua' ? 'selected' : ''}>Semua Unit</option>
-                                        ${DB.unitList.map(u => `<option value="${u}" ${filterChartUnit === u ? 'selected' : ''}>${u}</option>`).join('')}
-                                    </select>
-                                    <select onchange="filterChartIndikator = this.value; renderDashboardView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                        <option value="Semua" ${filterChartIndikator === 'Semua' ? 'selected' : ''}>Semua Indikator</option>
-                                        ${DB.renstraIndikatorKinerja.map(ik => `<option value="${ik.namaIndikator}" ${filterChartIndikator === ik.namaIndikator ? 'selected' : ''}>${ik.namaIndikator}</option>`).join('')}
-                                    </select>
-                                </div>
+                                <h3 class="font-bold text-slate-900 text-base">Grafik Capaian Indikator Utama (Line Chart)</h3>
                             </div>
                             <div class="relative min-h-[360px]">
                                 <canvas id="capaianChart"></canvas>
                             </div>
                         </div>
 
-                        <!-- Budget Realization Chart -->
+                        <!-- Budget Realization Chart (TERFILTER) -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                             <div class="flex items-center justify-between border-b pb-4">
                                 <div>
@@ -1941,14 +1730,11 @@ if (activeRiskYear !== 'Semua') {
                             </div>
                         </div>
 
-                        <!-- Risk Maps (Pre-Control & Residu) with Year Filter -->
+                        <!-- Risk Maps (Pre-Control & Residu) TERFILTER -->
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                                 <div class="flex items-center justify-between mb-4">
-                                    <div>
-                                        <h3 class="font-bold text-slate-900 text-base">Peta Risiko (Sebelum Pengendalian / Inherent)</h3>
-                                        <p class="text-xs text-slate-500">Matriks 5x5 Sebelum Mitigasi</p>
-                                    </div>
+                                    <h3 class="font-bold text-slate-900 text-base">Peta Risiko (Sebelum Pengendalian / Inherent)</h3>
                                     <span class="text-xs font-semibold bg-amber-50 text-amber-700 px-3 py-1 rounded-full">Pre-Control</span>
                                 </div>
                                 <div class="flex-1 relative min-h-[340px]">
@@ -1958,10 +1744,7 @@ if (activeRiskYear !== 'Semua') {
 
                             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                                 <div class="flex items-center justify-between mb-4">
-                                    <div>
-                                        <h3 class="font-bold text-slate-900 text-base">Peta Risiko (Sesudah Pengendalian / Residu)</h3>
-                                        <p class="text-xs text-slate-500">Matriks 5x5 Sesudah Mitigasi</p>
-                                    </div>
+                                    <h3 class="font-bold text-slate-900 text-base">Peta Risiko (Sesudah Pengendalian / Residu)</h3>
                                     <span class="text-xs font-semibold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full">Residu</span>
                                 </div>
                                 <div class="flex-1 relative min-h-[340px]">
@@ -1970,24 +1753,21 @@ if (activeRiskYear !== 'Semua') {
                             </div>
                         </div>
 
-                        <!-- Top 10 Risks List View (No Truncated Bars) -->
+                        <!-- Top 10 Risks List View (TERFILTER) -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                             <div class="flex items-center justify-between mb-4">
-                                <div>
-                                    <h3 class="font-bold text-slate-900 text-base">10 Risiko Tertinggi (Prioritas Utama)</h3>
-                                    <p class="text-xs text-slate-500">Daftar lengkap prioritas risiko tertinggi berbentuk list teks penuh</p>
-                                </div>
+                                <h3 class="font-bold text-slate-900 text-base">10 Risiko Tertinggi (Prioritas Utama)</h3>
                                 <span class="text-xs font-semibold bg-rose-50 text-rose-700 px-3 py-1 rounded-full"><i class="fa-solid fa-star mr-1"></i> Top Prioritas</span>
                             </div>
                             <div class="overflow-y-auto max-h-[380px] divide-y divide-slate-100 text-xs">
-                                ${filteredRisiko.length === 0 ? `<p class="p-6 text-center text-slate-400">Belum ada data risiko.</p>` : 
+                                ${filteredRisiko.length === 0 ? `<p class="p-6 text-center text-slate-400">Belum ada data risiko pada filter aktif.</p>` : 
                                     [...filteredRisiko].sort((a,b) => b.skor1 - a.skor1).slice(0, 10).map((r, i) => `
                                         <div class="py-3.5 flex items-start justify-between space-x-3">
                                             <div class="flex items-start space-x-3">
                                                 <span class="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">${i+1}</span>
                                                 <div>
                                                     <p class="font-bold text-slate-900 text-sm">${r.pernyataan}</p>
-                                                    <p class="text-slate-500 text-xs mt-1">Unit: <strong class="text-slate-700">${r.unit}</strong> | Indikator: <span class="text-primary-700">${r.targetDirektur || '-'}</span> | Dampak: ${r.dampak}</p>
+                                                    <p class="text-slate-500 text-xs mt-1">Unit: <strong class="text-slate-700">${r.unit}</strong> | Tahun: <strong class="text-primary-700">${r.tahun || '2025'}</strong> | Dampak: ${r.dampak}</p>
                                                 </div>
                                             </div>
                                             <div class="text-right shrink-0">
@@ -2005,83 +1785,40 @@ if (activeRiskYear !== 'Semua') {
 
             if (DB.cascadingDirektur.length > 0) {
                 setTimeout(() => {
+                    // Line Chart Capaian
                     const ctx1 = document.getElementById('capaianChart').getContext('2d');
-                    
-                    let chartLabels, chartDataDatasets;
-
-                    if (filterChartTriwulan === 'Semua') {
-                        chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
-                        let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
-                        chartDataDatasets = twPeriods.map(tw => {
-                            let subset = validCapaian.filter(c => c.triwulan === tw);
-                            if (filterChartTahun !== 'Semua') subset = subset.filter(c => c.tahun === filterChartTahun);
-                            if (filterChartTim !== 'Semua') subset = subset.filter(c => c.timKey === filterChartTim);
-                            if (filterChartUnit !== 'Semua') subset = subset.filter(c => c.unit === filterChartUnit);
-                            if (filterChartIndikator !== 'Semua') subset = subset.filter(c => c.targetDirektur === filterChartIndikator);
-                            if (subset.length === 0) return 0;
-                            return Number((subset.reduce((a,b) => a + b.realisasi, 0) / subset.length).toFixed(1));
-                        });
-                    } else {
-                        let filteredInd = DB.cascadingDirektur;
-                        if (filterChartTahun !== 'Semua') filteredInd = filteredInd.filter(c => c.tahun === filterChartTahun);
-                        if (filterChartTim !== 'Semua') filteredInd = filteredInd.filter(c => c.timKeys.includes(filterChartTim));
-                        if (filterChartIndikator !== 'Semua') filteredInd = filteredInd.filter(c => c.target === filterChartIndikator);
-
-                        chartLabels = filteredInd.map(cd => cd.target.length > 25 ? cd.target.substring(0, 25) + '...' : cd.target);
-                        chartDataDatasets = filteredInd.map(cd => {
-                            let matches = validCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun);
-                            if (filterChartTriwulan !== 'Semua') matches = matches.filter(c => c.triwulan === filterChartTriwulan);
-                            if (filterChartUnit !== 'Semua') matches = matches.filter(c => c.unit === filterChartUnit);
-                            if (matches.length > 0) {
-                                return Number((matches.reduce((a, b) => a + b.realisasi, 0) / matches.length).toFixed(1));
-                            }
-                            return 0;
-                        });
-                    }
+                    let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
+                    let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+                    let chartDataDatasets = twPeriods.map(tw => {
+                        let subset = validCapaian.filter(c => c.triwulan === tw);
+                        if (subset.length === 0) return 0;
+                        return Number((subset.reduce((a,b) => a + b.realisasi, 0) / subset.length).toFixed(1));
+                    });
 
                     new Chart(ctx1, {
                         type: 'line',
                         data: {
                             labels: chartLabels,
-                            datasets: [
-                                { 
-                                    label: filterChartTriwulan === 'Semua' ? 'Progres Triwulanan (%)' : 'Realisasi Kinerja (%)', 
-                                    data: chartDataDatasets, 
-                                    borderColor: '#2563eb', 
-                                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                                    borderWidth: 3,
-                                    fill: true,
-                                    tension: 0.3,
-                                    pointRadius: 6,
-                                    pointBackgroundColor: '#2563eb'
-                                }
-                            ]
+                            datasets: [{ label: 'Progres Triwulanan (%)', data: chartDataDatasets, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', borderWidth: 3, fill: true, tension: 0.3 }]
                         },
                         plugins: [ChartDataLabels],
-                        options: { 
-                            responsive: true, 
-                            maintainAspectRatio: false,
-                            layout: { padding: { top: 30, right: 15, bottom: 15, left: 15 } },
-                            scales: {
-                                y: { beginAtZero: true, max: 125 }
-                            },
-                            plugins: { 
-                                legend: { position: 'bottom' },
-                                datalabels: {
-                                    align: 'top',
-                                    font: { weight: 'bold', size: 11 },
-                                    formatter: (value) => value > 0 ? value + '%' : '-'
-                                }
-                            } 
-                        }
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: { align: 'top', formatter: v => v > 0 ? v + '%' : '-' } } }
                     });
 
-                    // Budget Realization Bar Chart
+                    // === GRAFIK REALISASI ANGGARAN (IKUT FILTER TERPADU) ===
                     const ctxAnggaran = document.getElementById('anggaranChart').getContext('2d');
-                    const ikLabels = DB.renstraIndikatorKinerja.map(ik => ik.namaIndikator.length > 20 ? ik.namaIndikator.substring(0, 20) + '...' : ik.namaIndikator);
-                    const paguData = DB.renstraIndikatorKinerja.map(ik => ik.anggaran2025 || 100000000);
-                    const realData = DB.renstraIndikatorKinerja.map(ik => {
-                        return DB.realisasiAnggaranAdmin.filter(ra => ra.indikatorId === ik.id).reduce((a,b)=>a+b.realisasiAnggaran,0);
+                    let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
+                    let targetIkList = DB.renstraIndikatorKinerja.filter(ik => activeIndikatorIds.length === 0 || activeIndikatorIds.includes(ik.id));
+                    if (targetIkList.length === 0) targetIkList = DB.renstraIndikatorKinerja;
+
+                    const ikLabels = targetIkList.map(ik => ik.namaIndikator.length > 20 ? ik.namaIndikator.substring(0, 20) + '...' : ik.namaIndikator);
+                    const paguData = targetIkList.map(ik => {
+                        let yKey = filterDashboardTahun !== 'Semua' ? 'anggaran' + filterDashboardTahun : 'anggaran2025';
+                        return ik[yKey] || 100000000;
+                    });
+                    const realData = targetIkList.map(ik => {
+                        let subRa = filteredRealisasiAdmin.filter(ra => ra.indikatorId === ik.id);
+                        return subRa.reduce((a,b)=>a+b.realisasiAnggaran,0);
                     });
 
                     new Chart(ctxAnggaran, {
@@ -2096,7 +1833,6 @@ if (activeRiskYear !== 'Semua') {
                         plugins: [ChartDataLabels],
                         options: {
                             responsive: true, maintainAspectRatio: false,
-                            layout: { padding: { top: 25, right: 15, bottom: 15, left: 15 } },
                             scales: { y: { beginAtZero: true } },
                             plugins: {
                                 legend: { position: 'bottom' },
@@ -2108,7 +1844,7 @@ if (activeRiskYear !== 'Semua') {
                         }
                     });
 
-                    // Risk Bubbles with padding to prevent clipping
+                    // === PETA RISIKO INHERENT (IKUT FILTER TERPADU) ===
                     const ctxPre = document.getElementById('petaRisikoPreChart').getContext('2d');
                     const preData = filteredRisiko.map(r => ({
                         x: r.damp1, y: r.prob1, r: Math.max(12, r.skor1 * 1.2), label: r.pernyataan, skor: r.skor1
@@ -2116,31 +1852,20 @@ if (activeRiskYear !== 'Semua') {
                     new Chart(ctxPre, {
                         type: 'bubble',
                         data: {
-                            datasets: [{
-                                label: 'Risiko Pre-Control',
-                                data: preData,
-                                backgroundColor: 'rgba(239, 68, 68, 0.75)',
-                                borderColor: '#0f172a', borderWidth: 1
-                            }]
+                            datasets: [{ label: 'Risiko Pre-Control', data: preData, backgroundColor: 'rgba(239, 68, 68, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
                         },
                         plugins: [ChartDataLabels],
                         options: {
                             responsive: true, maintainAspectRatio: false,
-                            layout: { padding: { top: 30, right: 30, bottom: 20, left: 20 } },
                             scales: {
                                 x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
                                 y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
                             },
-                            plugins: {
-                                legend: { display: false },
-                                datalabels: {
-                                    align: 'center', font: { weight: 'bold', size: 11 }, color: '#ffffff',
-                                    formatter: (value) => `Skor:${value.skor}`
-                                }
-                            }
+                            plugins: { legend: { display: false }, datalabels: { align: 'center', color: '#ffffff', formatter: (value) => `Skor:${value.skor}` } }
                         }
                     });
 
+                    // === PETA RISIKO RESIDU (IKUT FILTER TERPADU) ===
                     const ctxResidu = document.getElementById('petaRisikoResiduChart').getContext('2d');
                     const residuData = filteredRisiko.map(r => ({
                         x: r.damp2, y: r.prob2, r: Math.max(12, r.skor2 * 1.2), label: r.pernyataan, skor: r.skor2
@@ -2148,28 +1873,16 @@ if (activeRiskYear !== 'Semua') {
                     new Chart(ctxResidu, {
                         type: 'bubble',
                         data: {
-                            datasets: [{
-                                label: 'Risiko Residu',
-                                data: residuData,
-                                backgroundColor: 'rgba(16, 185, 129, 0.75)',
-                                borderColor: '#0f172a', borderWidth: 1
-                            }]
+                            datasets: [{ label: 'Risiko Residu', data: residuData, backgroundColor: 'rgba(16, 185, 129, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
                         },
                         plugins: [ChartDataLabels],
                         options: {
                             responsive: true, maintainAspectRatio: false,
-                            layout: { padding: { top: 30, right: 30, bottom: 20, left: 20 } },
                             scales: {
                                 x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
                                 y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
                             },
-                            plugins: {
-                                legend: { display: false },
-                                datalabels: {
-                                    align: 'center', font: { weight: 'bold', size: 11 }, color: '#ffffff',
-                                    formatter: (value) => `Skor:${value.skor}`
-                                }
-                            }
+                            plugins: { legend: { display: false }, datalabels: { align: 'center', color: '#ffffff', formatter: (value) => `Skor:${value.skor}` } }
                         }
                     });
                 }, 100);
