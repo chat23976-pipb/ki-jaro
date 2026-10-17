@@ -2378,7 +2378,7 @@ if (matchedCap.length > 0) {
                                                         c.status === 'Valid' ? 'bg-emerald-50 text-emerald-700' : c.status === 'Tidak Valid' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
                                                     }">${c.status}</span>
 
-                                                    // SESUAIKAN LOGIKA TOMBOL HAPUS & EDIT:
+                                
 ${isKaUnit ? `
     ${c.status === 'Valid' ? `
         <span class="text-[10px] text-emerald-600 font-semibold italic block"><i class="fa-solid fa-lock mr-0.5"></i> Tervalidasi (Hanya bisa Edit)</span>
@@ -2571,7 +2571,19 @@ ${isKaUnit ? `
                 }
             }, 100);
         }
-
+async function confirmDeleteCapaian(id) {
+    const found = DB.capaian.find(c => c.id === id);
+    if (found && found.status === 'Valid') {
+        showToast('Capaian yang sudah divalidasi tidak dapat dihapus!', 'error');
+        return;
+    }
+    if (confirm('Apakah Anda yakin ingin menghapus capaian kinerja ini?')) {
+        DB.capaian = DB.capaian.filter(c => c.id !== id);
+        await saveToMySQL();
+        showToast('Capaian kinerja berhasil dihapus.', 'info');
+        renderCapaianView(document.getElementById('mainContent'));
+    }
+}
         function updateSatuanAndTargetRef(selectEl) {
             const opt = selectEl.options[selectEl.selectedIndex];
             const satuan = opt.getAttribute('data-satuan') || '%';
