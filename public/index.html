@@ -1519,12 +1519,11 @@ let landingChartInstance = null;
             let worstUnit = sortedUnits.length > 0 ? `${sortedUnits[sortedUnits.length-1][0]} (${sortedUnits[sortedUnits.length-1][1].toFixed(1)}%)` : 'Belum ada data';
 
             let filteredRisiko = DB.risiko;
-            if (filterRisikoTahun !== 'Semua') {
-                filteredRisiko = filteredRisiko.filter(r => {
-                    const matchCasc = DB.cascadingDirektur.find(cd => cd.target === r.targetDirektur);
-                    return matchCasc ? matchCasc.tahun === filterRisikoTahun : true;
-                });
-            }
+const activeRiskYear = (typeof filterRisikoTahun !== 'undefined' && filterRisikoTahun !== 'Semua') ? filterRisikoTahun : filterDashboardTahun;
+
+if (activeRiskYear !== 'Semua') {
+    filteredRisiko = filteredRisiko.filter(r => (r.tahun || '2025') === activeRiskYear);
+}
             if (filterDashboardTim !== 'Semua') {
                 filteredRisiko = filteredRisiko.filter(r => r.timKey === filterDashboardTim);
             }
@@ -3046,12 +3045,8 @@ let landingChartInstance = null;
             }
 
             if (filterRisikoTahun !== 'Semua') {
-                displayRisiko = displayRisiko.filter(r => {
-                    const matchCasc = DB.cascadingDirektur.find(cd => cd.target === r.targetDirektur);
-                    return matchCasc ? matchCasc.tahun === filterRisikoTahun : true;
-                });
-            }
-
+    displayRisiko = displayRisiko.filter(r => (r.tahun || '2025') === filterRisikoTahun);
+}
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
