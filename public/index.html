@@ -2351,6 +2351,7 @@ if (matchedCap.length > 0) {
                                         <th class="p-4">Tahun & Periode</th>
                                         <th class="p-4">Target / Realisasi</th>
                                         <th class="p-4">Link Bukti</th>
+                                        <th class="p-4">Permasalahan</th>
                                         <th class="p-4">Status Validasi & Tindak Lanjut</th>
                                     </tr>
                                 </thead>
@@ -2370,22 +2371,30 @@ if (matchedCap.length > 0) {
                                             <td class="p-4 text-xs">
                                                 ${c.linkBukti ? `<a href="${c.linkBukti}" target="_blank" class="text-blue-600 underline font-semibold flex items-center space-x-1"><i class="fa-solid fa-link"></i><span>Buka Bukti</span></a>` : '<span class="text-slate-400">Belum ada</span>'}
                                             </td>
+                                            <td class="p-4 text-xs text-slate-600 font-medium">${c.permasalahan || '-'}</td>
                                             <td class="p-4 space-y-2">
                                                 <div class="flex items-center space-x-2">
                                                     <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${
                                                         c.status === 'Valid' ? 'bg-emerald-50 text-emerald-700' : c.status === 'Tidak Valid' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
                                                     }">${c.status}</span>
 
-                                                    ${isKaUnit ? `
-                                                        ${c.status === 'Valid' ? `
-                                                            <span class="text-[10px] text-emerald-600 font-semibold italic"><i class="fa-solid fa-lock mr-0.5"></i> Tervalidasi</span>
-                                                            <button onclick="openTindakLanjutModal('${c.id}')" class="px-2.5 py-1 bg-primary-600 text-white rounded-lg text-[10px] font-semibold mt-1">
-                                                                <i class="fa-solid fa-pen-to-square mr-1"></i> Update Bukti Tindak Lanjut
-                                                            </button>
-                                                        ` : `
-                                                            <button onclick="openCapaianModal('edit', '${c.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit Program"><i class="fa-solid fa-pen"></i></button>
-                                                        `}
-                                                    ` : ''}
+                                                    // SESUAIKAN LOGIKA TOMBOL HAPUS & EDIT:
+${isKaUnit ? `
+    ${c.status === 'Valid' ? `
+        <span class="text-[10px] text-emerald-600 font-semibold italic block"><i class="fa-solid fa-lock mr-0.5"></i> Tervalidasi (Hanya bisa Edit)</span>
+        <button onclick="openCapaianModal('edit', '${c.id}')" class="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-[10px] font-semibold mt-1">
+            <i class="fa-solid fa-pen mr-1"></i> Edit
+        </button>
+        <button onclick="openTindakLanjutModal('${c.id}')" class="px-2.5 py-1 bg-primary-600 text-white rounded-lg text-[10px] font-semibold mt-1 block">
+            <i class="fa-solid fa-pen-to-square mr-1"></i> Update Tindak Lanjut
+        </button>
+    ` : `
+        <div class="flex items-center space-x-1">
+            <button onclick="openCapaianModal('edit', '${c.id}')" class="px-2.5 py-1 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs font-semibold" title="Edit Program"><i class="fa-solid fa-pen mr-1"></i> Edit</button>
+            <button onclick="confirmDeleteCapaian('${c.id}')" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs font-semibold" title="Hapus Program"><i class="fa-solid fa-trash mr-1"></i> Hapus</button>
+        </div>
+    `}
+` : ''}
 
                                                     ${(isKetuaTim || isAdmin) ? `
                                                         <button onclick="openValidateModal('${c.id}')" class="p-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs shadow" title="Proses Validasi">
@@ -2501,6 +2510,10 @@ if (matchedCap.length > 0) {
                                     <option value="Tidak Valid" class="text-rose-700">Tidak Valid (Ditolak / Perbaikan)</option>
                                 </select>
                             </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border text-xs mb-3">
+    <span class="font-bold text-slate-700 block mb-1"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> Keterangan Permasalahan dari Unit:</span>
+    <p id="validatePermasalahanText" class="text-slate-600 italic">-</p>
+</div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-2">Penyesuaian (Checklist)</label>
                                 <div class="space-y-2 bg-slate-50 p-3 rounded-xl border">
