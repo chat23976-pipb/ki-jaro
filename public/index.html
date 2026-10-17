@@ -3162,12 +3162,6 @@ let landingChartInstance = null;
                                 </select>
                             </div>
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator Kinerja yang Dicascading ke Anda</label>
-                                <select id="rIndikatorRef" required class="w-full p-3 bg-slate-50 border rounded-xl">
-                                    ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => `<option value="${ct.targetDirektur}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun:${ct.tahun || '2025'})</option>`).join('')}
-                                </select>
-                            </div>
-                            <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pernyataan Risiko / Kejadian Risiko</label>
                                 <textarea id="rPernyataan" rows="2" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: Keterlambatan pelaporan keuangan unit..."></textarea>
                             </div>
