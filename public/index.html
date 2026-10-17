@@ -3144,6 +3144,23 @@ let landingChartInstance = null;
                             <button onclick="closeRisikoModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveRisiko(event)" class="space-y-4 text-sm">
+                           <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator Kinerja yang Dicascading ke Anda</label>
+                                <select id="rIndikatorRef" required class="w-full p-3 bg-slate-50 border rounded-xl">
+                                    ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => `<option value="${ct.targetDirektur}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun:${ct.tahun || '2025'})</option>`).join('')}
+                                </select>
+                            </div>
+                            <!-- TAMBAHKAN DROPDOWN TAHUN DI SINI -->
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Tahun Risiko</label>
+                                <select id="rTahun" required class="w-full p-3 bg-slate-50 border rounded-xl font-semibold">
+                                    <option value="2025">2025</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                    <option value="2028">2028</option>
+                                    <option value="2029">2029</option>
+                                </select>
+                            </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator Kinerja yang Dicascading ke Anda</label>
                                 <select id="rIndikatorRef" required class="w-full p-3 bg-slate-50 border rounded-xl">
@@ -3225,14 +3242,14 @@ let landingChartInstance = null;
         function openRisikoModal() { document.getElementById('risikoModal').classList.remove('hidden'); document.getElementById('risikoModal').classList.add('flex'); }
         function closeRisikoModal() { document.getElementById('risikoModal').classList.remove('flex'); document.getElementById('risikoModal').classList.add('hidden'); }
         
-        async function saveRisiko(e) {
+       async function saveRisiko(e) {
             e.preventDefault();
             const selInd = document.getElementById('rIndikatorRef');
             const selectedOpt = selInd.options[selInd.selectedIndex];
             const targetDirRef = selInd.value;
             const timKeyRef = selectedOpt ? selectedOpt.getAttribute('data-timkey') : currentUser.timKey;
             
-            // Ambil nilai tahun dari form input
+            // Mengambil nilai tahun dari dropdown modal yang baru ditambahkan
             const tahunRisiko = document.getElementById('rTahun').value;
 
             const p1 = parseInt(document.getElementById('rProb1').value);
@@ -3248,7 +3265,7 @@ let landingChartInstance = null;
                 unit: currentUser.unit,
                 timKey: timKeyRef,
                 targetDirektur: targetDirRef,
-                tahun: tahunRisiko, // Menyimpan atribut tahun ke objek data risiko
+                tahun: tahunRisiko, // Menyimpan tahun risiko
                 pernyataan: document.getElementById('rPernyataan').value,
                 sebabInternal: document.getElementById('rInternal').value,
                 sebabEksternal: document.getElementById('rEksternal').value,
