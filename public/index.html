@@ -1679,7 +1679,10 @@ function renderDashboardView(container) {
                                             const picNames = matchedCap.map(c => c.unit).join(', ') || 'Belum di-assign';
                                             const timKeyStr = cd.timKeys.join(', ');
                                             const permasalahanStr = matchedCap.map(c => c.permasalahan).filter(Boolean).join('; ') || '-';
-                                            const realisasiVal = matchedCap.length > 0 ? matchedCap.reduce((a,b)=>a+b.realisasi,0)/matchedCap.length : 0;
+                                            let realisasiVal = 0; if (matchedCap.length > 0) {
+                                            // Ambil inputan terakhir berdasarkan urutan validasi/input
+                                            realisasiVal = matchedCap[matchedCap.length - 1].realisasi;
+                                            }
                                             const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
                                             const pRealOutput = targetVal > 0 ? ((realisasiVal / targetVal) * 100).toFixed(2) : 0;
                                             const isTercapai = matchedCap.length > 0 && realisasiVal >= targetVal;
