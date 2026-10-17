@@ -3801,21 +3801,32 @@ let landingChartInstance = null;
         }
 
         window.onload = async function() {
-            await loadDataFromMySQL();
-            const savedUser = localStorage.getItem('ki_jaro_user');
-            if (savedUser) {
-                try {
-                    const parsed = JSON.parse(savedUser);
-                    const freshUser = DB.users.find(u => u.username === parsed.username);
-                    currentUser = freshUser || parsed;
-                    renderDashboardLayout();
-                } catch (e) {
-                    renderLogin();
-                }
+    // Pastikan data dimuat sepenuhnya dan sinkronisasi unit selesai sebelum cek sesi login
+    await loadDataFromMySQL();
+    if (typeof syncUnitListFromUsers === 'function') {
+        syncUnitListFromUsers();
+    }
+    
+    const savedUser = localStorage.getItem('ki_jaro_user');
+    if (savedUser) {
+        try {
+            const parsed = JSON.parse(savedUser);
+            const freshUser = DB.users.find(u => u.username === parsed.username);
+            if (freshUser) {
+                currentUser = freshUser;
+                renderDashboardLayout();
             } else {
+                // Jika data user di database lokal tidak cocok, hapus sesi dan arahkan login
+                localStorage.removeItem('ki_jaro_user');
                 renderLogin();
             }
-        };
+        } catch (e) {
+            renderLogin();
+        }
+    } else {
+        renderLogin();
+    }
+};
     </script>
 </body>
 </html>
