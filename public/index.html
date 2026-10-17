@@ -2342,8 +2342,21 @@ function renderDashboardView(container) {
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
-                                <thead>
-   <!-- UBAH ISI ROW TABEL MASTER INDIKATOR KINERJA MENJADI: -->
+                  <thead>
+    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+        <th class="p-3 text-center">No</th>
+        <th class="p-3">Indikator Kinerja</th>
+        <th class="p-3 text-center">Target</th>
+        <th class="p-3 text-center">Satuan</th>
+        <th class="p-3">Tim Kerja</th>
+        <th class="p-3">PIC (Unit / Prodi)</th>
+        <th class="p-3 text-center">Realisasi Capaian</th> <!-- Kolom Baru -->
+        <th class="p-3 text-center">Status</th>
+        <th class="p-3">Permasalahan</th>
+    </tr>
+</thead>
+
+<!-- UBAH ISI ROW TABEL MASTER INDIKATOR KINERJA MENJADI: -->
 <tr class="hover:bg-slate-50 transition-all">
     <td class="p-3 text-center font-semibold text-slate-600">${index + 1}</td>
     <td class="p-3 font-bold text-slate-900">${cd.target}</td>
@@ -2359,7 +2372,6 @@ function renderDashboardView(container) {
     </td>
     <td class="p-3 text-slate-500">${permasalahanStr}</td>
 </tr>
-</thead>
                                 <tbody class="divide-y divide-slate-100">
                                     ${displayCapaian.length === 0 ? `
                                         <tr><td colspan="7" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada tahun ${filterCapaianTahun}.</td></tr>
