@@ -663,11 +663,36 @@ let landingChartInstance = null;
                                     <i class="fa-solid fa-file-excel"></i>
                                     <span>Google Sheets Realtime</span>
                                 </a>
-                                <div class="flex items-center space-x-2 pl-4 border-l border-slate-200">
-                                    <div class="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-xs">
-                                        ${currentUser.name.charAt(0)}
+
+                                <!-- POJOK KANAN ATAS: Nama / Jabatan User dengan Dropdown Pilihan Logout & Ganti Password -->
+                                <div class="relative pl-4 border-l border-slate-200">
+                                    <button id="profileDropdownBtn" onclick="toggleProfileDropdown()" class="flex items-center space-x-2.5 px-3 py-1.5 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200 text-left">
+                                        <div class="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                            ${currentUser.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <span class="block text-xs font-bold text-slate-800 leading-tight">${currentUser.name}</span>
+                                            <span class="block text-[10px] text-slate-500 font-medium">${roleLabels[currentUser.role]}</span>
+                                        </div>
+                                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+                                    </button>
+
+                                    <!-- Dropdown Menu -->
+                                    <div id="profileDropdownMenu" class="hidden absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50">
+                                        <div class="px-4 py-2 border-b border-slate-100">
+                                            <p class="text-xs font-bold text-slate-900 truncate">${currentUser.name}</p>
+                                            <p class="text-[10px] text-slate-500 truncate">${currentUser.unit}</p>
+                                        </div>
+                                        <a href="javascript:void(0)" onclick="openChangePasswordModal()" class="flex items-center space-x-2.5 px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 font-medium transition-all">
+                                            <i class="fa-solid fa-key text-primary-600 w-4"></i>
+                                            <span>Ganti Password</span>
+                                        </a>
+                                        <div class="border-t border-slate-100 my-1"></div>
+                                        <a href="javascript:void(0)" onclick="logout()" class="flex items-center space-x-2.5 px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50 font-bold transition-all">
+                                            <i class="fa-solid fa-right-from-bracket text-rose-600 w-4"></i>
+                                            <span>Keluar Sistem (Logout)</span>
+                                        </a>
                                     </div>
-                                    <span class="text-sm font-medium text-slate-700">${currentUser.name}</span>
                                 </div>
                             </div>
                         </header>
