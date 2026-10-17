@@ -717,7 +717,7 @@ let landingChartInstance = null;
                 dropdown.classList.add('hidden');
             }
         });
-        function switchTab(tab) {
+       function switchTab(tab) {
             activeTab = tab;
             document.querySelectorAll('.nav-link').forEach(el => {
                 el.className = el.className.replace(/bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600\/30/g, 'hover:bg-slate-800 text-slate-400 hover:text-white');
@@ -727,11 +727,19 @@ let landingChartInstance = null;
             });
             const content = document.getElementById('mainContent');
             if (!content) return;
+            const sb = document.getElementById('appSidebar');
+            if (sb && window.innerWidth < 768) sb.classList.add('hidden');
 
             if (tab === 'dashboard') renderDashboardView(content);
             else if (tab === 'renstra') renderRenstraView(content);
             else if (tab === 'dokumen') renderDokumenView(content);
-            else if (tab === 'cascading') renderCascadingView(content);
+            else if (tab === 'cascading') {
+                if (typeof renderCascadingView === 'function') {
+                    renderCascadingView(content);
+                } else {
+                    content.innerHTML = '<div class="p-8 text-center bg-white rounded-2xl shadow-sm border"><p class="text-rose-500 font-bold">Fungsi renderCascadingView belum dimuat dengan benar.</p></div>';
+                }
+            }
             else if (tab === 'capaian') renderCapaianView(content);
             else if (tab === 'risiko') renderRisikoView(content);
             else if (tab === 'tindaklanjut') renderTindakLanjutMonitorView(content);
