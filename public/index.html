@@ -1823,10 +1823,10 @@ let landingChartInstance = null;
                                             const match = DB.capaian.filter(c => ik && c.targetDirektur === ik.namaIndikator && c.tahun === ra.tahun && c.triwulan === ra.triwulan && c.status === 'Valid');
                                             const realisasiVal = match.length > 0 ? match.reduce((a,b)=>a+b.realisasi,0)/match.length : 0;
                                             const targetVal = ik ? ik['target' + ra.tahun] : 100;
-                                            const pOutput = targetVal > 0 ? (realisasiVal / targetVal) * 100 : 0;
-                                            const gap = pOutput - pAnggaran;
-                                            const efektif = pOutput >= targetVal ? 'Efektif' : 'Tidak Efektif';
-                                            const efisien = pOutput >= pAnggaran ? 'Efisien' : 'Tidak Efisien';
+                                            const pRealOutput = targetVal > 0 ? ((realisasiVal / targetVal) * 100).toFixed(2) : 0;
+                                            const gap = pRealOutput - pAnggaran;
+                                            const efektif = pRealOutput >= targetVal ? 'Efektif' : 'Tidak Efektif';
+                                            const efisien = pRealOutput >= pAnggaran ? 'Efisien' : 'Tidak Efisien';
                                             const kesimpulan = `${efektif} & ${efisien}`;
 
                                             return `
