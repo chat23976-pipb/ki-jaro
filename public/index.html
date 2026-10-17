@@ -2355,7 +2355,10 @@ function renderDashboardView(container) {
         <th class="p-3">Permasalahan</th>
     </tr>
 </thead>
-
+<tbody class="divide-y divide-slate-100">
+                                    ${displayCapaian.length === 0 ? `
+                                        <tr><td colspan="7" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada tahun ${filterCapaianTahun}.</td></tr>
+                                    ` : displayCapaian.map((c, idx) => `
 <!-- UBAH ISI ROW TABEL MASTER INDIKATOR KINERJA MENJADI: -->
 <tr class="hover:bg-slate-50 transition-all">
     <td class="p-3 text-center font-semibold text-slate-600">${index + 1}</td>
@@ -2372,10 +2375,6 @@ function renderDashboardView(container) {
     </td>
     <td class="p-3 text-slate-500">${permasalahanStr}</td>
 </tr>
-                                <tbody class="divide-y divide-slate-100">
-                                    ${displayCapaian.length === 0 ? `
-                                        <tr><td colspan="7" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada tahun ${filterCapaianTahun}.</td></tr>
-                                    ` : displayCapaian.map((c, idx) => `
                                         <tr class="hover:bg-slate-50/80 transition-all">
                                             <td class="p-4 font-semibold text-slate-800">${c.unit}</td>
                                             <td class="p-4 text-xs font-semibold text-primary-700">${c.targetDirektur}</td>
