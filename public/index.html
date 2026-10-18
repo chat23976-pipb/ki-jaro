@@ -2694,15 +2694,22 @@ ${isKaUnit ? `
             }, 100);
         }
 async function confirmDeleteCapaian(id) {
-    const found = DB.capaian.find(c => c.id === id);
+    const found = DB.capaian.find(c => String(c.id) === String(id));
     if (found && found.status === 'Valid') {
         showToast('Capaian yang sudah divalidasi tidak dapat dihapus!', 'error');
         return;
     }
     if (confirm('Apakah Anda yakin ingin menghapus capaian kinerja ini?')) {
-        DB.capaian = DB.capaian.filter(c => c.id !== id);
+        // Hapus secara bersih berdasarkan ID maupun kombinasi periode yang sama jika ada sisa data lama
+        DB.capaian = DB.capaian.filter(c => {
+            if (String(c.id) === String(id)) return false;
+            if (found && c.unit === found.unit && c.targetDirektur === found.targetDirektur && c.triwulan === found.triwulan && (c.tahun || '2025') === (found.tahun || '2025')) {
+                return false;
+            }
+            return true;
+        });
         await saveToMySQL();
-        showToast('Capaian kinerja berhasil dihapus.', 'info');
+        showToast('Capaian kinerja berhasil dihapus dari database.', 'info');
         renderCapaianView(document.getElementById('mainContent'));
     }
 }
@@ -2806,8 +2813,10 @@ async function confirmDeleteCapaian(id) {
                 }
                 showToast('Capaian kinerja berhasil diperbarui!');
             } else {
+                // Bersihkan dulu jika ada sisa data lama yang nyangkut di periode & indikator yang sama
+                DB.capaian = DB.capaian.filter(c => !(c.unit === currentUser.unit && c.targetDirektur === targetDirRef && c.triwulan === tw && (c.tahun || '2025') === tahunRef));
                 const newCapaian = {
-                    id: 'cp' + (DB.capaian.length + 1),
+                    id: 'cp_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
                     unit: currentUser.unit,
                     timKey: timKeyRef,
                     targetDirektur: targetDirRef,
@@ -2836,51 +2845,66 @@ async function confirmDeleteCapaian(id) {
         }
 
         function openValidateModal(id) {
-    document.getElementById('validateCapaianId').value = id;
-    const found = DB.capaian.find(c => c.id === id);
-    if (found) {
-        document.getElementById('validateStatusChoice').value = found.status === 'Valid' ? 'Valid' : 'Tidak Valid';
-        document.getElementById('validateComment').value = found.rekomendasi || '';
-        
-        // Menampilkan teks permasalahan dari unit ke dalam modal validasi
-        const permEl = document.getElementById('validatePermasalahanText');
-        if (permEl) {
-            permEl.innerText = found.permasalahan && found.permasalahan.trim() !== '' ? found.permasalahan : 'Tidak ada permasalahan yang diinput oleh unit.';
+            document.getElementById('validateCapaianId').value = id;
+            const found = DB.capaian.find(c => String(c.id) === String(id));
+            if (found) {
+                document.getElementById('validateStatusChoice').value = found.status === 'Tidak Valid' ? 'Tidak Valid' : 'Valid';
+                document.getElementById('validateComment').value = found.rekomendasi || '';
+                
+                const permEl = document.getElementById('validatePermasalahanText');
+                if (permEl) {
+                    permEl.innerText = found.permasalahan && found.permasalahan.trim() !== '' ? found.permasalahan : 'Tidak ada permasalahan yang diinput oleh unit.';
+                }
+
+                document.querySelectorAll('input[name="penyesuaianCheck"]').forEach(chk => {
+                    chk.checked = found.penyesuaian && found.penyesuaian.includes(chk.value);
+                });
+            }
+            document.getElementById('validateModal').classList.remove('hidden');
+            document.getElementById('validateModal').classList.add('flex');
         }
 
-        document.querySelectorAll('input[name="penyesuaianCheck"]').forEach(chk => {
-            chk.checked = found.penyesuaian && found.penyesuaian.includes(chk.value);
-        });
-    }
-    document.getElementById('validateModal').classList.remove('hidden');
-    document.getElementById('validateModal').classList.add('flex');
-}
-        function closeValidateModal() { document.getElementById('validateModal').classList.remove('flex'); document.getElementById('validateModal').classList.add('hidden'); }
+        function closeValidateModal() { 
+            document.getElementById('validateModal').classList.remove('flex'); 
+            document.getElementById('validateModal').classList.add('hidden'); 
+        }
 
-async function submitValidation() {
-    const id = document.getElementById('validateCapaianId').value;
-    const rawStatusVal = document.getElementById('validateStatusChoice').value;
-    const statusVal = rawStatusVal.toLowerCase().includes('tidak') ? 'Tidak Valid' : 'Valid';
-    
-    const comment = document.getElementById('validateComment').value;
-    const checkedPenyesuaian = Array.from(document.querySelectorAll('input[name="penyesuaianCheck"]:checked')).map(el => el.value);
+        async function submitValidation() {
+            const id = document.getElementById('validateCapaianId').value;
+            const rawStatusVal = document.getElementById('validateStatusChoice').value;
+            const statusVal = rawStatusVal.toLowerCase().includes('tidak') ? 'Tidak Valid' : 'Valid';
+            
+            const comment = document.getElementById('validateComment').value;
+            const checkedPenyesuaian = Array.from(document.querySelectorAll('input[name="penyesuaianCheck"]:checked')).map(el => el.value);
 
-    // Cari index berdasarkan String ID agar presisi
-    const idx = DB.capaian.findIndex(c => String(c.id) === String(id));
-    if (idx !== -1) {
-        DB.capaian[idx].status = statusVal;
-        DB.capaian[idx].rekomendasi = comment;
-        DB.capaian[idx].penyesuaian = checkedPenyesuaian;
-        await syncToGoogleSheets('Validasi Kinerja', DB.capaian[idx]);
-    } else {
-        console.error("Data capaian tidak ditemukan untuk ID:", id);
-    }
-    
-    await saveToMySQL();
-    closeValidateModal();
-    showToast(`Status capaian berhasil diubah menjadi: ${statusVal}`);
-    renderCapaianView(document.getElementById('mainContent'));
-}
+            // Ambil data yang sedang diklik
+            const targetItem = DB.capaian.find(c => String(c.id) === String(id));
+
+            // Ubah status menggunakan perulangan (forEach) agar jika ada ID kembar akibat hapus-rekam ulang, semuanya ikut berubah jadi Valid
+            DB.capaian.forEach((c) => {
+                const samaId = String(c.id) === String(id);
+                const samaPeriode = targetItem && 
+                    c.unit === targetItem.unit && 
+                    c.targetDirektur === targetItem.targetDirektur && 
+                    String(c.triwulan).trim().toUpperCase() === String(targetItem.triwulan).trim().toUpperCase() && 
+                    String(c.tahun || '2025') === String(targetItem.tahun || '2025');
+
+                if (samaId || samaPeriode) {
+                    c.status = statusVal;
+                    c.rekomendasi = comment;
+                    c.penyesuaian = checkedPenyesuaian;
+                }
+            });
+
+            if (targetItem) {
+                await syncToGoogleSheets('Validasi Kinerja', targetItem);
+            }
+            
+            await saveToMySQL();
+            closeValidateModal();
+            showToast(`Status capaian berhasil diubah menjadi: ${statusVal}`);
+            renderCapaianView(document.getElementById('mainContent'));
+        }
 
         function openTindakLanjutModal(id) {
             document.getElementById('tindakLanjutCapaianId').value = id;
