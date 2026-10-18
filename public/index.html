@@ -1866,71 +1866,98 @@ if (matchedCap.length > 0) {
             if (DB.cascadingDirektur.length > 0) {
                 setTimeout(() => {
                     // Line Chart Capaian
+// Line Chart Capaian - Multi-line untuk setiap Indikator Utama
                     const ctx1 = document.getElementById('capaianChart').getContext('2d');
-let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
-let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
-let chartDataDatasets = twPeriods.map(tw => {
-    let subset = validCapaian.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === tw);
-    if (subset.length === 0) return 0;
-    let totalPersen = subset.reduce((acc, curr) => {
-        let targetVal = curr.target > 0 ? curr.target : 100;
-        return acc + ((curr.realisasi / targetVal) * 100);
-    }, 0);
-    return Number((totalPersen / subset.length).toFixed(1));
-});
-                   new Chart(ctx1, {
-    type: 'line',
-    data: {
-        labels: chartLabels,
-        datasets: [
-            {
-                label: '% Realisasi Output',
-                data: chartDataDatasets,
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37, 99, 235, 0.15)',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.3,
-                pointBackgroundColor: chartDataDatasets.map(v => v < 100 ? '#ef4444' : '#2563eb'), // Merah jika < 100, Biru jika >= 100
-                pointBorderColor: '#ffffff',
-                pointRadius: 6,
-                pointHoverRadius: 8
-            },
-            {
-                label: 'Standar Target (100%)',
-                data: [100, 100, 100, 100],
-                borderColor: '#ef4444',
-                borderWidth: 2,
-                borderDash: [5, 5],
-                fill: false,
-                pointRadius: 0
-            }
-        ]
-    },
-    plugins: [ChartDataLabels],
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            y: {
-                beginAtZero: true,
-                max: 140,
-                ticks: { font: { size: 11 } }
-            },
-            x: {
-                ticks: { font: { weight: 'bold', size: 12 } }
-            }
-        },
-        plugins: {
-            legend: { position: 'bottom' },
-            datalabels: {
-                align: 'top',
-                font: { weight: 'bold', size: 11 },
-                formatter: v => v > 0 ? v + '%' : '-'
-            }
-        }
-    }
-});
+                    let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
+                    let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+
+                    // Palet warna otomatis untuk membedakan hingga belasan/puluhan indikator
+                    const colorPalette = [
+                        '#2563eb', '#dc2626', '#10b981', '#f59e0b', '#8b5cf6', 
+                        '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
+                        '#14b8a6', '#e11d48', '#a855f7', '#0ea5e9', '#3b82f6', '#10b981', '#f43f5e'
+                    ];
+
+                    // Membuat dataset terpisah untuk setiap Indikator Kinerja Utama (Cascading Direktur)
+                    let multiDatasets = filteredCascading.map((cd, index) => {
+                        let color = colorPalette[index % colorPalette.length];
+                        
+                        let dataPoints = twPeriods.map(tw => {
+                            let match = validCapaian.filter(c => 
+                                c.targetDirektur === cd.target && 
+                                c.triwulan && c.triwulan.trim().toUpperCase() === tw &&
+                                (c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? (c.tahun || '2025') : filterDashboardTahun)
+                            );
+                            if (match.length > 0) {
+                                let targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
+                                let realVal = match[match.length - 1].realisasi;
+                                return Number(((realVal / targetVal) * 100).toFixed(1));
+                            }
+                            return null; // Kosong jika belum ada data di triwulan tersebut
+                        });
+
+                        let labelName = cd.target.length > 40 ? cd.target.substring(0, 40) + '...' : cd.target;
+
+                        return {
+                            label: labelName,
+                            data: dataPoints,
+                            borderColor: color,
+                            backgroundColor: color,
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.2,
+                            spanGaps: true, // Menjaga garis tetap terhubung walau ada triwulan yang kosong
+                            pointBackgroundColor: dataPoints.map(v => v !== null && v < 100 ? '#ef4444' : color), // Merah jika < 100%
+                            pointBorderColor: '#ffffff',
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        };
+                    });
+
+                    // Tambahkan garis standar 100% sebagai acuan batas
+                    multiDatasets.push({
+                        label: 'Standar Target (100%)',
+                        data: [100, 100, 100, 100],
+                        borderColor: '#94a3b8',
+                        borderWidth: 2,
+                        borderDash: [6, 6],
+                        fill: false,
+                        pointRadius: 0
+                    });
+
+                    new Chart(ctx1, {
+                        type: 'line',
+                        data: {
+                            labels: chartLabels,
+                            datasets: multiDatasets
+                        },
+                        plugins: [ChartDataLabels],
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 140,
+                                    title: { display: true, text: 'Persentase Realisasi (%)', font: { weight: 'bold', size: 12 } },
+                                    ticks: { font: { size: 11 }, callback: v => v + '%' }
+                                },
+                                x: {
+                                    title: { display: true, text: 'Triwulan', font: { weight: 'bold', size: 12 } },
+                                    ticks: { font: { weight: 'bold', size: 12 } }
+                                }
+                            },
+                            plugins: {
+                                legend: { 
+                                    position: 'bottom', 
+                                    labels: { boxWidth: 12, font: { size: 11 }, padding: 15 } 
+                                },
+                                datalabels: { 
+                                    display: false // Dimatikan agar tidak bertumpuk memenuhi grafik saat ada banyak indikator
+                                }
+                            }
+                        }
+                    });
                     // === GRAFIK REALISASI ANGGARAN (IKUT FILTER TERPADU) ===
                     const ctxAnggaran = document.getElementById('anggaranChart').getContext('2d');
                     let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
