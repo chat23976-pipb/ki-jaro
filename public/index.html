@@ -590,51 +590,51 @@ let landingChartInstance = null;
 
                         <!-- Navigation Links -->
                         <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto text-sm">
-                            <a href="javascript:void(0)" onclick="switchTab('dashboard')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
-                                <i class="fa-solid fa-chart-pie w-5"></i>
-                                <span>Dashboard Kinerja & Risiko</span>
+                            <a href="javascript:void(0)" onclick="switchTab('dashboard')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-blue-500 text-white font-semibold shadow-md shadow-blue-500/20' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
+                            <i class="fa-solid fa-chart-pie w-5"></i>
+                            <span>Dashboard Kinerja & Risiko</span>
                             </a>
 
-                            <a href="javascript:void(0)" onclick="switchTab('renstra')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'renstra' ? 'bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
+                            <a href="javascript:void(0)" onclick="switchTab('renstra')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'renstra' ? 'bg-blue-500 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
                                 <i class="fa-solid fa-book-bookmark w-5"></i>
                                 <span>${currentUser.role === 'admin' ? 'Input & Manajemen Renstra (Tier 1-4)' : 'View Renstra (Hierarki Kemenperin)'}</span>
                             </a>
 
-                            <a href="javascript:void(0)" onclick="switchTab('dokumen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen' ? 'bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
+                            <a href="javascript:void(0)" onclick="switchTab('dokumen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen' ? 'bg-blue-500 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
                                 <i class="fa-solid fa-folder-open w-5"></i>
                                 <span>Dokumen Perencanaan</span>
                             </a>
 
                             ${!isKaUnit ? `
-                                <a href="javascript:void(0)" onclick="switchTab('cascading')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'cascading' ? 'bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
+                                <a href="javascript:void(0)" onclick="switchTab('cascading')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'cascading' ? 'bg-blue-500 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
                                     <i class="fa-solid fa-sitemap w-5"></i>
                                     <span>Cascading Bertahap</span>
                                 </a>
                             ` : ''}
 
-                            <a href="javascript:void(0)" onclick="switchTab('capaian')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'capaian' ? 'bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
+                            <a href="javascript:void(0)" onclick="switchTab('capaian')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'capaian' ? 'bg-blue-500 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
                                 <i class="fa-solid fa-bullseye w-5"></i>
                                 <span>Capaian Kinerja & Validasi</span>
                             </a>
 
-                            <a href="javascript:void(0)" onclick="switchTab('risiko')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'risiko' ? 'bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
+                            <a href="javascript:void(0)" onclick="switchTab('risiko')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'risiko' ? 'bg-blue-500 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
                                 <i class="fa-solid fa-triangle-exclamation w-5"></i>
                                 <span>Peta Risiko & Sheet Realtime</span>
                             </a>
 
-                            <a href="javascript:void(0)" onclick="switchTab('tindaklanjut')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'tindaklanjut' ? 'bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
+                            <a href="javascript:void(0)" onclick="switchTab('tindaklanjut')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'tindaklanjut' ? 'bg-blue-500 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
                                 <i class="fa-solid fa-list-check w-5"></i>
                                 <span>Monitoring Tindak Lanjut</span>
                             </a>
 
                             ${currentUser.role === 'admin' ? `
-                                <a href="javascript:void(0)" onclick="switchTab('admin')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
+                                <a href="javascript:void(0)" onclick="switchTab('admin')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-blue-500 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
                                     <i class="fa-solid fa-users-gear w-5"></i>
                                     <span>Manajemen Pejabat & User</span>
                                 </a>
                             ` : ''}
 
-                            <a href="javascript:void(0)" onclick="switchTab('laporan')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'laporan' ? 'bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
+                            <a href="javascript:void(0)" onclick="switchTab('laporan')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'laporan' ? 'bg-blue-500 text-white font-semibold shadow-lg shadow-primary-600/30' : 'hover:bg-slate-800 text-slate-400 hover:text-white'}">
                                 <i class="fa-solid fa-file-pdf w-5"></i>
                                 <span>Ekspor & Download PDF</span>
                             </a>
@@ -2807,19 +2807,22 @@ async function confirmDeleteCapaian(id) {
 async function submitValidation() {
     const id = document.getElementById('validateCapaianId').value;
     const rawStatusVal = document.getElementById('validateStatusChoice').value;
-    // Pastikan status yang disimpan bersih bernilai 'Valid' atau 'Tidak Valid'
     const statusVal = rawStatusVal.toLowerCase().includes('tidak') ? 'Tidak Valid' : 'Valid';
     
     const comment = document.getElementById('validateComment').value;
     const checkedPenyesuaian = Array.from(document.querySelectorAll('input[name="penyesuaianCheck"]:checked')).map(el => el.value);
 
-    const idx = DB.capaian.findIndex(c => c.id === id);
+    // Cari index berdasarkan String ID agar presisi
+    const idx = DB.capaian.findIndex(c => String(c.id) === String(id));
     if (idx !== -1) {
         DB.capaian[idx].status = statusVal;
         DB.capaian[idx].rekomendasi = comment;
         DB.capaian[idx].penyesuaian = checkedPenyesuaian;
         await syncToGoogleSheets('Validasi Kinerja', DB.capaian[idx]);
+    } else {
+        console.error("Data capaian tidak ditemukan untuk ID:", id);
     }
+    
     await saveToMySQL();
     closeValidateModal();
     showToast(`Status capaian berhasil diubah menjadi: ${statusVal}`);
