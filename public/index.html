@@ -565,7 +565,7 @@ let landingChartInstance = null;
             app.innerHTML = `
                 <div class="min-h-screen flex bg-slate-100">
                     <!-- Sidebar -->
-                    <aside class="w-72 bg-navy-900 text-slate-300 flex flex-col shadow-xl z-20 no-print">
+                    <aside class="w-72 bg-blue-600 text-slate-100 flex flex-col shadow-xl z-20 no-print">
                         <div class="p-6 border-b border-slate-800 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shrink-0">
                                 <img src="logo_poltek-removebg-preview.png" alt="Logo Poltek" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/40x40/2563eb/ffffff?text=Logo'">
@@ -1444,12 +1444,25 @@ function renderDashboardView(container) {
             }
 
             let totalValidIndikator = filteredCascading.length;
-            let achievedCount = 0;
-            filteredCascading.forEach(cd => {
-                let matched = validCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun);
-                if (filterDashboardTriwulan !== 'Semua') {
-                    matched = matched.filter(c => c.triwulan === filterDashboardTriwulan);
-                }
+let achievedCount = 0;
+filteredCascading.forEach(cd => {
+    // Gunakan pengecekan yang lebih aman untuk string triwulan dan tahun
+    let matched = validCapaian.filter(c => {
+        let matchTarget = c.targetDirektur === cd.target;
+        let matchTahun = (c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? (c.tahun || '2025') : filterDashboardTahun);
+        return matchTarget && matchTahun;
+    });
+
+    if (filterDashboardTriwulan !== 'Semua') {
+        matched = matched.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+    }
+
+    if (matched.length > 0) {
+        const avgReal = matched.reduce((a,b)=>a+b.realisasi,0)/matched.length;
+        const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
+        if (avgReal >= targetVal) achievedCount++;
+    }
+});
                 if (matched.length > 0) {
                     const avgReal = matched.reduce((a,b)=>a+b.realisasi,0)/matched.length;
                     const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
@@ -1860,24 +1873,70 @@ if (matchedCap.length > 0) {
                 setTimeout(() => {
                     // Line Chart Capaian
                     const ctx1 = document.getElementById('capaianChart').getContext('2d');
-                    let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
-                    let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
-                    let chartDataDatasets = twPeriods.map(tw => {
-                        let subset = validCapaian.filter(c => c.triwulan === tw);
-                        if (subset.length === 0) return 0;
-                        return Number((subset.reduce((a,b) => a + b.realisasi, 0) / subset.length).toFixed(1));
-                    });
-
-                    new Chart(ctx1, {
-                        type: 'line',
-                        data: {
-                            labels: chartLabels,
-                            datasets: [{ label: 'Progres Triwulanan (%)', data: chartDataDatasets, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', borderWidth: 3, fill: true, tension: 0.3 }]
-                        },
-                        plugins: [ChartDataLabels],
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: { align: 'top', formatter: v => v > 0 ? v + '%' : '-' } } }
-                    });
-
+let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
+let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+let chartDataDatasets = twPeriods.map(tw => {
+    let subset = validCapaian.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === tw);
+    if (subset.length === 0) return 0;
+    let totalPersen = subset.reduce((acc, curr) => {
+        let targetVal = curr.target > 0 ? curr.target : 100;
+        return acc + ((curr.realisasi / targetVal) * 100);
+    }, 0);
+    return Number((totalPersen / subset.length).toFixed(1));
+});
+                   new Chart(ctx1, {
+    type: 'line',
+    data: {
+        labels: chartLabels,
+        datasets: [
+            {
+                label: '% Realisasi Output',
+                data: chartDataDatasets,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: chartDataDatasets.map(v => v < 100 ? '#ef4444' : '#2563eb'), // Merah jika < 100, Biru jika >= 100
+                pointBorderColor: '#ffffff',
+                pointRadius: 6,
+                pointHoverRadius: 8
+            },
+            {
+                label: 'Standar Target (100%)',
+                data: [100, 100, 100, 100],
+                borderColor: '#ef4444',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                pointRadius: 0
+            }
+        ]
+    },
+    plugins: [ChartDataLabels],
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 140,
+                ticks: { font: { size: 11 } }
+            },
+            x: {
+                ticks: { font: { weight: 'bold', size: 12 } }
+            }
+        },
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                align: 'top',
+                font: { weight: 'bold', size: 11 },
+                formatter: v => v > 0 ? v + '%' : '-'
+            }
+        }
+    }
+});
                     // === GRAFIK REALISASI ANGGARAN (IKUT FILTER TERPADU) ===
                     const ctxAnggaran = document.getElementById('anggaranChart').getContext('2d');
                     let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
