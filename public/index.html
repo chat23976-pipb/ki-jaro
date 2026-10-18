@@ -1446,11 +1446,11 @@ function renderDashboardView(container) {
             let totalValidIndikator = filteredCascading.length;
 let achievedCount = 0;
 filteredCascading.forEach(cd => {
-    // Gunakan pengecekan yang lebih aman untuk string triwulan dan tahun
     let matched = validCapaian.filter(c => {
         let matchTarget = c.targetDirektur === cd.target;
         let matchTahun = (c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? (c.tahun || '2025') : filterDashboardTahun);
-        return matchTarget && matchTahun;
+        let matchStatus = c.status === 'Valid';
+        return matchTarget && matchTahun && matchStatus;
     });
 
     if (filterDashboardTriwulan !== 'Semua') {
@@ -1462,8 +1462,7 @@ filteredCascading.forEach(cd => {
         const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
         if (avgReal >= targetVal) achievedCount++;
     }
-});
-                if (matched.length > 0) {
+});                if (matched.length > 0) {
                     const avgReal = matched.reduce((a,b)=>a+b.realisasi,0)/matched.length;
                     const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
                     if (avgReal >= targetVal) achievedCount++;
