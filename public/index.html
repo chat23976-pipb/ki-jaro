@@ -1683,9 +1683,9 @@ filteredCascading.forEach(cd => {
                                     <tbody class="divide-y divide-slate-100">
                                         ${filteredCascading.filter(cd => filterDashboardTahun === 'Semua' || cd.tahun === filterDashboardTahun).map((cd, index) => {
                                             let matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun && c.status === 'Valid');
-                                            if (filterDashboardTriwulan !== 'Semua') {
-                                                matchedCap = matchedCap.filter(c => c.triwulan === filterDashboardTriwulan);
-                                            }
+if (filterDashboardTriwulan !== 'Semua') {
+    matchedCap = matchedCap.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+}
                                             if (filterDashboardUnit !== 'Semua') {
                                                 matchedCap = matchedCap.filter(c => c.unit === filterDashboardUnit);
                                             }
