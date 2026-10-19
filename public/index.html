@@ -2221,8 +2221,10 @@ function renderCascadingView(container) {
                                         ${isKetuaTim ? '<th class="p-4 text-center">Aksi</th>' : ''}
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    ${filteredTim.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredTim.map((c, idx) => `
+                              <tbody class="divide-y divide-slate-100">
+                                    ${filteredTim.length === 0 ? `
+                                        <tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan untuk tahun ${filterCascadingTahun}.</td></tr>
+                                    ` : filteredTim.map((c) => `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
@@ -2233,8 +2235,9 @@ function renderCascadingView(container) {
                                                 </div>
                                             </td>
                                             ${isKetuaTim ? `
-                                                <td class="p-4 text-center">
-                                                    <button onclick="confirmDeleteCascadingTim(${idx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                <td class="p-4 text-center space-x-1">
+                                                    <button onclick="openCascadingTimModal('edit', '${c.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="confirmDeleteCascadingTim('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -2427,16 +2430,106 @@ function renderCascadingView(container) {
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        async function confirmDeleteCascadingTim(idx) {
-            const item = DB.cascadingTim[idx];
-            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}"?`)) {
-                DB.cascadingTim.splice(idx, 1);
+       // Fungsi Hapus menggunakan ID unik (bukan index array filter)
+        async function confirmDeleteCascadingTim(id) {
+            const item = DB.cascadingTim.find(ct => String(ct.id) === String(id));
+            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item ? item.targetDirektur : ''}"?`)) {
+                DB.cascadingTim = DB.cascadingTim.filter(ct => String(ct.id) !== String(id));
                 await saveToMySQL();
-                showToast('Cascading Tim dihapus.', 'info');
+                showToast('Cascading Tim berhasil dihapus.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
         }
 
+        // Fungsi Buka Modal (Mendukung Mode Tambah dan Edit)
+        function openCascadingTimModal(mode = 'add', id = null) {
+            const modal = document.getElementById('cascadingTimModal');
+            if (!modal) return;
+
+            let editInput = document.getElementById('editCascadingTimId');
+            if (!editInput) {
+                const form = modal.querySelector('form');
+                if (form) {
+                    editInput = document.createElement('input');
+                    editInput.type = 'hidden';
+                    editInput.id = 'editCascadingTimId';
+                    form.prepend(editInput);
+                }
+            }
+
+            const titleEl = modal.querySelector('h3');
+            const yrEl = document.getElementById('timTahunTarget');
+            const refEl = document.getElementById('timDirRef');
+
+            if (mode === 'edit' && id) {
+                if (titleEl) titleEl.innerText = `Edit Cascading Unit (${currentUser.timKey})`;
+                if (editInput) editInput.value = id;
+                const found = DB.cascadingTim.find(ct => String(ct.id) === String(id));
+                if (found) {
+                    if (yrEl) {
+                        yrEl.value = found.tahun || '2025';
+                        updateTimDirRefOptions(yrEl.value);
+                    }
+                    if (refEl) refEl.value = found.targetDirektur;
+                    setTimeout(() => {
+                        document.querySelectorAll('input[name="unitCheck"]').forEach(chk => {
+                            chk.checked = found.unitTargets && found.unitTargets.includes(chk.value);
+                        });
+                    }, 50);
+                }
+            } else {
+                if (titleEl) titleEl.innerText = `Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})`;
+                if (editInput) editInput.value = '';
+                if (yrEl) {
+                    yrEl.value = '2025';
+                    updateTimDirRefOptions('2025');
+                }
+                document.querySelectorAll('input[name="unitCheck"]').forEach(chk => chk.checked = false);
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Fungsi Simpan (Mendukung Simpan Baru & Perbarui Hasil Edit)
+        async function saveCascadingTim(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editCascadingTimId') ? document.getElementById('editCascadingTimId').value : '';
+            const tahun = document.getElementById('timTahunTarget').value;
+            const targetDir = document.getElementById('timDirRef').value;
+            if (!targetDir) {
+                showToast('Pilih indikator rujukan yang valid!', 'error');
+                return;
+            }
+            const checkedUnits = Array.from(document.querySelectorAll('input[name="unitCheck"]:checked')).map(el => el.value);
+            if (checkedUnits.length === 0) {
+                showToast('Pilih minimal 1 Unit / Prodi tujuan!', 'error');
+                return;
+            }
+
+            if (editId) {
+                const idx = DB.cascadingTim.findIndex(ct => String(ct.id) === String(editId));
+                if (idx !== -1) {
+                    DB.cascadingTim[idx].tahun = tahun;
+                    DB.cascadingTim[idx].targetDirektur = targetDir;
+                    DB.cascadingTim[idx].unitTargets = checkedUnits;
+                    showToast('Cascading Unit berhasil diperbarui!');
+                }
+            } else {
+                DB.cascadingTim.push({
+                    id: 'ct_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                    tahun: tahun,
+                    targetDirektur: targetDir,
+                    timKey: currentUser.timKey,
+                    unitTargets: checkedUnits
+                });
+                showToast('Cascading ke Unit/Prodi berhasil disimpan!');
+            }
+
+            await saveToMySQL();
+            closeCascadingTimModal();
+            renderCascadingView(document.getElementById('mainContent'));
+        }
         function renderCapaianView(container) {
             document.getElementById('pageTitle').innerText = 'Input & Validasi Capaian Kinerja & Program Kerja';
             const isKaUnit = currentUser.role === 'ketua_unit';
