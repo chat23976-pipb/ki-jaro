@@ -2123,56 +2123,99 @@ if (matchedCap.length > 0) {
             });
 
             container.innerHTML = `
-                <div class="space-y-8 animate-fadeIn">
-                   <!-- ========================================== -->
-                    <!-- VISUALISASI POHON CASCADING (DECISION TREE) -->
-                    <!-- ========================================== -->
+<div class="space-y-8 animate-fadeIn">
+                    <!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG JELAS -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
                         <div>
-                            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-primary-600 mr-2"></i> Visualisasi Pohon Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
-                            <p class="text-xs text-slate-500">Peta penurunan indikator kinerja dari level pimpinan tertinggi hingga unit pelaksana.</p>
+                            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Peta Pohon Organisasi Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
+                            <p class="text-xs text-slate-500">Visualisasi alur penurunan indikator kinerja institusi secara hierarki dengan garis penghubung.</p>
                         </div>
                         
-                        <div class="overflow-x-auto p-4 bg-slate-50 rounded-2xl border flex items-center justify-start space-x-8 min-w-[700px]">
-                            <!-- Level 1: Direktur -->
-                            <div class="flex flex-col items-center shrink-0">
-                                <div class="px-4 py-3 bg-blue-700 text-white rounded-xl shadow-md text-xs font-bold text-center max-w-[200px]">
-                                    <i class="fa-solid fa-user-tie mb-1 block"></i> Pimpinan Tertinggi (Direktur)
+                        <div class="overflow-x-auto p-6 bg-slate-50 rounded-2xl border min-w-[800px]">
+                            <div class="flex items-center space-x-6">
+                                <!-- Level 1: Direktur -->
+                                <div class="flex flex-col items-center shrink-0">
+                                    <div class="px-5 py-4 bg-blue-700 text-white rounded-2xl shadow-lg text-xs font-bold text-center w-52 border-2 border-blue-800">
+                                        <i class="fa-solid fa-user-tie mb-1 block text-sm"></i> Pimpinan Tertinggi (Direktur)
+                                    </div>
                                 </div>
-                            </div>
 
-                            <!-- Garis Penghubung Utama ke Tim Kerja -->
+                                <!-- Garis Penghubung Utama ke Tim Kerja -->
                                 <div class="w-10 h-0.5 bg-blue-400 shrink-0"></div>
 
-                            <!-- Level 2: Ketua Tim Kerja -->
-                            <div class="flex flex-col space-y-4">
-                                ${DB.timKerjaList.map(tim => {
-                                    const assignedDir = DB.cascadingDirektur.filter(cd => cd.timKeys.includes(tim));
-                                    if (assignedDir.length === 0) return '';
-                                    return `
-                                        <div class="flex items-center space-x-4">
-                                            <div class="px-4 py-2.5 bg-purple-700 text-white rounded-xl shadow text-xs font-semibold text-center min-w-[180px]">
-                                                <i class="fa-solid fa-users-gear mb-0.5 block"></i> Tim Kerja: ${tim}
-                                            </div>
-                                            <div class="text-slate-400">&rarr;</div>
-                                            <div class="flex flex-col space-y-2">
-                                                ${DB.cascadingTim.filter(ct => ct.timKey === tim).map(ct => `
-                                                    <div class="flex items-center space-x-2">
-                                                        <div class="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-xs text-xs">
-                                                            <strong class="text-blue-700 block">${ct.targetDirektur}</strong>
-                                                            <div class="flex flex-wrap gap-1 mt-1">
-                                                                ${ct.unitTargets.map(u => `<span class="px-2 py-0.5 bg-blue-50 text-blue-800 rounded font-medium text-[10px]">${u}</span>`).join('')}
+                                <!-- Level 2 & 3: Tim Kerja & Unit -->
+                                <div class="flex flex-col space-y-4 flex-1">
+                                    ${DB.timKerjaList.map(tim => {
+                                        const assignedDir = DB.cascadingDirektur.filter(cd => cd.timKeys.includes(tim));
+                                        if (assignedDir.length === 0) return '';
+                                        const subUnits = DB.cascadingTim.filter(ct => ct.timKey === tim);
+
+                                        return `
+                                            <div class="flex items-center space-x-4 relative">
+                                                <!-- Garis vertikal penghubung antar tim -->
+                                                <div class="absolute -left-6 top-0 bottom-0 w-0.5 bg-slate-300"></div>
+                                                <div class="w-6 h-0.5 bg-blue-400 shrink-0"></div>
+
+                                                <!-- Kotak Tim Kerja -->
+                                                <div class="px-4 py-3 bg-purple-700 text-white rounded-xl shadow-md text-xs font-semibold text-center w-48 shrink-0 border border-purple-800">
+                                                    <i class="fa-solid fa-users-gear mb-1 block"></i> Tim Kerja: ${tim}
+                                                </div>
+
+                                                <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
+
+                                                <!-- Kotak Unit / Prodi Tujuan -->
+                                                <div class="flex flex-col space-y-2 flex-1 py-2">
+                                                    ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan</span>' : subUnits.map(ct => `
+                                                        <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-xs text-xs flex flex-col space-y-1.5 relative">
+                                                            <strong class="text-blue-800"><i class="fa-solid fa-bullseye text-blue-600 mr-1"></i> ${ct.targetDirektur}</strong>
+                                                            <div class="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
+                                                                ${ct.unitTargets.map(u => `<span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full font-bold text-[10px] border border-blue-100"><i class="fa-solid fa-building-columns mr-1"></i>${u}</span>`).join('')}
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                `).join('')}
+                                                    `).join('')}
+                                                </div>
                                             </div>
-                                        </div>
-                                    `;
-                                }).join('')}
+                                        `;
+                                    }).join('')}
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Tabel Cascading Direktur -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> 1. Cascading Direktur ke Ketua Tim Kerja</h3>
+                            </div>
+                            ${isDirektur ? `<button onclick="openCascadingDirModal()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl text-xs shadow">Tambah Cascading Direktur</button>` : ''}
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b">
+                                        <th class="p-4">Sasaran Kinerja</th>
+                                        <th class="p-4 text-center">Target</th>
+                                        <th class="p-4 text-center">Satuan</th>
+                                        <th class="p-4">Tim Kerja Terpilih</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${filteredDir.length === 0 ? '<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada data cascading.</td></tr>' : filteredDir.map((c, idx) => `
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-4 font-semibold text-slate-900">${c.target}</td>
+                                            <td class="p-4 text-center font-bold text-blue-700">${c.targetVal}</td>
+                                            <td class="p-4 text-center">${c.satuan}</td>
+                                            <td class="p-4">${c.timKeys.map(t => `<span class="px-2 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold mr-1">${t}</span>`).join('')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
                     <!-- Bagian 1: Cascading Direktur ke Ketua Tim Kerja -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
