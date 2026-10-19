@@ -600,15 +600,15 @@ function renderDashboardLayout() {
                                 <i class="fa-solid fa-chart-pie w-5 text-center"></i>
                                 <span class="sidebar-text">Dashboard Kinerja & Risiko</span>
                             </a>
-                            
-                            <a href="javascript:void(0)" onclick="switchTab('dokumen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                <i class="fa-solid fa-folder-open w-5 text-center"></i>
-                                <span class="sidebar-text">Dokumen Perencanaan</span>
-                            </a>
-                            
+
                             <a href="javascript:void(0)" onclick="switchTab('renstra')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'renstra' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-book-bookmark w-5 text-center"></i>
                                 <span class="sidebar-text">${currentUser.role === 'admin' ? 'Input & Manajemen Renstra' : 'View Renstra (Hierarki Kemenperin)'}</span>
+                            </a>
+
+                            <a href="javascript:void(0)" onclick="switchTab('dokumen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                <i class="fa-solid fa-folder-open w-5 text-center"></i>
+                                <span class="sidebar-text">Dokumen Perencanaan</span>
                             </a>
 
                             ${!isKaUnit ? `
@@ -2080,27 +2080,9 @@ function renderCascadingView(container) {
                 return;
             }
 
-            if (typeof window.filterCascadingTahun === 'undefined') window.filterCascadingTahun = 'Semua';
-            if (typeof window.filterPohonTahun === 'undefined') window.filterPohonTahun = 'Semua';
-
-            // Normalisasi Tahun & Auto-Heal ID yang kosong atau duplikat agar 100% bisa diedit & dihapus
-            const seenDirIds = new Set();
-            DB.cascadingDirektur.forEach((c, idx) => {
-                if (!c.tahun) c.tahun = '2025';
-                if (!c.id || seenDirIds.has(String(c.id))) {
-                    c.id = 'cd_' + Date.now() + '_' + idx + '_' + Math.floor(Math.random() * 1000);
-                }
-                seenDirIds.add(String(c.id));
-            });
-
-            const seenTimIds = new Set();
-            DB.cascadingTim.forEach((c, idx) => {
-                if (!c.tahun) c.tahun = '2025';
-                if (!c.id || seenTimIds.has(String(c.id))) {
-                    c.id = 'ct_' + Date.now() + '_' + idx + '_' + Math.floor(Math.random() * 1000);
-                }
-                seenTimIds.add(String(c.id));
-            });
+            if (typeof filterCascadingTahun === 'undefined') window.filterCascadingTahun = 'Semua';
+            DB.cascadingDirektur.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
+            DB.cascadingTim.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
 
             let filteredDir = [...DB.cascadingDirektur];
             if (filterCascadingTahun !== 'Semua') filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
@@ -2109,34 +2091,13 @@ function renderCascadingView(container) {
             if (isKetuaTim) filteredTim = filteredTim.filter(c => c.timKey === currentUser.timKey);
             if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
 
-            // Filter khusus untuk Peta Pohon Organisasi Cascading Kinerja
-            let treeDir = [...DB.cascadingDirektur];
-            let treeTim = [...DB.cascadingTim];
-            if (filterPohonTahun !== 'Semua') {
-                treeDir = treeDir.filter(c => (c.tahun || '2025') === filterPohonTahun);
-                treeTim = treeTim.filter(c => (c.tahun || '2025') === filterPohonTahun);
-            }
-
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
-                    <!-- VISUALISASI POHON CASCADING DENGAN FILTER TAHUN -->
+                    <!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG KONEKTOR -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
-                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Peta Pohon Organisasi Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
-                                <p class="text-xs text-slate-500">Visualisasi alur penurunan indikator kinerja institusi secara hierarki dengan garis penghubung.</p>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <label class="text-xs font-semibold text-slate-600">Filter Tahun Pohon:</label>
-                                <select onchange="filterPohonTahun = this.value; renderCascadingView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700 cursor-pointer">
-                                    <option value="Semua" ${filterPohonTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                    <option value="2025" ${filterPohonTahun === '2025' ? 'selected' : ''}>2025</option>
-                                    <option value="2026" ${filterPohonTahun === '2026' ? 'selected' : ''}>2026</option>
-                                    <option value="2027" ${filterPohonTahun === '2027' ? 'selected' : ''}>2027</option>
-                                    <option value="2028" ${filterPohonTahun === '2028' ? 'selected' : ''}>2028</option>
-                                    <option value="2029" ${filterPohonTahun === '2029' ? 'selected' : ''}>2029</option>
-                                </select>
-                            </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Peta Pohon Organisasi Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
+                            <p class="text-xs text-slate-500">Visualisasi alur penurunan indikator kinerja institusi secara hierarki dengan garis penghubung.</p>
                         </div>
                         
                         <div class="overflow-x-auto p-6 bg-slate-50 rounded-2xl border min-w-[800px]">
@@ -2144,21 +2105,16 @@ function renderCascadingView(container) {
                                 <div class="flex flex-col items-center shrink-0">
                                     <div class="px-5 py-4 bg-blue-700 text-white rounded-2xl shadow-lg text-xs font-bold text-center w-52 border-2 border-blue-800">
                                         <i class="fa-solid fa-user-tie mb-1 block text-sm"></i> Pimpinan Tertinggi (Direktur)
-                                        <span class="block text-[10px] font-normal text-blue-200 mt-1">Tahun: ${filterPohonTahun}</span>
                                     </div>
                                 </div>
 
                                 <div class="w-10 h-0.5 bg-blue-400 shrink-0"></div>
 
                                 <div class="flex flex-col space-y-4 flex-1">
-                                    ${treeDir.length === 0 ? `
-                                        <div class="p-4 bg-white border border-slate-200 rounded-xl text-xs text-slate-400 italic text-center">
-                                            Belum ada data cascading kinerja pada tahun ${filterPohonTahun}.
-                                        </div>
-                                    ` : DB.timKerjaList.map(tim => {
-                                        const assignedDir = treeDir.filter(cd => cd.timKeys && cd.timKeys.includes(tim));
+                                    ${DB.timKerjaList.map(tim => {
+                                        const assignedDir = DB.cascadingDirektur.filter(cd => cd.timKeys.includes(tim));
                                         if (assignedDir.length === 0) return '';
-                                        const subUnits = treeTim.filter(ct => ct.timKey === tim);
+                                        const subUnits = DB.cascadingTim.filter(ct => ct.timKey === tim);
 
                                         return `
                                             <div class="flex items-center space-x-4 relative">
@@ -2169,14 +2125,11 @@ function renderCascadingView(container) {
                                                 </div>
                                                 <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
                                                 <div class="flex flex-col space-y-2 flex-1 py-2">
-                                                    ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan pada tahun ini</span>' : subUnits.map(ct => `
+                                                    ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan</span>' : subUnits.map(ct => `
                                                         <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-xs text-xs flex flex-col space-y-1.5 relative">
-                                                            <div class="flex items-center justify-between">
-                                                                <strong class="text-blue-800"><i class="fa-solid fa-bullseye text-blue-600 mr-1"></i> ${ct.targetDirektur}</strong>
-                                                                <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold">${ct.tahun || '2025'}</span>
-                                                            </div>
+                                                            <strong class="text-blue-800"><i class="fa-solid fa-bullseye text-blue-600 mr-1"></i> ${ct.targetDirektur}</strong>
                                                             <div class="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
-                                                                ${(ct.unitTargets || []).map(u => `<span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full font-bold text-[10px] border border-blue-100"><i class="fa-solid fa-building-columns mr-1"></i>${u}</span>`).join('')}
+                                                                ${ct.unitTargets.map(u => `<span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full font-bold text-[10px] border border-blue-100"><i class="fa-solid fa-building-columns mr-1"></i>${u}</span>`).join('')}
                                                             </div>
                                                         </div>
                                                     `).join('')}
@@ -2222,7 +2175,7 @@ function renderCascadingView(container) {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${filteredDir.length === 0 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data cascading dari Direktur untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredDir.map((c) => `
+                                    ${filteredDir.length === 0 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data cascading dari Direktur untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredDir.map((c, idx) => `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4">
                                                 <span class="px-2 py-0.5 bg-blue-50 text-primary-700 font-semibold text-xs rounded mr-2">Tahun: ${c.tahun || '2025'}</span>
@@ -2233,12 +2186,12 @@ function renderCascadingView(container) {
                                             <td class="p-4 text-center font-bold text-emerald-700">Rp ${Number(c.anggaran || 0).toLocaleString('id-ID')}</td>
                                             <td class="p-4">
                                                 <div class="flex flex-wrap gap-1.5">
-                                                    ${(c.timKeys || []).map(t => `<span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${t}</span>`).join('')}
+                                                    ${c.timKeys.map(t => `<span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${t}</span>`).join('')}
                                                 </div>
                                             </td>
                                             ${isDirektur ? `
                                                 <td class="p-4 text-center">
-                                                    <button onclick="confirmDeleteCascadingDir('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                    <button onclick="confirmDeleteCascadingDir(${idx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -2255,7 +2208,7 @@ function renderCascadingView(container) {
                                 <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-network-wired text-primary-600 mr-2"></i> 2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag</h3>
                                 <p class="text-xs text-slate-500">Ketua Tim Kerja menurunkan indikator ke unit/prodi/subbag di bawah koordinasinya.</p>
                             </div>
-                            ${isKetuaTim ? `<button onclick="openCascadingTimModal('add')" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
+                            ${isKetuaTim ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
@@ -2269,29 +2222,23 @@ function renderCascadingView(container) {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${filteredTim.length === 0 ? `
-                                        <tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan untuk tahun ${filterCascadingTahun}.</td></tr>
-                                    ` : filteredTim.map((c) => {
-                                        const realIdx = DB.cascadingTim.indexOf(c);
-                                        return `
+                                    ${filteredTim.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredTim.map((c, idx) => `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
                                             <td class="p-4 font-semibold text-slate-900">${c.targetDirektur}</td>
                                             <td class="p-4">
                                                 <div class="flex flex-wrap gap-1.5">
-                                                    ${(c.unitTargets || []).map(u => `<span class="px-2.5 py-1 bg-blue-50 text-primary-700 text-xs rounded-full font-medium">${u}</span>`).join('')}
+                                                    ${c.unitTargets.map(u => `<span class="px-2.5 py-1 bg-blue-50 text-primary-700 text-xs rounded-full font-medium">${u}</span>`).join('')}
                                                 </div>
                                             </td>
                                             ${isKetuaTim ? `
-                                                <td class="p-4 text-center space-x-1">
-                                                    <button onclick="openCascadingTimModal('edit', '${c.id}', ${realIdx})" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="confirmDeleteCascadingTim('${c.id}', ${realIdx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                <td class="p-4 text-center">
+                                                    <button onclick="confirmDeleteCascadingTim(${idx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
-                                        `;
-                                    }).join('')}
+                                    `).join('')}
                                 </tbody>
                             </table>
                         </div>
@@ -2337,12 +2284,10 @@ function renderCascadingView(container) {
                 <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 id="cascadingTimModalTitle" class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})</h3>
+                            <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})</h3>
                             <button onclick="closeCascadingTimModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveCascadingTim(event)" class="space-y-4 text-sm">
-                            <input type="hidden" id="editCascadingTimId" value="">
-                            <input type="hidden" id="editCascadingTimIdx" value="-1">
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Tahun</label>
                                 <select id="timTahunTarget" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold" onchange="updateTimDirRefOptions(this.value)">
@@ -2367,7 +2312,7 @@ function renderCascadingView(container) {
                     </div>
                 </div>
             `;
-
+        }
             setTimeout(() => {
                 const yrDir = document.getElementById('dirTahunTarget');
                 if (yrDir) updateDirRenstraOptions(yrDir.value);
@@ -2375,18 +2320,7 @@ function renderCascadingView(container) {
                 const yrEl = document.getElementById('timTahunTarget');
                 if (yrEl) updateTimDirRefOptions(yrEl.value);
             }, 100);
-        }
-
-        function updateDirRenstraOptions(tahun) {
-            const sel = document.getElementById('dirIndikatorRenstra');
-            if (!sel) return;
-            sel.innerHTML = DB.renstraIndikatorKinerja.map(ik => {
-                const targetVal = ik['target' + tahun] !== undefined ? ik['target' + tahun] : 100;
-                const anggaranVal = ik['anggaran' + tahun] !== undefined ? ik['anggaran' + tahun] : 0;
-                return `<option value="${ik.id}" data-nama="${ik.namaIndikator}" data-satuan="${ik.satuan || '%'}" data-target="${targetVal}" data-anggaran="${anggaranVal}">${ik.kodeIndikator} - ${ik.namaIndikator}</option>`;
-            }).join('');
-            updateDirAnggaranPreview();
-        }
+        
 
         function updateDirAnggaranPreview() {
             const sel = document.getElementById('dirIndikatorRenstra');
@@ -2399,23 +2333,11 @@ function renderCascadingView(container) {
             document.getElementById('previewAnggaranVal').innerText = `Rp ${Number(anggaran).toLocaleString('id-ID')}`;
         }
 
-        function updateTimDirRefOptions(tahun, selectedTarget = null) {
+        function updateTimDirRefOptions(tahun) {
             const sel = document.getElementById('timDirRef');
             if (!sel) return;
-            const matching = DB.cascadingDirektur.filter(c => c.timKeys && c.timKeys.includes(currentUser.timKey) && (c.tahun || '2025') === tahun);
-            
-            let optionsHtml = matching.length === 0 
-                ? '<option value="">Tidak ada indikator dicascading pada tahun ini</option>' 
-                : matching.map(c => `<option value="${c.target}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})</option>`).join('');
-            
-            // Jika sedang mode edit dan indikator lama berasal dari tahun/daftar berbeda, tetap tampilkan agar bisa diedit
-            if (selectedTarget && !matching.some(c => c.target === selectedTarget)) {
-                optionsHtml = `<option value="${selectedTarget}">${selectedTarget}</option>` + optionsHtml;
-            }
-            sel.innerHTML = optionsHtml;
-            if (selectedTarget) {
-                sel.value = selectedTarget;
-            }
+            const matching = DB.cascadingDirektur.filter(c => c.timKeys.includes(currentUser.timKey) && (c.tahun || '2025') === tahun);
+            sel.innerHTML = matching.length === 0 ? '<option value="">Tidak ada indikator dicascading pada tahun ini</option>' : matching.map(c => `<option value="${c.target}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})</option>`).join('');
         }
 
         function openCascadingDirModal() {
@@ -2423,16 +2345,11 @@ function renderCascadingView(container) {
                 showToast('Belum ada data Indikator Kinerja di Renstra. Minta Admin untuk mengisi Renstra terlebih dahulu.', 'error');
                 return;
             }
-            document.getElementById('cascadingDirModal').classList.remove('hidden');
-            document.getElementById('cascadingDirModal').classList.add('flex');
+            document.getElementById('cascadingDirModal').classList.remove('hidden'); document.getElementById('cascadingDirModal').classList.add('flex');
             const yrDir = document.getElementById('dirTahunTarget');
             if (yrDir) updateDirRenstraOptions(yrDir.value);
         }
-
-        function closeCascadingDirModal() {
-            document.getElementById('cascadingDirModal').classList.remove('flex');
-            document.getElementById('cascadingDirModal').classList.add('hidden');
-        }
+        function closeCascadingDirModal() { document.getElementById('cascadingDirModal').classList.remove('flex'); document.getElementById('cascadingDirModal').classList.add('hidden'); }
         
         async function saveCascadingDir(e) {
             e.preventDefault();
@@ -2451,7 +2368,7 @@ function renderCascadingView(container) {
             }
 
             DB.cascadingDirektur.push({
-                id: 'cd_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                id: 'cd' + (DB.cascadingDirektur.length + 1),
                 indikatorId: sel.value,
                 tahun: tahun,
                 target: indikatorName,
@@ -2467,14 +2384,12 @@ function renderCascadingView(container) {
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        async function confirmDeleteCascadingDir(id) {
-            const idx = DB.cascadingDirektur.findIndex(c => String(c.id) === String(id));
-            if (idx === -1) return;
+        async function confirmDeleteCascadingDir(idx) {
             const item = DB.cascadingDirektur[idx];
             if (confirm(`Apakah Anda yakin ingin menghapus cascading indikator "${item.target}"?\nMenghapus ini juga akan menghapus cascading lanjutan di Ketua Tim Kerja yang terkait, serta data capaian dan risiko unit terkait.`)) {
-                DB.cascadingTim = DB.cascadingTim.filter(ct => !(ct.targetDirektur === item.target && (ct.tahun || '2025') === (item.tahun || '2025')));
-                DB.capaian = DB.capaian.filter(c => !(c.targetDirektur === item.target && (c.tahun || '2025') === (item.tahun || '2025')));
-                DB.risiko = DB.risiko.filter(r => !(r.targetDirektur === item.target && (r.tahun || '2025') === (item.tahun || '2025')));
+                DB.cascadingTim = DB.cascadingTim.filter(ct => ct.targetDirektur !== item.target);
+                DB.capaian = DB.capaian.filter(c => c.targetDirektur !== item.target);
+                DB.risiko = DB.risiko.filter(r => r.targetDirektur !== item.target);
                 
                 DB.cascadingDirektur.splice(idx, 1);
                 await saveToMySQL();
@@ -2483,65 +2398,13 @@ function renderCascadingView(container) {
             }
         }
 
-        function closeCascadingTimModal() {
-            document.getElementById('cascadingTimModal').classList.remove('flex');
-            document.getElementById('cascadingTimModal').classList.add('hidden');
-        }
+        function openCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('hidden'); document.getElementById('cascadingTimModal').classList.add('flex'); }
+        function closeCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('flex'); document.getElementById('cascadingTimModal').classList.add('hidden'); }
 
-        // Fungsi Buka Modal Cascading Tim Kerja (Mendukung Tambah & Edit dengan Akurat)
-        function openCascadingTimModal(mode = 'add', id = null, realIdx = -1) {
-            const modal = document.getElementById('cascadingTimModal');
-            if (!modal) return;
-
-            const titleEl = document.getElementById('cascadingTimModalTitle');
-            const editInputId = document.getElementById('editCascadingTimId');
-            const editInputIdx = document.getElementById('editCascadingTimIdx');
-            const yrEl = document.getElementById('timTahunTarget');
-
-            if (mode === 'edit') {
-                let found = null;
-                if (realIdx !== -1 && DB.cascadingTim[realIdx]) {
-                    found = DB.cascadingTim[realIdx];
-                } else if (id) {
-                    realIdx = DB.cascadingTim.findIndex(ct => String(ct.id) === String(id));
-                    if (realIdx !== -1) found = DB.cascadingTim[realIdx];
-                }
-
-                if (found) {
-                    if (titleEl) titleEl.innerText = `Edit Cascading Unit (${currentUser.timKey})`;
-                    if (editInputId) editInputId.value = found.id || '';
-                    if (editInputIdx) editInputIdx.value = realIdx;
-
-                    const thn = found.tahun || '2025';
-                    if (yrEl) yrEl.value = thn;
-                    updateTimDirRefOptions(thn, found.targetDirektur);
-
-                    document.querySelectorAll('input[name="unitCheck"]').forEach(chk => {
-                        chk.checked = Array.isArray(found.unitTargets) && found.unitTargets.includes(chk.value);
-                    });
-                }
-            } else {
-                if (titleEl) titleEl.innerText = `Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})`;
-                if (editInputId) editInputId.value = '';
-                if (editInputIdx) editInputIdx.value = '-1';
-                const defaultYear = (typeof filterCascadingTahun !== 'undefined' && filterCascadingTahun !== 'Semua') ? filterCascadingTahun : '2025';
-                if (yrEl) yrEl.value = defaultYear;
-                updateTimDirRefOptions(defaultYear);
-                document.querySelectorAll('input[name="unitCheck"]').forEach(chk => chk.checked = false);
-            }
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        // Fungsi Simpan Cascading Tim Kerja (Mendukung Tambah Baru & Simpan Edit)
         async function saveCascadingTim(e) {
             e.preventDefault();
-            const editId = document.getElementById('editCascadingTimId') ? document.getElementById('editCascadingTimId').value : '';
-            const editIdx = document.getElementById('editCascadingTimIdx') ? parseInt(document.getElementById('editCascadingTimIdx').value) : -1;
             const tahun = document.getElementById('timTahunTarget').value;
             const targetDir = document.getElementById('timDirRef').value;
-
             if (!targetDir) {
                 showToast('Pilih indikator rujukan yang valid!', 'error');
                 return;
@@ -2551,152 +2414,29 @@ function renderCascadingView(container) {
                 showToast('Pilih minimal 1 Unit / Prodi tujuan!', 'error');
                 return;
             }
-
-            let targetIndex = -1;
-            if (editIdx >= 0 && editIdx < DB.cascadingTim.length) {
-                targetIndex = editIdx;
-            } else if (editId) {
-                targetIndex = DB.cascadingTim.findIndex(ct => String(ct.id) === String(editId));
-            }
-
-            if (targetIndex !== -1) {
-                DB.cascadingTim[targetIndex] = {
-                    ...DB.cascadingTim[targetIndex],
-                    id: DB.cascadingTim[targetIndex].id || ('ct_' + Date.now()),
-                    tahun: tahun,
-                    targetDirektur: targetDir,
-                    timKey: currentUser.timKey,
-                    unitTargets: checkedUnits
-                };
-                showToast('Cascading Unit berhasil diperbarui!');
-            } else {
-                DB.cascadingTim.push({
-                    id: 'ct_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-                    tahun: tahun,
-                    targetDirektur: targetDir,
-                    timKey: currentUser.timKey,
-                    unitTargets: checkedUnits
-                });
-                showToast('Cascading ke Unit/Prodi berhasil disimpan!');
-            }
-
+            DB.cascadingTim.push({
+                id: 'ct' + (DB.cascadingTim.length + 1),
+                tahun: tahun,
+                targetDirektur: targetDir,
+                timKey: currentUser.timKey,
+                unitTargets: checkedUnits
+            });
             await saveToMySQL();
             closeCascadingTimModal();
+            showToast('Cascading ke Unit/Prodi berhasil disimpan!');
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        // Fungsi Hapus Cascading Tim Kerja (Pasti Terhapus dari Tabel & MySQL)
-        async function confirmDeleteCascadingTim(id, realIdx = -1) {
-            let targetIndex = -1;
-            if (realIdx >= 0 && realIdx < DB.cascadingTim.length) {
-                targetIndex = realIdx;
-            } else {
-                targetIndex = DB.cascadingTim.findIndex(ct => String(ct.id) === String(id));
-            }
-
-            if (targetIndex === -1) {
-                showToast('Data tidak ditemukan!', 'error');
-                return;
-            }
-
-            const item = DB.cascadingTim[targetIndex];
-            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item ? item.targetDirektur : ''}"?`)) {
-                DB.cascadingTim.splice(targetIndex, 1);
+        async function confirmDeleteCascadingTim(idx) {
+            const item = DB.cascadingTim[idx];
+            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}"?`)) {
+                DB.cascadingTim.splice(idx, 1);
                 await saveToMySQL();
-                showToast('Cascading Tim berhasil dihapus.', 'info');
+                showToast('Cascading Tim dihapus.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
         }
 
-        // Fungsi Buka Modal (Mendukung Mode Tambah dan Edit)
-        function openCascadingTimModal(mode = 'add', id = null) {
-            const modal = document.getElementById('cascadingTimModal');
-            if (!modal) return;
-
-            let editInput = document.getElementById('editCascadingTimId');
-            if (!editInput) {
-                const form = modal.querySelector('form');
-                if (form) {
-                    editInput = document.createElement('input');
-                    editInput.type = 'hidden';
-                    editInput.id = 'editCascadingTimId';
-                    form.prepend(editInput);
-                }
-            }
-
-            const titleEl = modal.querySelector('h3');
-            const yrEl = document.getElementById('timTahunTarget');
-            const refEl = document.getElementById('timDirRef');
-
-            if (mode === 'edit' && id) {
-                if (titleEl) titleEl.innerText = `Edit Cascading Unit (${currentUser.timKey})`;
-                if (editInput) editInput.value = id;
-                const found = DB.cascadingTim.find(ct => String(ct.id) === String(id));
-                if (found) {
-                    if (yrEl) {
-                        yrEl.value = found.tahun || '2025';
-                        updateTimDirRefOptions(yrEl.value);
-                    }
-                    if (refEl) refEl.value = found.targetDirektur;
-                    setTimeout(() => {
-                        document.querySelectorAll('input[name="unitCheck"]').forEach(chk => {
-                            chk.checked = found.unitTargets && found.unitTargets.includes(chk.value);
-                        });
-                    }, 50);
-                }
-            } else {
-                if (titleEl) titleEl.innerText = `Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})`;
-                if (editInput) editInput.value = '';
-                if (yrEl) {
-                    yrEl.value = '2025';
-                    updateTimDirRefOptions('2025');
-                }
-                document.querySelectorAll('input[name="unitCheck"]').forEach(chk => chk.checked = false);
-            }
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        // Fungsi Simpan (Mendukung Simpan Baru & Perbarui Hasil Edit)
-        async function saveCascadingTim(e) {
-            e.preventDefault();
-            const editId = document.getElementById('editCascadingTimId') ? document.getElementById('editCascadingTimId').value : '';
-            const tahun = document.getElementById('timTahunTarget').value;
-            const targetDir = document.getElementById('timDirRef').value;
-            if (!targetDir) {
-                showToast('Pilih indikator rujukan yang valid!', 'error');
-                return;
-            }
-            const checkedUnits = Array.from(document.querySelectorAll('input[name="unitCheck"]:checked')).map(el => el.value);
-            if (checkedUnits.length === 0) {
-                showToast('Pilih minimal 1 Unit / Prodi tujuan!', 'error');
-                return;
-            }
-
-            if (editId) {
-                const idx = DB.cascadingTim.findIndex(ct => String(ct.id) === String(editId));
-                if (idx !== -1) {
-                    DB.cascadingTim[idx].tahun = tahun;
-                    DB.cascadingTim[idx].targetDirektur = targetDir;
-                    DB.cascadingTim[idx].unitTargets = checkedUnits;
-                    showToast('Cascading Unit berhasil diperbarui!');
-                }
-            } else {
-                DB.cascadingTim.push({
-                    id: 'ct_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-                    tahun: tahun,
-                    targetDirektur: targetDir,
-                    timKey: currentUser.timKey,
-                    unitTargets: checkedUnits
-                });
-                showToast('Cascading ke Unit/Prodi berhasil disimpan!');
-            }
-
-            await saveToMySQL();
-            closeCascadingTimModal();
-            renderCascadingView(document.getElementById('mainContent'));
-        }
         function renderCapaianView(container) {
             document.getElementById('pageTitle').innerText = 'Input & Validasi Capaian Kinerja & Program Kerja';
             const isKaUnit = currentUser.role === 'ketua_unit';
@@ -3235,7 +2975,7 @@ async function confirmDeleteCapaian(id) {
                             <h3 class="font-bold text-slate-900 text-base">Manajemen Risiko & Pengendalian (Sheet: Program Kerja dan Peta Resiko)</h3>
                             <p class="text-xs text-slate-500">Sesuai Matriks Analisis Risiko 5x5 dengan filter tahun</p>
                         </div>
-                        <div class="flex items-center space-x-3">
+                        <div class="flex flex-wrap items-center gap-3">
                             <div>
                                 <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Tahun</label>
                                 <select onchange="filterRisikoTahun = this.value; renderRisikoView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
@@ -3247,12 +2987,12 @@ async function confirmDeleteCapaian(id) {
                                     <option value="2029" ${filterRisikoTahun === '2029' ? 'selected' : ''}>2029</option>
                                 </select>
                             </div>
-                            <a href="${DB.spreadsheetUrl}" target="_blank" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2">
+                            <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
                                 <i class="fa-solid fa-file-excel"></i>
-                                <span>Google Sheets</span>
-                            </a>
+                                <span>Ekspor CSV Risiko</span>
+                            </button>
                             ${isKaUnit ? `
-                                <button onclick="openRisikoModal()" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
+                                <button onclick="openRisikoModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
                                     <i class="fa-solid fa-plus"></i>
                                     <span>Input Risiko Baru</span>
                                 </button>
@@ -3269,22 +3009,27 @@ async function confirmDeleteCapaian(id) {
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                                     <tr>
+                                        <th class="p-3 text-center">No</th>
                                         <th class="p-3">Unit / Prodi</th>
                                         <th class="p-3">Indikator Terkait</th>
                                         <th class="p-3">Pernyataan Risiko</th>
                                         <th class="p-3">Sebab Internal & Eksternal</th>
                                         <th class="p-3">Dampak</th>
-                                        <th class="p-3 text-center">Skor Awal (P x D)</th>
+                                        <th class="p-3 text-center">Skor Awal</th>
                                         <th class="p-3">Langkah Pengendalian</th>
-                                        <th class="p-3 text-center">Skor Residu (P x D)</th>
+                                        <th class="p-3 text-center">Skor Residu</th>
                                         <th class="p-3 text-center">Kuadran & Level</th>
+                                        ${isKaUnit ? '<th class="p-3 text-center">Aksi</th>' : ''}
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
                                     ${displayRisiko.length === 0 ? `
-                                        <tr><td colspan="9" class="p-8 text-center text-slate-400">Belum ada data risiko pada tahun ${filterRisikoTahun}.</td></tr>
-                                    ` : displayRisiko.map(r => `
+                                        <tr><td colspan="11" class="p-8 text-center text-slate-400">Belum ada data risiko pada tahun ${filterRisikoTahun}.</td></tr>
+                                    ` : displayRisiko.map((r, index) => {
+                                        const realIdx = DB.risiko.findIndex(item => item.id === r.id);
+                                        return `
                                         <tr class="hover:bg-slate-50 transition-all">
+                                            <td class="p-3 text-center font-semibold text-slate-600">${index + 1}</td>
                                             <td class="p-3 font-medium text-slate-800">${r.unit}</td>
                                             <td class="p-3 font-semibold text-primary-700 text-xs">${r.targetDirektur || '-'}</td>
                                             <td class="p-3 font-semibold text-slate-900">${r.pernyataan}</td>
@@ -3295,7 +3040,7 @@ async function confirmDeleteCapaian(id) {
                                             <td class="p-3 text-slate-600">${r.dampak}</td>
                                             <td class="p-3 text-center font-bold text-rose-600">${r.skor1}</td>
                                             <td class="p-3 text-slate-600">
-                                                <span class="block"><strong>${r.adaPengendalian}:</strong>${r.uraianPengendalian}</span>
+                                                <span class="block"><strong>${r.adaPengendalian}:</strong> ${r.uraianPengendalian}</span>
                                                 <span class="text-[10px] text-emerald-600 font-semibold">Memadai: ${r.memadai}</span>
                                             </td>
                                             <td class="p-3 text-center font-bold text-emerald-600">${r.skor2}</td>
@@ -3304,8 +3049,14 @@ async function confirmDeleteCapaian(id) {
                                                     ${r.kuadran2}
                                                 </span>
                                             </td>
+                                            ${isKaUnit ? `
+                                                <td class="p-3 text-center space-x-1">
+                                                    <button onclick="openRisikoModal('edit', '${r.id}',${realIdx})" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="confirmDeleteRisiko('${r.id}',${realIdx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                </td>
+                                            ` : ''}
                                         </tr>
-                                    `).join('')}
+                                    `;}).join('')}
                                 </tbody>
                             </table>
                         </div>
@@ -3313,20 +3064,21 @@ async function confirmDeleteCapaian(id) {
                 </div>
 
                <!-- Modal Input Risiko -->
-               <div id="risikoModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+              <div id="risikoModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">Input Pernyataan Risiko & Matriks 5x5</h3>
+                            <h3 id="risikoModalTitle" class="font-bold text-slate-900 text-base">Input Pernyataan Risiko & Matriks 5x5</h3>
                             <button onclick="closeRisikoModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveRisiko(event)" class="space-y-4 text-sm">
+                            <input type="hidden" id="editRisikoId" value="">
+                            <input type="hidden" id="editRisikoIdx" value="-1">
                            <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator Kinerja yang Dicascading ke Anda</label>
                                 <select id="rIndikatorRef" required class="w-full p-3 bg-slate-50 border rounded-xl">
                                     ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => `<option value="${ct.targetDirektur}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun:${ct.tahun || '2025'})</option>`).join('')}
                                 </select>
                             </div>
-                            <!-- TAMBAHKAN DROPDOWN TAHUN DI SINI -->
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Tahun Risiko</label>
                                 <select id="rTahun" required class="w-full p-3 bg-slate-50 border rounded-xl font-semibold">
@@ -3401,7 +3153,7 @@ async function confirmDeleteCapaian(id) {
 
                             <div class="flex justify-end space-x-3 pt-2 border-t">
                                 <button type="button" onclick="closeRisikoModal()" class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-medium">Batal</button>
-                                <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium shadow-md">Simpan & Sync Google Sheets</button>
+                                <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium shadow-md">Simpan Risiko</button>
                             </div>
                         </form>
                     </div>
@@ -4002,6 +3754,275 @@ async function confirmDeleteCapaian(id) {
                 renderLogin();
             }
         };
+        function openExportRisikoCsvModal() {
+            const modal = document.getElementById('exportRisikoCsvModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeExportRisikoCsvModal() {
+            const modal = document.getElementById('exportRisikoCsvModal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+        }
+
+        function executeDownloadRisikoCSV() {
+            let cols = [];
+            let headers = [
+                "Nomor", "Sasaran Kinerja", "Indikator Kinerja", "Program Kerja", "Tahun Risiko",
+                "Pernyataan Risiko / Kejadian Risiko", "Penyebab Internal", "Penyebab Eksternal", "Dampak Risiko",
+                "Probabilitas Awal (1-5)", "Dampak Awal (1-5)", "Skor Awal (P x D)", "Ada Langkah Pengendalian?",
+                "Uraian Langkah Pengendalian", "Apakah Memadai?", "Probabilitas Residu (1-5)", "Dampak Residu (1-5)",
+                "Skor Residu (P x D)", "Kuadran & Level", "Unit / Prodi"
+            ];
+
+            for (let i = 1; i <= 20; i++) {
+                const chk = document.getElementById(`c_csv_${i}`);
+                if (chk && chk.checked) cols.push(i - 1);
+            }
+
+            if (cols.length === 0) {
+                showToast('Pilih minimal 1 kolom untuk didownload!', 'error');
+                return;
+            }
+
+            let csvRows = [cols.map(idx => `"${headers[idx]}"`).join(",")];
+
+            let targetRisikoList = DB.risiko;
+            if (typeof filterRisikoTahun !== 'undefined' && filterRisikoTahun !== 'Semua') {
+                targetRisikoList = targetRisikoList.filter(r => (r.tahun || '2025') === filterRisikoTahun);
+            }
+            if (currentUser.role === 'ketua_unit') {
+                targetRisikoList = targetRisikoList.filter(r => r.unit === currentUser.unit);
+            }
+
+            targetRisikoList.forEach((r, index) => {
+                // Cari program kerja terkait unit & indikator
+                const progObj = DB.capaian.find(c => c.unit === r.unit && c.targetDirektur === r.targetDirektur);
+                const programKerja = progObj ? progObj.program : '-';
+                
+                // Cari sasaran kinerja berdasarkan indikator
+                const renstraIk = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === r.targetDirektur);
+                const sasaranKinerjaObj = renstraIk ? DB.renstraSasaranKinerja.find(sk => sk.id === renstraIk.sasaranKinerjaId) : null;
+                const sasaranKinerja = sasaranKinerjaObj ? sasaranKinerjaObj.sasaranKinerja : '-';
+
+                let rowData = [
+                    index + 1,
+                    sasaranKinerja,
+                    r.targetDirektur || '-',
+                    programKerja,
+                    r.tahun || '2025',
+                    r.pernyataan || '-',
+                    r.sebabInternal || '-',
+                    r.sebabEksternal || '-',
+                    r.dampak || '-',
+                    r.prob1 || 1,
+                    r.damp1 || 1,
+                    r.skor1 || 1,
+                    r.adaPengendalian || 'Ya',
+                    r.uraianPengendalian || '-',
+                    r.memadai || 'Memadai',
+                    r.prob2 || 1,
+                    r.damp2 || 1,
+                    r.skor2 || 1,
+                    r.kuadran2 || '-',
+                    r.unit || '-'
+                ];
+
+                let selectedRow = cols.map(idx => `"${String(rowData[idx]).replace(/"/g, '""')}"`);
+                csvRows.push(selectedRow.join(","));
+            });
+
+            const blob = new Blob([csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `manajemen_risiko_${filterRisikoTahun}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            closeExportRisikoCsvModal();
+            showToast('File CSV Manajemen Risiko berhasil diunduh!');
+        }
+
+        // Fungsi Buka Modal Risiko (Mode Tambah / Edit)
+        function openRisikoModal(mode = 'add', id = null, realIdx = -1) {
+            const modal = document.getElementById('risikoModal');
+            if (!modal) return;
+
+            const titleEl = document.getElementById('risikoModalTitle');
+            const editId = document.getElementById('editRisikoId');
+            const editIdx = document.getElementById('editRisikoIdx');
+
+            if (mode === 'edit') {
+                let found = null;
+                if (realIdx !== -1 && DB.risiko[realIdx]) {
+                    found = DB.risiko[realIdx];
+                } else if (id) {
+                    realIdx = DB.risiko.findIndex(item => String(item.id) === String(id));
+                    if (realIdx !== -1) found = DB.risiko[realIdx];
+                }
+
+                if (found) {
+                    if (titleEl) titleEl.innerText = 'Edit Pernyataan Risiko & Matriks 5x5';
+                    if (editId) editId.value = found.id || '';
+                    if (editIdx) editIdx.value = realIdx;
+
+                    document.getElementById('rIndikatorRef').value = found.targetDirektur || '';
+                    document.getElementById('rTahun').value = found.tahun || '2025';
+                    document.getElementById('rPernyataan').value = found.pernyataan || '';
+                    document.getElementById('rInternal').value = found.sebabInternal || '';
+                    document.getElementById('rEksternal').value = found.sebabEksternal || '';
+                    document.getElementById('rDampak').value = found.dampak || '';
+                    document.getElementById('rProb1').value = found.prob1 || 3;
+                    document.getElementById('rDamp1').value = found.damp1 || 4;
+                    document.getElementById('rAda').value = found.adaPengendalian || 'Ya';
+                    document.getElementById('rUraian').value = found.uraianPengendalian || '';
+                    document.getElementById('rMemadai').value = found.memadai || 'Memadai';
+                    document.getElementById('rProb2').value = found.prob2 || 2;
+                    document.getElementById('rDamp2').value = found.damp2 || 2;
+                }
+            } else {
+                if (titleEl) titleEl.innerText = 'Input Pernyataan Risiko & Matriks 5x5';
+                if (editId) editId.value = '';
+                if (editIdx) editIdx.value = '-1';
+                document.getElementById('rPernyataan').value = '';
+                document.getElementById('rInternal').value = '';
+                document.getElementById('rEksternal').value = '';
+                document.getElementById('rDampak').value = '';
+                document.getElementById('rUraian').value = '';
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Fungsi Simpan Risiko (Mendukung Tambah & Edit)
+        async function saveRisiko(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editRisikoId').value;
+            const editIdx = parseInt(document.getElementById('editRisikoIdx').value);
+            
+            const selInd = document.getElementById('rIndikatorRef');
+            const selectedOpt = selInd.options[selInd.selectedIndex];
+            const targetDirRef = selInd.value;
+            const timKeyRef = selectedOpt ? selectedOpt.getAttribute('data-timkey') : currentUser.timKey;
+            const tahunRisiko = document.getElementById('rTahun').value;
+
+            const p1 = parseInt(document.getElementById('rProb1').value);
+            const d1 = parseInt(document.getElementById('rDamp1').value);
+            const res1 = calculateSkorRisiko(p1, d1);
+
+            const p2 = parseInt(document.getElementById('rProb2').value);
+            const d2 = parseInt(document.getElementById('rDamp2').value);
+            const res2 = calculateSkorRisiko(p2, d2);
+
+            let targetIndex = -1;
+            if (editIdx >= 0 && editIdx < DB.risiko.length) {
+                targetIndex = editIdx;
+            } else if (editId) {
+                targetIndex = DB.risiko.findIndex(item => String(item.id) === String(editId));
+            }
+
+            const risikoPayload = {
+                id: targetIndex !== -1 ? DB.risiko[targetIndex].id : ('r_' + Date.now()),
+                unit: currentUser.unit,
+                timKey: timKeyRef,
+                targetDirektur: targetDirRef,
+                tahun: tahunRisiko,
+                pernyataan: document.getElementById('rPernyataan').value,
+                sebabInternal: document.getElementById('rInternal').value,
+                sebabEksternal: document.getElementById('rEksternal').value,
+                dampak: document.getElementById('rDampak').value,
+                prob1: p1, damp1: d1, skor1: res1.skor, kuadran1: res1.kuadran,
+                adaPengendalian: document.getElementById('rAda').value,
+                uraianPengendalian: document.getElementById('rUraian').value,
+                memadai: document.getElementById('rMemadai').value,
+                prob2: p2, damp2: d2, skor2: res2.skor, kuadran2: res2.kuadran, warnaResidu: res2.warna
+            };
+
+            if (targetIndex !== -1) {
+                DB.risiko[targetIndex] = risikoPayload;
+                showToast('Data risiko berhasil diperbarui!');
+            } else {
+                DB.risiko.push(risikoPayload);
+                showToast('Data risiko berhasil diinput!');
+            }
+
+            await syncToGoogleSheets('Program Kerja dan Peta Resiko', risikoPayload);
+            await saveToMySQL();
+
+            closeRisikoModal();
+            renderRisikoView(document.getElementById('mainContent'));
+        }
+
+        // Fungsi Hapus Risiko oleh Unit/Prodi
+        async function confirmDeleteRisiko(id, realIdx = -1) {
+            let targetIndex = -1;
+            if (realIdx >= 0 && realIdx < DB.risiko.length) {
+                targetIndex = realIdx;
+            } else {
+                targetIndex = DB.risiko.findIndex(item => String(item.id) === String(id));
+            }
+
+            if (targetIndex === -1) {
+                showToast('Data risiko tidak ditemukan!', 'error');
+                return;
+            }
+
+            const item = DB.risiko[targetIndex];
+            if (confirm(`Apakah Anda yakin ingin menghapus data risiko "${item ? item.pernyataan : ''}"?`)) {
+                DB.risiko.splice(targetIndex, 1);
+                await saveToMySQL();
+                showToast('Data risiko berhasil dihapus.', 'info');
+                renderRisikoView(document.getElementById('mainContent'));
+            }
+        }
     </script>
+    <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Manajemen Risiko -->
+<div id="exportRisikoCsvModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4">
+        <div class="flex justify-between items-center border-b pb-4">
+            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i> Pilih Kolom Ekspor CSV Manajemen Risiko</h3>
+            <button onclick="closeExportRisikoCsvModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <p class="text-xs text-slate-500">Centang kolom-kolom yang ingin Anda sertakan di dalam file CSV yang akan didownload:</p>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5 text-xs bg-slate-50 p-4 rounded-xl border max-h-72 overflow-y-auto">
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_1" checked class="rounded text-emerald-600"><span>1. Nomor</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_2" checked class="rounded text-emerald-600"><span>2. Sasaran Kinerja</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_3" checked class="rounded text-emerald-600"><span>3. Indikator Kinerja</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_4" checked class="rounded text-emerald-600"><span>4. Program Kerja</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_5" checked class="rounded text-emerald-600"><span>5. Tahun Risiko</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_6" checked class="rounded text-emerald-600"><span>6. Pernyataan Risiko</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_7" checked class="rounded text-emerald-600"><span>7. Penyebab Internal</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_8" checked class="rounded text-emerald-600"><span>8. Penyebab Eksternal</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_9" checked class="rounded text-emerald-600"><span>9. Dampak Risiko</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_10" checked class="rounded text-emerald-600"><span>10. Probabilitas Awal</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_11" checked class="rounded text-emerald-600"><span>11. Dampak Awal</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_12" checked class="rounded text-emerald-600"><span>12. Skor Awal (PxD)</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_13" checked class="rounded text-emerald-600"><span>13. Ada Pengendalian?</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_14" checked class="rounded text-emerald-600"><span>14. Uraian Pengendalian</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_15" checked class="rounded text-emerald-600"><span>15. Apakah Memadai?</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_16" checked class="rounded text-emerald-600"><span>16. Probabilitas Residu</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_17" checked class="rounded text-emerald-600"><span>17. Dampak Residu</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_18" checked class="rounded text-emerald-600"><span>18. Skor Residu (PxD)</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_19" checked class="rounded text-emerald-600"><span>19. Kuadran & Level</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="c_csv_20" checked class="rounded text-emerald-600"><span>20. Unit / Prodi</span></label>
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-2">
+            <button type="button" onclick="closeExportRisikoCsvModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
+            <button type="button" onclick="executeDownloadRisikoCSV()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-xs flex items-center space-x-2">
+                <i class="fa-solid fa-download"></i>
+                <span>Download CSV Sekarang</span>
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
