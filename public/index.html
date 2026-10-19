@@ -2069,7 +2069,7 @@ if (matchedCap.length > 0) {
             }
 }
 
- function renderCascadingView(container) {
+function renderCascadingView(container) {
             document.getElementById('pageTitle').innerText = 'Cascading Indikator Kinerja Bertahap';
             const isDirektur = currentUser.role === 'direktur';
             const isKetuaTim = currentUser.role === 'tim_kerja';
@@ -2080,51 +2080,20 @@ if (matchedCap.length > 0) {
                 return;
             }
 
-            // Deklarasi aman untuk filter dan sort jika belum ada
             if (typeof filterCascadingTahun === 'undefined') window.filterCascadingTahun = 'Semua';
-            if (typeof sortCascadingDirCol === 'undefined') window.sortCascadingDirCol = 'target';
-            if (typeof sortCascadingDirAsc === 'undefined') window.sortCascadingDirAsc = true;
-            if (typeof sortCascadingTimCol === 'undefined') window.sortCascadingTimCol = 'targetDirektur';
-            if (typeof sortCascadingTimAsc === 'undefined') window.sortCascadingTimAsc = true;
-
-            // Normalisasi data lama agar tidak hilang
             DB.cascadingDirektur.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
             DB.cascadingTim.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
 
-            // Filter data cascading Direktur
             let filteredDir = [...DB.cascadingDirektur];
-            if (filterCascadingTahun !== 'Semua') {
-                filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
-            }
+            if (filterCascadingTahun !== 'Semua') filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
 
-            // Sorting Cascading Direktur
-            filteredDir.sort((a, b) => {
-                let valA = a[sortCascadingDirCol] || '';
-                let valB = b[sortCascadingDirCol] || '';
-                if (typeof valA === 'string') return sortCascadingDirAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                return sortCascadingDirAsc ? valA - valB : valB - valA;
-            });
-
-            // Filter data cascading Tim Kerja
             let filteredTim = [...DB.cascadingTim];
-            if (isKetuaTim) {
-                filteredTim = filteredTim.filter(c => c.timKey === currentUser.timKey);
-            }
-            if (filterCascadingTahun !== 'Semua') {
-                filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
-            }
-
-            // Sorting Cascading Tim
-            filteredTim.sort((a, b) => {
-                let valA = a[sortCascadingTimCol] || '';
-                let valB = b[sortCascadingTimCol] || '';
-                if (typeof valA === 'string') return sortCascadingTimAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                return sortCascadingTimAsc ? valA - valB : valB - valA;
-            });
+            if (isKetuaTim) filteredTim = filteredTim.filter(c => c.timKey === currentUser.timKey);
+            if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
 
             container.innerHTML = `
-<div class="space-y-8 animate-fadeIn">
-                    <!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG JELAS -->
+                <div class="space-y-8 animate-fadeIn">
+                    <!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG KONEKTOR -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
                         <div>
                             <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Peta Pohon Organisasi Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
@@ -2133,17 +2102,14 @@ if (matchedCap.length > 0) {
                         
                         <div class="overflow-x-auto p-6 bg-slate-50 rounded-2xl border min-w-[800px]">
                             <div class="flex items-center space-x-6">
-                                <!-- Level 1: Direktur -->
                                 <div class="flex flex-col items-center shrink-0">
                                     <div class="px-5 py-4 bg-blue-700 text-white rounded-2xl shadow-lg text-xs font-bold text-center w-52 border-2 border-blue-800">
                                         <i class="fa-solid fa-user-tie mb-1 block text-sm"></i> Pimpinan Tertinggi (Direktur)
                                     </div>
                                 </div>
 
-                                <!-- Garis Penghubung Utama ke Tim Kerja -->
                                 <div class="w-10 h-0.5 bg-blue-400 shrink-0"></div>
 
-                                <!-- Level 2 & 3: Tim Kerja & Unit -->
                                 <div class="flex flex-col space-y-4 flex-1">
                                     ${DB.timKerjaList.map(tim => {
                                         const assignedDir = DB.cascadingDirektur.filter(cd => cd.timKeys.includes(tim));
@@ -2152,18 +2118,12 @@ if (matchedCap.length > 0) {
 
                                         return `
                                             <div class="flex items-center space-x-4 relative">
-                                                <!-- Garis vertikal penghubung antar tim -->
                                                 <div class="absolute -left-6 top-0 bottom-0 w-0.5 bg-slate-300"></div>
                                                 <div class="w-6 h-0.5 bg-blue-400 shrink-0"></div>
-
-                                                <!-- Kotak Tim Kerja -->
                                                 <div class="px-4 py-3 bg-purple-700 text-white rounded-xl shadow-md text-xs font-semibold text-center w-48 shrink-0 border border-purple-800">
                                                     <i class="fa-solid fa-users-gear mb-1 block"></i> Tim Kerja: ${tim}
                                                 </div>
-
                                                 <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
-
-                                                <!-- Kotak Unit / Prodi Tujuan -->
                                                 <div class="flex flex-col space-y-2 flex-1 py-2">
                                                     ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan</span>' : subUnits.map(ct => `
                                                         <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-xs text-xs flex flex-col space-y-1.5 relative">
@@ -2182,47 +2142,13 @@ if (matchedCap.length > 0) {
                         </div>
                     </div>
 
-                    <!-- Tabel Cascading Direktur -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> 1. Cascading Direktur ke Ketua Tim Kerja</h3>
-                            </div>
-                            ${isDirektur ? `<button onclick="openCascadingDirModal()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl text-xs shadow">Tambah Cascading Direktur</button>` : ''}
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-sm">
-                                <thead>
-                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b">
-                                        <th class="p-4">Sasaran Kinerja</th>
-                                        <th class="p-4 text-center">Target</th>
-                                        <th class="p-4 text-center">Satuan</th>
-                                        <th class="p-4">Tim Kerja Terpilih</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    ${filteredDir.length === 0 ? '<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada data cascading.</td></tr>' : filteredDir.map((c, idx) => `
-                                        <tr class="hover:bg-slate-50">
-                                            <td class="p-4 font-semibold text-slate-900">${c.target}</td>
-                                            <td class="p-4 text-center font-bold text-blue-700">${c.targetVal}</td>
-                                            <td class="p-4 text-center">${c.satuan}</td>
-                                            <td class="p-4">${c.timKeys.map(t => `<span class="px-2 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold mr-1">${t}</span>`).join('')}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
+                    <!-- Bagian 1: Cascading Direktur ke Ketua Tim Kerja -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
                                 <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-primary-600 mr-2"></i> 1. Cascading Direktur ke Ketua Tim Kerja (Dari Renstra Tier 4)</h3>
                                 <p class="text-xs text-slate-500">Direktur memilih tahun dan Indikator Kinerja dari Renstra untuk diturunkan ke Ketua Tim Kerja.</p>
                             </div>
-                            
                             <div class="flex items-center space-x-3">
                                 <label class="text-xs font-semibold text-slate-600">Tahun:</label>
                                 <select onchange="filterCascadingTahun = this.value; renderCascadingView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700">
@@ -2233,13 +2159,7 @@ if (matchedCap.length > 0) {
                                     <option value="2028" ${filterCascadingTahun === '2028' ? 'selected' : ''}>2028</option>
                                     <option value="2029" ${filterCascadingTahun === '2029' ? 'selected' : ''}>2029</option>
                                 </select>
-
-                                ${isDirektur ? `
-                                    <button onclick="openCascadingDirModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1">
-                                        <i class="fa-solid fa-plus mr-1"></i>
-                                        <span>Tambah Cascading Direktur</span>
-                                    </button>
-                                ` : ''}
+                                ${isDirektur ? `<button onclick="openCascadingDirModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1"><i class="fa-solid fa-plus mr-1"></i><span>Tambah Cascading Direktur</span></button>` : ''}
                             </div>
                         </div>
                         <div class="overflow-x-auto">
@@ -2255,9 +2175,7 @@ if (matchedCap.length > 0) {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${filteredDir.length === 0 ? `
-                                        <tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data cascading dari Direktur untuk tahun ${filterCascadingTahun}.</td></tr>
-                                    ` : filteredDir.map((c, idx) => `
+                                    ${filteredDir.length === 0 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data cascading dari Direktur untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredDir.map((c, idx) => `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4">
                                                 <span class="px-2 py-0.5 bg-blue-50 text-primary-700 font-semibold text-xs rounded mr-2">Tahun: ${c.tahun || '2025'}</span>
@@ -2290,12 +2208,7 @@ if (matchedCap.length > 0) {
                                 <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-network-wired text-primary-600 mr-2"></i> 2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag</h3>
                                 <p class="text-xs text-slate-500">Ketua Tim Kerja menurunkan indikator ke unit/prodi/subbag di bawah koordinasinya.</p>
                             </div>
-                            ${isKetuaTim ? `
-                                <button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                    <i class="fa-solid fa-plus"></i>
-                                    <span>Tambah Cascading ke Unit</span>
-                                </button>
-                            ` : ''}
+                            ${isKetuaTim ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
@@ -2309,9 +2222,7 @@ if (matchedCap.length > 0) {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${filteredTim.length === 0 ? `
-                                        <tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan untuk tahun ${filterCascadingTahun}.</td></tr>
-                                    ` : filteredTim.map((c, idx) => `
+                                    ${filteredTim.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredTim.map((c, idx) => `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
@@ -2345,11 +2256,7 @@ if (matchedCap.length > 0) {
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Tahun Target</label>
                                 <select id="dirTahunTarget" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold" onchange="updateDirRenstraOptions(this.value)">
-                                    <option value="2025">2025</option>
-                                    <option value="2026">2026</option>
-                                    <option value="2027">2027</option>
-                                    <option value="2028">2028</option>
-                                    <option value="2029">2029</option>
+                                    <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
                                 </select>
                             </div>
                             <div>
@@ -2357,24 +2264,13 @@ if (matchedCap.length > 0) {
                                 <select id="dirIndikatorRenstra" required class="w-full p-3 bg-slate-50 border rounded-xl" onchange="updateDirAnggaranPreview()"></select>
                             </div>
                             <div class="bg-slate-50 p-3 rounded-xl border flex justify-between items-center text-xs">
-                                <div>
-                                    <span class="text-slate-500 block">Target (Renstra):</span>
-                                    <strong id="previewTargetVal" class="text-primary-700 text-sm">100</strong>
-                                </div>
-                                <div class="text-right">
-                                    <span class="text-slate-500 block">Pagu Anggaran:</span>
-                                    <strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong>
-                                </div>
+                                <div><span class="text-slate-500 block">Target (Renstra):</span><strong id="previewTargetVal" class="text-primary-700 text-sm">100</strong></div>
+                                <div class="text-right"><span class="text-slate-500 block">Pagu Anggaran:</span><strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong></div>
                             </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-2">Pilih Ketua Tim Kerja (Multi-select)</label>
                                 <div class="space-y-2 bg-slate-50 p-3 rounded-xl border">
-                                    ${DB.timKerjaList.map(t => `
-                                        <label class="flex items-center space-x-3 cursor-pointer">
-                                            <input type="checkbox" name="timCheck" value="${t}" class="w-4 h-4 text-primary-600 rounded border-slate-300">
-                                            <span class="text-slate-700 font-medium">${t}</span>
-                                        </label>
-                                    `).join('')}
+                                    ${DB.timKerjaList.map(t => `<label class="flex items-center space-x-3 cursor-pointer"><input type="checkbox" name="timCheck" value="${t}" class="w-4 h-4 text-primary-600 rounded border-slate-300"><span class="text-slate-700 font-medium">${t}</span></label>`).join('')}
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
@@ -2395,11 +2291,7 @@ if (matchedCap.length > 0) {
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Tahun</label>
                                 <select id="timTahunTarget" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold" onchange="updateTimDirRefOptions(this.value)">
-                                    <option value="2025">2025</option>
-                                    <option value="2026">2026</option>
-                                    <option value="2027">2027</option>
-                                    <option value="2028">2028</option>
-                                    <option value="2029">2029</option>
+                                    <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
                                 </select>
                             </div>
                             <div>
@@ -2409,12 +2301,7 @@ if (matchedCap.length > 0) {
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-2">Pilih Unit / Prodi / Subbag Tujuan (Multi-select)</label>
                                 <div class="space-y-2 bg-slate-50 p-3 rounded-xl border max-h-48 overflow-y-auto">
-                                    ${DB.unitList.map(u => `
-                                        <label class="flex items-center space-x-3 cursor-pointer">
-                                            <input type="checkbox" name="unitCheck" value="${u}" class="w-4 h-4 text-primary-600 rounded border-slate-300">
-                                            <span class="text-slate-700 font-medium">${u}</span>
-                                        </label>
-                                    `).join('')}
+                                    ${DB.unitList.map(u => `<label class="flex items-center space-x-3 cursor-pointer"><input type="checkbox" name="unitCheck" value="${u}" class="w-4 h-4 text-primary-600 rounded border-slate-300"><span class="text-slate-700 font-medium">${u}</span></label>`).join('')}
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
@@ -2425,7 +2312,7 @@ if (matchedCap.length > 0) {
                     </div>
                 </div>
             `;
-            }
+        }
             setTimeout(() => {
                 const yrDir = document.getElementById('dirTahunTarget');
                 if (yrDir) updateDirRenstraOptions(yrDir.value);
@@ -2433,19 +2320,7 @@ if (matchedCap.length > 0) {
                 const yrEl = document.getElementById('timTahunTarget');
                 if (yrEl) updateTimDirRefOptions(yrEl.value);
             }, 100);
-        }
         
-        function updateDirRenstraOptions(tahun) {
-            const sel = document.getElementById('dirIndikatorRenstra');
-            if (!sel) return;
-            const matching = DB.renstraIndikatorKinerja;
-            sel.innerHTML = matching.length === 0 ? '<option value="">Belum ada Indikator Renstra</option>' : matching.map(ik => {
-                const target = ik['target' + tahun] !== undefined ? ik['target' + tahun] : 100;
-                const anggaran = ik['anggaran' + tahun] !== undefined ? ik['anggaran' + tahun] : 0;
-                return `<option value="${ik.id}" data-nama="${ik.namaIndikator}" data-satuan="${ik.satuan}" data-target="${target}" data-anggaran="${anggaran}">${ik.kodeIndikator} - ${ik.namaIndikator} (${ik.satuan})</option>`;
-            }).join('');
-            updateDirAnggaranPreview();
-        }
 
         function updateDirAnggaranPreview() {
             const sel = document.getElementById('dirIndikatorRenstra');
