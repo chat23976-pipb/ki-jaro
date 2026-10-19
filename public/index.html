@@ -741,14 +741,17 @@ function renderDashboardLayout() {
                 dropdown.classList.add('hidden');
             }
         });
-       function switchTab(tab) {
+            function switchTab(tab) {
             activeTab = tab;
+            
+            // Mengatur ulang warna tombol menu sidebar secara dinamis saat diklik
             document.querySelectorAll('.nav-link').forEach(el => {
-                el.className = el.className.replace(/bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600\/30/g, 'hover:bg-slate-800 text-slate-400 hover:text-white');
+                el.className = el.className.replace(/bg-white text-blue-800 font-bold shadow-lg/g, 'hover:bg-blue-600/60 text-white font-medium');
                 if (el.getAttribute('onclick') === `switchTab('${tab}')`) {
-                    el.className = el.className.replace(/hover:bg-slate-800 text-slate-400 hover:text-white/g, 'bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30');
+                    el.className = el.className.replace(/hover:bg-blue-600\/60 text-white font-medium/g, 'bg-white text-blue-800 font-bold shadow-lg');
                 }
             });
+
             const content = document.getElementById('mainContent');
             if (!content) return;
             const sb = document.getElementById('appSidebar');
@@ -2121,6 +2124,54 @@ if (matchedCap.length > 0) {
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
+                   <!-- ========================================== -->
+                    <!-- VISUALISASI POHON CASCADING (DECISION TREE) -->
+                    <!-- ========================================== -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-primary-600 mr-2"></i> Visualisasi Pohon Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
+                            <p class="text-xs text-slate-500">Peta penurunan indikator kinerja dari level pimpinan tertinggi hingga unit pelaksana.</p>
+                        </div>
+                        
+                        <div class="overflow-x-auto p-4 bg-slate-50 rounded-2xl border flex items-center justify-start space-x-8 min-w-[700px]">
+                            <!-- Level 1: Direktur -->
+                            <div class="flex flex-col items-center shrink-0">
+                                <div class="px-4 py-3 bg-blue-700 text-white rounded-xl shadow-md text-xs font-bold text-center max-w-[200px]">
+                                    <i class="fa-solid fa-user-tie mb-1 block"></i> Pimpinan Tertinggi (Direktur)
+                                </div>
+                            </div>
+
+                            <div class="text-slate-400 font-bold">&rarr;</div>
+
+                            <!-- Level 2: Ketua Tim Kerja -->
+                            <div class="flex flex-col space-y-4">
+                                ${DB.timKerjaList.map(tim => {
+                                    const assignedDir = DB.cascadingDirektur.filter(cd => cd.timKeys.includes(tim));
+                                    if (assignedDir.length === 0) return '';
+                                    return `
+                                        <div class="flex items-center space-x-4">
+                                            <div class="px-4 py-2.5 bg-purple-700 text-white rounded-xl shadow text-xs font-semibold text-center min-w-[180px]">
+                                                <i class="fa-solid fa-users-gear mb-0.5 block"></i> Tim Kerja: ${tim}
+                                            </div>
+                                            <div class="text-slate-400">&rarr;</div>
+                                            <div class="flex flex-col space-y-2">
+                                                ${DB.cascadingTim.filter(ct => ct.timKey === tim).map(ct => `
+                                                    <div class="flex items-center space-x-2">
+                                                        <div class="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-xs text-xs">
+                                                            <strong class="text-blue-700 block">${ct.targetDirektur}</strong>
+                                                            <div class="flex flex-wrap gap-1 mt-1">
+                                                                ${ct.unitTargets.map(u => `<span class="px-2 py-0.5 bg-blue-50 text-blue-800 rounded font-medium text-[10px]">${u}</span>`).join('')}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
                     <!-- Bagian 1: Cascading Direktur ke Ketua Tim Kerja -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
