@@ -2069,7 +2069,7 @@ if (matchedCap.length > 0) {
             }
 }
 
-        function renderCascadingView(container) {
+       function renderCascadingView(container) {
             document.getElementById('pageTitle').innerText = 'Cascading Indikator Kinerja Bertahap';
             const isDirektur = currentUser.role === 'direktur';
             const isKetuaTim = currentUser.role === 'tim_kerja';
@@ -2097,14 +2097,6 @@ if (matchedCap.length > 0) {
                 filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
             }
 
-            // Sorting Cascading Direktur
-            filteredDir.sort((a, b) => {
-                let valA = a[sortCascadingDirCol] || '';
-                let valB = b[sortCascadingDirCol] || '';
-                if (typeof valA === 'string') return sortCascadingDirAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                return sortCascadingDirAsc ? valA - valB : valB - valA;
-            });
-
             // Filter data cascading Tim Kerja
             let filteredTim = [...DB.cascadingTim];
             if (isKetuaTim) {
@@ -2114,14 +2106,8 @@ if (matchedCap.length > 0) {
                 filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
             }
 
-            // Sorting Cascading Tim
-            filteredTim.sort((a, b) => {
-                let valA = a[sortCascadingTimCol] || '';
-                let valB = b[sortCascadingTimCol] || '';
-                if (typeof valA === 'string') return sortCascadingTimAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                return sortCascadingTimAsc ? valA - valB : valB - valA;
-            });
-
+            container.innerHTML = `
+                <div class="space-y-8 animate-fadeIn">
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
                    <!-- ========================================== -->
