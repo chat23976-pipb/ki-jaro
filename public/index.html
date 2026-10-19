@@ -600,15 +600,15 @@ function renderDashboardLayout() {
                                 <i class="fa-solid fa-chart-pie w-5 text-center"></i>
                                 <span class="sidebar-text">Dashboard Kinerja & Risiko</span>
                             </a>
-
-                            <a href="javascript:void(0)" onclick="switchTab('renstra')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'renstra' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                <i class="fa-solid fa-book-bookmark w-5 text-center"></i>
-                                <span class="sidebar-text">${currentUser.role === 'admin' ? 'Input & Manajemen Renstra' : 'View Renstra (Hierarki Kemenperin)'}</span>
-                            </a>
-
+                            
                             <a href="javascript:void(0)" onclick="switchTab('dokumen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-folder-open w-5 text-center"></i>
                                 <span class="sidebar-text">Dokumen Perencanaan</span>
+                            </a>
+                            
+                            <a href="javascript:void(0)" onclick="switchTab('renstra')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'renstra' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                <i class="fa-solid fa-book-bookmark w-5 text-center"></i>
+                                <span class="sidebar-text">${currentUser.role === 'admin' ? 'Input & Manajemen Renstra' : 'View Renstra (Hierarki Kemenperin)'}</span>
                             </a>
 
                             ${!isKaUnit ? `
@@ -2080,9 +2080,27 @@ function renderCascadingView(container) {
                 return;
             }
 
-            if (typeof filterCascadingTahun === 'undefined') window.filterCascadingTahun = 'Semua';
-            DB.cascadingDirektur.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
-            DB.cascadingTim.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
+            if (typeof window.filterCascadingTahun === 'undefined') window.filterCascadingTahun = 'Semua';
+            if (typeof window.filterPohonTahun === 'undefined') window.filterPohonTahun = 'Semua';
+
+            // Normalisasi Tahun & Auto-Heal ID yang kosong atau duplikat agar 100% bisa diedit & dihapus
+            const seenDirIds = new Set();
+            DB.cascadingDirektur.forEach((c, idx) => {
+                if (!c.tahun) c.tahun = '2025';
+                if (!c.id || seenDirIds.has(String(c.id))) {
+                    c.id = 'cd_' + Date.now() + '_' + idx + '_' + Math.floor(Math.random() * 1000);
+                }
+                seenDirIds.add(String(c.id));
+            });
+
+            const seenTimIds = new Set();
+            DB.cascadingTim.forEach((c, idx) => {
+                if (!c.tahun) c.tahun = '2025';
+                if (!c.id || seenTimIds.has(String(c.id))) {
+                    c.id = 'ct_' + Date.now() + '_' + idx + '_' + Math.floor(Math.random() * 1000);
+                }
+                seenTimIds.add(String(c.id));
+            });
 
             let filteredDir = [...DB.cascadingDirektur];
             if (filterCascadingTahun !== 'Semua') filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
@@ -2091,13 +2109,34 @@ function renderCascadingView(container) {
             if (isKetuaTim) filteredTim = filteredTim.filter(c => c.timKey === currentUser.timKey);
             if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
 
+            // Filter khusus untuk Peta Pohon Organisasi Cascading Kinerja
+            let treeDir = [...DB.cascadingDirektur];
+            let treeTim = [...DB.cascadingTim];
+            if (filterPohonTahun !== 'Semua') {
+                treeDir = treeDir.filter(c => (c.tahun || '2025') === filterPohonTahun);
+                treeTim = treeTim.filter(c => (c.tahun || '2025') === filterPohonTahun);
+            }
+
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
-                    <!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG KONEKTOR -->
+                    <!-- VISUALISASI POHON CASCADING DENGAN FILTER TAHUN -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
-                        <div>
-                            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Peta Pohon Organisasi Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
-                            <p class="text-xs text-slate-500">Visualisasi alur penurunan indikator kinerja institusi secara hierarki dengan garis penghubung.</p>
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Peta Pohon Organisasi Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
+                                <p class="text-xs text-slate-500">Visualisasi alur penurunan indikator kinerja institusi secara hierarki dengan garis penghubung.</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <label class="text-xs font-semibold text-slate-600">Filter Tahun Pohon:</label>
+                                <select onchange="filterPohonTahun = this.value; renderCascadingView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700 cursor-pointer">
+                                    <option value="Semua" ${filterPohonTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
+                                    <option value="2025" ${filterPohonTahun === '2025' ? 'selected' : ''}>2025</option>
+                                    <option value="2026" ${filterPohonTahun === '2026' ? 'selected' : ''}>2026</option>
+                                    <option value="2027" ${filterPohonTahun === '2027' ? 'selected' : ''}>2027</option>
+                                    <option value="2028" ${filterPohonTahun === '2028' ? 'selected' : ''}>2028</option>
+                                    <option value="2029" ${filterPohonTahun === '2029' ? 'selected' : ''}>2029</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <div class="overflow-x-auto p-6 bg-slate-50 rounded-2xl border min-w-[800px]">
@@ -2105,16 +2144,21 @@ function renderCascadingView(container) {
                                 <div class="flex flex-col items-center shrink-0">
                                     <div class="px-5 py-4 bg-blue-700 text-white rounded-2xl shadow-lg text-xs font-bold text-center w-52 border-2 border-blue-800">
                                         <i class="fa-solid fa-user-tie mb-1 block text-sm"></i> Pimpinan Tertinggi (Direktur)
+                                        <span class="block text-[10px] font-normal text-blue-200 mt-1">Tahun: ${filterPohonTahun}</span>
                                     </div>
                                 </div>
 
                                 <div class="w-10 h-0.5 bg-blue-400 shrink-0"></div>
 
                                 <div class="flex flex-col space-y-4 flex-1">
-                                    ${DB.timKerjaList.map(tim => {
-                                        const assignedDir = DB.cascadingDirektur.filter(cd => cd.timKeys.includes(tim));
+                                    ${treeDir.length === 0 ? `
+                                        <div class="p-4 bg-white border border-slate-200 rounded-xl text-xs text-slate-400 italic text-center">
+                                            Belum ada data cascading kinerja pada tahun ${filterPohonTahun}.
+                                        </div>
+                                    ` : DB.timKerjaList.map(tim => {
+                                        const assignedDir = treeDir.filter(cd => cd.timKeys && cd.timKeys.includes(tim));
                                         if (assignedDir.length === 0) return '';
-                                        const subUnits = DB.cascadingTim.filter(ct => ct.timKey === tim);
+                                        const subUnits = treeTim.filter(ct => ct.timKey === tim);
 
                                         return `
                                             <div class="flex items-center space-x-4 relative">
@@ -2125,11 +2169,14 @@ function renderCascadingView(container) {
                                                 </div>
                                                 <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
                                                 <div class="flex flex-col space-y-2 flex-1 py-2">
-                                                    ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan</span>' : subUnits.map(ct => `
+                                                    ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan pada tahun ini</span>' : subUnits.map(ct => `
                                                         <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-xs text-xs flex flex-col space-y-1.5 relative">
-                                                            <strong class="text-blue-800"><i class="fa-solid fa-bullseye text-blue-600 mr-1"></i> ${ct.targetDirektur}</strong>
+                                                            <div class="flex items-center justify-between">
+                                                                <strong class="text-blue-800"><i class="fa-solid fa-bullseye text-blue-600 mr-1"></i> ${ct.targetDirektur}</strong>
+                                                                <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold">${ct.tahun || '2025'}</span>
+                                                            </div>
                                                             <div class="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
-                                                                ${ct.unitTargets.map(u => `<span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full font-bold text-[10px] border border-blue-100"><i class="fa-solid fa-building-columns mr-1"></i>${u}</span>`).join('')}
+                                                                ${(ct.unitTargets || []).map(u => `<span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full font-bold text-[10px] border border-blue-100"><i class="fa-solid fa-building-columns mr-1"></i>${u}</span>`).join('')}
                                                             </div>
                                                         </div>
                                                     `).join('')}
@@ -2175,7 +2222,7 @@ function renderCascadingView(container) {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${filteredDir.length === 0 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data cascading dari Direktur untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredDir.map((c, idx) => `
+                                    ${filteredDir.length === 0 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data cascading dari Direktur untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredDir.map((c) => `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4">
                                                 <span class="px-2 py-0.5 bg-blue-50 text-primary-700 font-semibold text-xs rounded mr-2">Tahun: ${c.tahun || '2025'}</span>
@@ -2186,12 +2233,12 @@ function renderCascadingView(container) {
                                             <td class="p-4 text-center font-bold text-emerald-700">Rp ${Number(c.anggaran || 0).toLocaleString('id-ID')}</td>
                                             <td class="p-4">
                                                 <div class="flex flex-wrap gap-1.5">
-                                                    ${c.timKeys.map(t => `<span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${t}</span>`).join('')}
+                                                    ${(c.timKeys || []).map(t => `<span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${t}</span>`).join('')}
                                                 </div>
                                             </td>
                                             ${isDirektur ? `
                                                 <td class="p-4 text-center">
-                                                    <button onclick="confirmDeleteCascadingDir(${idx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                    <button onclick="confirmDeleteCascadingDir('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -2208,7 +2255,7 @@ function renderCascadingView(container) {
                                 <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-network-wired text-primary-600 mr-2"></i> 2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag</h3>
                                 <p class="text-xs text-slate-500">Ketua Tim Kerja menurunkan indikator ke unit/prodi/subbag di bawah koordinasinya.</p>
                             </div>
-                            ${isKetuaTim ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
+                            ${isKetuaTim ? `<button onclick="openCascadingTimModal('add')" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
@@ -2221,27 +2268,30 @@ function renderCascadingView(container) {
                                         ${isKetuaTim ? '<th class="p-4 text-center">Aksi</th>' : ''}
                                     </tr>
                                 </thead>
-                              <tbody class="divide-y divide-slate-100">
+                                <tbody class="divide-y divide-slate-100">
                                     ${filteredTim.length === 0 ? `
                                         <tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan untuk tahun ${filterCascadingTahun}.</td></tr>
-                                    ` : filteredTim.map((c) => `
+                                    ` : filteredTim.map((c) => {
+                                        const realIdx = DB.cascadingTim.indexOf(c);
+                                        return `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
                                             <td class="p-4 font-semibold text-slate-900">${c.targetDirektur}</td>
                                             <td class="p-4">
                                                 <div class="flex flex-wrap gap-1.5">
-                                                    ${c.unitTargets.map(u => `<span class="px-2.5 py-1 bg-blue-50 text-primary-700 text-xs rounded-full font-medium">${u}</span>`).join('')}
+                                                    ${(c.unitTargets || []).map(u => `<span class="px-2.5 py-1 bg-blue-50 text-primary-700 text-xs rounded-full font-medium">${u}</span>`).join('')}
                                                 </div>
                                             </td>
                                             ${isKetuaTim ? `
                                                 <td class="p-4 text-center space-x-1">
-                                                    <button onclick="openCascadingTimModal('edit', '${c.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="confirmDeleteCascadingTim('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                    <button onclick="openCascadingTimModal('edit', '${c.id}', ${realIdx})" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="confirmDeleteCascadingTim('${c.id}', ${realIdx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
-                                    `).join('')}
+                                        `;
+                                    }).join('')}
                                 </tbody>
                             </table>
                         </div>
@@ -2287,10 +2337,12 @@ function renderCascadingView(container) {
                 <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})</h3>
+                            <h3 id="cascadingTimModalTitle" class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})</h3>
                             <button onclick="closeCascadingTimModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveCascadingTim(event)" class="space-y-4 text-sm">
+                            <input type="hidden" id="editCascadingTimId" value="">
+                            <input type="hidden" id="editCascadingTimIdx" value="-1">
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Tahun</label>
                                 <select id="timTahunTarget" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold" onchange="updateTimDirRefOptions(this.value)">
@@ -2315,7 +2367,7 @@ function renderCascadingView(container) {
                     </div>
                 </div>
             `;
-        }
+
             setTimeout(() => {
                 const yrDir = document.getElementById('dirTahunTarget');
                 if (yrDir) updateDirRenstraOptions(yrDir.value);
@@ -2323,7 +2375,18 @@ function renderCascadingView(container) {
                 const yrEl = document.getElementById('timTahunTarget');
                 if (yrEl) updateTimDirRefOptions(yrEl.value);
             }, 100);
-        
+        }
+
+        function updateDirRenstraOptions(tahun) {
+            const sel = document.getElementById('dirIndikatorRenstra');
+            if (!sel) return;
+            sel.innerHTML = DB.renstraIndikatorKinerja.map(ik => {
+                const targetVal = ik['target' + tahun] !== undefined ? ik['target' + tahun] : 100;
+                const anggaranVal = ik['anggaran' + tahun] !== undefined ? ik['anggaran' + tahun] : 0;
+                return `<option value="${ik.id}" data-nama="${ik.namaIndikator}" data-satuan="${ik.satuan || '%'}" data-target="${targetVal}" data-anggaran="${anggaranVal}">${ik.kodeIndikator} - ${ik.namaIndikator}</option>`;
+            }).join('');
+            updateDirAnggaranPreview();
+        }
 
         function updateDirAnggaranPreview() {
             const sel = document.getElementById('dirIndikatorRenstra');
@@ -2336,11 +2399,23 @@ function renderCascadingView(container) {
             document.getElementById('previewAnggaranVal').innerText = `Rp ${Number(anggaran).toLocaleString('id-ID')}`;
         }
 
-        function updateTimDirRefOptions(tahun) {
+        function updateTimDirRefOptions(tahun, selectedTarget = null) {
             const sel = document.getElementById('timDirRef');
             if (!sel) return;
-            const matching = DB.cascadingDirektur.filter(c => c.timKeys.includes(currentUser.timKey) && (c.tahun || '2025') === tahun);
-            sel.innerHTML = matching.length === 0 ? '<option value="">Tidak ada indikator dicascading pada tahun ini</option>' : matching.map(c => `<option value="${c.target}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})</option>`).join('');
+            const matching = DB.cascadingDirektur.filter(c => c.timKeys && c.timKeys.includes(currentUser.timKey) && (c.tahun || '2025') === tahun);
+            
+            let optionsHtml = matching.length === 0 
+                ? '<option value="">Tidak ada indikator dicascading pada tahun ini</option>' 
+                : matching.map(c => `<option value="${c.target}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})</option>`).join('');
+            
+            // Jika sedang mode edit dan indikator lama berasal dari tahun/daftar berbeda, tetap tampilkan agar bisa diedit
+            if (selectedTarget && !matching.some(c => c.target === selectedTarget)) {
+                optionsHtml = `<option value="${selectedTarget}">${selectedTarget}</option>` + optionsHtml;
+            }
+            sel.innerHTML = optionsHtml;
+            if (selectedTarget) {
+                sel.value = selectedTarget;
+            }
         }
 
         function openCascadingDirModal() {
@@ -2348,11 +2423,16 @@ function renderCascadingView(container) {
                 showToast('Belum ada data Indikator Kinerja di Renstra. Minta Admin untuk mengisi Renstra terlebih dahulu.', 'error');
                 return;
             }
-            document.getElementById('cascadingDirModal').classList.remove('hidden'); document.getElementById('cascadingDirModal').classList.add('flex');
+            document.getElementById('cascadingDirModal').classList.remove('hidden');
+            document.getElementById('cascadingDirModal').classList.add('flex');
             const yrDir = document.getElementById('dirTahunTarget');
             if (yrDir) updateDirRenstraOptions(yrDir.value);
         }
-        function closeCascadingDirModal() { document.getElementById('cascadingDirModal').classList.remove('flex'); document.getElementById('cascadingDirModal').classList.add('hidden'); }
+
+        function closeCascadingDirModal() {
+            document.getElementById('cascadingDirModal').classList.remove('flex');
+            document.getElementById('cascadingDirModal').classList.add('hidden');
+        }
         
         async function saveCascadingDir(e) {
             e.preventDefault();
@@ -2371,7 +2451,7 @@ function renderCascadingView(container) {
             }
 
             DB.cascadingDirektur.push({
-                id: 'cd' + (DB.cascadingDirektur.length + 1),
+                id: 'cd_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
                 indikatorId: sel.value,
                 tahun: tahun,
                 target: indikatorName,
@@ -2387,12 +2467,14 @@ function renderCascadingView(container) {
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        async function confirmDeleteCascadingDir(idx) {
+        async function confirmDeleteCascadingDir(id) {
+            const idx = DB.cascadingDirektur.findIndex(c => String(c.id) === String(id));
+            if (idx === -1) return;
             const item = DB.cascadingDirektur[idx];
             if (confirm(`Apakah Anda yakin ingin menghapus cascading indikator "${item.target}"?\nMenghapus ini juga akan menghapus cascading lanjutan di Ketua Tim Kerja yang terkait, serta data capaian dan risiko unit terkait.`)) {
-                DB.cascadingTim = DB.cascadingTim.filter(ct => ct.targetDirektur !== item.target);
-                DB.capaian = DB.capaian.filter(c => c.targetDirektur !== item.target);
-                DB.risiko = DB.risiko.filter(r => r.targetDirektur !== item.target);
+                DB.cascadingTim = DB.cascadingTim.filter(ct => !(ct.targetDirektur === item.target && (ct.tahun || '2025') === (item.tahun || '2025')));
+                DB.capaian = DB.capaian.filter(c => !(c.targetDirektur === item.target && (c.tahun || '2025') === (item.tahun || '2025')));
+                DB.risiko = DB.risiko.filter(r => !(r.targetDirektur === item.target && (r.tahun || '2025') === (item.tahun || '2025')));
                 
                 DB.cascadingDirektur.splice(idx, 1);
                 await saveToMySQL();
@@ -2401,13 +2483,65 @@ function renderCascadingView(container) {
             }
         }
 
-        function openCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('hidden'); document.getElementById('cascadingTimModal').classList.add('flex'); }
-        function closeCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('flex'); document.getElementById('cascadingTimModal').classList.add('hidden'); }
+        function closeCascadingTimModal() {
+            document.getElementById('cascadingTimModal').classList.remove('flex');
+            document.getElementById('cascadingTimModal').classList.add('hidden');
+        }
 
+        // Fungsi Buka Modal Cascading Tim Kerja (Mendukung Tambah & Edit dengan Akurat)
+        function openCascadingTimModal(mode = 'add', id = null, realIdx = -1) {
+            const modal = document.getElementById('cascadingTimModal');
+            if (!modal) return;
+
+            const titleEl = document.getElementById('cascadingTimModalTitle');
+            const editInputId = document.getElementById('editCascadingTimId');
+            const editInputIdx = document.getElementById('editCascadingTimIdx');
+            const yrEl = document.getElementById('timTahunTarget');
+
+            if (mode === 'edit') {
+                let found = null;
+                if (realIdx !== -1 && DB.cascadingTim[realIdx]) {
+                    found = DB.cascadingTim[realIdx];
+                } else if (id) {
+                    realIdx = DB.cascadingTim.findIndex(ct => String(ct.id) === String(id));
+                    if (realIdx !== -1) found = DB.cascadingTim[realIdx];
+                }
+
+                if (found) {
+                    if (titleEl) titleEl.innerText = `Edit Cascading Unit (${currentUser.timKey})`;
+                    if (editInputId) editInputId.value = found.id || '';
+                    if (editInputIdx) editInputIdx.value = realIdx;
+
+                    const thn = found.tahun || '2025';
+                    if (yrEl) yrEl.value = thn;
+                    updateTimDirRefOptions(thn, found.targetDirektur);
+
+                    document.querySelectorAll('input[name="unitCheck"]').forEach(chk => {
+                        chk.checked = Array.isArray(found.unitTargets) && found.unitTargets.includes(chk.value);
+                    });
+                }
+            } else {
+                if (titleEl) titleEl.innerText = `Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})`;
+                if (editInputId) editInputId.value = '';
+                if (editInputIdx) editInputIdx.value = '-1';
+                const defaultYear = (typeof filterCascadingTahun !== 'undefined' && filterCascadingTahun !== 'Semua') ? filterCascadingTahun : '2025';
+                if (yrEl) yrEl.value = defaultYear;
+                updateTimDirRefOptions(defaultYear);
+                document.querySelectorAll('input[name="unitCheck"]').forEach(chk => chk.checked = false);
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Fungsi Simpan Cascading Tim Kerja (Mendukung Tambah Baru & Simpan Edit)
         async function saveCascadingTim(e) {
             e.preventDefault();
+            const editId = document.getElementById('editCascadingTimId') ? document.getElementById('editCascadingTimId').value : '';
+            const editIdx = document.getElementById('editCascadingTimIdx') ? parseInt(document.getElementById('editCascadingTimIdx').value) : -1;
             const tahun = document.getElementById('timTahunTarget').value;
             const targetDir = document.getElementById('timDirRef').value;
+
             if (!targetDir) {
                 showToast('Pilih indikator rujukan yang valid!', 'error');
                 return;
@@ -2417,24 +2551,57 @@ function renderCascadingView(container) {
                 showToast('Pilih minimal 1 Unit / Prodi tujuan!', 'error');
                 return;
             }
-            DB.cascadingTim.push({
-                id: 'ct' + (DB.cascadingTim.length + 1),
-                tahun: tahun,
-                targetDirektur: targetDir,
-                timKey: currentUser.timKey,
-                unitTargets: checkedUnits
-            });
+
+            let targetIndex = -1;
+            if (editIdx >= 0 && editIdx < DB.cascadingTim.length) {
+                targetIndex = editIdx;
+            } else if (editId) {
+                targetIndex = DB.cascadingTim.findIndex(ct => String(ct.id) === String(editId));
+            }
+
+            if (targetIndex !== -1) {
+                DB.cascadingTim[targetIndex] = {
+                    ...DB.cascadingTim[targetIndex],
+                    id: DB.cascadingTim[targetIndex].id || ('ct_' + Date.now()),
+                    tahun: tahun,
+                    targetDirektur: targetDir,
+                    timKey: currentUser.timKey,
+                    unitTargets: checkedUnits
+                };
+                showToast('Cascading Unit berhasil diperbarui!');
+            } else {
+                DB.cascadingTim.push({
+                    id: 'ct_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                    tahun: tahun,
+                    targetDirektur: targetDir,
+                    timKey: currentUser.timKey,
+                    unitTargets: checkedUnits
+                });
+                showToast('Cascading ke Unit/Prodi berhasil disimpan!');
+            }
+
             await saveToMySQL();
             closeCascadingTimModal();
-            showToast('Cascading ke Unit/Prodi berhasil disimpan!');
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-       // Fungsi Hapus menggunakan ID unik (bukan index array filter)
-        async function confirmDeleteCascadingTim(id) {
-            const item = DB.cascadingTim.find(ct => String(ct.id) === String(id));
+        // Fungsi Hapus Cascading Tim Kerja (Pasti Terhapus dari Tabel & MySQL)
+        async function confirmDeleteCascadingTim(id, realIdx = -1) {
+            let targetIndex = -1;
+            if (realIdx >= 0 && realIdx < DB.cascadingTim.length) {
+                targetIndex = realIdx;
+            } else {
+                targetIndex = DB.cascadingTim.findIndex(ct => String(ct.id) === String(id));
+            }
+
+            if (targetIndex === -1) {
+                showToast('Data tidak ditemukan!', 'error');
+                return;
+            }
+
+            const item = DB.cascadingTim[targetIndex];
             if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item ? item.targetDirektur : ''}"?`)) {
-                DB.cascadingTim = DB.cascadingTim.filter(ct => String(ct.id) !== String(id));
+                DB.cascadingTim.splice(targetIndex, 1);
                 await saveToMySQL();
                 showToast('Cascading Tim berhasil dihapus.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
