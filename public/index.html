@@ -171,16 +171,44 @@
         let filterTindakLanjutTahun = '2025';
 
         function calculateSkorRisiko(p, d) {
-            const val = parseInt(p) * parseInt(d);
+            const prob = parseInt(p) || 1;
+            const damp = parseInt(d) || 1;
+
+            // Matriks Risiko 5x5 Sesuai Lampiran 3 (Baris = Level Kemungkinan 1-5, Kolom = Level Dampak 1-5)
+            const matriksSkor = {
+                5: { 1: 7, 2: 12, 3: 17, 4: 22, 5: 25 },
+                4: { 1: 4, 2: 9,  3: 14, 4: 19, 5: 24 },
+                3: { 1: 3, 2: 8,  3: 13, 4: 18, 5: 23 },
+                2: { 1: 2, 2: 6,  3: 11, 4: 16, 5: 21 },
+                1: { 1: 1, 2: 5,  3: 10, 4: 15, 5: 20 }
+            };
+
+            const val = (matriksSkor[prob] && matriksSkor[prob][damp]) ? matriksSkor[prob][damp] : (prob * damp);
             let kuadran = '';
             let warna = '';
             let level = '';
 
-            if (val >= 20) { level = 'Sangat Tinggi (5)'; kuadran = 'Kuadran IV (Sangat Tinggi)'; warna = 'bg-rose-600 text-white'; }
-            else if (val >= 15) { level = 'Tinggi (4)'; kuadran = 'Kuadran III (Tinggi)'; warna = 'bg-amber-500 text-white'; }
-            else if (val >= 12) { level = 'Sedang (3)'; kuadran = 'Kuadran II (Sedang)'; warna = 'bg-yellow-400 text-slate-900'; }
-            else if (val >= 7) { level = 'Rendah (2)'; kuadran = 'Kuadran I (Rendah)'; warna = 'bg-emerald-500 text-white'; }
-            else { level = 'Sangat Rendah (1)'; kuadran = 'Kuadran I (Sangat Rendah)'; warna = 'bg-blue-500 text-white'; }
+            if (val >= 20) {
+                level = 'Sangat Tinggi (5)';
+                kuadran = 'Sangat Tinggi (5) [Merah]';
+                warna = 'bg-rose-600 text-white'; // Merah (20 - 25)
+            } else if (val >= 15) {
+                level = 'Tinggi (4)';
+                kuadran = 'Tinggi (4) [Orange]';
+                warna = 'bg-amber-500 text-white'; // Orange (15 - 19)
+            } else if (val >= 12) {
+                level = 'Sedang (3)';
+                kuadran = 'Sedang (3) [Kuning]';
+                warna = 'bg-yellow-400 text-slate-900'; // Kuning (12 - 14)
+            } else if (val >= 7) {
+                level = 'Rendah (2)';
+                kuadran = 'Rendah (2) [Hijau]';
+                warna = 'bg-emerald-500 text-white'; // Hijau (7 - 11)
+            } else {
+                level = 'Sangat Rendah (1)';
+                kuadran = 'Sangat Rendah (1) [Biru]';
+                warna = 'bg-blue-500 text-white'; // Biru (1 - 6)
+            }
 
             return { skor: val, level, kuadran, warna };
         }
@@ -221,8 +249,8 @@ let landingChartInstance = null;
                 <div class="min-h-screen bg-white text-slate-800 flex flex-col justify-between selection:bg-blue-100 selection:text-blue-900 font-sans">
                     
                     <!-- Navbar Header Ala Kemenperin (Menu Navigasi & Tombol Login di Kanan Atas) -->
-                    <header class="bg-white border-b border-slate-100 px-6 sm:px-12 py-4 sticky top-0 z-30 shadow-xs">
-                        <div class="max-w-7xl mx-auto flex items-center justify-between">
+                    <header class="bg-white border-b border-slate-100 px-6 sm:px-12 lg:px-20 py-5 sticky top-0 z-30 shadow-xs w-full">
+                        <div class="w-full max-w-[1920px] mx-auto flex items-center justify-between">
                             <div class="flex items-center space-x-3">
                                 <div class="w-10 h-10 rounded-xl bg-white-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-blue-600/20">
                                     <img src="logo_poltek-removebg-preview.png" alt="Logo Poltek" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/40x40/2563eb/ffffff?text=Logo'">
@@ -249,7 +277,7 @@ let landingChartInstance = null;
                     </header>
 
                     <!-- Main Hero Section (Kiri: Teks & Search, Kanan: Foto Gambar Besar) -->
-                    <main class="max-w-7xl mx-auto w-full px-4 sm:px-8 py-12 sm:py-16 flex-1 flex flex-col justify-center">
+                    <main class="w-full max-w-[1920px] mx-auto px-6 sm:px-12 lg:px-20 py-12 sm:py-16 flex-1 flex flex-col justify-center">
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
                             
                             <!-- SISI KIRI: Penjelasan & Kolom Pencarian -->
@@ -261,7 +289,7 @@ let landingChartInstance = null;
                                     Ki-Jaro <br>
                                     <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-500">Mengawal Kinerja Jawara</span><br>
                                     <span class="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-green-500">Mewujudkan Transparansi Institusi</span>
-                                <p class="font-bold text-slate-900 text-base sm:text-lg leading-relaxed max-w-xl">
+                                <p class="font-bold text-slate-900 text-base sm:text-lg lg:text-xl leading-relaxed max-w-4xl">
                                     Ki-Jaro (Kinerja Jawara Petro) hadir sebagai pusat integrasi Sistem Akuntabilitas Kinerja Instansi Pemerintah (SAKIP) dan Manajemen Risiko Politeknik Industri Petrokimia Banten. Terinspirasi dari keteguhan peran Jaro dalam memimpin, sistem Ki-Jaro hadir mengawal Sistem Akuntabilitas Kinerja Instansi Pemerintah (SAKIP) Politeknik Industri Petrokimia Banten menuju tatakelola yang terarah dan tepat sasaran
                                 </p>
 
@@ -276,7 +304,7 @@ let landingChartInstance = null;
                             <div class="lg:col-span-5">
                                 <div class="w-full overflow-hidden rounded-[2.5rem] shadow-2xl shadow-slate-300/50 bg-transparent">
                                     <img src="gambar tampilan depan.jpeg" alt="Ilustrasi Petrokimia Banten" 
-                                        class="w-full h-[350px] sm:h-[450px] object-cover object-center transform hover:scale-85 transition-transform duration-500" 
+                                       class="w-full h-[380px] sm:h-[480px] lg:h-[540px] object-cover object-center transform hover:scale-105 transition-transform duration-500" 
                                         onerror="this.src='https://placehold.co/1000x800/f8fafc/2563eb?text=Politeknik+Industri+Petrokimia+Banten'">
                                 </div>
                             </div>
@@ -419,76 +447,69 @@ let landingChartInstance = null;
             const canvas = document.getElementById('landingPreviewChart');
             if (!canvas) return;
 
-            let labels = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
-            let dataPoints = labels.map(tw => {
-                const matches = DB.capaian.filter(c => (c.tahun || '2025') === filterLandingTahun && c.triwulan === tw && c.status === 'Valid');
-                if (matches.length > 0) return Number((matches.reduce((a, b) => a + b.realisasi, 0) / matches.length).toFixed(1));
-                return tw === 'TW 1' ? 82.5 : tw === 'TW 2' ? 88.0 : tw === 'TW 3' ? 92.4 : 98.2;
-            });
+            const validCapaian = DB.capaian.filter(c => c.status === 'Valid' && (c.tahun || '2025') === filterLandingTahun);
+            const filteredCascading = DB.cascadingDirektur.filter(cd => (cd.tahun || '2025') === filterLandingTahun);
 
-            if (landingChartInstance) {
-                landingChartInstance.destroy();
+            const colorPalette = [
+                '#2563eb', '#dc2626', '#10b981', '#f59e0b', '#8b5cf6', 
+                '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+            ];
+
+            let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
+            let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+
+            if (filterLandingTriwulan !== 'Semua') {
+                chartLabels = [filterLandingTriwulan];
+                twPeriods = [filterLandingTriwulan];
             }
 
-            landingChartInstance = new Chart(canvas.getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Capaian (%)',
-                        data: dataPoints,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 3,
-                        pointRadius: 5,
-                        pointBackgroundColor: '#2563eb',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2
-                    }]
-                },
-                plugins: [ChartDataLabels],
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, max: 120, ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#f1f5f9' }, border: { display: false } },
-                        x: { ticks: { color: '#64748b', font: { size: 11, weight: '500' } }, grid: { display: false }, border: { display: false } }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        datalabels: { align: 'top', color: '#1e40af', font: { weight: 'bold', size: 11 }, formatter: v => v + '%' }
+            let datasets = filteredCascading.map((cd, index) => {
+                let color = colorPalette[index % colorPalette.length];
+                let dataPoints = twPeriods.map(tw => {
+                    let match = validCapaian.filter(c => 
+                        c.targetDirektur === cd.target && 
+                        c.triwulan && c.triwulan.trim().toUpperCase() === tw
+                    );
+                    if (match.length > 0) {
+                        let targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
+                        let realVal = match[match.length - 1].realisasi;
+                        return Number(((realVal / targetVal) * 100).toFixed(1));
                     }
-                }
-            });
-        }
-        function updateLandingChart() {
-            const canvas = document.getElementById('landingPreviewChart');
-            if (!canvas) return;
-
-            let labels = [];
-            let dataPoints = [];
-
-            if (filterLandingTriwulan === 'Semua') {
-                labels = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
-                dataPoints = ['TW 1', 'TW 2', 'TW 3', 'TW 4'].map(tw => {
-                    const matches = DB.capaian.filter(c => (c.tahun || '2025') === filterLandingTahun && c.triwulan === tw && c.status === 'Valid');
-                    if (matches.length > 0) return Number((matches.reduce((a, b) => a + b.realisasi, 0) / matches.length).toFixed(1));
-                    return tw === 'TW 1' ? 82.5 : tw === 'TW 2' ? 88.0 : tw === 'TW 3' ? 92.4 : 98.2;
+                    return 0; // Data riil: 0 jika belum ada realisasi tervalidasi
                 });
-            } else {
-                const matchingCD = DB.cascadingDirektur.filter(cd => (cd.tahun || '2025') === filterLandingTahun);
-                if (matchingCD.length > 0) {
-                    labels = matchingCD.map(cd => cd.target.length > 15 ? cd.target.substring(0, 15) + '...' : cd.target);
-                    dataPoints = matchingCD.map(cd => {
-                        const m = DB.capaian.filter(c => c.targetDirektur === cd.target && (c.tahun || '2025') === filterLandingTahun && c.triwulan === filterLandingTriwulan && c.status === 'Valid');
-                        return m.length > 0 ? Number((m.reduce((a, b) => a + b.realisasi, 0) / m.length).toFixed(1)) : 85.0;
-                    });
-                } else {
-                    labels = [filterLandingTriwulan];
-                    dataPoints = [90];
-                }
+
+                return {
+                    label: cd.target.length > 35 ? cd.target.substring(0, 35) + '...' : cd.target,
+                    data: dataPoints,
+                    borderColor: color,
+                    backgroundColor: color,
+                    borderWidth: 2.5,
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                };
+            });
+
+            // Jika belum ada cascading pada tahun tersebut, tampilkan garis rata-rata dari capaian valid yang ada
+            if (datasets.length === 0) {
+                let avgPoints = twPeriods.map(tw => {
+                    let matches = validCapaian.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === tw);
+                    if (matches.length > 0) {
+                        return Number((matches.reduce((acc, cur) => acc + ((cur.realisasi / (cur.target || 100)) * 100), 0) / matches.length).toFixed(1));
+                    }
+                    return 0;
+                });
+                datasets.push({
+                    label: 'Rata-rata Capaian IKU (%)',
+                    data: avgPoints,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointRadius: 5
+                });
             }
 
             if (landingChartInstance) {
@@ -498,33 +519,20 @@ let landingChartInstance = null;
             landingChartInstance = new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Capaian (%)',
-                        data: dataPoints,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 3,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        pointBackgroundColor: '#2563eb',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2
-                    }]
+                    labels: chartLabels,
+                    datasets: datasets
                 },
                 plugins: [ChartDataLabels],
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true, max: 120, ticks: { color: '#94a3b8', font: { size: 10, weight: '500' } }, grid: { color: '#f1f5f9' }, border: { display: false } },
-                        x: { ticks: { color: '#64748b', font: { size: 10, weight: '500' } }, grid: { display: false }, border: { display: false } }
+                        y: { beginAtZero: true, max: 120, ticks: { color: '#64748b', font: { size: 11 }, callback: v => v + '%' }, grid: { color: '#f1f5f9' } },
+                        x: { ticks: { color: '#475569', font: { size: 11, weight: 'bold' } }, grid: { display: false } }
                     },
                     plugins: {
-                        legend: { display: false },
-                        datalabels: { align: 'top', color: '#1e40af', font: { weight: 'bold', size: 11 }, formatter: v => v + '%' }
+                        legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                        datalabels: { align: 'top', color: '#1e3a8a', font: { weight: 'bold', size: 10 }, formatter: v => v > 0 ? v + '%' : '' }
                     }
                 }
             });
@@ -3736,32 +3744,41 @@ async function confirmDeleteCapaian(id) {
                         </div>
 
                         <div class="space-y-4 text-sm">
-                            <h3 class="font-bold text-slate-900 text-base border-l-4 border-primary-600 pl-3">Rekapitulasi Capaian Program Kerja (Tervalidasi)</h3>
+                            <h3 class="font-bold text-slate-900 text-base border-l-4 border-primary-600 pl-3">Rekapitulasi Capaian Kinerja</h3>
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead class="bg-slate-50 border">
                                     <tr>
-                                        <th class="p-2 border">Unit / Prodi</th>
-                                        <th class="p-2 border">Indikator Utama</th>
-                                        <th class="p-2 border">Program Kerja</th>
-                                        <th class="p-2 border">Triwulan / Satuan</th>
-                                        <th class="p-2 border">Target / Realisasi</th>
-                                        <th class="p-2 border">Status & Tindak Lanjut</th>
+                                        <th class="p-2 border text-center w-10">No.</th>
+                                        <th class="p-2 border">Sasaran Kinerja</th>
+                                        <th class="p-2 border">Indikator Kinerja</th>
+                                        <th class="p-2 border text-center">Target</th>
+                                        <th class="p-2 border text-center">Satuan</th>
+                                        <th class="p-2 border text-center">Realisasi</th>
+                                        <th class="p-2 border text-center">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="printTableBody">
-                                    ${validCapaian.length === 0 ? '<tr><td colspan="6" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi</td></tr>' : validCapaian.map(c => `
+                                    ${validCapaian.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi</td></tr>' : validCapaian.map((c, idx) => {
+                                        const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
+                                        const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
+                                        const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
+                                        const isTercapai = Number(c.realisasi) >= Number(c.target);
+                                        return `
                                         <tr>
-                                            <td class="p-2 border">${c.unit}</td>
+                                            <td class="p-2 border text-center font-semibold">${idx + 1}</td>
+                                            <td class="p-2 border">${sasaranKinerjaText}</td>
                                             <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
-                                            <td class="p-2 border font-medium">${c.program}</td>
-                                            <td class="p-2 border">${c.triwulan} (${c.satuan || '%'})</td>
-                                            <td class="p-2 border">${c.target} /${c.realisasi}</td>
-                                            <td class="p-2 border">
-                                                <span class="font-semibold text-emerald-700">${c.status}</span>
-                                                <span class="block text-[10px] text-slate-600">Tindak Lanjut: ${c.statusTindakLanjut || 'Belum'}</span>
+                                            <td class="p-2 border text-center font-semibold">${c.target}</td>
+                                            <td class="p-2 border text-center">${c.satuan || '%'}</td>
+                                            <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi}</td>
+                                            <td class="p-2 border text-center">
+                                                <span class="px-2 py-0.5 rounded font-bold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                                                    ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
+                                                </span>
                                             </td>
                                         </tr>
-                                    `).join('')}
+                                        `;
+                                    }).join('')}
                                 </tbody>
                             </table>
                         </div>
@@ -3806,21 +3823,29 @@ async function confirmDeleteCapaian(id) {
                 validCapaian = validCapaian.filter(c => c.timKey === currentUser.timKey);
             }
 
-            const tbody = document.getElementById('printTableBody');
-            tbody.innerHTML = validCapaian.length === 0 ? '<tr><td colspan="6" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi untuk periode ini</td></tr>' : validCapaian.map(c => `
+           const tbody = document.getElementById('printTableBody');
+            tbody.innerHTML = validCapaian.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi untuk periode ini</td></tr>' : validCapaian.map((c, idx) => {
+                const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
+                const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
+                const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
+                const isTercapai = Number(c.realisasi) >= Number(c.target);
+                return `
                 <tr>
-                    <td class="p-2 border">${c.unit}</td>
+                    <td class="p-2 border text-center font-semibold">${idx + 1}</td>
+                    <td class="p-2 border">${sasaranKinerjaText}</td>
                     <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
-                    <td class="p-2 border font-medium">${c.program}</td>
-                    <td class="p-2 border">${c.triwulan} (${c.satuan || '%'})</td>
-                    <td class="p-2 border">${c.target} / ${c.realisasi}</td>
-                    <td class="p-2 border">
-                        <span class="font-semibold text-emerald-700">${c.status}</span>
-                        <span class="block text-[10px] text-slate-600">Tindak Lanjut: ${c.statusTindakLanjut || 'Belum'}</span>
+                    <td class="p-2 border text-center font-semibold">${c.target}</td>
+                    <td class="p-2 border text-center">${c.satuan || '%'}</td>
+                    <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi}</td>
+                    <td class="p-2 border text-center">
+                        <span class="font-bold ${isTercapai ? 'text-emerald-700' : 'text-rose-700'}">
+                            ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
+                        </span>
                     </td>
                 </tr>
-            `).join('');
-
+                `;
+            }).join('');
+            
             window.print();
         }
 
