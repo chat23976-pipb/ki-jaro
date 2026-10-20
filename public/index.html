@@ -2093,11 +2093,23 @@ function renderCascadingView(container) {
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
-                    <!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG KONEKTOR -->
+<!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG KONEKTOR & FILTER TAHUN -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
-                        <div>
-                            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Peta Pohon Organisasi Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
-                            <p class="text-xs text-slate-500">Visualisasi alur penurunan indikator kinerja institusi secara hierarki dengan garis penghubung.</p>
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Peta Pohon Organisasi Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
+                                <p class="text-xs text-slate-500">Visualisasi alur penurunan indikator kinerja institusi secara hierarki sesuai tahun terpilih.</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <label class="text-xs font-semibold text-slate-600">Filter Tahun Pohon:</label>
+                                <select onchange="filterCascadingTahun = this.value; renderCascadingView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700">
+                                    <option value="2025" ${filterCascadingTahun === '2025' ? 'selected' : ''}>2025</option>
+                                    <option value="2026" ${filterCascadingTahun === '2026' ? 'selected' : ''}>2026</option>
+                                    <option value="2027" ${filterCascadingTahun === '2027' ? 'selected' : ''}>2027</option>
+                                    <option value="2028" ${filterCascadingTahun === '2028' ? 'selected' : ''}>2028</option>
+                                    <option value="2029" ${filterCascadingTahun === '2029' ? 'selected' : ''}>2029</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <div class="overflow-x-auto p-6 bg-slate-50 rounded-2xl border min-w-[800px]">
@@ -2105,6 +2117,7 @@ function renderCascadingView(container) {
                                 <div class="flex flex-col items-center shrink-0">
                                     <div class="px-5 py-4 bg-blue-700 text-white rounded-2xl shadow-lg text-xs font-bold text-center w-52 border-2 border-blue-800">
                                         <i class="fa-solid fa-user-tie mb-1 block text-sm"></i> Pimpinan Tertinggi (Direktur)
+                                        <span class="block text-[10px] font-normal text-blue-200 mt-1">Tahun: ${filterCascadingTahun}</span>
                                     </div>
                                 </div>
 
@@ -2112,9 +2125,9 @@ function renderCascadingView(container) {
 
                                 <div class="flex flex-col space-y-4 flex-1">
                                     ${DB.timKerjaList.map(tim => {
-                                        const assignedDir = DB.cascadingDirektur.filter(cd => cd.timKeys.includes(tim));
+                                        const assignedDir = filteredDir.filter(cd => cd.timKeys.includes(tim));
                                         if (assignedDir.length === 0) return '';
-                                        const subUnits = DB.cascadingTim.filter(ct => ct.timKey === tim);
+                                        const subUnits = filteredTim.filter(ct => ct.timKey === tim && assignedDir.some(ad => ad.target === ct.targetDirektur && (ad.tahun || '2025') === (ct.tahun || '2025')));
 
                                         return `
                                             <div class="flex items-center space-x-4 relative">
