@@ -2729,10 +2729,10 @@ function renderCascadingView(container) {
                                 <div><span class="text-slate-500 block">Target (Renstra):</span><strong id="previewTargetVal" class="text-primary-700 text-sm">100</strong></div>
                                 <div class="text-right"><span class="text-slate-500 block">Pagu Anggaran:</span><strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong></div>
                             </div>
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-2">Pilih Ketua Tim Kerja (Multi-select)</label>
+                           <div>
+                                <label class="block font-semibold text-slate-700 mb-2">Pilih Ketua Tim Kerja (Pilih Salah Satu)</label>
                                 <div class="space-y-2 bg-slate-50 p-3 rounded-xl border">
-                                    ${DB.timKerjaList.map(t => `<label class="flex items-center space-x-3 cursor-pointer"><input type="checkbox" name="timCheck" value="${t}" class="w-4 h-4 text-primary-600 rounded border-slate-300"><span class="text-slate-700 font-medium">${t}</span></label>`).join('')}
+                                    ${DB.timKerjaList.map(t => `<label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="timCheck" value="${t}" required class="w-4 h-4 text-primary-600 border-slate-300"><span class="text-slate-700 font-medium">${t}</span></label>`).join('')}
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
@@ -2761,9 +2761,9 @@ function renderCascadingView(container) {
                                 <select id="timDirRef" required class="w-full p-3 bg-slate-50 border rounded-xl"></select>
                             </div>
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-2">Pilih Unit / Prodi / Subbag Tujuan (Multi-select)</label>
+                                <label class="block font-semibold text-slate-700 mb-2">Pilih Unit / Prodi / Subbag Tujuan (Pilih Salah Satu)</label>
                                 <div class="space-y-2 bg-slate-50 p-3 rounded-xl border max-h-48 overflow-y-auto">
-                                    ${DB.unitList.map(u => `<label class="flex items-center space-x-3 cursor-pointer"><input type="checkbox" name="unitCheck" value="${u}" class="w-4 h-4 text-primary-600 rounded border-slate-300"><span class="text-slate-700 font-medium">${u}</span></label>`).join('')}
+                                    ${DB.unitList.map(u => `<label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="unitCheck" value="${u}" required class="w-4 h-4 text-primary-600 border-slate-300"><span class="text-slate-700 font-medium">${u}</span></label>`).join('')}
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
@@ -2849,6 +2849,7 @@ function renderCascadingView(container) {
         
         async function saveCascadingDir(e) {
             e.preventDefault();
+            const editId = document.getElementById('cascadingDirModal').getAttribute('data-edit-id');
             const tahun = document.getElementById('dirTahunTarget').value;
             const sel = document.getElementById('dirIndikatorRenstra');
             const opt = sel.options[sel.selectedIndex];
@@ -2856,27 +2857,47 @@ function renderCascadingView(container) {
             const satuan = opt.getAttribute('data-satuan');
             const targetVal = parseFloat(opt.getAttribute('data-target')) || 100;
             const anggaran = parseFloat(opt.getAttribute('data-anggaran')) || 0;
-            const checked = Array.from(document.querySelectorAll('input[name="timCheck"]:checked')).map(el => el.value);
             
-            if (checked.length === 0) {
-                showToast('Pilih minimal 1 Ketua Tim Kerja!', 'error');
+            // Diubah menjadi pilihan tunggal (hanya boleh 1 tim kerja saja)
+            const selectedTimEl = document.querySelector('input[name="timCheck"]:checked');
+            if (!selectedTimEl) {
+                showToast('Pilih salah satu Ketua Tim Kerja!', 'error');
                 return;
             }
+            const chosenTim = selectedTimEl.value;
 
-            DB.cascadingDirektur.push({
-                id: 'cd' + (DB.cascadingDirektur.length + 1),
-                indikatorId: sel.value,
-                tahun: tahun,
-                target: indikatorName,
-                targetVal: targetVal,
-                satuan: satuan,
-                anggaran: anggaran,
-                timKeys: checked,
-                status: 'Aktif'
-            });
+            if (editId) {
+                const idx = DB.cascadingDirektur.findIndex(x => x.id === editId);
+                if (idx !== -1) {
+                    DB.cascadingDirektur[idx] = {
+                        ...DB.cascadingDirektur[idx],
+                        indikatorId: sel.value,
+                        tahun: tahun,
+                        target: indikatorName,
+                        targetVal: targetVal,
+                        satuan: satuan,
+                        anggaran: anggaran,
+                        timKeys: [chosenTim] // Disimpan sebagai array berisi 1 item
+                    };
+                }
+                showToast('Cascading Direktur berhasil diperbarui!');
+            } else {
+                DB.cascadingDirektur.push({
+                    id: 'cd_' + Date.now(),
+                    indikatorId: sel.value,
+                    tahun: tahun,
+                    target: indikatorName,
+                    targetVal: targetVal,
+                    satuan: satuan,
+                    anggaran: anggaran,
+                    timKeys: [chosenTim], // Hanya boleh satu
+                    status: 'Aktif'
+                });
+                showToast('Cascading Direktur berhasil disimpan!');
+            }
+
             await saveToMySQL();
             closeCascadingDirModal();
-            showToast('Cascading Direktur berhasil disimpan!');
             renderCascadingView(document.getElementById('mainContent'));
         }
 
@@ -2940,27 +2961,46 @@ function renderCascadingView(container) {
 
         async function saveCascadingTim(e) {
             e.preventDefault();
+            const editId = document.getElementById('cascadingTimModal').getAttribute('data-edit-id');
             const tahun = document.getElementById('timTahunTarget').value;
             const targetDir = document.getElementById('timDirRef').value;
             if (!targetDir) {
                 showToast('Pilih indikator rujukan yang valid!', 'error');
                 return;
             }
-            const checkedUnits = Array.from(document.querySelectorAll('input[name="unitCheck"]:checked')).map(el => el.value);
-            if (checkedUnits.length === 0) {
-                showToast('Pilih minimal 1 Unit / Prodi tujuan!', 'error');
+            
+            // Diubah menjadi pilihan tunggal (hanya boleh 1 unit/prodi)
+            const selectedUnitEl = document.querySelector('input[name="unitCheck"]:checked');
+            if (!selectedUnitEl) {
+                showToast('Pilih salah satu Unit / Prodi / Subbag tujuan!', 'error');
                 return;
             }
-            DB.cascadingTim.push({
-                id: 'ct' + (DB.cascadingTim.length + 1),
-                tahun: tahun,
-                targetDirektur: targetDir,
-                timKey: currentUser.timKey,
-                unitTargets: checkedUnits
-            });
+            const chosenUnit = selectedUnitEl.value;
+
+            if (editId) {
+                const idx = DB.cascadingTim.findIndex(x => x.id === editId);
+                if (idx !== -1) {
+                    DB.cascadingTim[idx] = {
+                        ...DB.cascadingTim[idx],
+                        tahun: tahun,
+                        targetDirektur: targetDir,
+                        unitTargets: [chosenUnit] // Disimpan sebagai array berisi 1 item
+                    };
+                }
+                showToast('Cascading Unit berhasil diperbarui!');
+            } else {
+                DB.cascadingTim.push({
+                    id: 'ct_' + Date.now(),
+                    tahun: tahun,
+                    targetDirektur: targetDir,
+                    timKey: currentUser.timKey || 'Akademik',
+                    unitTargets: [chosenUnit] // Hanya boleh satu
+                });
+                showToast('Cascading ke Unit/Prodi berhasil disimpan!');
+            }
+
             await saveToMySQL();
             closeCascadingTimModal();
-            showToast('Cascading ke Unit/Prodi berhasil disimpan!');
             renderCascadingView(document.getElementById('mainContent'));
         }
 
