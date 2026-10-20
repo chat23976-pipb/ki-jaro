@@ -2351,7 +2351,8 @@ function renderCascadingView(container) {
                     </div>
                 </div>
             `;
-        }
+
+            // Dipindahkan ke dalam kurung kurawal agar otomatis dijalankan saat halaman Cascading dirender
             setTimeout(() => {
                 const yrDir = document.getElementById('dirTahunTarget');
                 if (yrDir) updateDirRenstraOptions(yrDir.value);
@@ -2359,24 +2360,57 @@ function renderCascadingView(container) {
                 const yrEl = document.getElementById('timTahunTarget');
                 if (yrEl) updateTimDirRefOptions(yrEl.value);
             }, 100);
-        
+        }
+
+        // FUNGSI YANG SEBELUMNYA HILANG: Mengisi dropdown Indikator Renstra (Tier 4) untuk Direktur
+        function updateDirRenstraOptions(tahun) {
+            const sel = document.getElementById('dirIndikatorRenstra');
+            if (!sel) return;
+            const listIndikator = DB.renstraIndikatorKinerja || [];
+            
+            if (listIndikator.length === 0) {
+                sel.innerHTML = '<option value="">Belum ada Indikator Kinerja di Renstra (Tier 4)</option>';
+                return;
+            }
+
+            sel.innerHTML = listIndikator.map(ik => {
+                const targetThn = ik['target' + tahun] !== undefined ? ik['target' + tahun] : (ik.target2025 || 100);
+                const paguThn = ik['anggaran' + tahun] !== undefined ? ik['anggaran' + tahun] : (ik.anggaran2025 || 0);
+                const satuan = ik.satuan || '%';
+                const kode = ik.kodeIndikator ? `${ik.kodeIndikator} - ` : '';
+                return `<option value="${ik.id}" data-nama="${ik.namaIndikator}" data-satuan="${satuan}" data-target="${targetThn}" data-anggaran="${paguThn}">${kode}${ik.namaIndikator} (Target: ${targetThn} ${satuan})</option>`;
+            }).join('');
+
+            updateDirAnggaranPreview();
+        }
 
         function updateDirAnggaranPreview() {
             const sel = document.getElementById('dirIndikatorRenstra');
-            if (!sel || sel.options.length === 0) return;
+            if (!sel || sel.options.length === 0 || !sel.options[sel.selectedIndex]) return;
             const opt = sel.options[sel.selectedIndex];
             const target = opt.getAttribute('data-target') || '100';
             const anggaran = parseFloat(opt.getAttribute('data-anggaran') || '0');
             
-            document.getElementById('previewTargetVal').innerText = target;
-            document.getElementById('previewAnggaranVal').innerText = `Rp ${Number(anggaran).toLocaleString('id-ID')}`;
+            const elTarget = document.getElementById('previewTargetVal');
+            const elAnggaran = document.getElementById('previewAnggaranVal');
+            if (elTarget) elTarget.innerText = target;
+            if (elAnggaran) elAnggaran.innerText = `Rp ${Number(anggaran).toLocaleString('id-ID')}`;
         }
 
+        // Mengisi dropdown Indikator dari Direktur untuk Ketua Tim Kerja
         function updateTimDirRefOptions(tahun) {
             const sel = document.getElementById('timDirRef');
             if (!sel) return;
-            const matching = DB.cascadingDirektur.filter(c => c.timKeys.includes(currentUser.timKey) && (c.tahun || '2025') === tahun);
-            sel.innerHTML = matching.length === 0 ? '<option value="">Tidak ada indikator dicascading pada tahun ini</option>' : matching.map(c => `<option value="${c.target}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})</option>`).join('');
+            const matching = (DB.cascadingDirektur || []).filter(c => {
+                const matchTahun = String(c.tahun || '2025') === String(tahun);
+                // Jika login sebagai Ketua Tim Kerja, tampilkan yang di-assign ke timnya. Jika Admin, tampilkan semua.
+                const matchTim = currentUser.role === 'admin' ? true : (Array.isArray(c.timKeys) && c.timKeys.includes(currentUser.timKey));
+                return matchTahun && matchTim;
+            });
+
+            sel.innerHTML = matching.length === 0 
+                ? `<option value="">Belum ada indikator dari Direktur untuk tahun ${tahun}</option>` 
+                : matching.map(c => `<option value="${c.target}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})</option>`).join('');
         }
 
         function openCascadingDirModal() {
