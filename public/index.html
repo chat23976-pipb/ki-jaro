@@ -2983,6 +2983,152 @@ async function confirmDeleteCapaian(id) {
 }
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
+                    <!-- TOMBOL & PANEL DROPDOWN PANDUAN PENGISIAN RISIKO -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-blue-200 overflow-hidden">
+                        <button type="button" onclick="document.getElementById('panduanRisikoBox').classList.toggle('hidden'); document.getElementById('iconChevronPanduan').classList.toggle('rotate-180');" class="w-full p-4 bg-blue-50/80 hover:bg-blue-100/70 flex items-center justify-between text-left transition-all">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                                    <i class="fa-solid fa-book-open text-xs"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-900 text-sm">Panduan Pengisian Kriteria, Dampak & Matriks Risiko</h4>
+                                    <p class="text-[11px] text-blue-700 font-medium">Klik tombol ini untuk membuka / menutup panduan sebelum mengisi Peta Risiko</p>
+                                </div>
+                            </div>
+                            <span class="px-3 py-1 bg-white border border-blue-200 rounded-xl text-xs font-bold text-blue-700 flex items-center space-x-1.5 shadow-2xs">
+                                <span>Buka / Tutup Panduan</span>
+                                <i id="iconChevronPanduan" class="fa-solid fa-chevron-down transition-transform duration-300"></i>
+                            </span>
+                        </button>
+
+                        <div id="panduanRisikoBox" class="hidden p-6 space-y-6 border-t border-blue-100 text-xs bg-white">
+                            <!-- 1. Penetapan Kriteria Risiko (Kemungkinan) -->
+                            <div class="space-y-2">
+                                <h5 class="font-bold text-slate-900 text-sm border-l-4 border-blue-600 pl-2">1. Penetapan Kriteria Risiko (Level Kemungkinan)</h5>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse border border-slate-200">
+                                        <thead class="bg-slate-100 text-slate-700 font-bold">
+                                            <tr>
+                                                <th class="p-2.5 border">Level Kemungkinan</th>
+                                                <th class="p-2.5 border">Persentase Kemungkinan Terjadi dalam 1 Periode</th>
+                                                <th class="p-2.5 border">Jumlah Frekuensi Kemungkinan Terjadi dalam 1 Periode</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y">
+                                            <tr><td class="p-2 border font-semibold">Hampir tidak terjadi (1)</td><td class="p-2 border">X &le; 5%</td><td class="p-2 border">&lt; 2 kali dalam 1 tahun</td></tr>
+                                            <tr><td class="p-2 border font-semibold">Jarang terjadi (2)</td><td class="p-2 border">5% &lt; X &le; 10%</td><td class="p-2 border">2 kali s.d. 5 kali dalam 1 tahun</td></tr>
+                                            <tr><td class="p-2 border font-semibold">Kadang terjadi (3)</td><td class="p-2 border">10% &lt; X &le; 20%</td><td class="p-2 border">6 s.d. 9 kali dalam 1 tahun</td></tr>
+                                            <tr><td class="p-2 border font-semibold">Sering terjadi (4)</td><td class="p-2 border">20% &lt; X &le; 50%</td><td class="p-2 border">10 kali s.d. 12 kali dalam 1 tahun</td></tr>
+                                            <tr><td class="p-2 border font-semibold">Hampir pasti terjadi (5)</td><td class="p-2 border">X &gt; 50%</td><td class="p-2 border">&gt; 12 kali dalam 1 tahun</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- 2. Penetapan Kriteria Dampak -->
+                            <div class="space-y-2">
+                                <h5 class="font-bold text-slate-900 text-sm border-l-4 border-blue-600 pl-2">2. Penetapan Kriteria Dampak</h5>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse border border-slate-200">
+                                        <thead class="bg-slate-100 text-slate-700 font-bold">
+                                            <tr>
+                                                <th class="p-2 border">Kriteria</th>
+                                                <th class="p-2 border">Tidak Signifikan (1)</th>
+                                                <th class="p-2 border">Minor (2)</th>
+                                                <th class="p-2 border">Moderat (3)</th>
+                                                <th class="p-2 border">Signifikan (4)</th>
+                                                <th class="p-2 border">Sangat Signifikan (5)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y">
+                                            <tr>
+                                                <td class="p-2 border font-semibold">Beban Keuangan Negara</td>
+                                                <td class="p-2 border">&le; 0,01% dari total anggaran belanja pada Unit Pemilik Risiko</td>
+                                                <td class="p-2 border">&gt; 0,01% - 0,1% dari total anggaran belanja pada Unit Pemilik Risiko</td>
+                                                <td class="p-2 border">&gt; 0,1% - 1% dari total anggaran belanja pada Unit Pemilik Risiko</td>
+                                                <td class="p-2 border">&gt; 1% - 5% dari total anggaran belanja pada Unit Pemilik Risiko</td>
+                                                <td class="p-2 border">&gt; 5% dari total anggaran belanja pada Unit Pemilik Risiko</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="p-2 border font-semibold">Penurunan Reputasi Organisasi</td>
+                                                <td class="p-2 border">Berdampak negatif pada reputasi pelaksanaan/ fungsional ahli pertama</td>
+                                                <td class="p-2 border">Berdampak negatif pada reputasi Pejabat Administrator atau Pejabat Pengawas Unit Kerja/fungsional ahli muda/madya</td>
+                                                <td class="p-2 border">Berdampak negatif pada reputasi Kepala Unit Kerja/ Pejabat Administrator</td>
+                                                <td class="p-2 border">Pemberitaan negatif pada media massa /media sosial tingkat nasional</td>
+                                                <td class="p-2 border">Pemberitaan negatif pada media massa/media sosial tingkat internasional</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="p-2 border font-semibold">Pencapaian Tujuan Organisasi</td>
+                                                <td class="p-2 border">95% &le; Capaian Indikator Kinerja &le; 100%</td>
+                                                <td class="p-2 border">Capaian Indikator Kinerja &ge; 95%</td>
+                                                <td class="p-2 border">80% &le; Capaian Indikator Kinerja &le; 90%</td>
+                                                <td class="p-2 border">70% &le; Capaian Indikator Kinerja &le; 80%</td>
+                                                <td class="p-2 border">Capaian Indikator Kinerja &le; 70%</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="p-2 border font-semibold">Kesehatan dan Keselamatan Kerja</td>
+                                                <td class="p-2 border">Tidak berbahaya</td>
+                                                <td class="p-2 border">Gangguan kesehatan fisik ringan tapi masih bekerja pada hari yang sama</td>
+                                                <td class="p-2 border">Gangguan Kesehatan fisik dan/atau mental sedang (tidak mampu melaksanakan tugas &gt; 1 hari – 3 minggu)</td>
+                                                <td class="p-2 border">Gangguan Kesehatan fisik dan/atau mental berat (tidak mampu melaksanakan tugas &gt; 3 minggu atau mengalami cacat tetap atau gangguan jiwa permanen)</td>
+                                                <td class="p-2 border">Kejadian fatal/kematian</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="p-2 border font-semibold">Temuan Hasil Pemeriksaan</td>
+                                                <td class="p-2 border">Tidak ada temuan pengembalian uang ke kas negara dan/atau penyimpangan material</td>
+                                                <td class="p-2 border">Ada temuan pengembalian uang ke kas negara dan/atau penyimpangan &lt; 0,1% dari total anggaran</td>
+                                                <td class="p-2 border">Ada temuan pengembalian kas negara dan/atau penyimpangan s/d 0,1% dari total anggaran</td>
+                                                <td class="p-2 border">Ada temuan pengembalian uang ke kas negara dan/atau penyimpangan &gt; 0,1% - 1% dari total anggaran</td>
+                                                <td class="p-2 border">Ada temuan pengembalian uang ke kas negara dan/atau penyimpangan &gt; 1% dari total anggaran</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- 3. Penetapan Skor Matriks Risiko -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div class="lg:col-span-2 space-y-2">
+                                    <h5 class="font-bold text-slate-900 text-sm border-l-4 border-blue-600 pl-2">3. Penetapan Skor Matriks Risiko (5x5)</h5>
+                                    <table class="w-full text-center border-collapse border border-slate-200">
+                                        <thead class="bg-slate-100 text-slate-700 font-bold">
+                                            <tr>
+                                                <th class="p-2 border" colspan="2">Matriks Analisis Risiko 5 x 5</th>
+                                                <th class="p-2 border">1 (Tidak Signifikan)</th>
+                                                <th class="p-2 border">2 (Minor)</th>
+                                                <th class="p-2 border">3 (Moderat)</th>
+                                                <th class="p-2 border">4 (Signifikan)</th>
+                                                <th class="p-2 border">5 (Sangat Signifikan)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td class="p-2 border font-bold">5</td><td class="p-2 border text-left font-semibold">Hampir Pasti Terjadi</td><td class="p-2 border bg-emerald-500 text-white font-bold">7</td><td class="p-2 border bg-yellow-400 text-slate-900 font-bold">12</td><td class="p-2 border bg-amber-500 text-white font-bold">17</td><td class="p-2 border bg-rose-600 text-white font-bold">22</td><td class="p-2 border bg-rose-600 text-white font-bold">25</td></tr>
+                                            <tr><td class="p-2 border font-bold">4</td><td class="p-2 border text-left font-semibold">Sering Terjadi</td><td class="p-2 border bg-blue-500 text-white font-bold">4</td><td class="p-2 border bg-emerald-500 text-white font-bold">9</td><td class="p-2 border bg-yellow-400 text-slate-900 font-bold">14</td><td class="p-2 border bg-amber-500 text-white font-bold">19</td><td class="p-2 border bg-rose-600 text-white font-bold">24</td></tr>
+                                            <tr><td class="p-2 border font-bold">3</td><td class="p-2 border text-left font-semibold">Kadang Terjadi</td><td class="p-2 border bg-blue-500 text-white font-bold">3</td><td class="p-2 border bg-emerald-500 text-white font-bold">8</td><td class="p-2 border bg-yellow-400 text-slate-900 font-bold">13</td><td class="p-2 border bg-amber-500 text-white font-bold">18</td><td class="p-2 border bg-rose-600 text-white font-bold">23</td></tr>
+                                            <tr><td class="p-2 border font-bold">2</td><td class="p-2 border text-left font-semibold">Jarang Terjadi</td><td class="p-2 border bg-blue-500 text-white font-bold">2</td><td class="p-2 border bg-blue-500 text-white font-bold">6</td><td class="p-2 border bg-emerald-500 text-white font-bold">11</td><td class="p-2 border bg-amber-500 text-white font-bold">16</td><td class="p-2 border bg-rose-600 text-white font-bold">21</td></tr>
+                                            <tr><td class="p-2 border font-bold">1</td><td class="p-2 border text-left font-semibold">Hampir Tidak Terjadi</td><td class="p-2 border bg-blue-500 text-white font-bold">1</td><td class="p-2 border bg-blue-500 text-white font-bold">5</td><td class="p-2 border bg-emerald-500 text-white font-bold">10</td><td class="p-2 border bg-amber-500 text-white font-bold">15</td><td class="p-2 border bg-rose-600 text-white font-bold">20</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="space-y-2">
+                                    <h5 class="font-bold text-slate-900 text-sm border-l-4 border-blue-600 pl-2">Kategori Level & Warna Risiko</h5>
+                                    <table class="w-full text-center border-collapse border border-slate-200">
+                                        <thead class="bg-slate-100 text-slate-700 font-bold">
+                                            <tr><th class="p-2 border">Level Risiko</th><th class="p-2 border">Besaran Risiko</th><th class="p-2 border">Warna</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td class="p-2 border font-semibold">Sangat Tinggi (5)</td><td class="p-2 border font-bold">20 – 25</td><td class="p-2 border bg-rose-600 text-white font-bold">Merah</td></tr>
+                                            <tr><td class="p-2 border font-semibold">Tinggi (4)</td><td class="p-2 border font-bold">15 – 19</td><td class="p-2 border bg-amber-500 text-white font-bold">Orange</td></tr>
+                                            <tr><td class="p-2 border font-semibold">Sedang (3)</td><td class="p-2 border font-bold">12 – 14</td><td class="p-2 border bg-yellow-400 text-slate-900 font-bold">Kuning</td></tr>
+                                            <tr><td class="p-2 border font-semibold">Rendah (2)</td><td class="p-2 border font-bold">7 – 11</td><td class="p-2 border bg-emerald-500 text-white font-bold">Hijau</td></tr>
+                                            <tr><td class="p-2 border font-semibold">Sangat Rendah (1)</td><td class="p-2 border font-bold">1 – 6</td><td class="p-2 border bg-blue-500 text-white font-bold">Biru</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <h3 class="font-bold text-slate-900 text-base">Manajemen Risiko & Pengendalian (Sheet: Program Kerja dan Peta Resiko)</h3>
