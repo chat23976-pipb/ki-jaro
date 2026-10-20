@@ -817,15 +817,12 @@ function renderDashboardLayout() {
             renderDokumenUkurLaporView(document.getElementById('mainContent'));
         }
 
-        function renderDokumenUkurLaporView(container) {
+function renderDokumenUkurLaporView(container) {
             document.getElementById('pageTitle').innerText = 'Dokumen Pengukuran & Dokumen Pelaporan Kinerja';
+            const isAdmin = currentUser.role === 'admin';
 
             if (!DB.dokumenPengukuran) DB.dokumenPengukuran = [];
             if (!DB.dokumenPelaporan) DB.dokumenPelaporan = [];
-
-            // Hapus otomatis sisa data dummy lama jika sempat tersimpan di database
-            DB.dokumenPengukuran = DB.dokumenPengukuran.filter(d => !(d.nama === 'Perjanjian Kinerja (PK) Direktur 2025' && d.link === '#'));
-            DB.dokumenPelaporan = DB.dokumenPelaporan.filter(d => !(d.nama === 'Laporan Kinerja Instansi Pemerintah (LKjIP) 2025' && d.link === '#'));
 
             // Sort Dokumen Pengukuran
             let listUkur = DB.dokumenPengukuran.map((d, originalIdx) => ({ ...d, originalIdx }));
@@ -862,40 +859,43 @@ function renderDashboardLayout() {
                                     </h3>
                                     <p class="text-xs text-slate-500">PK, SK IKU, Manual IKU, Matriks Cascading, Rencana Aksi</p>
                                 </div>
-                                <button onclick="openUkurLaporModal('pengukuran', 'add')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
-                                    <i class="fa-solid fa-plus"></i><span>Input Dokumen</span>
-                                </button>
+                                ${isAdmin ? `
+                                    <button onclick="openUkurLaporModal('pengukuran', 'add')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
+                                        <i class="fa-solid fa-plus"></i><span>Input Dokumen</span>
+                                    </button>
+                                ` : ''}
                             </div>
 
-                            <!-- Tabel Dokumen Pengukuran (Sort dari Header Kolom) -->
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse text-xs">
                                     <thead class="bg-slate-50 text-slate-700 font-semibold border-b select-none">
                                         <tr>
-                                            <th onclick="toggleSortPengukuran('nama')" class="p-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                                            <th onclick="toggleSortPengukuran('nama')" class="p-3 cursor-pointer hover:bg-slate-100">
                                                 1. Nama Dokumen ${getSortIcon(sortPengukuranCol, 'nama', sortPengukuranAsc)}
                                             </th>
-                                            <th onclick="toggleSortPengukuran('kategori')" class="p-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                                            <th onclick="toggleSortPengukuran('kategori')" class="p-3 cursor-pointer hover:bg-slate-100">
                                                 2. Kategori Dokumen ${getSortIcon(sortPengukuranCol, 'kategori', sortPengukuranAsc)}
                                             </th>
-                                            <th onclick="toggleSortPengukuran('tahun')" class="p-3 text-center cursor-pointer hover:bg-slate-100 transition-colors">
+                                            <th onclick="toggleSortPengukuran('tahun')" class="p-3 text-center cursor-pointer hover:bg-slate-100">
                                                 Periode/Tahun ${getSortIcon(sortPengukuranCol, 'tahun', sortPengukuranAsc)}
                                             </th>
                                             <th class="p-3">Link Dokumen</th>
-                                            <th class="p-3 text-center w-24">Aksi</th>
+                                            ${isAdmin ? '<th class="p-3 text-center w-24">Aksi</th>' : ''}
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
-                                        ${listUkur.length === 0 ? '<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada dokumen pengukuran yang diinput.</td></tr>' : listUkur.map(d => `
+                                        ${listUkur.length === 0 ? `<tr><td colspan="${isAdmin ? 5 : 4}" class="p-6 text-center text-slate-400">Belum ada dokumen pengukuran yang diinput.</td></tr>` : listUkur.map(d => `
                                             <tr class="hover:bg-slate-50">
                                                 <td class="p-3 font-semibold text-slate-900">${d.nama}</td>
                                                 <td class="p-3"><span class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full font-semibold text-[10px]">${d.kategori}</span></td>
                                                 <td class="p-3 text-center font-bold text-slate-700">${d.tahun}</td>
                                                 <td class="p-3"><a href="${d.link}" target="_blank" class="text-blue-600 underline font-semibold"><i class="fa-solid fa-link mr-1"></i>Buka</a></td>
-                                                <td class="p-3 text-center space-x-1">
-                                                    <button onclick="openUkurLaporModal('pengukuran', 'edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Edit Dokumen"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="deleteUkurLaporDoc('pengukuran', ${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus Dokumen"><i class="fa-solid fa-trash"></i></button>
-                                                </td>
+                                                ${isAdmin ? `
+                                                    <td class="p-3 text-center space-x-1">
+                                                        <button onclick="openUkurLaporModal('pengukuran', 'edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Edit Dokumen"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="deleteUkurLaporDoc('pengukuran', ${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus Dokumen"><i class="fa-solid fa-trash"></i></button>
+                                                    </td>
+                                                ` : ''}
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -912,40 +912,43 @@ function renderDashboardLayout() {
                                     </h3>
                                     <p class="text-xs text-slate-500">LKjIP, Laporan Triwulanan, Laporan Tahunan, Evaluasi SAKIP</p>
                                 </div>
-                                <button onclick="openUkurLaporModal('pelaporan', 'add')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
-                                    <i class="fa-solid fa-plus"></i><span>Input Dokumen</span>
-                                </button>
+                                ${isAdmin ? `
+                                    <button onclick="openUkurLaporModal('pelaporan', 'add')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
+                                        <i class="fa-solid fa-plus"></i><span>Input Dokumen</span>
+                                    </button>
+                                ` : ''}
                             </div>
 
-                            <!-- Tabel Dokumen Pelaporan (Sort dari Header Kolom) -->
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse text-xs">
                                     <thead class="bg-slate-50 text-slate-700 font-semibold border-b select-none">
                                         <tr>
-                                            <th onclick="toggleSortPelaporan('nama')" class="p-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                                            <th onclick="toggleSortPelaporan('nama')" class="p-3 cursor-pointer hover:bg-slate-100">
                                                 1. Nama Dokumen ${getSortIcon(sortPelaporanCol, 'nama', sortPelaporanAsc)}
                                             </th>
-                                            <th onclick="toggleSortPelaporan('kategori')" class="p-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                                            <th onclick="toggleSortPelaporan('kategori')" class="p-3 cursor-pointer hover:bg-slate-100">
                                                 2. Kategori Dokumen ${getSortIcon(sortPelaporanCol, 'kategori', sortPelaporanAsc)}
                                             </th>
-                                            <th onclick="toggleSortPelaporan('tahun')" class="p-3 text-center cursor-pointer hover:bg-slate-100 transition-colors">
+                                            <th onclick="toggleSortPelaporan('tahun')" class="p-3 text-center cursor-pointer hover:bg-slate-100">
                                                 Periode/Tahun ${getSortIcon(sortPelaporanCol, 'tahun', sortPelaporanAsc)}
                                             </th>
                                             <th class="p-3">Link Dokumen</th>
-                                            <th class="p-3 text-center w-24">Aksi</th>
+                                            ${isAdmin ? '<th class="p-3 text-center w-24">Aksi</th>' : ''}
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
-                                        ${listLapor.length === 0 ? '<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada dokumen pelaporan yang diinput.</td></tr>' : listLapor.map(d => `
+                                        ${listLapor.length === 0 ? `<tr><td colspan="${isAdmin ? 5 : 4}" class="p-6 text-center text-slate-400">Belum ada dokumen pelaporan yang diinput.</td></tr>` : listLapor.map(d => `
                                             <tr class="hover:bg-slate-50">
                                                 <td class="p-3 font-semibold text-slate-900">${d.nama}</td>
                                                 <td class="p-3"><span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full font-semibold text-[10px]">${d.kategori}</span></td>
                                                 <td class="p-3 text-center font-bold text-slate-700">${d.tahun}</td>
                                                 <td class="p-3"><a href="${d.link}" target="_blank" class="text-blue-600 underline font-semibold"><i class="fa-solid fa-link mr-1"></i>Buka</a></td>
-                                                <td class="p-3 text-center space-x-1">
-                                                    <button onclick="openUkurLaporModal('pelaporan', 'edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Edit Dokumen"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="deleteUkurLaporDoc('pelaporan', ${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus Dokumen"><i class="fa-solid fa-trash"></i></button>
-                                                </td>
+                                                ${isAdmin ? `
+                                                    <td class="p-3 text-center space-x-1">
+                                                        <button onclick="openUkurLaporModal('pelaporan', 'edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Edit Dokumen"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="deleteUkurLaporDoc('pelaporan', ${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus Dokumen"><i class="fa-solid fa-trash"></i></button>
+                                                    </td>
+                                                ` : ''}
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -956,39 +959,41 @@ function renderDashboardLayout() {
                     </div>
                 </div>
 
-                <!-- Modal Input / Edit Dokumen Pengukuran & Pelaporan -->
-                <div id="ukurLaporModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-                        <div class="flex justify-between items-center border-b pb-4">
-                            <h3 id="ukurLaporModalTitle" class="font-bold text-slate-900 text-base">Input Dokumen</h3>
-                            <button onclick="closeUkurLaporModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                ${isAdmin ? `
+                    <!-- Modal Input / Edit Dokumen Pengukuran & Pelaporan -->
+                    <div id="ukurLaporModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+                            <div class="flex justify-between items-center border-b pb-4">
+                                <h3 id="ukurLaporModalTitle" class="font-bold text-slate-900 text-base">Input Dokumen</h3>
+                                <button onclick="closeUkurLaporModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            </div>
+                            <form onsubmit="saveUkurLaporDoc(event)" class="space-y-4 text-sm">
+                                <input type="hidden" id="ukurLaporJenis" value="pengukuran">
+                                <input type="hidden" id="ukurLaporEditIdx" value="-1">
+                                <div>
+                                    <label class="block font-semibold mb-1">1. Nama Dokumen</label>
+                                    <input type="text" id="ulDocNama" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Masukkan nama dokumen...">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold mb-1">2. Kategori Dokumen</label>
+                                    <select id="ulDocKategori" class="w-full p-3 bg-slate-50 border rounded-xl font-medium"></select>
+                                </div>
+                                <div>
+                                    <label class="block font-semibold mb-1">Periode / Tahun</label>
+                                    <input type="text" id="ulDocTahun" required value="2025" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 2025 / TW 1 2025">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold mb-1">Link Dokumen (URL Google Drive / PDF)</label>
+                                    <input type="url" id="ulDocLink" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="https://drive.google.com/...">
+                                </div>
+                                <div class="flex justify-end space-x-2 pt-2">
+                                    <button type="button" onclick="closeUkurLaporModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button>
+                                    <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-xl font-semibold">Simpan Dokumen</button>
+                                </div>
+                            </form>
                         </div>
-                        <form onsubmit="saveUkurLaporDoc(event)" class="space-y-4 text-sm">
-                            <input type="hidden" id="ukurLaporJenis" value="pengukuran">
-                            <input type="hidden" id="ukurLaporEditIdx" value="-1">
-                            <div>
-                                <label class="block font-semibold mb-1">1. Nama Dokumen</label>
-                                <input type="text" id="ulDocNama" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Masukkan nama dokumen...">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">2. Kategori Dokumen</label>
-                                <select id="ulDocKategori" class="w-full p-3 bg-slate-50 border rounded-xl font-medium"></select>
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Periode / Tahun</label>
-                                <input type="text" id="ulDocTahun" required value="2025" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 2025 / TW 1 2025">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Link Dokumen (URL Google Drive / PDF)</label>
-                                <input type="url" id="ulDocLink" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="https://drive.google.com/...">
-                            </div>
-                            <div class="flex justify-end space-x-2 pt-2">
-                                <button type="button" onclick="closeUkurLaporModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button>
-                                <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-xl font-semibold">Simpan Dokumen</button>
-                            </div>
-                        </form>
                     </div>
-                </div>
+                ` : ''}
             `;
         }
 
