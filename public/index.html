@@ -149,12 +149,8 @@
                 { nama: 'RKA-KL Politeknik Industri Petrokimia Banten', kategori: 'RKA-KL', tahun: '2025', link: '#' },
                 { nama: 'Panduan IKU & Pengukuran Kinerja', kategori: 'IKU', tahun: '2025', link: '#' }
             ],
-            dokumenPengukuran: [
-                { nama: 'Perjanjian Kinerja (PK) Direktur 2025', kategori: 'Perjanjian Kinerja (PK)', tahun: '2025', link: '#' }
-            ],
-            dokumenPelaporan: [
-                { nama: 'Laporan Kinerja Instansi Pemerintah (LKjIP) 2025', kategori: 'LKjIP', tahun: '2025', link: '#' }
-            ],
+            dokumenPengukuran: [],
+            dokumenPelaporan: [],
             spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1qR_zS0ZUNKW5EU2oFGCVoGBxn7m2zh5c2Cf3cP2MveA/edit?usp=sharing"
         };
 
@@ -794,43 +790,70 @@ function renderDashboardLayout() {
             else if (tab === 'dokumen_ukur_lapor') renderDokumenUkurLaporView(content);
         }
 
-        // State Filter & Sort untuk Dokumen Pengukuran dan Dokumen Pelaporan
-        let filterKatPengukuran = 'Semua';
-        let filterThnPengukuran = 'Semua';
-        let sortPengukuranBy = 'nama';
+// State Sort Header Kolom untuk Dokumen Pengukuran & Pelaporan
+        let sortPengukuranCol = 'nama';
+        let sortPengukuranAsc = true;
 
-        let filterKatPelaporan = 'Semua';
-        let filterThnPelaporan = 'Semua';
-        let sortPelaporanBy = 'nama';
+        let sortPelaporanCol = 'nama';
+        let sortPelaporanAsc = true;
+
+        function toggleSortPengukuran(col) {
+            if (sortPengukuranCol === col) {
+                sortPengukuranAsc = !sortPengukuranAsc;
+            } else {
+                sortPengukuranCol = col;
+                sortPengukuranAsc = true;
+            }
+            renderDokumenUkurLaporView(document.getElementById('mainContent'));
+        }
+
+        function toggleSortPelaporan(col) {
+            if (sortPelaporanCol === col) {
+                sortPelaporanAsc = !sortPelaporanAsc;
+            } else {
+                sortPelaporanCol = col;
+                sortPelaporanAsc = true;
+            }
+            renderDokumenUkurLaporView(document.getElementById('mainContent'));
+        }
 
         function renderDokumenUkurLaporView(container) {
             document.getElementById('pageTitle').innerText = 'Dokumen Pengukuran & Dokumen Pelaporan Kinerja';
-            const isAdmin = currentUser.role === 'admin';
 
             if (!DB.dokumenPengukuran) DB.dokumenPengukuran = [];
             if (!DB.dokumenPelaporan) DB.dokumenPelaporan = [];
 
-            // Proses Filter & Sort Dokumen Pengukuran
+            // Hapus otomatis sisa data dummy lama jika sempat tersimpan di database
+            DB.dokumenPengukuran = DB.dokumenPengukuran.filter(d => !(d.nama === 'Perjanjian Kinerja (PK) Direktur 2025' && d.link === '#'));
+            DB.dokumenPelaporan = DB.dokumenPelaporan.filter(d => !(d.nama === 'Laporan Kinerja Instansi Pemerintah (LKjIP) 2025' && d.link === '#'));
+
+            // Sort Dokumen Pengukuran
             let listUkur = DB.dokumenPengukuran.map((d, originalIdx) => ({ ...d, originalIdx }));
-            if (filterKatPengukuran !== 'Semua') listUkur = listUkur.filter(d => d.kategori === filterKatPengukuran);
-            if (filterThnPengukuran !== 'Semua') listUkur = listUkur.filter(d => d.tahun === filterThnPengukuran);
-            listUkur.sort((a, b) => (a[sortPengukuranBy] || '').localeCompare(b[sortPengukuranBy] || ''));
+            listUkur.sort((a, b) => {
+                const valA = (a[sortPengukuranCol] || '').toString().toLowerCase();
+                const valB = (b[sortPengukuranCol] || '').toString().toLowerCase();
+                return sortPengukuranAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            });
 
-            // Proses Filter & Sort Dokumen Pelaporan
+            // Sort Dokumen Pelaporan
             let listLapor = DB.dokumenPelaporan.map((d, originalIdx) => ({ ...d, originalIdx }));
-            if (filterKatPelaporan !== 'Semua') listLapor = listLapor.filter(d => d.kategori === filterKatPelaporan);
-            if (filterThnPelaporan !== 'Semua') listLapor = listLapor.filter(d => d.tahun === filterThnPelaporan);
-            listLapor.sort((a, b) => (a[sortPelaporanBy] || '').localeCompare(b[sortPelaporanBy] || ''));
+            listLapor.sort((a, b) => {
+                const valA = (a[sortPelaporanCol] || '').toString().toLowerCase();
+                const valB = (b[sortPelaporanCol] || '').toString().toLowerCase();
+                return sortPelaporanAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            });
 
-            const tahunUkurUnik = Array.from(new Set(['2025', '2026', '2027', '2028', '2029', ...DB.dokumenPengukuran.map(d => d.tahun)]));
-            const tahunLaporUnik = Array.from(new Set(['2025', '2026', '2027', '2028', '2029', ...DB.dokumenPelaporan.map(d => d.tahun)]));
+            const getSortIcon = (currentCol, targetCol, isAsc) => {
+                if (currentCol !== targetCol) return '<i class="fa-solid fa-sort text-slate-300 ml-1"></i>';
+                return isAsc ? '<i class="fa-solid fa-sort-up text-blue-600 ml-1"></i>' : '<i class="fa-solid fa-sort-down text-blue-600 ml-1"></i>';
+            };
 
             container.innerHTML = `
                 <div class="animate-fadeIn">
                     <!-- Grid 2 Kolom (Pemisahan Vertikal Kiri & Kanan) -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start relative">
                         
-                        <!-- KOLOM KIRI: DOKUMEN PENGUKURAN -->
+                        <!-- KOLOM KIRI: DOKUMEN PENGUKURAN KINERJA -->
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
                                 <div>
@@ -839,67 +862,40 @@ function renderDashboardLayout() {
                                     </h3>
                                     <p class="text-xs text-slate-500">PK, SK IKU, Manual IKU, Matriks Cascading, Rencana Aksi</p>
                                 </div>
-                                ${isAdmin ? `
-                                    <button onclick="openUkurLaporModal('pengukuran')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
-                                        <i class="fa-solid fa-plus"></i><span>Tambah Pengukuran</span>
-                                    </button>
-                                ` : ''}
+                                <button onclick="openUkurLaporModal('pengukuran', 'add')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
+                                    <i class="fa-solid fa-plus"></i><span>Input Dokumen</span>
+                                </button>
                             </div>
 
-                            <!-- Bar Filter & Sort Dokumen Pengukuran -->
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-xs">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filter Kategori</label>
-                                    <select onchange="filterKatPengukuran = this.value; renderDokumenUkurLaporView(document.getElementById('mainContent'));" class="w-full p-2 bg-white border rounded-lg font-semibold text-slate-700">
-                                        <option value="Semua" ${filterKatPengukuran === 'Semua' ? 'selected' : ''}>Semua Kategori</option>
-                                        <option value="Perjanjian Kinerja (PK)" ${filterKatPengukuran === 'Perjanjian Kinerja (PK)' ? 'selected' : ''}>Perjanjian Kinerja (PK)</option>
-                                        <option value="SK IKU & Manual IKU" ${filterKatPengukuran === 'SK IKU & Manual IKU' ? 'selected' : ''}>SK IKU & Manual IKU</option>
-                                        <option value="Rencana Aksi Kinerja" ${filterKatPengukuran === 'Rencana Aksi Kinerja' ? 'selected' : ''}>Rencana Aksi Kinerja</option>
-                                        <option value="Instrumen Pengukuran" ${filterKatPengukuran === 'Instrumen Pengukuran' ? 'selected' : ''}>Instrumen Pengukuran</option>
-                                        <option value="Lainnya" ${filterKatPengukuran === 'Lainnya' ? 'selected' : ''}>Lainnya</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filter Tahun</label>
-                                    <select onchange="filterThnPengukuran = this.value; renderDokumenUkurLaporView(document.getElementById('mainContent'));" class="w-full p-2 bg-white border rounded-lg font-semibold text-slate-700">
-                                        <option value="Semua" ${filterThnPengukuran === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                        ${tahunUkurUnik.map(t => `<option value="${t}" ${filterThnPengukuran === t ? 'selected' : ''}>${t}</option>`).join('')}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Urutkan (Sort)</label>
-                                    <select onchange="sortPengukuranBy = this.value; renderDokumenUkurLaporView(document.getElementById('mainContent'));" class="w-full p-2 bg-white border rounded-lg font-semibold text-blue-700">
-                                        <option value="nama" ${sortPengukuranBy === 'nama' ? 'selected' : ''}>Nama Dokumen</option>
-                                        <option value="kategori" ${sortPengukuranBy === 'kategori' ? 'selected' : ''}>Kategori Dokumen</option>
-                                        <option value="tahun" ${sortPengukuranBy === 'tahun' ? 'selected' : ''}>Periode / Tahun</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Tabel Dokumen Pengukuran -->
+                            <!-- Tabel Dokumen Pengukuran (Sort dari Header Kolom) -->
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse text-xs">
-                                    <thead class="bg-slate-50 text-slate-700 font-semibold border-b">
+                                    <thead class="bg-slate-50 text-slate-700 font-semibold border-b select-none">
                                         <tr>
-                                            <th class="p-3">1. Nama Dokumen</th>
-                                            <th class="p-3">2. Kategori Dokumen</th>
-                                            <th class="p-3 text-center">Periode/Tahun</th>
+                                            <th onclick="toggleSortPengukuran('nama')" class="p-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                                                1. Nama Dokumen ${getSortIcon(sortPengukuranCol, 'nama', sortPengukuranAsc)}
+                                            </th>
+                                            <th onclick="toggleSortPengukuran('kategori')" class="p-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                                                2. Kategori Dokumen ${getSortIcon(sortPengukuranCol, 'kategori', sortPengukuranAsc)}
+                                            </th>
+                                            <th onclick="toggleSortPengukuran('tahun')" class="p-3 text-center cursor-pointer hover:bg-slate-100 transition-colors">
+                                                Periode/Tahun ${getSortIcon(sortPengukuranCol, 'tahun', sortPengukuranAsc)}
+                                            </th>
                                             <th class="p-3">Link Dokumen</th>
-                                            ${isAdmin ? '<th class="p-3 text-center">Aksi</th>' : ''}
+                                            <th class="p-3 text-center w-24">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
-                                        ${listUkur.length === 0 ? '<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada dokumen pengukuran pada filter ini.</td></tr>' : listUkur.map(d => `
+                                        ${listUkur.length === 0 ? '<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada dokumen pengukuran yang diinput.</td></tr>' : listUkur.map(d => `
                                             <tr class="hover:bg-slate-50">
                                                 <td class="p-3 font-semibold text-slate-900">${d.nama}</td>
                                                 <td class="p-3"><span class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full font-semibold text-[10px]">${d.kategori}</span></td>
                                                 <td class="p-3 text-center font-bold text-slate-700">${d.tahun}</td>
                                                 <td class="p-3"><a href="${d.link}" target="_blank" class="text-blue-600 underline font-semibold"><i class="fa-solid fa-link mr-1"></i>Buka</a></td>
-                                                ${isAdmin ? `
-                                                    <td class="p-3 text-center">
-                                                        <button onclick="deleteUkurLaporDoc('pengukuran', ${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                                                    </td>
-                                                ` : ''}
+                                                <td class="p-3 text-center space-x-1">
+                                                    <button onclick="openUkurLaporModal('pengukuran', 'edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Edit Dokumen"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="deleteUkurLaporDoc('pengukuran', ${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus Dokumen"><i class="fa-solid fa-trash"></i></button>
+                                                </td>
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -907,7 +903,7 @@ function renderDashboardLayout() {
                             </div>
                         </div>
 
-                        <!-- KOLOM KANAN: DOKUMEN PELAPORAN -->
+                        <!-- KOLOM KANAN: DOKUMEN PELAPORAN KINERJA -->
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
                                 <div>
@@ -916,67 +912,40 @@ function renderDashboardLayout() {
                                     </h3>
                                     <p class="text-xs text-slate-500">LKjIP, Laporan Triwulanan, Laporan Tahunan, Evaluasi SAKIP</p>
                                 </div>
-                                ${isAdmin ? `
-                                    <button onclick="openUkurLaporModal('pelaporan')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
-                                        <i class="fa-solid fa-plus"></i><span>Tambah Pelaporan</span>
-                                    </button>
-                                ` : ''}
+                                <button onclick="openUkurLaporModal('pelaporan', 'add')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
+                                    <i class="fa-solid fa-plus"></i><span>Input Dokumen</span>
+                                </button>
                             </div>
 
-                            <!-- Bar Filter & Sort Dokumen Pelaporan -->
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-xs">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filter Kategori</label>
-                                    <select onchange="filterKatPelaporan = this.value; renderDokumenUkurLaporView(document.getElementById('mainContent'));" class="w-full p-2 bg-white border rounded-lg font-semibold text-slate-700">
-                                        <option value="Semua" ${filterKatPelaporan === 'Semua' ? 'selected' : ''}>Semua Kategori</option>
-                                        <option value="LKjIP" ${filterKatPelaporan === 'LKjIP' ? 'selected' : ''}>LKjIP</option>
-                                        <option value="Laporan Kinerja Triwulanan" ${filterKatPelaporan === 'Laporan Kinerja Triwulanan' ? 'selected' : ''}>Laporan Kinerja Triwulanan</option>
-                                        <option value="Laporan Tahunan" ${filterKatPelaporan === 'Laporan Tahunan' ? 'selected' : ''}>Laporan Tahunan</option>
-                                        <option value="Laporan Evaluasi SAKIP" ${filterKatPelaporan === 'Laporan Evaluasi SAKIP' ? 'selected' : ''}>Laporan Evaluasi SAKIP</option>
-                                        <option value="Lainnya" ${filterKatPelaporan === 'Lainnya' ? 'selected' : ''}>Lainnya</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filter Tahun</label>
-                                    <select onchange="filterThnPelaporan = this.value; renderDokumenUkurLaporView(document.getElementById('mainContent'));" class="w-full p-2 bg-white border rounded-lg font-semibold text-slate-700">
-                                        <option value="Semua" ${filterThnPelaporan === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                        ${tahunLaporUnik.map(t => `<option value="${t}" ${filterThnPelaporan === t ? 'selected' : ''}>${t}</option>`).join('')}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Urutkan (Sort)</label>
-                                    <select onchange="sortPelaporanBy = this.value; renderDokumenUkurLaporView(document.getElementById('mainContent'));" class="w-full p-2 bg-white border rounded-lg font-semibold text-emerald-700">
-                                        <option value="nama" ${sortPelaporanBy === 'nama' ? 'selected' : ''}>Nama Dokumen</option>
-                                        <option value="kategori" ${sortPelaporanBy === 'kategori' ? 'selected' : ''}>Kategori Dokumen</option>
-                                        <option value="tahun" ${sortPelaporanBy === 'tahun' ? 'selected' : ''}>Periode / Tahun</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Tabel Dokumen Pelaporan -->
+                            <!-- Tabel Dokumen Pelaporan (Sort dari Header Kolom) -->
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse text-xs">
-                                    <thead class="bg-slate-50 text-slate-700 font-semibold border-b">
+                                    <thead class="bg-slate-50 text-slate-700 font-semibold border-b select-none">
                                         <tr>
-                                            <th class="p-3">1. Nama Dokumen</th>
-                                            <th class="p-3">2. Kategori Dokumen</th>
-                                            <th class="p-3 text-center">Periode/Tahun</th>
+                                            <th onclick="toggleSortPelaporan('nama')" class="p-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                                                1. Nama Dokumen ${getSortIcon(sortPelaporanCol, 'nama', sortPelaporanAsc)}
+                                            </th>
+                                            <th onclick="toggleSortPelaporan('kategori')" class="p-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                                                2. Kategori Dokumen ${getSortIcon(sortPelaporanCol, 'kategori', sortPelaporanAsc)}
+                                            </th>
+                                            <th onclick="toggleSortPelaporan('tahun')" class="p-3 text-center cursor-pointer hover:bg-slate-100 transition-colors">
+                                                Periode/Tahun ${getSortIcon(sortPelaporanCol, 'tahun', sortPelaporanAsc)}
+                                            </th>
                                             <th class="p-3">Link Dokumen</th>
-                                            ${isAdmin ? '<th class="p-3 text-center">Aksi</th>' : ''}
+                                            <th class="p-3 text-center w-24">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
-                                        ${listLapor.length === 0 ? '<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada dokumen pelaporan pada filter ini.</td></tr>' : listLapor.map(d => `
+                                        ${listLapor.length === 0 ? '<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada dokumen pelaporan yang diinput.</td></tr>' : listLapor.map(d => `
                                             <tr class="hover:bg-slate-50">
                                                 <td class="p-3 font-semibold text-slate-900">${d.nama}</td>
                                                 <td class="p-3"><span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full font-semibold text-[10px]">${d.kategori}</span></td>
                                                 <td class="p-3 text-center font-bold text-slate-700">${d.tahun}</td>
                                                 <td class="p-3"><a href="${d.link}" target="_blank" class="text-blue-600 underline font-semibold"><i class="fa-solid fa-link mr-1"></i>Buka</a></td>
-                                                ${isAdmin ? `
-                                                    <td class="p-3 text-center">
-                                                        <button onclick="deleteUkurLaporDoc('pelaporan', ${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                                                    </td>
-                                                ` : ''}
+                                                <td class="p-3 text-center space-x-1">
+                                                    <button onclick="openUkurLaporModal('pelaporan', 'edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Edit Dokumen"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="deleteUkurLaporDoc('pelaporan', ${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus Dokumen"><i class="fa-solid fa-trash"></i></button>
+                                                </td>
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -987,15 +956,16 @@ function renderDashboardLayout() {
                     </div>
                 </div>
 
-                <!-- Modal Tambah Dokumen Pengukuran / Pelaporan -->
+                <!-- Modal Input / Edit Dokumen Pengukuran & Pelaporan -->
                 <div id="ukurLaporModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 id="ukurLaporModalTitle" class="font-bold text-slate-900 text-base">Tambah Dokumen</h3>
+                            <h3 id="ukurLaporModalTitle" class="font-bold text-slate-900 text-base">Input Dokumen</h3>
                             <button onclick="closeUkurLaporModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveUkurLaporDoc(event)" class="space-y-4 text-sm">
                             <input type="hidden" id="ukurLaporJenis" value="pengukuran">
+                            <input type="hidden" id="ukurLaporEditIdx" value="-1">
                             <div>
                                 <label class="block font-semibold mb-1">1. Nama Dokumen</label>
                                 <input type="text" id="ulDocNama" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Masukkan nama dokumen...">
@@ -1022,15 +992,14 @@ function renderDashboardLayout() {
             `;
         }
 
-        function openUkurLaporModal(jenis) {
+        function openUkurLaporModal(jenis, mode = 'add', idx = -1) {
             document.getElementById('ukurLaporJenis').value = jenis;
+            document.getElementById('ukurLaporEditIdx').value = mode === 'edit' ? idx : -1;
             const titleEl = document.getElementById('ukurLaporModalTitle');
             const katSelect = document.getElementById('ulDocKategori');
-            document.getElementById('ulDocNama').value = '';
-            document.getElementById('ulDocLink').value = '';
 
             if (jenis === 'pengukuran') {
-                titleEl.innerText = 'Tambah Dokumen Pengukuran Kinerja';
+                titleEl.innerText = mode === 'edit' ? 'Edit Dokumen Pengukuran Kinerja' : 'Input Dokumen Pengukuran Kinerja';
                 katSelect.innerHTML = `
                     <option value="Perjanjian Kinerja (PK)">Perjanjian Kinerja (PK)</option>
                     <option value="SK IKU & Manual IKU">SK IKU & Manual IKU</option>
@@ -1039,7 +1008,7 @@ function renderDashboardLayout() {
                     <option value="Lainnya">Lainnya</option>
                 `;
             } else {
-                titleEl.innerText = 'Tambah Dokumen Pelaporan Kinerja';
+                titleEl.innerText = mode === 'edit' ? 'Edit Dokumen Pelaporan Kinerja' : 'Input Dokumen Pelaporan Kinerja';
                 katSelect.innerHTML = `
                     <option value="LKjIP">LKjIP</option>
                     <option value="Laporan Kinerja Triwulanan">Laporan Kinerja Triwulanan</option>
@@ -1047,6 +1016,21 @@ function renderDashboardLayout() {
                     <option value="Laporan Evaluasi SAKIP">Laporan Evaluasi SAKIP</option>
                     <option value="Lainnya">Lainnya</option>
                 `;
+            }
+
+            if (mode === 'edit' && idx !== -1) {
+                const targetArr = jenis === 'pengukuran' ? DB.dokumenPengukuran : DB.dokumenPelaporan;
+                const item = targetArr[idx];
+                if (item) {
+                    document.getElementById('ulDocNama').value = item.nama || '';
+                    document.getElementById('ulDocKategori').value = item.kategori || '';
+                    document.getElementById('ulDocTahun').value = item.tahun || '2025';
+                    document.getElementById('ulDocLink').value = item.link || '';
+                }
+            } else {
+                document.getElementById('ulDocNama').value = '';
+                document.getElementById('ulDocTahun').value = '2025';
+                document.getElementById('ulDocLink').value = '';
             }
 
             const modal = document.getElementById('ukurLaporModal');
@@ -1063,7 +1047,8 @@ function renderDashboardLayout() {
         async function saveUkurLaporDoc(e) {
             e.preventDefault();
             const jenis = document.getElementById('ukurLaporJenis').value;
-            const newDoc = {
+            const editIdx = parseInt(document.getElementById('ukurLaporEditIdx').value);
+            const docData = {
                 nama: document.getElementById('ulDocNama').value.trim(),
                 kategori: document.getElementById('ulDocKategori').value,
                 tahun: document.getElementById('ulDocTahun').value.trim(),
@@ -1072,12 +1057,22 @@ function renderDashboardLayout() {
 
             if (jenis === 'pengukuran') {
                 if (!DB.dokumenPengukuran) DB.dokumenPengukuran = [];
-                DB.dokumenPengukuran.push(newDoc);
-                showToast('Dokumen Pengukuran berhasil ditambahkan!');
+                if (editIdx !== -1 && DB.dokumenPengukuran[editIdx]) {
+                    DB.dokumenPengukuran[editIdx] = docData;
+                    showToast('Dokumen Pengukuran berhasil diperbarui!');
+                } else {
+                    DB.dokumenPengukuran.push(docData);
+                    showToast('Dokumen Pengukuran berhasil ditambahkan!');
+                }
             } else {
                 if (!DB.dokumenPelaporan) DB.dokumenPelaporan = [];
-                DB.dokumenPelaporan.push(newDoc);
-                showToast('Dokumen Pelaporan berhasil ditambahkan!');
+                if (editIdx !== -1 && DB.dokumenPelaporan[editIdx]) {
+                    DB.dokumenPelaporan[editIdx] = docData;
+                    showToast('Dokumen Pelaporan berhasil diperbarui!');
+                } else {
+                    DB.dokumenPelaporan.push(docData);
+                    showToast('Dokumen Pelaporan berhasil ditambahkan!');
+                }
             }
 
             await saveToMySQL();
@@ -1096,7 +1091,6 @@ function renderDashboardLayout() {
             showToast('Dokumen berhasil dihapus.', 'info');
             renderDokumenUkurLaporView(document.getElementById('mainContent'));
         }
-
         function renderRenstraView(container) {
             document.getElementById('pageTitle').innerText = currentUser.role === 'admin' ? 'Input & Manajemen Renstra (Tier 1-4)' : 'View Renstra (Hierarki Kemenperin s.d Indikator)';
             const isAdmin = currentUser.role === 'admin';
@@ -1688,15 +1682,16 @@ function renderDashboardLayout() {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y">
-                                    ${getSortedDokumen().length === 0 ? '<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada dokumen perencanaan terinput.</td></tr>' : getSortedDokumen().map((d, idx) => `
+                                    ${getSortedDokumen().length === 0 ? '<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada dokumen perencanaan terinput.</td></tr>' : getSortedDokumen().map((d) => `
                                         <tr class="hover:bg-slate-50">
                                             <td class="p-3 font-semibold text-slate-900">${d.nama}</td>
                                             <td class="p-3"><span class="px-2.5 py-1 bg-blue-50 text-primary-700 rounded-full font-medium text-[10px]">${d.kategori}</span></td>
                                             <td class="p-3 text-center font-bold text-slate-700">${d.tahun}</td>
                                             <td class="p-3"><a href="${d.link}" target="_blank" class="text-blue-600 underline font-medium"><i class="fa-solid fa-link mr-1"></i> Buka Dokumen</a></td>
                                             ${isAdmin ? `
-                                                <td class="p-3 text-center">
-                                                    <button onclick="deleteDokumen(${idx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                <td class="p-3 text-center space-x-1">
+                                                    <button onclick="openDokumenModal('edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-primary-700 rounded hover:bg-blue-200" title="Edit Dokumen"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="deleteDokumen(${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus Dokumen"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -1707,14 +1702,15 @@ function renderDashboardLayout() {
                     </div>
                 </div>
 
-                <!-- Modal Tambah Dokumen -->
+                <!-- Modal Tambah / Edit Dokumen Perencanaan -->
                 <div id="dokumenModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">Tambah Dokumen Perencanaan</h3>
+                            <h3 id="dokumenModalTitle" class="font-bold text-slate-900 text-base">Tambah Dokumen Perencanaan</h3>
                             <button onclick="closeDokumenModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveDokumen(event)" class="space-y-4 text-sm">
+                            <input type="hidden" id="editDokumenIdx" value="-1">
                             <div>
                                 <label class="block font-semibold mb-1">Nama Dokumen</label>
                                 <input type="text" id="docNama" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: Renstra Politeknik 2025-2029">
@@ -1739,7 +1735,7 @@ function renderDashboardLayout() {
                             </div>
                             <div class="flex justify-end space-x-2 pt-2">
                                 <button type="button" onclick="closeDokumenModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button>
-                                <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-xl">Simpan Dokumen</button>
+                                <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-xl font-semibold">Simpan Dokumen</button>
                             </div>
                         </form>
                     </div>
@@ -1749,35 +1745,71 @@ function renderDashboardLayout() {
 
         function getSortedDokumen() {
             const sortBy = document.getElementById('sortDokumenBy') ? document.getElementById('sortDokumenBy').value : 'nama';
-            let docs = [...DB.dokumenPerencanaan];
+            let docs = (DB.dokumenPerencanaan || []).map((d, originalIdx) => ({ ...d, originalIdx }));
             if (sortBy === 'nama') {
-                docs.sort((a, b) => a.nama.localeCompare(b.nama));
+                docs.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
             } else if (sortBy === 'tahun') {
-                docs.sort((a, b) => a.tahun.localeCompare(b.tahun));
+                docs.sort((a, b) => (a.tahun || '').localeCompare(b.tahun || ''));
             } else if (sortBy === 'kategori') {
-                docs.sort((a, b) => a.kategori.localeCompare(b.kategori));
+                docs.sort((a, b) => (a.kategori || '').localeCompare(b.kategori || ''));
             }
             return docs;
         }
 
-        function openDokumenModal() { document.getElementById('dokumenModal').classList.remove('hidden'); document.getElementById('dokumenModal').classList.add('flex'); }
-        function closeDokumenModal() { document.getElementById('dokumenModal').classList.remove('flex'); document.getElementById('dokumenModal').classList.add('hidden'); }
+        function openDokumenModal(mode = 'add', idx = -1) {
+            const modal = document.getElementById('dokumenModal');
+            const titleEl = document.getElementById('dokumenModalTitle');
+            document.getElementById('editDokumenIdx').value = mode === 'edit' ? idx : -1;
+
+            if (mode === 'edit' && idx !== -1 && DB.dokumenPerencanaan[idx]) {
+                const item = DB.dokumenPerencanaan[idx];
+                if (titleEl) titleEl.innerText = 'Edit Dokumen Perencanaan';
+                document.getElementById('docNama').value = item.nama || '';
+                document.getElementById('docKategori').value = item.kategori || 'Renstra';
+                document.getElementById('docTahun').value = item.tahun || '';
+                document.getElementById('docLink').value = item.link || '';
+            } else {
+                if (titleEl) titleEl.innerText = 'Tambah Dokumen Perencanaan';
+                document.getElementById('docNama').value = '';
+                document.getElementById('docKategori').value = 'Renstra';
+                document.getElementById('docTahun').value = '';
+                document.getElementById('docLink').value = '';
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeDokumenModal() {
+            document.getElementById('dokumenModal').classList.remove('flex');
+            document.getElementById('dokumenModal').classList.add('hidden');
+        }
         
         async function saveDokumen(e) {
             e.preventDefault();
-            DB.dokumenPerencanaan.push({
-                nama: document.getElementById('docNama').value,
+            const editIdx = parseInt(document.getElementById('editDokumenIdx').value);
+            const docObj = {
+                nama: document.getElementById('docNama').value.trim(),
                 kategori: document.getElementById('docKategori').value,
-                tahun: document.getElementById('docTahun').value,
-                link: document.getElementById('docLink').value
-            });
+                tahun: document.getElementById('docTahun').value.trim(),
+                link: document.getElementById('docLink').value.trim()
+            };
+
+            if (editIdx !== -1 && DB.dokumenPerencanaan[editIdx]) {
+                DB.dokumenPerencanaan[editIdx] = docObj;
+                showToast('Dokumen perencanaan berhasil diperbarui!');
+            } else {
+                DB.dokumenPerencanaan.push(docObj);
+                showToast('Dokumen perencanaan berhasil ditambahkan!');
+            }
+
             await saveToMySQL();
             closeDokumenModal();
-            showToast('Dokumen perencanaan berhasil ditambahkan!');
             renderDokumenView(document.getElementById('mainContent'));
         }
 
         async function deleteDokumen(idx) {
+            if (!confirm('Apakah Anda yakin ingin menghapus dokumen perencanaan ini?')) return;
             DB.dokumenPerencanaan.splice(idx, 1);
             await saveToMySQL();
             showToast('Dokumen dihapus.', 'info');
@@ -2426,13 +2458,13 @@ function renderCascadingView(container) {
             let filteredDir = [...DB.cascadingDirektur];
             if (filterCascadingTahun !== 'Semua') filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
 
+            // Disamakan dengan tampilan Direktur: menampilkan seluruh Tim Kerja & Unit tanpa difilter per role tim_kerja
             let filteredTim = [...DB.cascadingTim];
-            if (isKetuaTim) filteredTim = filteredTim.filter(c => c.timKey === currentUser.timKey);
             if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
-<!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG KONEKTOR & FILTER TAHUN -->
+                    <!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG KONEKTOR & FILTER TAHUN -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -2442,6 +2474,7 @@ function renderCascadingView(container) {
                             <div class="flex items-center space-x-2">
                                 <label class="text-xs font-semibold text-slate-600">Filter Tahun Pohon:</label>
                                 <select onchange="filterCascadingTahun = this.value; renderCascadingView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700">
+                                    <option value="Semua" ${filterCascadingTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
                                     <option value="2025" ${filterCascadingTahun === '2025' ? 'selected' : ''}>2025</option>
                                     <option value="2026" ${filterCascadingTahun === '2026' ? 'selected' : ''}>2026</option>
                                     <option value="2027" ${filterCascadingTahun === '2027' ? 'selected' : ''}>2027</option>
