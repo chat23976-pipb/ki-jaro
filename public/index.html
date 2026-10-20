@@ -1239,8 +1239,24 @@ function renderDashboardLayout() {
                     anggaran2028: parseFloat(document.getElementById('r_ang2028').value) || 0,
                     anggaran2029: parseFloat(document.getElementById('r_ang2029').value) || 0
                 };
-                if (isEdit) DB.renstraIndikatorKinerja[editingRenstraIndex] = data;
-                else DB.renstraIndikatorKinerja.push(data);
+               if (isEdit) {
+                    const oldName = DB.renstraIndikatorKinerja[editingRenstraIndex].namaIndikator;
+                    DB.renstraIndikatorKinerja[editingRenstraIndex] = data;
+                    // Otomatis mengupdate nama & target di Cascading Direktur, Tim, Capaian, dan Risiko
+                    DB.cascadingDirektur.forEach(cd => {
+                        if (cd.indikatorId === data.id || cd.target === oldName) {
+                            cd.target = data.namaIndikator;
+                            cd.satuan = data.satuan;
+                            cd.targetVal = data['target' + (cd.tahun || '2025')];
+                            cd.anggaran = data['anggaran' + (cd.tahun || '2025')];
+                        }
+                    });
+                    DB.cascadingTim.forEach(ct => { if (ct.targetDirektur === oldName) ct.targetDirektur = data.namaIndikator; });
+                    DB.capaian.forEach(cp => { if (cp.targetDirektur === oldName) { cp.targetDirektur = data.namaIndikator; cp.satuan = data.satuan; } });
+                    DB.risiko.forEach(rk => { if (rk.targetDirektur === oldName) rk.targetDirektur = data.namaIndikator; });
+                } else {
+                    DB.renstraIndikatorKinerja.push(data);
+                }
             }
             await saveToMySQL();
             closeRenstraModal();
@@ -2210,9 +2226,10 @@ function renderCascadingView(container) {
                                                     ${c.timKeys.map(t => `<span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${t}</span>`).join('')}
                                                 </div>
                                             </td>
-                                            ${isDirektur ? `
-                                                <td class="p-4 text-center">
-                                                    <button onclick="confirmDeleteCascadingDir(${idx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                            ${(isDirektur || currentUser.role === 'admin') ? `
+                                                <td class="p-4 text-center space-x-1">
+                                                    <button onclick="openEditCascadingDirModal('${c.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="confirmDeleteCascadingDir('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -2253,9 +2270,10 @@ function renderCascadingView(container) {
                                                     ${c.unitTargets.map(u => `<span class="px-2.5 py-1 bg-blue-50 text-primary-700 text-xs rounded-full font-medium">${u}</span>`).join('')}
                                                 </div>
                                             </td>
-                                            ${isKetuaTim ? `
-                                                <td class="p-4 text-center">
-                                                    <button onclick="confirmDeleteCascadingTim(${idx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                            ${(isKetuaTim || currentUser.role === 'admin') ? `
+                                                <td class="p-4 text-center space-x-1">
+                                                    <button onclick="openEditCascadingTimModal('${c.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="confirmDeleteCascadingTim('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -2405,16 +2423,57 @@ function renderCascadingView(container) {
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        async function confirmDeleteCascadingDir(idx) {
+        function openEditCascadingDirModal(id) {
+            const item = DB.cascadingDirektur.find(x => x.id === id);
+            if (!item) return;
+            openCascadingDirModal();
+            document.getElementById('dirTahunTarget').value = item.tahun || '2025';
+            updateDirRenstraOptions(item.tahun || '2025');
+            document.getElementById('dirIndikatorRenstra').value = item.indikatorId;
+            updateDirAnggaranPreview();
+            document.querySelectorAll('input[name="timCheck"]').forEach(chk => {
+                chk.checked = item.timKeys.includes(chk.value);
+            });
+            document.getElementById('cascadingDirModal').setAttribute('data-edit-id', id);
+        }
+
+        async function confirmDeleteCascadingDir(id) {
+            const idx = DB.cascadingDirektur.findIndex(x => x.id === id);
+            if (idx === -1) return;
             const item = DB.cascadingDirektur[idx];
-            if (confirm(`Apakah Anda yakin ingin menghapus cascading indikator "${item.target}"?\nMenghapus ini juga akan menghapus cascading lanjutan di Ketua Tim Kerja yang terkait, serta data capaian dan risiko unit terkait.`)) {
-                DB.cascadingTim = DB.cascadingTim.filter(ct => ct.targetDirektur !== item.target);
-                DB.capaian = DB.capaian.filter(c => c.targetDirektur !== item.target);
-                DB.risiko = DB.risiko.filter(r => r.targetDirektur !== item.target);
+            if (confirm(`Apakah Anda yakin ingin menghapus cascading indikator "${item.target}" (Tahun ${item.tahun || '2025'})?\nMenghapus ini juga akan mengupdate Pohon Cascading, Tim Kerja, Capaian, dan Risiko terkait.`)) {
+                DB.cascadingTim = DB.cascadingTim.filter(ct => !(ct.targetDirektur === item.target && (ct.tahun || '2025') === (item.tahun || '2025')));
+                DB.capaian = DB.capaian.filter(c => !(c.targetDirektur === item.target && (c.tahun || '2025') === (item.tahun || '2025')));
+                DB.risiko = DB.risiko.filter(r => !(r.targetDirektur === item.target && (r.tahun || '2025') === (item.tahun || '2025')));
                 
                 DB.cascadingDirektur.splice(idx, 1);
                 await saveToMySQL();
-                showToast('Cascading Direktur dan data terkait berhasil dihapus.', 'info');
+                showToast('Cascading Direktur dan Pohon Kinerja berhasil diperbarui.', 'info');
+                renderCascadingView(document.getElementById('mainContent'));
+            }
+        }
+
+        function openEditCascadingTimModal(id) {
+            const item = DB.cascadingTim.find(x => x.id === id);
+            if (!item) return;
+            openCascadingTimModal();
+            document.getElementById('timTahunTarget').value = item.tahun || '2025';
+            updateTimDirRefOptions(item.tahun || '2025');
+            document.getElementById('timDirRef').value = item.targetDirektur;
+            document.querySelectorAll('input[name="unitCheck"]').forEach(chk => {
+                chk.checked = item.unitTargets.includes(chk.value);
+            });
+            document.getElementById('cascadingTimModal').setAttribute('data-edit-id', id);
+        }
+
+        async function confirmDeleteCascadingTim(id) {
+            const idx = DB.cascadingTim.findIndex(x => x.id === id);
+            if (idx === -1) return;
+            const item = DB.cascadingTim[idx];
+            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}" (Tahun ${item.tahun || '2025'})?`)) {
+                DB.cascadingTim.splice(idx, 1);
+                await saveToMySQL();
+                showToast('Cascading Tim & Pohon Kinerja diperbarui.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
         }
