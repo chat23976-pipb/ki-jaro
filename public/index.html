@@ -3034,12 +3034,7 @@ function renderCascadingView(container) {
 
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h3 class="font-bold text-slate-900 text-base">Kelola Program & Capaian Kinerja</h3>
-                            <p class="text-xs text-slate-500">Target ditetapkan oleh Direktur (terkunci otomatis). Unit hanya menginput realisasi & bukti kinerja.</p>
-                        </div>
-                        <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-3">
                             <div>
                                 <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Tahun</label>
                                 <select onchange="filterCapaianTahun = this.value; renderCapaianView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
@@ -3051,6 +3046,32 @@ function renderCascadingView(container) {
                                     <option value="2029" ${filterCapaianTahun === '2029' ? 'selected' : ''}>2029</option>
                                 </select>
                             </div>
+
+                            <!-- === TAMBAHKAN TOMBOL DI BAWAH INI === -->
+                            <button onclick="downloadTemplateCapaian()" class="mt-5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
+                                <i class="fa-solid fa-download"></i>
+                                <span>Template Capaian</span>
+                            </button>
+
+                            <label class="mt-5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow cursor-pointer">
+                                <i class="fa-solid fa-file-excel"></i>
+                                <span>Import Capaian</span>
+                                <input type="file" id="importCapaianFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportCapaian(event)">
+                            </label>
+
+                            <button id="btnDownloadLogCapaian" onclick="downloadLogCapaianError()" class="mt-5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow hidden">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Log Error Capaian</span>
+                            </button>
+                            <!-- ===================================== -->
+
+                            ${isKaUnit ? `
+                                <button onclick="openCapaianModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
+                                    <i class="fa-solid fa-plus"></i>
+                                    <span>Input Program Baru</span>
+                                </button>
+                            ` : ''}
+                        </div>
                             ${isKaUnit ? `
                                 <button onclick="openCapaianModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
                                     <i class="fa-solid fa-plus"></i>
@@ -3693,12 +3714,7 @@ async function confirmDeleteCapaian(id) {
                         </div>
                     </div>
 
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h3 class="font-bold text-slate-900 text-base">Manajemen Risiko & Pengendalian (Sheet: Program Kerja dan Peta Resiko)</h3>
-                            <p class="text-xs text-slate-500">Sesuai Matriks Analisis Risiko 5x5 dengan filter tahun</p>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex flex-wrap items-center gap-3">
                             <div>
                                 <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Tahun</label>
                                 <select onchange="filterRisikoTahun = this.value; renderRisikoView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
@@ -3710,6 +3726,36 @@ async function confirmDeleteCapaian(id) {
                                     <option value="2029" ${filterRisikoTahun === '2029' ? 'selected' : ''}>2029</option>
                                 </select>
                             </div>
+
+                            <!-- === TAMBAHKAN TOMBOL DI SINI === -->
+                            <button onclick="downloadTemplateRisiko()" class="mt-5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
+                                <i class="fa-solid fa-download"></i>
+                                <span>Template Risiko</span>
+                            </button>
+
+                            <label class="mt-5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow cursor-pointer">
+                                <i class="fa-solid fa-file-excel"></i>
+                                <span>Import Risiko</span>
+                                <input type="file" id="importRisikoFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportRisiko(event)">
+                            </label>
+
+                            <button id="btnDownloadLogRisiko" onclick="downloadLogRisikoError()" class="mt-5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow hidden">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Log Error Risiko</span>
+                            </button>
+                            <!-- ============================== -->
+
+                            <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
+                                <i class="fa-solid fa-file-excel"></i>
+                                <span>Ekspor CSV Risiko</span>
+                            </button>
+                            ${isKaUnit ? `
+                                <button onclick="openRisikoModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
+                                    <i class="fa-solid fa-plus"></i>
+                                    <span>Input Risiko Baru</span>
+                                </button>
+                            ` : ''}
+                        </div>
                             <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
                                 <i class="fa-solid fa-file-excel"></i>
                                 <span>Ekspor CSV Risiko</span>
@@ -4722,6 +4768,250 @@ async function confirmDeleteCapaian(id) {
                 renderRisikoView(document.getElementById('mainContent'));
             }
         }
+        let lastRisikoErrorLog = [];
+
+function downloadTemplateRisiko() {
+    const headers = [
+        "No.", "Unit / Prodi", "Indikator Kinerja", "Tahun Risiko", 
+        "Pernyataan Risiko / Kejadian Risiko", "Penyebab Internal", "Penyebab Eksternal", 
+        "Dampak Risiko", "Probabilitas Awal (1-5)", "Dampak Awal (1-5)", 
+        "Ada Langkah Pengendalian?", "Uraian Langkah Pengendalian", "Apakah Memadai?", 
+        "Probabilitas Residu (1-5)", "Dampak Residu (1-5)"
+    ];
+    const sampleRow = [
+        "1", currentUser.unit, "Meningkatnya Kualitas Lulusan", "2025", 
+        "Keterlambatan pelaporan nilai", "Kendala sistem LMS", "Koneksi internet tidak stabil", 
+        "Penilaian terlambat", "3", "4", "Ya", "Pelatihan berkala", "Memadai", "2", "2"
+    ];
+    
+    let csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), sampleRow.join(",")].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "template_peta_risiko_ki_jaro.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Template Peta Risiko berhasil diunduh!");
+}
+function downloadTemplateCapaian() {
+    const headers = [
+        "Indikator Kinerja", "Nama Program Kerja", "Periode Triwulan / Tahunan", 
+        "Tahun", "Realisasi (Bisa Desimal)", "Link Bukti Kinerja", "Permasalahan yang Dihadapi"
+    ];
+    const sampleRow = [
+        "Meningkatnya Kualitas Lulusan", "Workshop Kurikulum Vokasi", "TW 1", 
+        "2025", "90.5", "https://drive.google.com/...", "Keterbatasan fasilitas lab"
+    ];
+    
+    let csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), sampleRow.join(",")].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "template_capaian_kinerja_ki_jaro.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Template Capaian Kinerja berhasil diunduh!");
+}
+
+let lastCapaianErrorLog = [];
+
+async function handleImportCapaian(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const text = e.target.result;
+        const separator = text.includes(';') ? ';' : ',';
+        const rows = text.split("\n").map(r => r.split(separator).map(val => val.trim().replace(/^"|"$/g, '')));
+        
+        let successCount = 0;
+        let failCount = 0;
+        lastCapaianErrorLog = ["Baris,Indikator Kinerja,Periode,Keterangan Error"];
+
+        for (let i = 1; i < rows.length; i++) {
+            const cols = rows[i];
+            if (cols.length < 2 || !cols[0]) continue;
+
+            const rowNum = i + 1;
+            const indikator = (cols[0] || '').trim();
+            const program = (cols[1] || '').trim();
+            const triwulan = (cols[2] || 'TW 1').trim();
+            const tahun = (cols[3] || '2025').trim();
+            const realisasi = parseFloat(cols[4]) || 0;
+            const linkBukti = (cols[5] || '').trim();
+            const permasalahan = (cols[6] || '').trim();
+
+            // Validasi Hak Akses: Cek apakah indikator ini dicascadingkan ke unit login saat ini
+            const isCascadedToMe = currentUser.role === 'admin' || currentUser.role === 'direktur' || DB.cascadingTim.some(ct => 
+                ct.unitTargets.includes(currentUser.unit) && ct.targetDirektur.toLowerCase() === indikator.toLowerCase()
+            );
+
+            if (currentUser.role === 'ketua_unit' && !isCascadedToMe) {
+                failCount++;
+                lastCapaianErrorLog.push(`${rowNum},"${indikator}","${triwulan}","Indikator tidak dicascadingkan ke unit Anda (${currentUser.unit})"`);
+                continue;
+            }
+
+            // Validasi Duplikasi: Indikator kinerja pada triwulan dan tahun yang sama
+            const isDuplicate = DB.capaian.some(c => 
+                c.unit === currentUser.unit && 
+                c.targetDirektur.toLowerCase() === indikator.toLowerCase() && 
+                c.triwulan.toLowerCase() === triwulan.toLowerCase() && 
+                (c.tahun || '2025') === tahun
+            );
+
+            if (isDuplicate) {
+                failCount++;
+                lastCapaianErrorLog.push(`${rowNum},"${indikator}","${triwulan}","Indikator kinerja pada triwulan dan tahun yang sama sudah diinput sebelumnya"`);
+                continue;
+            }
+
+            const dirRef = DB.cascadingDirektur.find(cd => cd.target.toLowerCase() === indikator.toLowerCase());
+            const targetVal = dirRef && dirRef.targetVal !== undefined ? dirRef.targetVal : 100;
+            const satuanVal = dirRef ? (dirRef.satuan || '%') : '%';
+            const timKeyRef = dirRef && dirRef.timKeys.length > 0 ? dirRef.timKeys[0] : (currentUser.timKey || 'Akademik');
+
+            const newCapaian = {
+                id: 'cp_imp_' + Date.now() + '_' + i,
+                unit: currentUser.unit,
+                timKey: timKeyRef,
+                targetDirektur: indikator,
+                tahun: tahun,
+                program: program,
+                triwulan: triwulan,
+                satuan: satuanVal,
+                target: targetVal,
+                realisasi: realisasi,
+                status: 'Menunggu Validasi',
+                permasalahan: permasalahan,
+                rekomendasi: '',
+                penyesuaian: [],
+                linkBukti: linkBukti,
+                statusTindakLanjut: 'Belum Ditindaklanjuti',
+                linkBuktiTindakLanjut: ''
+            };
+
+            DB.capaian.push(newCapaian);
+            successCount++;
+        }
+
+        await saveToMySQL();
+        event.target.value = '';
+
+        const logBtn = document.getElementById('btnDownloadLogCapaian');
+        if (failCount > 0) {
+            if (logBtn) logBtn.classList.remove('hidden');
+            showToast(`Import selesai: ${successCount} sukses, ${failCount} gagal. Download log error untuk melihat detail.`, 'error');
+        } else {
+            if (logBtn) logBtn.classList.add('hidden');
+            showToast(`Import Capaian Kinerja Berhasil! ${successCount} data ditambahkan.`);
+        }
+        renderCapaianView(document.getElementById('mainContent'));
+    };
+    reader.readAsText(file);
+}
+
+function downloadLogCapaianError() {
+    let csvContent = "data:text/csv;charset=utf-8," + lastCapaianErrorLog.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "log_error_import_capaian.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+async function handleImportRisiko(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const text = e.target.result;
+        // Mendukung pemisah koma (,) atau titik koma (;)
+        const separator = text.includes(';') ? ';' : ',';
+        const rows = text.split("\n").map(r => r.split(separator).map(val => val.trim().replace(/^"|"$/g, '')));
+        
+        let successCount = 0;
+        let failCount = 0;
+        lastRisikoErrorLog = ["Baris,Unit/Prodi,Pernyataan Risiko,Keterangan Error"];
+
+        for (let i = 1; i < rows.length; i++) {
+            const cols = rows[i];
+            // Jika baris kosong atau tidak memiliki data penting, lewati
+            if (cols.length < 3 || !cols[1]) continue;
+
+            const rowNum = i + 1;
+            const fileUnit = (cols[1] || '').trim();
+            const indikatorKinerja = (cols[2] || '').trim();
+            const tahunRisiko = (cols[3] || '2025').trim();
+            const pernyataan = (cols[4] || '').trim();
+
+            // Validasi Hak Akses Unit (Bersifat fleksibel non-case-sensitive)
+            if (currentUser.role === 'ketua_unit' && fileUnit.toLowerCase() !== currentUser.unit.toLowerCase()) {
+                failCount++;
+                lastRisikoErrorLog.push(`${rowNum},"${fileUnit}","${pernyataan}","Unit pada file (${fileUnit}) tidak sesuai dengan unit login Anda (${currentUser.unit})"`);
+                continue;
+            }
+
+            const p1 = parseInt(cols[8]) || 3;
+            const d1 = parseInt(cols[9]) || 3;
+            const res1 = calculateSkorRisiko(p1, d1);
+            
+            const p2 = parseInt(cols[13]) || 2;
+            const d2 = parseInt(cols[14]) || 2;
+            const res2 = calculateSkorRisiko(p2, d2);
+
+            const newRisiko = {
+                id: 'r_imp_' + Date.now() + '_' + i,
+                unit: fileUnit || currentUser.unit,
+                timKey: currentUser.timKey || 'Akademik',
+                targetDirektur: indikatorKinerja || '-',
+                tahun: tahunRisiko,
+                pernyataan: pernyataan || 'Risiko dari Import',
+                sebabInternal: cols[5] || '-',
+                sebabEksternal: cols[6] || '-',
+                dampak: cols[7] || '-',
+                prob1: p1, damp1: d1, skor1: res1.skor, kuadran1: res1.kuadran,
+                adaPengendalian: cols[10] || 'Ya',
+                uraianPengendalian: cols[11] || '-',
+                memadai: cols[12] || 'Memadai',
+                prob2: p2, damp2: d2, skor2: res2.skor, kuadran2: res2.kuadran, warnaResidu: res2.warna
+            };
+
+            DB.risiko.push(newRisiko);
+            successCount++;
+        }
+
+        await saveToMySQL();
+        event.target.value = '';
+
+        const logBtn = document.getElementById('btnDownloadLogRisiko');
+        if (failCount > 0) {
+            if (logBtn) logBtn.classList.remove('hidden');
+            showToast(`Import selesai: ${successCount} sukses, ${failCount} gagal. Silakan download log error.`, 'error');
+        } else {
+            if (logBtn) logBtn.classList.add('hidden');
+            showToast(`Import Peta Risiko Berhasil! ${successCount} data ditambahkan ke sistem & database.`);
+        }
+        renderRisikoView(document.getElementById('mainContent'));
+    };
+    reader.readAsText(file);
+}
+
+function downloadLogRisikoError() {
+    let csvContent = "data:text/csv;charset=utf-8," + lastRisikoErrorLog.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "log_error_import_risiko.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
     </script>
     <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Manajemen Risiko -->
 <div id="exportRisikoCsvModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
