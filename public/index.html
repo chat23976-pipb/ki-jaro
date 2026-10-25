@@ -637,38 +637,11 @@ function renderDashboardLayout() {
                             </div>
                         </div>
 
-                       <!-- Menu Sidetab Warna Putih Elegan & Kontras -->
+                        <!-- Menu Sidetab Warna Putih Elegan & Kontras -->
                         <nav class="flex-1 p-3 space-y-1.5 overflow-y-auto text-sm">
                             <a href="javascript:void(0)" onclick="switchTab('dashboard')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-chart-pie w-5 text-center"></i>
-                                <span class="sidebar-text">Dashboard Kinerja & Risiko Utama</span>
-                            </a>
-
-                            <a href="javascript:void(0)" onclick="switchTab('dashboard_all')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard_all' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                <i class="fa-solid fa-chart-line w-5 text-center"></i>
-                                <span class="sidebar-text">Dashboard Kinerja & Risiko All</span>
-                            </a>
-
-                            <a href="javascript:void(0)" onclick="switchTab('renstra')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'renstra' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                <i class="fa-solid fa-book-bookmark w-5 text-center"></i>
-                                <span class="sidebar-text">${currentUser.role === 'admin' ? 'Input & Manajemen Renstra' : 'View Renstra (Hierarki Kemenperin)'}</span>
-                            </a>
-
-                            <a href="javascript:void(0)" onclick="switchTab('dokumen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                <i class="fa-solid fa-folder-open w-5 text-center"></i>
-                                <span class="sidebar-text">Dokumen Perencanaan</span>
-                            </a>
-
-                            ${!isKaUnit ? `
-                                <a href="javascript:void(0)" onclick="switchTab('cascading')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'cascading' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                    <i class="fa-solid fa-sitemap w-5 text-center"></i>
-                                    <span class="sidebar-text">Cascading Bertahap</span>
-                                </a>
-                            ` : ''}
-
-                            <a href="javascript:void(0)" onclick="switchTab('peta_pohon')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'peta_pohon' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                <i class="fa-solid fa-network-wired w-5 text-center"></i>
-                                <span class="sidebar-text">Peta Pohon Organisasi</span>
+                                <span class="sidebar-text">Dashboard Kinerja & Risiko</span>
                             </a>
 
                             <a href="javascript:void(0)" onclick="switchTab('renstra')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'renstra' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
@@ -832,19 +805,24 @@ function renderDashboardLayout() {
             const sb = document.getElementById('appSidebar');
             if (sb && window.innerWidth < 768) sb.classList.add('hidden');
 
-if (tab === 'dashboard') renderDashboardView(content, 'Utama');
-            else if (tab === 'dashboard_all') renderDashboardView(content, 'All');
+            if (tab === 'dashboard') renderDashboardView(content);
             else if (tab === 'renstra') renderRenstraView(content);
             else if (tab === 'dokumen') renderDokumenView(content);
-            else if (tab === 'cascading') renderCascadingView(content);
-            else if (tab === 'peta_pohon') renderPetaPohonView(content);
+            else if (tab === 'cascading') {
+                if (typeof renderCascadingView === 'function') {
+                    renderCascadingView(content);
+                } else {
+                    content.innerHTML = '<div class="p-8 text-center bg-white rounded-2xl shadow-sm border"><p class="text-rose-500 font-bold">Fungsi renderCascadingView belum dimuat dengan benar.</p></div>';
+                }
+            }
             else if (tab === 'capaian') renderCapaianView(content);
             else if (tab === 'risiko') renderRisikoView(content);
             else if (tab === 'tindaklanjut') renderTindakLanjutMonitorView(content);
             else if (tab === 'admin') renderAdminView(content);
             else if (tab === 'laporan') renderLaporanView(content);
             else if (tab === 'dokumen_ukur_lapor') renderDokumenUkurLaporView(content);
-            }
+        }
+
 // State Sort Header Kolom untuk Dokumen Pengukuran & Pelaporan
         let sortPengukuranCol = 'nama';
         let sortPengukuranAsc = true;
@@ -2751,20 +2729,10 @@ function renderCascadingView(container) {
                                 <div><span class="text-slate-500 block">Target (Renstra):</span><strong id="previewTargetVal" class="text-primary-700 text-sm">100</strong></div>
                                 <div class="text-right"><span class="text-slate-500 block">Pagu Anggaran:</span><strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong></div>
                             </div>
-                           <div class="space-y-3">
-                                <label class="block font-semibold text-slate-700 mb-1">Pilih Tim Kerja & Tentukan Peran (Utama / Support)</label>
-                                <div class="space-y-2 bg-slate-50 p-4 rounded-xl border">
-                                    ${DB.timKerjaList.map(t => `
-                                        <div class="flex items-center justify-between p-2 bg-white rounded-lg border">
-                                            <label class="flex items-center space-x-2 cursor-pointer flex-1">
-                                                <input type="checkbox" name="timCheck" value="${t}" class="w-4 h-4 text-primary-600 rounded border-slate-300">
-                                                <span class="text-slate-800 font-bold text-xs">${t}</span>
-                                            </label>
-                                            <div class="flex items-center space-x-4 text-xs font-semibold">
-                                                <label class="cursor-pointer flex items-center space-x-1"><input type="radio" name="timUtamaRadio" value="${t}" class="text-primary-600"><span>Utama</span></label>
-                                            </div>
-                                        </div>
-                                    `).join('')}
+                           <div>
+                                <label class="block font-semibold text-slate-700 mb-2">Pilih Ketua Tim Kerja (Pilih Salah Satu)</label>
+                                <div class="space-y-2 bg-slate-50 p-3 rounded-xl border">
+                                    ${DB.timKerjaList.map(t => `<label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="timCheck" value="${t}" required class="w-4 h-4 text-primary-600 border-slate-300"><span class="text-slate-700 font-medium">${t}</span></label>`).join('')}
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
@@ -2775,7 +2743,7 @@ function renderCascadingView(container) {
                     </div>
                 </div>
 
-<div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+                <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
                             <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})</h3>
@@ -2793,19 +2761,9 @@ function renderCascadingView(container) {
                                 <select id="timDirRef" required class="w-full p-3 bg-slate-50 border rounded-xl"></select>
                             </div>
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-2">Pilih Unit / Prodi Tujuan & Tentukan Utama/Support</label>
-                                <div class="space-y-2 bg-slate-50 p-3 rounded-xl border max-h-56 overflow-y-auto">
-                                    ${DB.unitList.map(u => `
-                                        <div class="flex items-center justify-between p-2 bg-white rounded-lg border">
-                                            <label class="flex items-center space-x-2 cursor-pointer flex-1">
-                                                <input type="checkbox" name="unitCheck" value="${u}" class="w-4 h-4 text-primary-600 rounded border-slate-300">
-                                                <span class="text-slate-800 font-bold text-xs">${u}</span>
-                                            </label>
-                                            <div class="flex items-center space-x-2 text-xs font-semibold">
-                                                <label class="cursor-pointer flex items-center space-x-1"><input type="radio" name="unitUtamaRadio" value="${u}" class="text-primary-600"><span>Utama</span></label>
-                                            </div>
-                                        </div>
-                                    `).join('')}
+                                <label class="block font-semibold text-slate-700 mb-2">Pilih Unit / Prodi / Subbag Tujuan (Pilih Salah Satu)</label>
+                                <div class="space-y-2 bg-slate-50 p-3 rounded-xl border max-h-48 overflow-y-auto">
+                                    ${DB.unitList.map(u => `<label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="unitCheck" value="${u}" required class="w-4 h-4 text-primary-600 border-slate-300"><span class="text-slate-700 font-medium">${u}</span></label>`).join('')}
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
@@ -2814,7 +2772,8 @@ function renderCascadingView(container) {
                             </div>
                         </form>
                     </div>
-                </div>            `;
+                </div>
+            `;
 
             // Dipindahkan ke dalam kurung kurawal agar otomatis dijalankan saat halaman Cascading dirender
             setTimeout(() => {
@@ -2877,21 +2836,17 @@ function renderCascadingView(container) {
                 : matching.map(c => `<option value="${c.target}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})</option>`).join('');
         }
 
-function openCascadingDirModal() {
+        function openCascadingDirModal() {
             if (DB.renstraIndikatorKinerja.length === 0) {
                 showToast('Belum ada data Indikator Kinerja di Renstra. Minta Admin untuk mengisi Renstra terlebih dahulu.', 'error');
                 return;
             }
-            const modal = document.getElementById('cascadingDirModal');
-            modal.removeAttribute('data-edit-id');
-            modal.classList.remove('hidden'); modal.classList.add('flex');
+            document.getElementById('cascadingDirModal').classList.remove('hidden'); document.getElementById('cascadingDirModal').classList.add('flex');
             const yrDir = document.getElementById('dirTahunTarget');
             if (yrDir) updateDirRenstraOptions(yrDir.value);
-            // Reset checkboxes & radios
-            document.querySelectorAll('input[name="timCheck"]').forEach(chk => chk.checked = false);
-            document.querySelectorAll('input[name="timUtamaRadio"]').forEach(r => r.checked = false);
         }
-
+        function closeCascadingDirModal() { document.getElementById('cascadingDirModal').classList.remove('flex'); document.getElementById('cascadingDirModal').classList.add('hidden'); }
+        
         async function saveCascadingDir(e) {
             e.preventDefault();
             const editId = document.getElementById('cascadingDirModal').getAttribute('data-edit-id');
@@ -2903,27 +2858,13 @@ function openCascadingDirModal() {
             const targetVal = parseFloat(opt.getAttribute('data-target')) || 100;
             const anggaran = parseFloat(opt.getAttribute('data-anggaran')) || 0;
             
-            const checkedTims = Array.from(document.querySelectorAll('input[name="timCheck"]:checked')).map(el => el.value);
-            if (checkedTims.length === 0) {
-                showToast('Pilih minimal 1 Ketua Tim Kerja!', 'error');
+            // Diubah menjadi pilihan tunggal (hanya boleh 1 tim kerja saja)
+            const selectedTimEl = document.querySelector('input[name="timCheck"]:checked');
+            if (!selectedTimEl) {
+                showToast('Pilih salah satu Ketua Tim Kerja!', 'error');
                 return;
             }
-
-            const utamaRadio = document.querySelector('input[name="timUtamaRadio"]:checked');
-            if (!utamaRadio) {
-                showToast('Tentukan salah satu Tim Kerja sebagai yang UTAMA!', 'error');
-                return;
-            }
-            const timUtama = utamaRadio.value;
-            if (!checkedTims.includes(timUtama)) {
-                showToast('Tim Kerja Utama harus dicentang pada daftar tim kerja di atas!', 'error');
-                return;
-            }
-
-            let timRolesObj = {};
-            checkedTims.forEach(t => {
-                timRolesObj[t] = (t === timUtama) ? 'Utama' : 'Support';
-            });
+            const chosenTim = selectedTimEl.value;
 
             if (editId) {
                 const idx = DB.cascadingDirektur.findIndex(x => x.id === editId);
@@ -2936,8 +2877,7 @@ function openCascadingDirModal() {
                         targetVal: targetVal,
                         satuan: satuan,
                         anggaran: anggaran,
-                        timKeys: checkedTims,
-                        timRoles: timRolesObj
+                        timKeys: [chosenTim] // Disimpan sebagai array berisi 1 item
                     };
                 }
                 showToast('Cascading Direktur berhasil diperbarui!');
@@ -2950,8 +2890,7 @@ function openCascadingDirModal() {
                     targetVal: targetVal,
                     satuan: satuan,
                     anggaran: anggaran,
-                    timKeys: checkedTims,
-                    timRoles: timRolesObj,
+                    timKeys: [chosenTim], // Hanya boleh satu
                     status: 'Aktif'
                 });
                 showToast('Cascading Direktur berhasil disimpan!');
@@ -2970,15 +2909,12 @@ function openCascadingDirModal() {
             updateDirRenstraOptions(item.tahun || '2025');
             document.getElementById('dirIndikatorRenstra').value = item.indikatorId;
             updateDirAnggaranPreview();
-            
             document.querySelectorAll('input[name="timCheck"]').forEach(chk => {
-                chk.checked = item.timKeys && item.timKeys.includes(chk.value);
-            });
-            document.querySelectorAll('input[name="timUtamaRadio"]').forEach(r => {
-                if (item.timRoles && item.timRoles[r.value] === 'Utama') r.checked = true;
+                chk.checked = item.timKeys.includes(chk.value);
             });
             document.getElementById('cascadingDirModal').setAttribute('data-edit-id', id);
         }
+
         async function confirmDeleteCascadingDir(id) {
             const idx = DB.cascadingDirektur.findIndex(x => x.id === id);
             if (idx === -1) return;
@@ -3020,40 +2956,8 @@ function openCascadingDirModal() {
             }
         }
 
-function openCascadingTimModal() { 
-            const modal = document.getElementById('cascadingTimModal');
-            modal.removeAttribute('data-edit-id');
-            modal.classList.remove('hidden'); 
-            modal.classList.add('flex'); 
-            const yrEl = document.getElementById('timTahunTarget');
-            if (yrEl) updateTimDirRefOptions(yrEl.value);
-            document.querySelectorAll('input[name="unitCheck"]').forEach(chk => chk.checked = false);
-            document.querySelectorAll('input[name="unitUtamaRadio"]').forEach(r => r.checked = false);
-        }
-
-        function closeCascadingTimModal() { 
-            const modal = document.getElementById('cascadingTimModal');
-            modal.removeAttribute('data-edit-id');
-            modal.classList.remove('flex'); 
-            modal.classList.add('hidden'); 
-        }
-
-        function openEditCascadingTimModal(id) {
-            const item = DB.cascadingTim.find(x => x.id === id);
-            if (!item) return;
-            openCascadingTimModal();
-            document.getElementById('timTahunTarget').value = item.tahun || '2025';
-            updateTimDirRefOptions(item.tahun || '2025');
-            document.getElementById('timDirRef').value = item.targetDirektur;
-            
-            document.querySelectorAll('input[name="unitCheck"]').forEach(chk => {
-                chk.checked = item.unitTargets && item.unitTargets.includes(chk.value);
-            });
-            document.querySelectorAll('input[name="unitUtamaRadio"]').forEach(r => {
-                if (item.unitRoles && item.unitRoles[r.value] === 'Utama') r.checked = true;
-            });
-            document.getElementById('cascadingTimModal').setAttribute('data-edit-id', id);
-        }
+        function openCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('hidden'); document.getElementById('cascadingTimModal').classList.add('flex'); }
+        function closeCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('flex'); document.getElementById('cascadingTimModal').classList.add('hidden'); }
 
         async function saveCascadingTim(e) {
             e.preventDefault();
@@ -3065,27 +2969,13 @@ function openCascadingTimModal() {
                 return;
             }
             
-            const checkedUnits = Array.from(document.querySelectorAll('input[name="unitCheck"]:checked')).map(el => el.value);
-            if (checkedUnits.length === 0) {
-                showToast('Pilih minimal 1 Unit / Prodi tujuan!', 'error');
+            // Diubah menjadi pilihan tunggal (hanya boleh 1 unit/prodi)
+            const selectedUnitEl = document.querySelector('input[name="unitCheck"]:checked');
+            if (!selectedUnitEl) {
+                showToast('Pilih salah satu Unit / Prodi / Subbag tujuan!', 'error');
                 return;
             }
-
-            const utamaRadio = document.querySelector('input[name="unitUtamaRadio"]:checked');
-            if (!utamaRadio) {
-                showToast('Tentukan salah satu Unit sebagai yang UTAMA!', 'error');
-                return;
-            }
-            const unitUtama = utamaRadio.value;
-            if (!checkedUnits.includes(unitUtama)) {
-                showToast('Unit Utama harus dicentang pada daftar unit di atas!', 'error');
-                return;
-            }
-
-            let unitRolesObj = {};
-            checkedUnits.forEach(u => {
-                unitRolesObj[u] = (u === unitUtama) ? 'Utama' : 'Support';
-            });
+            const chosenUnit = selectedUnitEl.value;
 
             if (editId) {
                 const idx = DB.cascadingTim.findIndex(x => x.id === editId);
@@ -3094,8 +2984,7 @@ function openCascadingTimModal() {
                         ...DB.cascadingTim[idx],
                         tahun: tahun,
                         targetDirektur: targetDir,
-                        unitTargets: checkedUnits,
-                        unitRoles: unitRolesObj
+                        unitTargets: [chosenUnit] // Disimpan sebagai array berisi 1 item
                     };
                 }
                 showToast('Cascading Unit berhasil diperbarui!');
@@ -3105,8 +2994,7 @@ function openCascadingTimModal() {
                     tahun: tahun,
                     targetDirektur: targetDir,
                     timKey: currentUser.timKey || 'Akademik',
-                    unitTargets: checkedUnits,
-                    unitRoles: unitRolesObj
+                    unitTargets: [chosenUnit] // Hanya boleh satu
                 });
                 showToast('Cascading ke Unit/Prodi berhasil disimpan!');
             }
@@ -3116,17 +3004,16 @@ function openCascadingTimModal() {
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        async function confirmDeleteCascadingTim(id) {
-            const idx = DB.cascadingTim.findIndex(x => x.id === id);
-            if (idx === -1) return;
+        async function confirmDeleteCascadingTim(idx) {
             const item = DB.cascadingTim[idx];
-            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}" (Tahun ${item.tahun || '2025'})?`)) {
+            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}"?`)) {
                 DB.cascadingTim.splice(idx, 1);
                 await saveToMySQL();
-                showToast('Cascading Tim & Pohon Kinerja diperbarui.', 'info');
+                showToast('Cascading Tim dihapus.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
         }
+
         function renderCapaianView(container) {
             document.getElementById('pageTitle').innerText = 'Input & Validasi Capaian Kinerja & Program Kerja';
             const isKaUnit = currentUser.role === 'ketua_unit';
