@@ -2775,7 +2775,7 @@ function renderCascadingView(container) {
                     </div>
                 </div>
 
-                <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+<div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
                             <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})</h3>
@@ -2793,9 +2793,19 @@ function renderCascadingView(container) {
                                 <select id="timDirRef" required class="w-full p-3 bg-slate-50 border rounded-xl"></select>
                             </div>
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-2">Pilih Unit / Prodi / Subbag Tujuan (Pilih Salah Satu)</label>
-                                <div class="space-y-2 bg-slate-50 p-3 rounded-xl border max-h-48 overflow-y-auto">
-                                    ${DB.unitList.map(u => `<label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="unitCheck" value="${u}" required class="w-4 h-4 text-primary-600 border-slate-300"><span class="text-slate-700 font-medium">${u}</span></label>`).join('')}
+                                <label class="block font-semibold text-slate-700 mb-2">Pilih Unit / Prodi Tujuan & Tentukan Utama/Support</label>
+                                <div class="space-y-2 bg-slate-50 p-3 rounded-xl border max-h-56 overflow-y-auto">
+                                    ${DB.unitList.map(u => `
+                                        <div class="flex items-center justify-between p-2 bg-white rounded-lg border">
+                                            <label class="flex items-center space-x-2 cursor-pointer flex-1">
+                                                <input type="checkbox" name="unitCheck" value="${u}" class="w-4 h-4 text-primary-600 rounded border-slate-300">
+                                                <span class="text-slate-800 font-bold text-xs">${u}</span>
+                                            </label>
+                                            <div class="flex items-center space-x-2 text-xs font-semibold">
+                                                <label class="cursor-pointer flex items-center space-x-1"><input type="radio" name="unitUtamaRadio" value="${u}" class="text-primary-600"><span>Utama</span></label>
+                                            </div>
+                                        </div>
+                                    `).join('')}
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
@@ -2804,8 +2814,7 @@ function renderCascadingView(container) {
                             </div>
                         </form>
                     </div>
-                </div>
-            `;
+                </div>            `;
 
             // Dipindahkan ke dalam kurung kurawal agar otomatis dijalankan saat halaman Cascading dirender
             setTimeout(() => {
@@ -3011,8 +3020,40 @@ function openCascadingDirModal() {
             }
         }
 
-        function openCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('hidden'); document.getElementById('cascadingTimModal').classList.add('flex'); }
-        function closeCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('flex'); document.getElementById('cascadingTimModal').classList.add('hidden'); }
+function openCascadingTimModal() { 
+            const modal = document.getElementById('cascadingTimModal');
+            modal.removeAttribute('data-edit-id');
+            modal.classList.remove('hidden'); 
+            modal.classList.add('flex'); 
+            const yrEl = document.getElementById('timTahunTarget');
+            if (yrEl) updateTimDirRefOptions(yrEl.value);
+            document.querySelectorAll('input[name="unitCheck"]').forEach(chk => chk.checked = false);
+            document.querySelectorAll('input[name="unitUtamaRadio"]').forEach(r => r.checked = false);
+        }
+
+        function closeCascadingTimModal() { 
+            const modal = document.getElementById('cascadingTimModal');
+            modal.removeAttribute('data-edit-id');
+            modal.classList.remove('flex'); 
+            modal.classList.add('hidden'); 
+        }
+
+        function openEditCascadingTimModal(id) {
+            const item = DB.cascadingTim.find(x => x.id === id);
+            if (!item) return;
+            openCascadingTimModal();
+            document.getElementById('timTahunTarget').value = item.tahun || '2025';
+            updateTimDirRefOptions(item.tahun || '2025');
+            document.getElementById('timDirRef').value = item.targetDirektur;
+            
+            document.querySelectorAll('input[name="unitCheck"]').forEach(chk => {
+                chk.checked = item.unitTargets && item.unitTargets.includes(chk.value);
+            });
+            document.querySelectorAll('input[name="unitUtamaRadio"]').forEach(r => {
+                if (item.unitRoles && item.unitRoles[r.value] === 'Utama') r.checked = true;
+            });
+            document.getElementById('cascadingTimModal').setAttribute('data-edit-id', id);
+        }
 
         async function saveCascadingTim(e) {
             e.preventDefault();
@@ -3024,13 +3065,27 @@ function openCascadingDirModal() {
                 return;
             }
             
-            // Diubah menjadi pilihan tunggal (hanya boleh 1 unit/prodi)
-            const selectedUnitEl = document.querySelector('input[name="unitCheck"]:checked');
-            if (!selectedUnitEl) {
-                showToast('Pilih salah satu Unit / Prodi / Subbag tujuan!', 'error');
+            const checkedUnits = Array.from(document.querySelectorAll('input[name="unitCheck"]:checked')).map(el => el.value);
+            if (checkedUnits.length === 0) {
+                showToast('Pilih minimal 1 Unit / Prodi tujuan!', 'error');
                 return;
             }
-            const chosenUnit = selectedUnitEl.value;
+
+            const utamaRadio = document.querySelector('input[name="unitUtamaRadio"]:checked');
+            if (!utamaRadio) {
+                showToast('Tentukan salah satu Unit sebagai yang UTAMA!', 'error');
+                return;
+            }
+            const unitUtama = utamaRadio.value;
+            if (!checkedUnits.includes(unitUtama)) {
+                showToast('Unit Utama harus dicentang pada daftar unit di atas!', 'error');
+                return;
+            }
+
+            let unitRolesObj = {};
+            checkedUnits.forEach(u => {
+                unitRolesObj[u] = (u === unitUtama) ? 'Utama' : 'Support';
+            });
 
             if (editId) {
                 const idx = DB.cascadingTim.findIndex(x => x.id === editId);
@@ -3039,7 +3094,8 @@ function openCascadingDirModal() {
                         ...DB.cascadingTim[idx],
                         tahun: tahun,
                         targetDirektur: targetDir,
-                        unitTargets: [chosenUnit] // Disimpan sebagai array berisi 1 item
+                        unitTargets: checkedUnits,
+                        unitRoles: unitRolesObj
                     };
                 }
                 showToast('Cascading Unit berhasil diperbarui!');
@@ -3049,7 +3105,8 @@ function openCascadingDirModal() {
                     tahun: tahun,
                     targetDirektur: targetDir,
                     timKey: currentUser.timKey || 'Akademik',
-                    unitTargets: [chosenUnit] // Hanya boleh satu
+                    unitTargets: checkedUnits,
+                    unitRoles: unitRolesObj
                 });
                 showToast('Cascading ke Unit/Prodi berhasil disimpan!');
             }
@@ -3059,16 +3116,17 @@ function openCascadingDirModal() {
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        async function confirmDeleteCascadingTim(idx) {
+        async function confirmDeleteCascadingTim(id) {
+            const idx = DB.cascadingTim.findIndex(x => x.id === id);
+            if (idx === -1) return;
             const item = DB.cascadingTim[idx];
-            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}"?`)) {
+            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}" (Tahun ${item.tahun || '2025'})?`)) {
                 DB.cascadingTim.splice(idx, 1);
                 await saveToMySQL();
-                showToast('Cascading Tim dihapus.', 'info');
+                showToast('Cascading Tim & Pohon Kinerja diperbarui.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
         }
-
         function renderCapaianView(container) {
             document.getElementById('pageTitle').innerText = 'Input & Validasi Capaian Kinerja & Program Kerja';
             const isKaUnit = currentUser.role === 'ketua_unit';
