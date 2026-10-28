@@ -3169,17 +3169,23 @@ function renderCascadingView(container) {
                 }).join('');
         }
 
-        function openCascadingDirModal() {
-            if (DB.renstraIndikatorKinerja.length === 0) {
-                showToast('Belum ada data Indikator Kinerja di Renstra. Minta Admin untuk mengisi Renstra terlebih dahulu.', 'error');
+            function openCascadingDirModal() {
+            if (!DB.renstraIndikatorKinerja || DB.renstraIndikatorKinerja.length === 0) {
+                showToast('Belum ada data Indikator Kinerja di Renstra (Tier 4)! Input dulu di menu Renstra.', 'error');
                 return;
             }
             const modal = document.getElementById('cascadingDirModal');
             modal.removeAttribute('data-edit-id');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            
+            // Set default tahun ke 2025 atau tahun aktif, lalu panggil pembaru opsi dropdown secara paksa
             const yrDir = document.getElementById('dirTahunTarget');
-            if (yrDir) updateDirRenstraOptions(yrDir.value);
+            if (yrDir) {
+                updateDirRenstraOptions(yrDir.value);
+            }
+            
+            // Reset checklist tim kerja
             document.querySelectorAll('input[name="timCheck"]').forEach((chk, idx) => {
                 chk.checked = false;
                 toggleTimRoleSelect(idx, false);
