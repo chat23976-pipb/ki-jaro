@@ -3168,7 +3168,33 @@ function renderCascadingView(container) {
                     return `<option value="${c.target}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})${roleStatus}</option>`;
                 }).join('');
         }
+function updateDirRenstraOptions(tahun) {
+            const sel = document.getElementById('dirIndikatorRenstra');
+            if (!sel) return;
+            
+            // Mengambil langsung seluruh indikator Renstra yang telah diinput oleh Admin
+            const listIndikator = DB.renstraIndikatorKinerja || [];
+            
+            if (listIndikator.length === 0) {
+                sel.innerHTML = '<option value="">Belum ada Indikator Kinerja di Renstra (Tier 4)</option>';
+                const elTarget = document.getElementById('previewTargetVal');
+                const elAnggaran = document.getElementById('previewAnggaranVal');
+                if (elTarget) elTarget.innerText = '100';
+                if (elAnggaran) elAnggaran.innerText = 'Rp 0';
+                return;
+            }
 
+            // Render opsi dropdown secara aman membaca data indikator yang diinput Admin
+            sel.innerHTML = listIndikator.map(ik => {
+                const targetThn = ik['target' + tahun] !== undefined ? ik['target' + tahun] : (ik.target2025 || 100);
+                const paguThn = ik['anggaran' + tahun] !== undefined ? ik['anggaran' + tahun] : (ik.anggaran2025 || 0);
+                const satuan = ik.satuan || '%';
+                const kode = ik.kodeIndikator ? `${ik.kodeIndikator} - ` : '';
+                return `<option value="${ik.id || ik.namaIndikator}" data-nama="${ik.namaIndikator}" data-satuan="${satuan}" data-target="${targetThn}" data-anggaran="${paguThn}">${kode}${ik.namaIndikator} (Target: ${targetThn} ${satuan})</option>`;
+            }).join('');
+
+            updateDirAnggaranPreview();
+        }
             function openCascadingDirModal() {
             if (!DB.renstraIndikatorKinerja || DB.renstraIndikatorKinerja.length === 0) {
                 showToast('Belum ada data Indikator Kinerja di Renstra (Tier 4)! Input dulu di menu Renstra.', 'error');
