@@ -3437,16 +3437,31 @@ function updateDirRenstraOptions(tahun) {
             }
         }
 
-        function openCascadingTimModal() {
-            // ... kode openCascadingTimModal yang sudah ada ...
-        }
-        function openCascadingTimModal() {
+            function openCascadingTimModal() {
             const modal = document.getElementById('cascadingTimModal');
+            if (!modal) {
+                showToast('Modal Cascading Tim tidak ditemukan di halaman!', 'error');
+                return;
+            }
             modal.removeAttribute('data-edit-id');
             modal.removeAttribute('data-edit-timkey');
-            renderTimUnitCheckboxes(currentUser.timKey);
+            
+            const activeTim = currentUser.timKey || 'Akademik';
+            renderTimUnitCheckboxes(activeTim);
+            
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+
+            const yrEl = document.getElementById('timTahunTarget');
+            if (yrEl) updateTimDirRefOptions(yrEl.value);
+        }
+
+        function closeCascadingTimModal() {
+            const modal = document.getElementById('cascadingTimModal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
         }
         function closeCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('flex'); document.getElementById('cascadingTimModal').classList.add('hidden'); }
 
