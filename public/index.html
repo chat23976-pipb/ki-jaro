@@ -578,27 +578,7 @@ let landingChartInstance = null;
                             </div>
                         </div>
 
-                        <!-- Daftar Cepat Akun yang Terdaftar di Database Admin -->
-                        <div class="space-y-1.5">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Akun Terdaftar di Database Admin (Klik untuk Login Cepat):</p>
-                            <div class="max-h-52 overflow-y-auto divide-y divide-slate-100 border border-slate-200/80 rounded-2xl">
-                                ${DB.users.map(u => {
-                                    const emailDisp = u.username.includes('@') ? u.username.toLowerCase() : `${u.username.toLowerCase()}@poltek-petrokimia.ac.id`;
-                                    return `
-                                        <button type="button" onclick="verifyAndLoginWithGoogleEmail('${emailDisp}')" class="w-full p-3 hover:bg-blue-50/70 flex items-center space-x-3 text-left transition-all">
-                                            <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                                                ${u.name.charAt(0)}
-                                            </div>
-                                            <div class="overflow-hidden flex-1">
-                                                <p class="text-xs font-bold text-slate-900 truncate">${u.name}</p>
-                                                <p class="text-[11px] text-blue-600 font-medium truncate">${emailDisp}</p>
-                                            </div>
-                                            <span class="text-[9px] font-bold uppercase px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">${u.role}</span>
-                                        </button>
-                                    `;
-                                }).join('')}
-                            </div>
-                        </div>
+            
                     </div>
                 </div>
             `;
