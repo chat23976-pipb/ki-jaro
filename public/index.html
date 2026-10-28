@@ -2848,13 +2848,12 @@ function renderCascadingView(container) {
             let filteredDir = [...DB.cascadingDirektur];
             if (filterCascadingTahun !== 'Semua') filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
 
-            // Disamakan dengan tampilan Direktur: menampilkan seluruh Tim Kerja & Unit tanpa difilter per role tim_kerja
             let filteredTim = [...DB.cascadingTim];
             if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
-                    <!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG KONEKTOR & FILTER TAHUN -->
+                    <!-- VISUALISASI POHON CASCADING -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -2886,34 +2885,6 @@ function renderCascadingView(container) {
                                 <div class="w-10 h-0.5 bg-blue-400 shrink-0"></div>
 
                                 <div class="flex flex-col space-y-4 flex-1">
-                                    ${DB.timKerjaList.map(tim => {
-                                        const assignedDir = filteredDir.filter(cd => cd.timKeys.includes(tim));
-                                        if (assignedDir.length === 0) return '';
-                                        const subUnits = filteredTim.filter(ct => ct.timKey === tim && assignedDir.some(ad => ad.target === ct.targetDirektur && (ad.tahun || '2025') === (ct.tahun || '2025')));
-
-                                        return `
-                                            <div class="flex items-center space-x-4 relative">
-                                                <div class="absolute -left-6 top-0 bottom-0 w-0.5 bg-slate-300"></div>
-                                                <div class="w-6 h-0.5 bg-blue-400 shrink-0"></div>
-                                                <div class="px-4 py-3 bg-gradient-to-br from-purple-700 to-indigo-800 text-white rounded-xl shadow-md text-xs font-semibold text-center w-52 shrink-0 border border-purple-800">
-                                                    <i class="fa-solid fa-users-gear mb-1 block"></i> Tim Kerja: ${tim}
-                                                </div>
-                                                <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
-                                                <div class="flex flex-col space-y-4 flex-1">
-                                    ${DB.timKerjaList.map(tim => {
-                                        const assignedDir = filteredDir.filter(cd => cd.timKeys.includes(tim));
-                                        if (assignedDir.length === 0) return '';
-                                        const subUnits = filteredTim.filter(ct => ct.timKey === tim && assignedDir.some(ad => ad.target === ct.targetDirektur && (ad.tahun || '2025') === (ct.tahun || '2025')));
-
-                                        return `
-                                            <div class="flex items-center space-x-4 relative">
-                                                <div class="absolute -left-6 top-0 bottom-0 w-0.5 bg-slate-300"></div>
-                                                <div class="w-6 h-0.5 bg-blue-400 shrink-0"></div>
-                                                <div class="px-4 py-3 bg-gradient-to-br from-purple-700 to-indigo-800 text-white rounded-xl shadow-md text-xs font-semibold text-center w-52 shrink-0 border border-purple-800">
-                                                    <i class="fa-solid fa-users-gear mb-1 block"></i> Tim Kerja: ${tim}
-                                                </div>
-                                                <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
-                                                <div class="flex flex-col space-y-4 flex-1">
                                     ${DB.timKerjaList.map(tim => {
                                         const assignedDir = filteredDir.filter(cd => cd.timKeys.includes(tim));
                                         if (assignedDir.length === 0) return '';
@@ -3045,7 +3016,7 @@ function renderCascadingView(container) {
                                             <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
                                             <td class="p-4 font-semibold text-slate-900">${c.targetDirektur}</td>
-                                           <td class="p-4">
+                                            <td class="p-4">
                                                 <div class="flex flex-wrap gap-1.5">
                                                     ${c.unitTargets.map(u => {
                                                         const isUtama = isUnitUtamaInTim(c, u);
@@ -3067,7 +3038,7 @@ function renderCascadingView(container) {
                     </div>
                 </div>
 
-                <!-- Modal Cascading Direktur (Multi-Select Tim Kerja + Pilihan Utama vs Support) -->
+                <!-- Modal Cascading Direktur -->
                 <div id="cascadingDirModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
                         <div class="flex justify-between items-center border-b pb-4">
@@ -3120,7 +3091,7 @@ function renderCascadingView(container) {
                     </div>
                 </div>
 
-                <!-- Modal Cascading Ketua Tim Kerja (Multi-Select Unit di Bawah Timnya Saja + Pilihan Utama vs Support) -->
+                <!-- Modal Cascading Ketua Tim Kerja -->
                 <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
                         <div class="flex justify-between items-center border-b pb-4">
@@ -3146,9 +3117,7 @@ function renderCascadingView(container) {
                                     <label class="block font-semibold text-slate-700">Pilih Unit / Prodi / Subbag Tujuan (Bisa Lebih Dari 1)</label>
                                     <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">★ Utama = Masuk Dashboard</span>
                                 </div>
-                                <div id="timUnitCheckContainer" class="space-y-2 bg-slate-50 p-3.5 rounded-xl border max-h-60 overflow-y-auto">
-                                    <!-- Di-render otomatis sesuai timKey melalui renderTimUnitCheckboxes() -->
-                                </div>
+                                <div id="timUnitCheckContainer" class="space-y-2 bg-slate-50 p-3.5 rounded-xl border max-h-60 overflow-y-auto"></div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
                                 <button type="button" onclick="closeCascadingTimModal()" class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-medium">Batal</button>
@@ -3168,82 +3137,7 @@ function renderCascadingView(container) {
 
                 renderTimUnitCheckboxes(currentUser.timKey);
             }, 100);
-        }
-
-        function toggleTimRoleSelect(idx, isChecked) {
-            const sel = document.getElementById(`timRole_${idx}`);
-            if (!sel) return;
-            sel.disabled = !isChecked;
-            if (isChecked) {
-                sel.className = 'p-1.5 text-xs font-bold rounded-lg border border-blue-300 bg-blue-50 text-blue-800 transition-all cursor-pointer';
-            } else {
-                sel.className = 'p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer';
-            }
-        }
-
-        function toggleUnitRoleSelect(idx, isChecked) {
-            const sel = document.getElementById(`unitRole_${idx}`);
-            if (!sel) return;
-            sel.disabled = !isChecked;
-            if (isChecked) {
-                sel.className = 'p-1.5 text-xs font-bold rounded-lg border border-blue-300 bg-blue-50 text-blue-800 transition-all cursor-pointer';
-            } else {
-                sel.className = 'p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer';
-            }
-        }
-
-        // Menampilkan HANYA Unit/Prodi/Subbag yang berada di bawah Tim Kerja yang bersangkutan
-        function renderTimUnitCheckboxes(targetTimKey) {
-            const container = document.getElementById('timUnitCheckContainer');
-            if (!container) return;
-            const activeTim = targetTimKey || currentUser.timKey;
-            const headerLbl = document.getElementById('modalTimHeaderLabel');
-            if (headerLbl && activeTim) headerLbl.innerText = activeTim;
-
-            // Filter unit berdasarkan timKey yang ada pada DB.users (role: ketua_unit)
-            let allowedUnits = DB.users
-                .filter(u => u.role === 'ketua_unit' && (!activeTim || u.timKey === activeTim))
-                .map(u => u.unit);
-
-            // Hilangkan duplikat
-            allowedUnits = Array.from(new Set(allowedUnits));
-
-            if (allowedUnits.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Tidak ada Unit/Prodi di bawah Tim Kerja ${activeTim || 'ini'}.</p>`;
-                return;
-            }
-
-            container.innerHTML = allowedUnits.map((u, idx) => `
-                <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-all shadow-2xs">
-                    <label class="flex items-center space-x-3 cursor-pointer flex-1">
-                        <input type="checkbox" name="unitCheck" value="${u}" onchange="toggleUnitRoleSelect(${idx}, this.checked)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-                        <span class="text-slate-800 font-semibold text-xs">${u}</span>
-                    </label>
-                    <select id="unitRole_${idx}" data-unit="${u}" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
-                        <option value="Utama">★ Unit Utama (Inti)</option>
-                        <option value="Support">🛡️ Unit Support (Pendukung)</option>
-                    </select>
-                </div>
-            `).join('');
-        }
-
-        function updateDirRenstraOptions(tahun) {
-            const sel = document.getElementById('dirIndikatorRenstra');
-            if (!sel) return;
-            const listIndikator = DB.renstraIndikatorKinerja || [];
-            
-            if (listIndikator.length === 0) {
-                sel.innerHTML = '<option value="">Belum ada Indikator Kinerja di Renstra (Tier 4)</option>';
-                return;
-            }
-
-            sel.innerHTML = listIndikator.map(ik => {
-                const targetThn = ik['target' + tahun] !== undefined ? ik['target' + tahun] : (ik.target2025 || 100);
-                const paguThn = ik['anggaran' + tahun] !== undefined ? ik['anggaran' + tahun] : (ik.anggaran2025 || 0);
-                const satuan = ik.satuan || '%';
-                const kode = ik.kodeIndikator ? `${ik.kodeIndikator} - ` : '';
-                return `<option value="${ik.id}" data-nama="${ik.namaIndikator}" data-satuan="${satuan}" data-target="${targetThn}" data-anggaran="${paguThn}">${kode}${ik.namaIndikator} (Target: ${targetThn} ${satuan})</option>`;
-            }).join('');
+        }).join('');
 
             updateDirAnggaranPreview();
         }
