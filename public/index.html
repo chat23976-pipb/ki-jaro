@@ -3195,6 +3195,40 @@ function updateDirRenstraOptions(tahun) {
 
             updateDirAnggaranPreview();
         }
+            // --- LETAKKAN DI SINI (Di atas openCascadingDirModal) ---
+        function toggleTimRoleSelect(idx, isChecked) {
+            const sel = document.getElementById(`timRole_${idx}`);
+            if (!sel) return;
+            sel.disabled = !isChecked;
+            if (isChecked) {
+                sel.className = 'p-1.5 text-xs font-bold rounded-lg border border-blue-300 bg-blue-50 text-blue-800 transition-all cursor-pointer';
+                
+                const existingUtama = Array.from(document.querySelectorAll('select[id^="timRole_"]')).some(s => !s.disabled && s.value === 'Utama' && s.id !== `timRole_${idx}`);
+                if (!existingUtama) {
+                    sel.value = 'Utama';
+                } else {
+                    sel.value = 'Support';
+                }
+            } else {
+                sel.className = 'p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer';
+                sel.value = 'Support';
+            }
+        }
+
+        function handleTimRoleChange(changedIdx) {
+            const changedSel = document.getElementById(`timRole_${changedIdx}`);
+            if (changedSel && changedSel.value === 'Utama') {
+                document.querySelectorAll('select[id^="timRole_"]').forEach((s, idx) => {
+                    if (idx !== changedIdx && !s.disabled) {
+                        s.value = 'Support';
+                    }
+                });
+            }
+        }
+
+        function openCascadingDirModal() {
+            // ... kode modal direktur selanjutnya ...
+        }
             function openCascadingDirModal() {
             if (!DB.renstraIndikatorKinerja || DB.renstraIndikatorKinerja.length === 0) {
                 showToast('Belum ada data Indikator Kinerja di Renstra (Tier 4)! Input dulu di menu Renstra.', 'error');
