@@ -105,6 +105,43 @@
     </div>
 </div>
     <script>
+        // Helper Enterprise: Cek apakah Tim Kerja berstatus UTAMA pada Cascading Direktur
+        function isTimUtamaInDir(cd, timKey) {
+            if (!cd) return false;
+            if (cd.timRoles && cd.timRoles[timKey]) {
+                return cd.timRoles[timKey] === 'Utama';
+            }
+            return Array.isArray(cd.timKeys) && cd.timKeys[0] === timKey;
+        }
+
+        // Helper Enterprise: Cek apakah Unit/Prodi/Subbag berstatus UTAMA pada Cascading Tim Kerja
+        function isUnitUtamaInTim(ct, unitName) {
+            if (!ct) return false;
+            if (ct.unitRoles && ct.unitRoles[unitName]) {
+                return ct.unitRoles[unitName] === 'Utama';
+            }
+            return Array.isArray(ct.unitTargets) && ct.unitTargets[0] === unitName;
+        }
+
+        // Helper Enterprise: Cek apakah Capaian suatu Unit berhak masuk ke Dashboard Kinerja Utama
+        function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
+            if (!capaianItem) return false;
+            const tahun = String(capaianItem.tahun || '2025');
+            const cd = cdObj || DB.cascadingDirektur.find(x => x.target === capaianItem.targetDirektur && String(x.tahun || '2025') === tahun);
+            if (!cd) return false;
+
+            if (!isTimUtamaInDir(cd, capaianItem.timKey)) return false;
+
+            const ct = DB.cascadingTim.find(x => 
+                x.targetDirektur === cd.target && 
+                String(x.tahun || '2025') === tahun && 
+                x.timKey === capaianItem.timKey &&
+                Array.isArray(x.unitTargets) && x.unitTargets.includes(capaianItem.unit)
+            );
+            if (!ct) return false;
+
+            return isUnitUtamaInTim(ct, capaianItem.unit);
+        }
         let DB = {
             users: [
                 { id: 'u1', username: 'deni.saputra@poltek-petrokimia.ac.id', password: '123', name: 'Administrator Sistem', role: 'admin', unit: 'Pusat Data & Sistem' },
