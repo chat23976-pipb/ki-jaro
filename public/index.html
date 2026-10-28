@@ -2862,6 +2862,20 @@ function renderCascadingView(container) {
                                                     <i class="fa-solid fa-users-gear mb-1 block"></i> Tim Kerja: ${tim}
                                                 </div>
                                                 <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
+                                                <div class="flex flex-col space-y-4 flex-1">
+                                    ${DB.timKerjaList.map(tim => {
+                                        const assignedDir = filteredDir.filter(cd => cd.timKeys.includes(tim));
+                                        if (assignedDir.length === 0) return '';
+                                        const subUnits = filteredTim.filter(ct => ct.timKey === tim && assignedDir.some(ad => ad.target === ct.targetDirektur && (ad.tahun || '2025') === (ct.tahun || '2025')));
+
+                                        return `
+                                            <div class="flex items-center space-x-4 relative">
+                                                <div class="absolute -left-6 top-0 bottom-0 w-0.5 bg-slate-300"></div>
+                                                <div class="w-6 h-0.5 bg-blue-400 shrink-0"></div>
+                                                <div class="px-4 py-3 bg-gradient-to-br from-purple-700 to-indigo-800 text-white rounded-xl shadow-md text-xs font-semibold text-center w-52 shrink-0 border border-purple-800">
+                                                    <i class="fa-solid fa-users-gear mb-1 block"></i> Tim Kerja: ${tim}
+                                                </div>
+                                                <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
                                                 <div class="flex flex-col space-y-2 flex-1 py-2">
                                                     ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan</span>' : subUnits.map(ct => {
                                                         const parentCd = assignedDir.find(ad => ad.target === ct.targetDirektur && (ad.tahun || '2025') === (ct.tahun || '2025'));
@@ -2883,10 +2897,6 @@ function renderCascadingView(container) {
                                                         </div>
                                                     `;}).join('')}
                                                 </div>
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
                                             </div>
                                         `;
                                     }).join('')}
