@@ -3223,16 +3223,7 @@ function updateDirRenstraOptions(tahun) {
             }
         }
 
-        function handleTimRoleChange(changedIdx) {
-            const changedSel = document.getElementById(`timRole_${changedIdx}`);
-            if (changedSel && changedSel.value === 'Utama') {
-                document.querySelectorAll('select[id^="timRole_"]').forEach((s, idx) => {
-                    if (idx !== changedIdx && !s.disabled) {
-                        s.value = 'Support';
-                    }
-                });
-            }
-        }
+// Pengatur Eksklusif 1 Tim Utama
         function handleTimRoleChange(changedIdx) {
             const changedSel = document.getElementById(`timRole_${changedIdx}`);
             if (changedSel && changedSel.value === 'Utama') {
@@ -3244,7 +3235,7 @@ function updateDirRenstraOptions(tahun) {
             }
         }
 
-        // --- TARUH DI SINI ---
+        // Pengatur Eksklusif 1 Unit Utama
         function handleUnitRoleChange(changedIdx) {
             const changedSel = document.getElementById(`unitRole_${changedIdx}`);
             if (changedSel && changedSel.value === 'Utama') {
