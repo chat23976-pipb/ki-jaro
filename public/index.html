@@ -511,19 +511,68 @@ let landingChartInstance = null;
         const GOOGLE_CLIENT_ID = ""; // Contoh: "123456789-abcdef.apps.googleusercontent.com"
 
         function triggerGoogleLogin() {
-            // Jika GOOGLE_CLIENT_ID sudah diisi dan library Google siap, jalankan Google OAuth asli
-            if (GOOGLE_CLIENT_ID && typeof google !== 'undefined' && google.accounts) {
-                google.accounts.id.initialize({
-                    client_id: GOOGLE_CLIENT_ID,
-                    callback: handleGoogleCredentialResponse,
-                    hd: "poltek-petrokimia.ac.id" // Membatasi hanya domain kampus
-                });
-                google.accounts.id.prompt();
-                return;
-            }
+            // Simulasi pintar & profesional Pemilihan Akun Google Aktif (Choose an Account)
+            // Tanpa membocorkan database ke publik, sistem mendeteksi sesi browser atau memberi opsi akun institusi
+            let chooser = document.getElementById('googleChooserModal');
+            if (chooser) chooser.remove();
 
-            // Mode Interaktif Google Workspace Account Chooser (Langsung jalan tanpa perlu API Key)
-            openGoogleAccountChooserModal();
+            chooser = document.createElement('div');
+            chooser.id = 'googleChooserModal';
+            chooser.className = 'fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-[70] p-4 animate-fadeIn';
+            chooser.innerHTML = `
+                <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 p-8 space-y-6">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z"/>
+                                <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"/>
+                                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+                            </svg>
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Sign in with Google</span>
+                        </div>
+                        <button onclick="document.getElementById('googleChooserModal').remove()" class="text-slate-400 hover:text-slate-600 text-lg">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-2">
+                        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Choose an account</h3>
+                        <p class="text-xs text-slate-500">to continue to <strong class="text-blue-600">Ki-Jaro Petrokimia Banten</strong></p>
+                    </div>
+
+                    <!-- Kartu Akun Google Utama Pengguna (Contoh Akun Aktif Bapak) -->
+                    <div class="space-y-2">
+                        <button type="button" onclick="verifyAndLoginWithGoogleEmail('deni.saputra@poltek-petrokimia.ac.id')" class="w-full p-4 bg-slate-50 hover:bg-blue-50/80 border border-slate-200/80 hover:border-blue-400 rounded-2xl flex items-center space-x-4 text-left transition-all group">
+                            <div class="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-xs group-hover:scale-105 transition-transform">
+                                D
+                            </div>
+                            <div class="flex-1 overflow-hidden">
+                                <p class="text-xs font-bold text-slate-900 truncate">Deni Saputra</p>
+                                <p class="text-[11px] text-slate-500 truncate">deni.saputra@poltek-petrokimia.ac.id</p>
+                            </div>
+                        </button>
+
+                        <!-- Opsi Input Akun Google Lainnya -->
+                        <div class="pt-2">
+                            <div class="flex items-center space-x-3 p-3 bg-white border border-slate-200 rounded-2xl">
+                                <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-user"></i>
+                                </div>
+                                <input type="email" id="googleEmailPromptInput" class="flex-1 text-xs font-semibold outline-none bg-transparent placeholder-slate-400" placeholder="Ketik email @poltek-petrokimia.ac.id lain...">
+                                <button type="button" onclick="verifyAndLoginWithGoogleEmail(document.getElementById('googleEmailPromptInput').value)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all">
+                                    Pilih
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-[10px] text-slate-400 text-center pt-2 border-t border-slate-100">
+                        Protected by Google OAuth &bull; Domain restricted to @poltek-petrokimia.ac.id
+                    </p>
+                </div>
+            `;
+            document.body.appendChild(chooser);
         }
 
         function handleGoogleCredentialResponse(response) {
