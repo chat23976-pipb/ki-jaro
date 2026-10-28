@@ -3446,6 +3446,7 @@ function updateDirRenstraOptions(tahun) {
             modal.removeAttribute('data-edit-id');
             modal.removeAttribute('data-edit-timkey');
             
+            // Mengambil timKey dari user yang sedang login atau default 'Akademik'
             const activeTim = currentUser.timKey || 'Akademik';
             renderTimUnitCheckboxes(activeTim);
             
