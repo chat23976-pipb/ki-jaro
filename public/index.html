@@ -3180,6 +3180,22 @@ function renderCascadingView(container) {
             if (elAnggaran) elAnggaran.innerText = `Rp ${Number(anggaran).toLocaleString('id-ID')}`;
         }
 
+function isCurrentTimUtamaSelected() {
+            const tahunEl = document.getElementById('timTahunTarget');
+            const indEl = document.getElementById('timDirRef');
+            if (!tahunEl || !indEl || !indEl.value) return true;
+            
+            const modal = document.getElementById('cascadingTimModal');
+            const editTimKey = modal ? modal.getAttribute('data-edit-timkey') : null;
+            const activeTim = editTimKey || (currentUser && currentUser.timKey) || 'Akademik';
+            
+            const cd = (DB.cascadingDirektur || []).find(c => 
+                c.target === indEl.value && String(c.tahun || '2025') === String(tahunEl.value)
+            );
+            if (!cd) return true;
+            return isTimUtamaInDir(cd, activeTim);
+        }
+
         function updateTimDirRefOptions(tahun) {
             const sel = document.getElementById('timDirRef');
             if (!sel) return;
@@ -3192,10 +3208,39 @@ function renderCascadingView(container) {
             sel.innerHTML = matching.length === 0 
                 ? `<option value="">Belum ada indikator dari Direktur untuk tahun ${tahun}</option>` 
                 : matching.map(c => {
-                    const roleStatus = currentUser.timKey ? (isTimUtamaInDir(c, currentUser.timKey) ? ' [Status Tim Anda: ★ UTAMA]' : ' [Status Tim Anda: 🛡️ SUPPORT]') : '';
-                    return `<option value="${c.target}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})${roleStatus}</option>`;
+                    const isUtama = currentUser.timKey ? isTimUtamaInDir(c, currentUser.timKey) : true;
+                    const roleStatus = currentUser.timKey ? (isUtama ? ' [Status Tim Anda: ★ UTAMA]' : ' [Status Tim Anda: 🛡️ SUPPORT]') : '';
+                    return `<option value="${c.target}" data-isutama="${isUtama}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})${roleStatus}</option>`;
                 }).join('');
+
+            sel.onchange = function() {
+                syncUnitRolesWithTimStatus();
+            };
+            syncUnitRolesWithTimStatus();
         }
+
+        function syncUnitRolesWithTimStatus() {
+            const timIsUtama = isCurrentTimUtamaSelected();
+            document.querySelectorAll('select[id^="unitRole_"]').forEach((sel, idx) => {
+                const chk = document.querySelectorAll('input[name="unitCheck"]')[idx];
+                const isChecked = chk ? chk.checked : false;
+                const optUtama = sel.querySelector('option[value="Utama"]');
+                
+                if (!timIsUtama) {
+                    if (optUtama) optUtama.disabled = true;
+                    sel.value = 'Support';
+                } else {
+                    if (optUtama) optUtama.disabled = false;
+                    if (isChecked) {
+                        const existingUtama = Array.from(document.querySelectorAll('select[id^="unitRole_"]')).some(
+                            s => s.id !== sel.id && !s.disabled && s.value === 'Utama'
+                        );
+                        sel.value = !existingUtama ? 'Utama' : 'Support';
+                    }
+                }
+            });
+        }
+        
 function updateDirRenstraOptions(tahun) {
             const sel = document.getElementById('dirIndikatorRenstra');
             if (!sel) return;
@@ -3407,30 +3452,29 @@ function updateDirRenstraOptions(tahun) {
         }
 
 function toggleUnitRoleSelect(idx, isChecked) {
-    const sel = document.getElementById(`unitRole_${idx}`);
-    if (!sel) {
-        console.warn('[Ki-Jaro] toggleUnitRoleSelect: elemen unitRole_' + idx + ' tidak ditemukan');
-        return;
-    }
-    sel.disabled = !isChecked;
-    if (isChecked) {
-        sel.className = 'p-1.5 text-xs font-bold rounded-lg border border-blue-300 bg-blue-50 text-blue-800 transition-all cursor-pointer';
-        
-        // Cek apakah SUDAH ADA unit lain yang Utama
-        const existingUtama = Array.from(document.querySelectorAll('select[id^="unitRole_"]')).some(
-            s => s.id !== `unitRole_${idx}` && !s.disabled && s.value === 'Utama'
-        );
-        
-        if (!existingUtama) {
-            sel.value = 'Utama';   // jadikan ini Utama jika belum ada
-        } else {
-            sel.value = 'Support'; // jika sudah ada Utama, jadikan Support
+            const sel = document.getElementById(`unitRole_${idx}`);
+            if (!sel) return;
+            sel.disabled = !isChecked;
+            const timIsUtama = isCurrentTimUtamaSelected();
+            const optUtama = sel.querySelector('option[value="Utama"]');
+
+            if (isChecked) {
+                sel.className = 'p-1.5 text-xs font-bold rounded-lg border border-blue-300 bg-blue-50 text-blue-800 transition-all cursor-pointer';
+                if (!timIsUtama) {
+                    if (optUtama) optUtama.disabled = true;
+                    sel.value = 'Support';
+                } else {
+                    if (optUtama) optUtama.disabled = false;
+                    const existingUtama = Array.from(document.querySelectorAll('select[id^="unitRole_"]')).some(
+                        s => s.id !== `unitRole_${idx}` && !s.disabled && s.value === 'Utama'
+                    );
+                    sel.value = !existingUtama ? 'Utama' : 'Support';
+                }
+            } else {
+                sel.className = 'p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer';
+                sel.value = 'Support';
+            }
         }
-    } else {
-        sel.className = 'p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer';
-        sel.value = 'Support';
-    }
-}
 
         function openCascadingTimModal() {
             console.log('[Ki-Jaro] openCascadingTimModal dipanggil.');
@@ -3536,7 +3580,7 @@ function toggleUnitRoleSelect(idx, isChecked) {
             }
         }
 
-        async function saveCascadingTim(e) {
+async function saveCascadingTim(e) {
             e.preventDefault();
             const modal = document.getElementById('cascadingTimModal');
             const editId = modal.getAttribute('data-edit-id');
@@ -3554,23 +3598,24 @@ function toggleUnitRoleSelect(idx, isChecked) {
                 return;
             }
 
+            const timIsUtama = isCurrentTimUtamaSelected();
             const chosenUnits = [];
             const unitRoles = {};
-            let hasUtama = false;
+            let utamaCount = 0;
 
             document.querySelectorAll('input[name="unitCheck"]').forEach((chk, idx) => {
                 if (chk.checked) {
                     const uName = chk.value;
                     chosenUnits.push(uName);
                     const roleSel = document.getElementById(`unitRole_${idx}`);
-                    const rVal = roleSel ? roleSel.value : 'Utama';
+                    const rVal = !timIsUtama ? 'Support' : (roleSel ? roleSel.value : 'Utama');
                     unitRoles[uName] = rVal;
-                    if (rVal === 'Utama') hasUtama = true;
+                    if (rVal === 'Utama') utamaCount++;
                 }
             });
 
-            if (!hasUtama) {
-                showToast('Minimal harus ada 1 Unit/Prodi/Subbag dengan status "Unit Utama (Inti)"!', 'error');
+            if (timIsUtama && utamaCount !== 1) {
+                showToast('Karena Tim Kerja Anda berstatus Utama pada indikator ini, wajib ada tepat 1 Unit Utama (Inti)!', 'error');
                 return;
             }
 
@@ -3586,7 +3631,7 @@ function toggleUnitRoleSelect(idx, isChecked) {
                         unitRoles: unitRoles
                     };
                 }
-                showToast('Cascading Unit (Utama & Support) berhasil diperbarui!');
+                showToast('Cascading Unit berhasil diperbarui!');
             } else {
                 DB.cascadingTim.push({
                     id: 'ct_' + Date.now(),
@@ -3603,7 +3648,7 @@ function toggleUnitRoleSelect(idx, isChecked) {
             closeCascadingTimModal();
             renderCascadingView(document.getElementById('mainContent'));
         }
-
+        
         function renderCapaianView(container) {
             document.getElementById('pageTitle').innerText = 'Input & Validasi Capaian Kinerja & Program Kerja';
             const isKaUnit = currentUser.role === 'ketua_unit';
@@ -4786,6 +4831,13 @@ async function confirmDeleteCapaian(id) {
                 document.getElementById('uPassword').value = '';
                 document.getElementById('uRole').value = 'ketua_unit';
                 document.getElementById('uUnit').value = '';
+            }
+        }
+        function closeUserModal() {
+            const modal = document.getElementById('userModal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
             }
         }
        // Fungsi otomatis menyamakan daftar DB.unitList dengan unit milik user ber-role ketua_unit
