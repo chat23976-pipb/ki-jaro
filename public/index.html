@@ -3040,7 +3040,7 @@ function renderCascadingView(container) {
                     </div>
                 </div>
 
-                <!-- Modal Cascading Direktur -->
+<!-- Modal Cascading Direktur -->
                 <div id="cascadingDirModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
                         <div class="flex justify-between items-center border-b pb-4">
@@ -3048,7 +3048,7 @@ function renderCascadingView(container) {
                                 <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Direktur</h3>
                                 <p class="text-[11px] text-slate-500">Pilih satu atau lebih Tim Kerja dan tentukan Tim Utama vs Support</p>
                             </div>
-                            <button onclick="closeCascadingDirModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            <button type="button" onclick="closeCascadingDirModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveCascadingDir(event)" class="space-y-4 text-sm">
                             <div>
@@ -3066,7 +3066,6 @@ function renderCascadingView(container) {
                                 <div class="text-right"><span class="text-slate-500 block">Pagu Anggaran:</span><strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong></div>
                             </div>
                             <div>
-                                <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <label class="block font-semibold text-slate-700">Pilih Ketua Tim Kerja (Bisa Lebih Dari 1) & Status Peran</label>
                                     <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">★ Utama = Masuk Dashboard</span>
@@ -3094,15 +3093,15 @@ function renderCascadingView(container) {
                     </div>
                 </div>
 
-               <!-- Modal Cascading Ketua Tim Kerja -->
-<div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+                <!-- Modal Cascading Ketua Tim Kerja -->
+                <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
                         <div class="flex justify-between items-center border-b pb-4">
                             <div>
                                 <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (<span id="modalTimHeaderLabel">${currentUser.timKey || 'Semua Tim'}</span>)</h3>
                                 <p class="text-[11px] text-slate-500">Menampilkan khusus Subbag / Prodi / Unit di bawah koordinasi Tim Kerja Anda</p>
                             </div>
-                            <button onclick="closeCascadingTimModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            <button type="button" onclick="closeCascadingTimModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveCascadingTim(event)" class="space-y-4 text-sm">
                             <div>
@@ -3120,7 +3119,6 @@ function renderCascadingView(container) {
                                     <label class="block font-semibold text-slate-700">Pilih Unit / Prodi / Subbag Tujuan (Bisa Lebih Dari 1)</label>
                                     <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">★ Utama = Masuk Dashboard</span>
                                 </div>
-                                <!-- Kontainer dinamis tempat unit/prodi dirender oleh renderTimUnitCheckboxes -->
                                 <div id="timUnitCheckContainer" class="space-y-2 bg-slate-50 p-3.5 rounded-xl border max-h-60 overflow-y-auto"></div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
@@ -3454,6 +3452,13 @@ function toggleUnitRoleSelect(idx, isChecked) {
             
             const yrEl = document.getElementById('timTahunTarget');
             if (yrEl) updateTimDirRefOptions(yrEl.value);
+        }
+        function closeCascadingTimModal() {
+            const modal = document.getElementById('cascadingTimModal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
         }
 
         function renderTimUnitCheckboxes(targetTimKey) {
