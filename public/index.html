@@ -968,7 +968,10 @@ function renderDashboardLayout() {
                                 <i class="fa-solid fa-folder-open w-5 text-center"></i>
                                 <span class="sidebar-text">Dokumen Perencanaan</span>
                             </a>
-
+                            <a href="javascript:void(0)" onclick="switchTab('dokumen_ukur_lapor')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen_ukur_lapor' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                <i class="fa-solid fa-file-contract w-5 text-center"></i>
+                                <span class="sidebar-text">Dokumen Pengukuran & Pelaporan</span>
+                            </a>
                             ${!isKaUnit ? `
                                 <a href="javascript:void(0)" onclick="switchTab('cascading')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'cascading' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                     <i class="fa-solid fa-sitemap w-5 text-center"></i>
@@ -1001,11 +1004,6 @@ function renderDashboardLayout() {
                             <a href="javascript:void(0)" onclick="switchTab('laporan')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'laporan' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-file-pdf w-5 text-center"></i>
                                 <span class="sidebar-text">Ekspor & Download PDF</span>
-                            </a>
-
-                            <a href="javascript:void(0)" onclick="switchTab('dokumen_ukur_lapor')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen_ukur_lapor' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                <i class="fa-solid fa-file-contract w-5 text-center"></i>
-                                <span class="sidebar-text">Dokumen Pengukuran & Pelaporan</span>
                             </a>
                         </nav>
                     </aside>
@@ -2406,14 +2404,14 @@ filteredCascading.forEach(cd => {
                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-blue-50 text-primary-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-bullseye"></i></div>
                             <div>
-                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Tercapai</p>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Pencapaian Perkin Poltek</p>
                                 <h3 class="text-base font-bold text-slate-900 mt-0.5">${achievedCount} dari ${totalValidIndikator} tercapai</h3>
                             </div>
                         </div>
                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-circle-check"></i></div>
                             <div>
-                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Tercapai (Role)</p>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Pencapaian Perkin Tim</p>
                                 <h3 class="text-base font-bold text-slate-900 mt-0.5">${roleAchievedCount} dari ${roleTotalIndikator} tercapai</h3>
                             </div>
                         </div>
@@ -2427,21 +2425,21 @@ filteredCascading.forEach(cd => {
                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-scale-balanced"></i></div>
                             <div>
-                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Jumlah Efisien</p>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Jumlah Efisiensi</p>
                                 <h3 class="text-base font-bold text-slate-900 mt-0.5">${efficientCount}</h3>
                             </div>
                         </div>
                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-award"></i></div>
                             <div class="overflow-hidden">
-                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Unit Terbaik</p>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Unit Teratas</p>
                                 <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${bestUnit}</h3>
                             </div>
                         </div>
                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
                             <div class="overflow-hidden">
-                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Unit Terendah</p>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Unit Terbawah</p>
                                 <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${worstUnit}</h3>
                             </div>
                         </div>
@@ -2572,7 +2570,7 @@ filteredCascading.forEach(cd => {
                                             <th class="p-3 text-center">Realisasi Anggaran (Rp)</th>
                                             <th class="p-3 text-center">% Realisasi Anggaran</th>
                                             <th class="p-3 text-center">Efektivitas</th>
-                                            <th class="p-3 text-center">Efisien</th>
+                                            <th class="p-3 text-center">Efisiensi</th>
                                             <th class="p-3 text-center">Kesimpulan</th>
                                         </tr>
                                     </thead>
