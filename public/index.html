@@ -3699,14 +3699,6 @@ async function saveCascadingTim(e) {
                                 <span>Log Error Capaian</span>
                             </button>
                             <!-- ===================================== -->
-
-                            ${isKaUnit ? `
-                                <button onclick="openCapaianModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                    <i class="fa-solid fa-plus"></i>
-                                    <span>Input Program Baru</span>
-                                </button>
-                            ` : ''}
-                        </div>
                             ${isKaUnit ? `
                                 <button onclick="openCapaianModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
                                     <i class="fa-solid fa-plus"></i>
@@ -3723,6 +3715,7 @@ async function saveCascadingTim(e) {
                                     <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                                         <th class="p-4">Unit / Prodi</th>
                                         <th class="p-4">Indikator Utama (Direktur)</th>
+                                        <th class="p-4 text-center">Kategori</th>
                                         <th class="p-4">Program Kerja Intervensi</th>
                                         <th class="p-4">Tahun & Periode</th>
                                         <th class="p-4">Target / Realisasi</th>
@@ -3823,6 +3816,10 @@ ${isKaUnit ? `
                                         return `<option value="${ct.targetDirektur}" data-tahun="${ct.tahun || '2025'}" data-satuan="${satuan}" data-targetval="${targetVal}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun: ${ct.tahun || '2025'})</option>`;
                                     }).join('')}
                                 </select>
+                                <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs mt-3">
+    <span class="font-semibold text-slate-700">Kategori Indikator bagi Unit Anda:</span>
+    <span id="badgeKategoriModal" class="px-3 py-1 bg-blue-600 text-white font-bold rounded-full text-[10px]">UTAMA</span>
+</div>
                             </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Nama Program Kerja</label>
@@ -3967,13 +3964,40 @@ async function confirmDeleteCapaian(id) {
         renderCapaianView(document.getElementById('mainContent'));
     }
 }
-        function updateSatuanAndTargetRef(selectEl) {
-            const opt = selectEl.options[selectEl.selectedIndex];
-            const satuan = opt.getAttribute('data-satuan') || '%';
-            const targetVal = opt.getAttribute('data-targetval') || '100';
-            document.getElementById('inputSatuan').value = satuan;
-            document.getElementById('inputTarget').value = targetVal;
-        }
+        function updateSatuanAndTargetRef(selectEl, preserveExisting = false) {
+    if (!selectEl || selectEl.selectedIndex === -1) return;
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const satuan = opt.getAttribute('data-satuan') || '%';
+    const targetVal = opt.getAttribute('data-targetval') || '100';
+    const isUtama = opt.getAttribute('data-isutama') === 'true';
+
+    const satuanEl = document.getElementById('inputSatuan');
+    const targetEl = document.getElementById('inputTarget');
+    const badgeEl = document.getElementById('badgeKategoriModal');
+    if (!satuanEl || !targetEl) return;
+
+    if (badgeEl) {
+        badgeEl.innerText = isUtama ? 'UTAMA' : 'Support';
+        badgeEl.className = isUtama ? 'px-3 py-1 bg-blue-600 text-white font-bold rounded-full text-[10px]' : 'px-3 py-1 bg-slate-600 text-white font-bold rounded-full text-[10px]';
+    }
+
+    if (!preserveExisting) {
+        satuanEl.value = satuan;
+        targetEl.value = targetVal;
+    }
+
+    if (isUtama) {
+        satuanEl.readOnly = true;
+        targetEl.readOnly = true;
+        satuanEl.className = 'w-full p-3 bg-slate-100 border rounded-xl font-semibold text-slate-600 cursor-not-allowed';
+        targetEl.className = 'w-full p-3 bg-slate-100 border rounded-xl font-bold text-primary-700 cursor-not-allowed';
+    } else {
+        satuanEl.readOnly = false;
+        targetEl.readOnly = false;
+        satuanEl.className = 'w-full p-3 bg-white border border-blue-400 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500';
+        targetEl.className = 'w-full p-3 bg-white border border-blue-400 rounded-xl font-bold text-primary-700 focus:ring-2 focus:ring-blue-500';
+    }
+}
 
         function openCapaianModal(mode, id = null) {
             if (mode === 'edit' && id) {
@@ -4999,6 +5023,8 @@ async function confirmDeleteCapaian(id) {
                                         <th class="p-2 border text-center">Satuan</th>
                                         <th class="p-2 border text-center">Realisasi</th>
                                         <th class="p-2 border text-center">Status</th>
+                                        <th class="p-2 border text-center">Efektivitas</th>
+                                        <th class="p-2 border text-center">Efisiensi</th>
                                     </tr>
                                 </thead>
                                 <tbody id="printTableBody">
