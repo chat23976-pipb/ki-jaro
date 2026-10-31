@@ -3092,7 +3092,7 @@ function renderCascadingView(container) {
                     </div>
                 </div>
 
-                <!-- Modal Cascading Ketua Tim Kerja -->
+               <!-- Modal Cascading Ketua Tim Kerja -->
                 <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
                         <div class="flex justify-between items-center border-b pb-4">
@@ -3114,26 +3114,20 @@ function renderCascadingView(container) {
                                 <select id="timDirRef" required class="w-full p-3 bg-slate-50 border rounded-xl"></select>
                             </div>
                             <div>
-                                <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <label class="block font-semibold text-slate-700">Pilih Ketua Tim Kerja (Bisa Lebih Dari 1) & Status Peran</label>
+                                    <label class="block font-semibold text-slate-700">Pilih Unit / Prodi / Subbag Tujuan (Bisa Lebih Dari 1)</label>
                                     <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">★ Utama = Masuk Dashboard</span>
                                 </div>
-                                <div class="space-y-2.5 bg-slate-50 p-3.5 rounded-xl border">
-                                    ${DB.timKerjaList.map((t, idx) => `
-                                        <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-all shadow-2xs">
-                                            <label class="flex items-center space-x-3 cursor-pointer flex-1">
-                                                <input type="checkbox" name="timCheck" value="${t}" onchange="toggleTimRoleSelect(${idx}, this.checked)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-                                                <span class="text-slate-800 font-semibold text-xs">${t}</span>
-                                            </label>
-                                            <select id="timRole_${idx}" data-tim="${t}" onchange="handleTimRoleChange(${idx})" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
-                                                <option value="Utama">★ Tim Utama (Inti)</option>
-                                                <option value="Support">🛡️ Tim Support (Pendukung)</option>
-                                            </select>
-                                        </div>
-                                    `).join('')}
-                                </div>
+                                <!-- Kontainer dinamis tempat unit/prodi dirender oleh renderTimUnitCheckboxes -->
+                                <div id="timUnitCheckContainer" class="space-y-2 bg-slate-50 p-3.5 rounded-xl border max-h-60 overflow-y-auto"></div>
                             </div>
+                            <div class="flex justify-end space-x-3 pt-2">
+                                <button type="button" onclick="closeCascadingTimModal()" class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-medium">Batal</button>
+                                <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold shadow-md">Simpan Cascading Unit</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             `;
 
             setTimeout(() => {
@@ -3446,15 +3440,16 @@ function updateDirRenstraOptions(tahun) {
             modal.removeAttribute('data-edit-id');
             modal.removeAttribute('data-edit-timkey');
             
-            // Mengambil timKey dari user yang sedang login atau default 'Akademik'
-            const activeTim = currentUser.timKey || 'Akademik';
+            const activeTim = (currentUser && currentUser.timKey) ? currentUser.timKey : 'Akademik';
             renderTimUnitCheckboxes(activeTim);
             
             modal.classList.remove('hidden');
             modal.classList.add('flex');
 
             const yrEl = document.getElementById('timTahunTarget');
-            if (yrEl) updateTimDirRefOptions(yrEl.value);
+            if (yrEl) {
+                updateTimDirRefOptions(yrEl.value);
+            }
         }
 
         function closeCascadingTimModal() {
@@ -3464,8 +3459,39 @@ function updateDirRenstraOptions(tahun) {
                 modal.classList.add('hidden');
             }
         }
-        function closeCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('flex'); document.getElementById('cascadingTimModal').classList.add('hidden'); }
 
+        function renderTimUnitCheckboxes(targetTimKey) {
+            const container = document.getElementById('timUnitCheckContainer');
+            if (!container) return;
+            
+            const activeTim = targetTimKey || (currentUser ? currentUser.timKey : 'Akademik') || 'Akademik';
+            const headerLbl = document.getElementById('modalTimHeaderLabel');
+            if (headerLbl) headerLbl.innerText = activeTim;
+
+            let allowedUnits = DB.users
+                .filter(u => u.role === 'ketua_unit' && (!activeTim || u.timKey === activeTim))
+                .map(u => u.unit);
+
+            allowedUnits = Array.from(new Set(allowedUnits));
+
+            if (allowedUnits.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Tidak ada Unit/Prodi di bawah Tim Kerja ${activeTim}.</p>`;
+                return;
+            }
+
+            container.innerHTML = allowedUnits.map((u, idx) => `
+                <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-all shadow-2xs">
+                    <label class="flex items-center space-x-3 cursor-pointer flex-1">
+                        <input type="checkbox" name="unitCheck" value="${u}" onchange="toggleUnitRoleSelect(${idx}, this.checked)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                        <span class="text-slate-800 font-semibold text-xs">${u}</span>
+                    </label>
+                    <select id="unitRole_${idx}" data-unit="${u}" onchange="handleUnitRoleChange(${idx})" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
+                        <option value="Utama">★ Unit Utama (Inti)</option>
+                        <option value="Support">🛡️ Unit Support (Pendukung)</option>
+                    </select>
+                </div>
+            `).join('');
+        }
         function openEditCascadingTimModal(id) {
             const item = DB.cascadingTim.find(x => x.id === id);
             if (!item) return;
