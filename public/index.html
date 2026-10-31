@@ -2206,9 +2206,9 @@ function renderDokumenUkurLaporView(container) {
 
 function renderDashboardView(container) {
             document.getElementById('pageTitle').innerText = 'Dashboard Capaian Kinerja & Peta Risiko';
-            
-            // Hanya mengambil Capaian yang Valid DAN berstatus UTAMA (baik di level Tim Kerja maupun di level Unit/Prodi/Subbag)
-            let validCapaian = DB.capaian.filter(c => c.status === 'Valid' && isCapaianUtamaForDashboard(c));
+
+            // Mengambil seluruh capaian yang sudah Valid (Utama diprioritaskan, namun tetap aman membaca realisasi valid yang ada)
+            let validCapaian = DB.capaian.filter(c => c.status === 'Valid');
             if (filterDashboardTahun !== 'Semua') {
                 validCapaian = validCapaian.filter(c => c.tahun === filterDashboardTahun);
             }
@@ -2438,78 +2438,86 @@ filteredCascading.forEach(cd => {
                             <button onclick="switchTab('cascading')" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md">Buka Menu Cascading</button>
                         </div>
                     ` : `
-                        <!-- Master KPI Table -->
+<!-- Master KPI Table -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
                                     <h3 class="font-bold text-slate-900 text-base">Tabel Master Indikator Kinerja (Direktur & Unit Terkait)</h3>
-                                    <p class="text-xs text-slate-500">Memuat indikator kinerja, target, satuan, tim kerja, PIC, % realisasi output, status tercapai/tidak, serta permasalahan</p>
+                                    <p class="text-xs text-slate-500">Memuat indikator kinerja, target, satuan, tim kerja, PIC, realisasi capaian, serta status ketercapaian</p>
                                 </div>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse text-xs">
                                     <thead>
-    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-        <th class="p-3 text-center">No</th>
-        <th class="p-3">Indikator Kinerja</th>
-        <th class="p-3 text-center">Target</th>
-        <th class="p-3 text-center">Satuan</th>
-        <th class="p-3">Tim Kerja</th>
-        <th class="p-3">PIC (Unit / Prodi)</th>
-        <th class="p-3 text-center">Realisasi Capaian</th> <!-- Kolom Baru -->
-        <th class="p-3 text-center">Status</th>
-        
-    </tr>
-</thead>
+                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                            <th class="p-3 text-center">No</th>
+                                            <th class="p-3">Indikator Kinerja</th>
+                                            <th class="p-3 text-center">Target</th>
+                                            <th class="p-3 text-center">Satuan</th>
+                                            <th class="p-3">Tim Kerja</th>
+                                            <th class="p-3">PIC (Unit / Prodi)</th>
+                                            <th class="p-3 text-center">Realisasi Capaian</th>
+                                            <th class="p-3 text-center">Status</th>
+                                        </tr>
+                                    </thead>
                                     <tbody class="divide-y divide-slate-100">
-                                        ${filteredCascading.filter(cd => filterDashboardTahun === 'Semua' || cd.tahun === filterDashboardTahun).map((cd, index) => {
-                                            let matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun && c.status === 'Valid');
-if (filterDashboardTriwulan !== 'Semua') {
-    matchedCap = matchedCap.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
-}
+                                        ${filteredCascading.filter(cd => filterDashboardTahun === 'Semua' || String(cd.tahun || '2025') === String(filterDashboardTahun)).map((cd, index) => {
+                                            const cdTahun = String(cd.tahun || '2025');
+                                            let matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && String(c.tahun || '2025') === cdTahun && c.status === 'Valid');
+                                            if (filterDashboardTriwulan !== 'Semua') {
+                                                matchedCap = matchedCap.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                                            }
                                             if (filterDashboardUnit !== 'Semua') {
                                                 matchedCap = matchedCap.filter(c => c.unit === filterDashboardUnit);
                                             }
-                                            const picNames = matchedCap.map(c => `${c.unit} (Utama)`).join(', ') || 'Belum ada realisasi Utama';
-                                            const timKeyStr = cd.timKeys.map(t => {
-                                                const isUtama = isTimUtamaInDir(cd, t);
-                                                return isUtama 
-                                                    ? `<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-bold text-[10px] mr-1 mb-1">★ ${t} (Utama)</span>`
-                                                    : `<span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 rounded font-medium text-[10px] mr-1 mb-1">🛡️ ${t} (Support)</span>`;
-                                            }).join('');
-                                            const permasalahanStr = matchedCap.map(c => c.permasalahan).filter(Boolean).join('; ') || '-';
+
+                                            // Prioritaskan capaian dari Unit Utama jika ada, jika belum ada gunakan capaian Valid yang tersedia
+                                            const utamaCap = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
+                                            const activeCapList = utamaCap.length > 0 ? utamaCap : matchedCap;
+
+                                            // Urutkan berdasarkan Triwulan (TW 1 -> TW 2 -> TW 3 -> TW 4 -> Tahunan) agar elemen terakhir adalah TW terbaru
+                                            const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
+                                            const sortedCap = [...activeCapList].sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
+
+                                            // Ambil daftar PIC dari Cascading Tim maupun dari Capaian yang sudah masuk
+                                            const cascadedUnits = DB.cascadingTim
+                                                .filter(ct => ct.targetDirektur === cd.target && String(ct.tahun || '2025') === cdTahun)
+                                                .flatMap(ct => ct.unitTargets || []);
+                                            const picUnits = Array.from(new Set([...activeCapList.map(c => c.unit), ...cascadedUnits]));
+                                            const picNames = picUnits.length > 0 ? picUnits.join(', ') : 'Belum ditentukan';
+
+                                            const timKeyStr = (cd.timKeys || []).join(', ') || '-';
+
                                             let realisasiVal = 0;
-if (matchedCap.length > 0) {
-    // Ambil inputan terakhir berdasarkan urutan validasi/input
-    realisasiVal = matchedCap[matchedCap.length - 1].realisasi;
-}
+                                            if (sortedCap.length > 0) {
+                                                realisasiVal = sortedCap[sortedCap.length - 1].realisasi;
+                                            }
                                             const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
-                                            const pRealOutput = targetVal > 0 ? ((realisasiVal / targetVal) * 100).toFixed(2) : 0;
-                                            const isTercapai = matchedCap.length > 0 && realisasiVal >= targetVal;
+                                            const isTercapai = sortedCap.length > 0 && realisasiVal >= targetVal;
 
                                             return `
                                                 <tr class="hover:bg-slate-50 transition-all">
-    <td class="p-3 text-center font-semibold text-slate-600">${index + 1}</td>
-    <td class="p-3 font-bold text-slate-900">${cd.target}</td>
-    <td class="p-3 text-center font-semibold text-primary-700">${targetVal}</td>
-    <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 rounded text-[11px] font-semibold">${cd.satuan || '%'}</span></td>
-    <td class="p-3 font-medium text-purple-700">${timKeyStr}</td>
-    <td class="p-3 font-medium text-slate-700">${picNames}</td>
-    <td class="p-3 text-center font-bold text-emerald-600">${realisasiVal}</td> <!-- Nilai Realisasi Capaian -->
-    <td class="p-3 text-center">
-        <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
-            ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
-        </span>
-    </td>
-    
-</tr>
+                                                    <td class="p-3 text-center font-semibold text-slate-600">${index + 1}</td>
+                                                    <td class="p-3 font-bold text-slate-900">${cd.target}</td>
+                                                    <td class="p-3 text-center font-semibold text-primary-700">${targetVal}</td>
+                                                    <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 rounded text-[11px] font-semibold">${cd.satuan || '%'}</span></td>
+                                                    <td class="p-3 font-semibold text-purple-700">${timKeyStr}</td>
+                                                    <td class="p-3 font-medium text-slate-700">${picNames}</td>
+                                                    <td class="p-3 text-center font-bold text-emerald-600">${realisasiVal}</td>
+                                                    <td class="p-3 text-center">
+                                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                                                            ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
                                             `;
                                         }).join('')}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-<!-- Tabel Efektivitas & Efisiensi -->
+
+                        <!-- Tabel Efektivitas & Efisiensi -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                             <div>
                                 <h3 class="font-bold text-slate-900 text-base">Tabel Analisis Efektivitas & Efisiensi Kinerja</h3>
@@ -2535,16 +2543,28 @@ if (matchedCap.length > 0) {
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
                                         ${filteredCascading.length === 0 ? `<tr><td colspan="12" class="p-4 text-center text-slate-400">Belum ada data indikator.</td></tr>` : filteredCascading.map((cd, index) => {
-                                            const matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun && c.status === 'Valid');
-                                            const realisasiOutput = matchedCap.length > 0 ? matchedCap[matchedCap.length - 1].realisasi : 0;
+                                            const cdTahun = String(cd.tahun || '2025');
+                                            let matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && String(c.tahun || '2025') === cdTahun && c.status === 'Valid');
+                                            if (filterDashboardTriwulan !== 'Semua') {
+                                                matchedCap = matchedCap.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                                            }
+                                            if (filterDashboardUnit !== 'Semua') {
+                                                matchedCap = matchedCap.filter(c => c.unit === filterDashboardUnit);
+                                            }
+                                            const utamaCap = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
+                                            const activeCapList = utamaCap.length > 0 ? utamaCap : matchedCap;
+
+                                            const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
+                                            const sortedCap = [...activeCapList].sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
+
+                                            const realisasiOutput = sortedCap.length > 0 ? sortedCap[sortedCap.length - 1].realisasi : 0;
                                             const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
                                             const pRealisasiOutput = targetVal > 0 ? (realisasiOutput / targetVal) * 100 : 0;
 
-                                            // Cari data anggaran terkait berdasarkan indikator
                                             const renstratik = DB.renstraIndikatorKinerja.find(x => x.namaIndikator === cd.target);
-                                            const paguVal = renstratik ? (renstratik['anggaran' + cd.tahun] || 100000000) : 100000000;
+                                            const paguVal = renstratik ? (renstratik['anggaran' + cdTahun] || 100000000) : (cd.anggaran || 100000000);
                                             
-                                            let subRa = DB.realisasiAnggaranAdmin.filter(ra => renstratik && ra.indikatorId === renstratik.id && ra.tahun === cd.tahun);
+                                            let subRa = DB.realisasiAnggaranAdmin.filter(ra => renstratik && ra.indikatorId === renstratik.id && String(ra.tahun || '2025') === cdTahun);
                                             if (filterDashboardTriwulan !== 'Semua') {
                                                 subRa = subRa.filter(ra => ra.triwulan === filterDashboardTriwulan);
                                             }
@@ -2614,14 +2634,27 @@ if (matchedCap.length > 0) {
                                                 if (cd && cd.targetVal !== undefined) return Number(cd.targetVal);
                                                 return ik['target' + yr] !== undefined ? Number(ik['target' + yr]) : 100;
                                             };
-                                            const getReal = (yr) => {
-                                                let caps = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === String(yr) && c.status === 'Valid' && isCapaianUtamaForDashboard(c));
-                                                if (filterDashboardTriwulan !== 'Semua') {
-                                                    caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
-                                                }
-                                                if (caps.length === 0) return null;
-                                                return Number(caps[caps.length - 1].realisasi);
-                                            };
+                                           const getReal = (yr) => {
+                                             if (filterDashboardTahun !== 'Semua' && String(filterDashboardTahun) !== String(yr)) return null;
+                                             let caps = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === String(yr) && c.status === 'Valid');
+                                             if (filterDashboardTim !== 'Semua') {
+                                                 caps = caps.filter(c => c.timKey === filterDashboardTim);
+                                             }
+                                             if (filterDashboardUnit !== 'Semua') {
+                                                 caps = caps.filter(c => c.unit === filterDashboardUnit);
+                                             }
+                                             if (filterDashboardTriwulan !== 'Semua') {
+                                                 caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                                             }
+                                             const utamaCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
+                                             const finalCaps = utamaCaps.length > 0 ? utamaCaps : caps;
+                                             if (finalCaps.length === 0) return null;
+
+                                             // Urutkan berdasarkan urutan Triwulan agar selalu mengambil Triwulan Terakhir yang sudah Valid di tahun tersebut
+                                             const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
+                                             finalCaps.sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
+                                             return Number(finalCaps[finalCaps.length - 1].realisasi);
+                                         };
                                             const t25 = getTarget('2025'), r25 = getReal('2025');
                                             const t26 = getTarget('2026'), r26 = getReal('2026');
                                             const t27 = getTarget('2027'), r27 = getReal('2027');
@@ -2935,13 +2968,16 @@ if (matchedCap.length > 0) {
             }
 }
 let multiYearChartInstance = null;
-        function renderMultiYearIndikatorChart() {
+function renderMultiYearIndikatorChart() {
             const canvas = document.getElementById('targetVsRealMultiYearChart');
             if (!canvas) return;
             const selEl = document.getElementById('selectIndikatorMultiYearChart');
             const selectedInd = selEl ? selEl.value : 'Semua';
-            const years = ['2025', '2026', '2027', '2028', '2029'];
+            
+            const allYears = ['2025', '2026', '2027', '2028', '2029'];
+            const years = filterDashboardTahun !== 'Semua' ? [String(filterDashboardTahun)] : allYears;
             const ikList = (DB.renstraIndikatorKinerja || []).filter(ik => selectedInd === 'Semua' || ik.namaIndikator === selectedInd);
+            const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
 
             const targetData = years.map(yr => {
                 if (ikList.length === 0) return 0;
@@ -2956,11 +2992,23 @@ let multiYearChartInstance = null;
             const realData = years.map(yr => {
                 if (ikList.length === 0) return 0;
                 const sum = ikList.reduce((acc, ik) => {
-                    let caps = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === yr && c.status === 'Valid' && isCapaianUtamaForDashboard(c));
+                    let caps = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === yr && c.status === 'Valid');
+                    if (filterDashboardTim !== 'Semua') {
+                        caps = caps.filter(c => c.timKey === filterDashboardTim);
+                    }
+                    if (filterDashboardUnit !== 'Semua') {
+                        caps = caps.filter(c => c.unit === filterDashboardUnit);
+                    }
                     if (filterDashboardTriwulan !== 'Semua') {
                         caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
                     }
-                    const rVal = caps.length > 0 ? Number(caps[caps.length - 1].realisasi) : 0;
+                    const utamaCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
+                    const finalCaps = utamaCaps.length > 0 ? utamaCaps : caps;
+                    if (finalCaps.length === 0) return acc;
+
+                    // Urutkan agar mengambil Triwulan Terakhir yang divalidasi pada tahun tersebut
+                    finalCaps.sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
+                    const rVal = Number(finalCaps[finalCaps.length - 1].realisasi) || 0;
                     return acc + rVal;
                 }, 0);
                 return Number((sum / ikList.length).toFixed(2));
@@ -2973,7 +3021,7 @@ let multiYearChartInstance = null;
                     labels: years.map(y => 'Tahun ' + y),
                     datasets: [
                         { label: 'Target', data: targetData, backgroundColor: '#3b82f6', borderRadius: 6 },
-                        { label: 'Realisasi', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
+                        { label: 'Realisasi (TW Terakhir Valid)', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
                     ]
                 },
                 plugins: [ChartDataLabels],
@@ -2988,7 +3036,7 @@ let multiYearChartInstance = null;
                 }
             });
         }
-function renderCascadingView(container) {
+        function renderCascadingView(container) {
             document.getElementById('pageTitle').innerText = 'Cascading Indikator Kinerja Bertahap';
             const isDirektur = currentUser.role === 'direktur';
             const isKetuaTim = currentUser.role === 'tim_kerja';
@@ -3915,12 +3963,22 @@ async function saveCascadingTim(e) {
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
                                     ${displayCapaian.length === 0 ? `
-                                        <tr><td colspan="7" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada tahun ${filterCapaianTahun}.</td></tr>
-                                    ` : displayCapaian.map((c, idx) => `
-                                        <tr class="hover:bg-slate-50/80 transition-all">
-                                            <td class="p-4 font-semibold text-slate-800">${c.unit}</td>
-                                            <td class="p-4 text-xs font-semibold text-primary-700">${c.targetDirektur}</td>
-                                            <td class="p-4 text-slate-900 font-medium">${c.program}</td>
+                                     <tr><td colspan="9" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada tahun ${filterCapaianTahun}.</td></tr>
+                                 ` : displayCapaian.map((c, idx) => {
+                                     const tahunCap = String(c.tahun || '2025');
+                                     const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahunCap) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
+                                     const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahunCap && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && x.unitTargets.includes(c.unit));
+                                     const isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
+                                     return `
+                                     <tr class="hover:bg-slate-50/80 transition-all">
+                                         <td class="p-4 font-semibold text-slate-800">${c.unit}</td>
+                                         <td class="p-4 text-xs font-semibold text-primary-700">${c.targetDirektur}</td>
+                                         <td class="p-4 text-center">
+                                             <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isUtama ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'}">
+                                                 ${isUtama ? 'Utama' : 'Support'}
+                                             </span>
+                                         </td>
+                                         <td class="p-4 text-slate-900 font-medium">${c.program}</td>
                                             <td class="p-4">
                                                 <span class="px-2 py-0.5 bg-blue-50 text-primary-700 font-semibold text-xs rounded mr-1">${c.tahun || '2025'}</span>
                                                 <span class="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700">${c.triwulan}</span>
@@ -3977,9 +4035,9 @@ ${isKaUnit ? `
                                                         `}
                                                     </div>
                                                 ` : ''}
-                                            </td>
-                                        </tr>
-                                    `).join('')}
+                                           </td>
+                                    </tr>
+                                `; }).join('')}
                                 </tbody>
                             </table>
                         </div>
@@ -3998,13 +4056,15 @@ ${isKaUnit ? `
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator Kinerja yang Diintervensi</label>
                                 <select id="inputIndikatorRef" required class="w-full p-3 bg-slate-50 border rounded-xl" onchange="updateSatuanAndTargetRef(this)">
-                                    ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => {
-                                        const dirObj = DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur);
-                                        const satuan = dirObj ? (dirObj.satuan || '%') : '%';
-                                        const targetVal = dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100;
-                                        return `<option value="${ct.targetDirektur}" data-tahun="${ct.tahun || '2025'}" data-satuan="${satuan}" data-targetval="${targetVal}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun: ${ct.tahun || '2025'})</option>`;
-                                    }).join('')}
-                                </select>
+                                 ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => {
+                                     const tahun = String(ct.tahun || '2025');
+                                     const dirObj = DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur);
+                                     const satuan = dirObj ? (dirObj.satuan || '%') : '%';
+                                     const targetVal = dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100;
+                                     const isUtama = dirObj ? (isTimUtamaInDir(dirObj, ct.timKey) && isUnitUtamaInTim(ct, currentUser.unit)) : isUnitUtamaInTim(ct, currentUser.unit);
+                                     return `<option value="${ct.targetDirektur}" data-tahun="${tahun}" data-satuan="${satuan}" data-targetval="${targetVal}" data-timkey="${ct.timKey}" data-isutama="${isUtama}">${ct.targetDirektur} (Tahun: ${tahun} - ${isUtama ? 'Utama' : 'Support'})</option>`;
+                                 }).join('')}
+                             </select>
                                 <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs mt-3">
     <span class="font-semibold text-slate-700">Kategori Indikator bagi Unit Anda:</span>
     <span id="badgeKategoriModal" class="px-3 py-1 bg-blue-600 text-white font-bold rounded-full text-[10px]">UTAMA</span>
