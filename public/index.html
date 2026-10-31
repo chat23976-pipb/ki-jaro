@@ -67,6 +67,9 @@
     background-color: #94a3b8;
     margin: 0 auto;
 }
+/* Memastikan tombol tidak terhalang elemen lain */
+button { position: relative; z-index: 10; }
+        
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
@@ -105,29 +108,65 @@
     </div>
 </div>
     <script>
+        // Helper Enterprise: Cek apakah Tim Kerja berstatus UTAMA pada Cascading Direktur
+        function isTimUtamaInDir(cd, timKey) {
+            if (!cd) return false;
+            if (cd.timRoles && cd.timRoles[timKey]) {
+                return cd.timRoles[timKey] === 'Utama';
+            }
+            return Array.isArray(cd.timKeys) && cd.timKeys[0] === timKey;
+        }
+
+        // Helper Enterprise: Cek apakah Unit/Prodi/Subbag berstatus UTAMA pada Cascading Tim Kerja
+        function isUnitUtamaInTim(ct, unitName) {
+            if (!ct) return false;
+            if (ct.unitRoles && ct.unitRoles[unitName]) {
+                return ct.unitRoles[unitName] === 'Utama';
+            }
+            return Array.isArray(ct.unitTargets) && ct.unitTargets[0] === unitName;
+        }
+
+// Helper Enterprise: Cek apakah Capaian suatu Unit berhak masuk ke Dashboard Kinerja Utama (Wajib Tim Utama & Unit Utama)
+     function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
+         if (!capaianItem) return false;
+         const tahun = String(capaianItem.tahun || '2025');
+         const cd = cdObj || DB.cascadingDirektur.find(x => x.target === capaianItem.targetDirektur && String(x.tahun || '2025') === tahun) || DB.cascadingDirektur.find(x => x.target === capaianItem.targetDirektur);
+         if (!cd) return false;
+
+         // Cari cascading tim yang memuat indikator dan unit ini pada tahun terkait
+         const ctList = DB.cascadingTim.filter(x => 
+             x.targetDirektur === cd.target && 
+             String(x.tahun || '2025') === String(cd.tahun || tahun) && 
+             Array.isArray(x.unitTargets) && x.unitTargets.includes(capaianItem.unit)
+         );
+         if (ctList.length === 0) return false;
+
+         // Hanya bernilai TRUE jika di salah satu jalur cascading: Tim Kerja berstatus UTAMA di Direktur DAN Unit berstatus UTAMA di Tim Kerja tersebut
+         return ctList.some(ct => isTimUtamaInDir(cd, ct.timKey) && isUnitUtamaInTim(ct, capaianItem.unit));
+     }
         let DB = {
             users: [
                 { id: 'u1', username: 'deni.saputra@poltek-petrokimia.ac.id', password: '123', name: 'Administrator Sistem', role: 'admin', unit: 'Pusat Data & Sistem' },
-                { id: 'u2', username: 'direktur', password: '123', name: 'Dr. Supardi S.Pd., M.Pd', role: 'direktur', unit: 'Pimpinan Tertinggi' },
+                { id: 'u2', username: 'supardi@poltek-petrokimia.ac.id', password: '123', name: 'Dr. Supardi S.Pd., M.Pd', role: 'direktur', unit: 'Pimpinan Tertinggi' },
                 
                 // 3 Tim Kerja
-                { id: 'u3', username: 'tim_akademik', password: '123', name: 'Asadian Puja Enggita S.Si., M.MT', role: 'tim_kerja', timKey: 'Akademik', unit: 'Tim Kerja Akademik' },
-                { id: 'u4', username: 'tim_umum', password: '123', name: 'Ir. Deni Saputra S.T., M.Sc', role: 'tim_kerja', timKey: 'Umum dan Keuangan', unit: 'Tim Kerja Umum dan Keuangan' },
-                { id: 'u5', username: 'tim_kemahasiswaan', password: '123', name: 'Budi Kemahasiswaan, M.Pd.', role: 'tim_kerja', timKey: 'Kemahasiswaan dan Kerjasama', unit: 'Tim Kerja Kemahasiswaan dan Kerjasama' },
+                { id: 'u3', username: 'asadian@poltek-petrokimia.ac.id', password: '123', name: 'Asadian Puja Enggita S.Si., M.MT', role: 'tim_kerja', timKey: 'Akademik', unit: 'Tim Kerja Akademik' },
+                { id: 'u4', username: 'deni@poltek-petrokimia.ac.id', password: '123', name: 'Ir. Deni Saputra S.T., M.Sc', role: 'tim_kerja', timKey: 'Umum dan Keuangan', unit: 'Tim Kerja Umum dan Keuangan' },
+                { id: 'u5', username: 'wirandi@poltek-petrokimia.ac.id', password: '123', name: 'Budi Kemahasiswaan, M.Pd.', role: 'tim_kerja', timKey: 'Kemahasiswaan dan Kerjasama', unit: 'Tim Kerja Kemahasiswaan dan Kerjasama' },
 
                 // 12 Ketua Unit / Prodi / Subbag
-                { id: 'u6', username: 'prodi_tmip', password: '123', name: 'Ketua Prodi TMIP', role: 'ketua_unit', unit: 'Prodi TMIP', timKey: 'Akademik' },
-                { id: 'u7', username: 'prodi_tiip', password: '123', name: 'Ketua Prodi TIIP', role: 'ketua_unit', unit: 'Prodi TIIP', timKey: 'Akademik' },
-                { id: 'u8', username: 'prodi_tpip', password: '123', name: 'Ketua Prodi TPIP', role: 'ketua_unit', unit: 'Prodi TPIP', timKey: 'Akademik' },
-                { id: 'u9', username: 'uppm', password: '123', name: 'Kepala UPPM', role: 'ketua_unit', unit: 'UPPM', timKey: 'Akademik' },
-                { id: 'u10', username: 'lsp', password: '123', name: 'Ketua LSP', role: 'ketua_unit', unit: 'LSP', timKey: 'Kemahasiswaan dan Kerjasama' },
-                { id: 'u11', username: 'cdc', password: '123', name: 'Kepala CDC', role: 'ketua_unit', unit: 'CDC', timKey: 'Kemahasiswaan dan Kerjasama' },
-                { id: 'u12', username: 'inkubator', password: '123', name: 'Kepala Inkubator Bisnis', role: 'ketua_unit', unit: 'Inkubator Bisnis', timKey: 'Kemahasiswaan dan Kerjasama' },
-                { id: 'u13', username: 'transformasi', password: '123', name: 'Kabid Transformasi Digital', role: 'ketua_unit', unit: 'Transformasi Digital 4.0', timKey: 'Umum dan Keuangan' },
-                { id: 'u14', username: 'spm', password: '123', name: 'Kepala SPM', role: 'ketua_unit', unit: 'SPM', timKey: 'Akademik' },
-                { id: 'u15', username: 'pmb', password: '123', name: 'Kepala PMB', role: 'ketua_unit', unit: 'PMB', timKey: 'Kemahasiswaan dan Kerjasama' },
-                { id: 'u16', username: 'subbag_umum', password: '123', name: 'Kasubbag Umum & Keuangan', role: 'ketua_unit', unit: 'Subbag Umum dan Keuangan', timKey: 'Umum dan Keuangan' },
-                { id: 'u17', username: 'subbag_akademik', password: '123', name: 'Kasubbag Akademik', role: 'ketua_unit', unit: 'Subbag Akademik Kemahasiswaan dan Kerjasama', timKey: 'Umum dan Keuangan' }
+                { id: 'u6', username: 'prodi_tmip@poltek-petrokimia.ac.id', password: '123', name: 'Ketua Prodi TMIP', role: 'ketua_unit', unit: 'Prodi TMIP', timKey: 'Akademik' },
+                { id: 'u7', username: 'prodi_tiip@poltek-petrokimia.ac.id', password: '123', name: 'Ketua Prodi TIIP', role: 'ketua_unit', unit: 'Prodi TIIP', timKey: 'Akademik' },
+                { id: 'u8', username: 'prodi_tpip@poltek-petrokimia.ac.id', password: '123', name: 'Ketua Prodi TPIP', role: 'ketua_unit', unit: 'Prodi TPIP', timKey: 'Akademik' },
+                { id: 'u9', username: 'uppm@poltek-petrokimia.ac.id', password: '123', name: 'Kepala UPPM', role: 'ketua_unit', unit: 'UPPM', timKey: 'Akademik' },
+                { id: 'u10', username: 'lsp@poltek-petrokimia.ac.id', password: '123', name: 'Ketua LSP', role: 'ketua_unit', unit: 'LSP', timKey: 'Kemahasiswaan dan Kerjasama' },
+                { id: 'u11', username: 'cdc@poltek-petrokimia.ac.id', password: '123', name: 'Kepala CDC', role: 'ketua_unit', unit: 'CDC', timKey: 'Kemahasiswaan dan Kerjasama' },
+                { id: 'u12', username: 'inkubator@poltek-petrokimia.ac.id', password: '123', name: 'Kepala Inkubator Bisnis', role: 'ketua_unit', unit: 'Inkubator Bisnis', timKey: 'Kemahasiswaan dan Kerjasama' },
+                { id: 'u13', username: 'transformasi@poltek-petrokimia.ac.id', password: '123', name: 'Kabid Transformasi Digital', role: 'ketua_unit', unit: 'Transformasi Digital 4.0', timKey: 'Umum dan Keuangan' },
+                { id: 'u14', username: 'spm@poltek-petrokimia.ac.id', password: '123', name: 'Kepala SPM', role: 'ketua_unit', unit: 'SPM', timKey: 'Akademik' },
+                { id: 'u15', username: 'pmb@poltek-petrokimia.ac.id', password: '123', name: 'Kepala PMB', role: 'ketua_unit', unit: 'PMB', timKey: 'Kemahasiswaan dan Kerjasama' },
+                { id: 'u16', username: 'subbag_umum@poltek-petrokimia.ac.id', password: '123', name: 'Kasubbag Umum & Keuangan', role: 'ketua_unit', unit: 'Subbag Umum dan Keuangan', timKey: 'Umum dan Keuangan' },
+                { id: 'u17', username: 'subbag_akademik@poltek-petrokimia.ac.id', password: '123', name: 'Kasubbag Akademik', role: 'ketua_unit', unit: 'Subbag Akademik Kemahasiswaan dan Kerjasama', timKey: 'Umum dan Keuangan' }
             ],
             timKerjaList: ['Akademik', 'Umum dan Keuangan', 'Kemahasiswaan dan Kerjasama'],
             unitList: [
@@ -358,7 +397,7 @@ let landingChartInstance = null;
                                 <div class="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/40 border border-slate-100 space-y-6 h-full flex flex-col justify-between">
                                     <div class="border-b border-slate-100 pb-4">
                                         <h3 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                                            <i class="fa-solid fa-folder-open text-blue-600"></i> Dokumen Perencanaan
+                                            <i class="fa-solid fa-folder-open text-blue-600"></i> VMTS & Dokumen Perencanaan
                                         </h3>
                                         <p class="text-xs text-slate-500">Dokumen perencanaan strategis yang dipublikasikan</p>
                                     </div>
@@ -425,7 +464,7 @@ let landingChartInstance = null;
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                         <div class="mb-6 text-center">
-                            <h3 class="text-2xl font-black text-slate-900 tracking-tight">Masuk Sistem</h3>
+                            <h3 class="text-2xl font-black text-slate-900 tracking-tight">Welcome To Ki-Jaro</h3>
                             <p class="text-xs font-medium text-slate-500 mt-1">Masukkan kredensial akun Ki-Jaro Anda</p>
                         </div>
 
@@ -438,7 +477,7 @@ let landingChartInstance = null;
                                     <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"/>
                                     <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
                                 </svg>
-                                <span>Login via Google (@poltek-petrokimia.ac.id)</span>
+                                <span>Login via Google</span>
                             </button>
                             <!-- Container opsional untuk Google One-Tap / Official Button -->
                             <div id="googleSsoButtonContainer" class="hidden justify-center"></div>
@@ -454,7 +493,7 @@ let landingChartInstance = null;
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 ml-1">Email Resmi Institusi</label>
                                 <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-blue-600 text-xs">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-blue-600 text-xs z-10 pointer-events-none">
                                         <i class="fa-solid fa-envelope"></i>
                                     </span>
                                     <input type="email" id="usernameInput" required 
@@ -467,7 +506,7 @@ let landingChartInstance = null;
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 ml-1">Kata Sandi</label>
                                 <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-blue-600 text-xs">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-blue-600 text-xs z-10 pointer-events-none">
                                         <i class="fa-solid fa-lock"></i>
                                     </span>
                                     <input type="password" id="passwordInput" required 
@@ -477,7 +516,7 @@ let landingChartInstance = null;
                             </div>
 
                             <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center space-x-2 text-xs mt-2">
-                                <span>Masuk Dashboard</span>
+                                <span>Login</span>
                                 <i class="fa-solid fa-arrow-right-to-bracket text-[10px]"></i>
                             </button>
                         </form>
@@ -511,32 +550,122 @@ let landingChartInstance = null;
         const GOOGLE_CLIENT_ID = "144766073544-9vugm0hiqqk8msojg1plrfk1ig6hd79b.apps.googleusercontent.com"; // Contoh: "123456789-abcdef.apps.googleusercontent.com"
 
 function triggerGoogleLogin() {
-            // Memanggil Google Identity Services SDK resmi secara langsung
+            // Jika dijalankan di server utama (Domain Kampus), panggil Google OAuth SDK Asli
             if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
-                const client = google.accounts.oauth2.initTokenClient({
-                    client_id: GOOGLE_CLIENT_ID,
-                    scope: 'email profile openid',
-                    callback: (tokenResponse) => {
-                        if (tokenResponse && tokenResponse.access_token) {
-                            // Ambil data profil/email pengguna secara aman dari Google API
-                            fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokenResponse.access_token}`)
-                                .then(res => res.json())
-                                .then(userInfo => {
-                                    const googleEmail = (userInfo.email || '').trim().toLowerCase();
-                                    verifyAndLoginWithGoogleEmail(googleEmail);
-                                })
-                                .catch(err => {
-                                    showToast('Gagal mengambil data akun dari Google.', 'error');
-                                });
-                        }
-                    },
-                });
-                // Membuka jendela pop-up login Google asli (otomatis meminta login Google jika browser belum login)
-                client.requestAccessToken();
-            } else {
-                // Fallback jika skrip Google belum termuat sempurna: gunakan kotak input aman
-                openGoogleAccountChooserModal();
+                try {
+                    const client = google.accounts.oauth2.initTokenClient({
+                        client_id: GOOGLE_CLIENT_ID,
+                        scope: 'email profile openid',
+                        callback: (tokenResponse) => {
+                            if (tokenResponse && tokenResponse.access_token) {
+                                fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokenResponse.access_token}`)
+                                    .then(res => res.json())
+                                    .then(userInfo => {
+                                        const googleEmail = (userInfo.email || '').trim().toLowerCase();
+                                        verifyAndLoginWithGoogleEmail(googleEmail);
+                                    })
+                                    .catch(err => {
+                                        showToast('Gagal memverifikasi profil Google.', 'error');
+                                    });
+                            }
+                        },
+                    });
+                    client.requestAccessToken();
+                    return;
+                } catch (e) {
+                    console.log("OAuth Redirect/Popup dialihkan ke modal verifikasi aman.");
+                }
             }
+
+            // Jika di mode preview / diblokir browser, tampilkan pop-up verifikasi email institusi resmi
+            let chooser = document.getElementById('googleChooserModal');
+            if (chooser) chooser.remove();
+
+            chooser = document.createElement('div');
+            chooser.id = 'googleChooserModal';
+            chooser.className = 'fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center z-[80] p-4 animate-fadeIn';
+            chooser.innerHTML = `
+                <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 p-8 space-y-6">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div class="flex items-center space-x-2.5">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z"/>
+                                <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"/>
+                                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+                            </svg>
+                            <span class="text-xs font-bold text-slate-800 uppercase tracking-wider">Sign in with Google</span>
+                        </div>
+                        <button onclick="document.getElementById('googleChooserModal').remove()" class="text-slate-400 hover:text-slate-600 text-lg">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-1">
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight">Autentikasi Google Workspace</h3>
+                        <p class="text-xs text-slate-500">Sistem Terpadu <strong class="text-blue-600">Ki-Jaro Petrokimia Banten</strong></p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Masukkan Email Kampus Anda</label>
+                            <div class="flex space-x-2">
+                                <input type="email" id="googleEmailPromptInput" class="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all" placeholder="nama@poltek-petrokimia.ac.id">
+                                <button type="button" onclick="verifyAndLoginWithGoogleEmail(document.getElementById('googleEmailPromptInput').value)" class="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-all shrink-0">
+                                    Masuk
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-slate-400 italic">
+                            <i class="fa-solid fa-shield-halved text-blue-500 mr-1"></i> Domain wajib berakhiran <strong>@poltek-petrokimia.ac.id</strong> dan terdaftar di database admin.
+                        </p>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100 flex justify-end">
+                        <button type="button" onclick="document.getElementById('googleChooserModal').remove()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all">
+                            Batal
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(chooser);
+        }
+
+        function verifyAndLoginWithGoogleEmail(rawEmail) {
+            const email = (rawEmail || '').trim().toLowerCase();
+            if (!email) {
+                showToast('Masukkan alamat email Google terlebih dahulu!', 'error');
+                return;
+            }
+
+            if (!email.endsWith('@poltek-petrokimia.ac.id')) {
+                showToast('Akses Ditolak! Wajib menggunakan email berdomain @poltek-petrokimia.ac.id', 'error');
+                return;
+            }
+
+            // Cek apakah email tersebut ada di DB.users milik Admin
+            const found = DB.users.find(x => {
+                const dbEmail = x.username.includes('@') ? x.username.toLowerCase() : `${x.username.toLowerCase()}@poltek-petrokimia.ac.id`;
+                return dbEmail === email;
+            });
+
+            if (!found) {
+                showToast(`Akun Google "${email}" tidak terdaftar di Database Administrator Ki-Jaro!`, 'error');
+                return;
+            }
+
+            if (!found.username.includes('@')) {
+                found.username = email;
+            }
+
+            const chooser = document.getElementById('googleChooserModal');
+            if (chooser) chooser.remove();
+            closeLoginModal();
+
+            currentUser = found;
+            localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
+            showToast(`Autentikasi Google Berhasil! Selamat datang, ${currentUser.name}`);
+            renderDashboardLayout();
         }
 
         // Fungsi Cadangan jika pop-up diblokir browser
@@ -664,7 +793,7 @@ function triggerGoogleLogin() {
             const canvas = document.getElementById('landingPreviewChart');
             if (!canvas) return;
 
-            const validCapaian = DB.capaian.filter(c => c.status === 'Valid' && (c.tahun || '2025') === filterLandingTahun);
+            const validCapaian = DB.capaian.filter(c => c.status === 'Valid' && (c.tahun || '2025') === filterLandingTahun && isCapaianUtamaForDashboard(c));
             const filteredCascading = DB.cascadingDirektur.filter(cd => (cd.tahun || '2025') === filterLandingTahun);
 
             const colorPalette = [
@@ -782,15 +911,19 @@ function renderDashboardLayout() {
                 admin: 'Administrator Sistem',
                 direktur: 'Direktur',
                 tim_kerja: 'Ketua Tim Kerja',
-                ketua_unit: 'Ketua Prodi / Subbag / Unit'
+                ketua_unit: 'Ketua Prodi / Subbag / Unit',
+                viewer: 'Viewer (Monitoring & Evaluasi)'
             };
 
             const isKaUnit = currentUser.role === 'ketua_unit';
 
             app.innerHTML = `
                 <div class="min-h-screen flex bg-slate-100 overflow-x-hidden">
-                    <!-- Sidebar Biru Penuh dengan Tombol Collapse ke Samping -->
-                    <aside id="appSidebar" class="w-72 min-h-screen bg-blue-700 text-white flex flex-col shadow-xl z-30 no-print transition-all duration-300 shrink-0">
+                    <!-- Backdrop Gelap Khusus Layar HP saat Sidebar Dibuka -->
+                 <div id="mobileSidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 hidden md:hidden no-print"></div>
+
+                 <!-- Sidebar Biru Penuh (Support Mobile Drawer & Desktop Collapse) -->
+                 <aside id="appSidebar" class="fixed md:static inset-y-0 left-0 w-72 min-h-screen bg-blue-700 text-white hidden md:flex flex-col shadow-2xl md:shadow-xl z-50 md:z-30 no-print transition-all duration-300 shrink-0">
                         <div class="p-6 border-b border-blue-600 flex items-center justify-between bg-blue-700">
                             <div class="flex items-center space-x-3 overflow-hidden sidebar-brand-container">
                                 <div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shrink-0">
@@ -828,18 +961,21 @@ function renderDashboardLayout() {
 
                             <a href="javascript:void(0)" onclick="switchTab('renstra')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'renstra' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-book-bookmark w-5 text-center"></i>
-                                <span class="sidebar-text">${currentUser.role === 'admin' ? 'Input & Manajemen Renstra' : 'View Renstra (Hierarki Kemenperin)'}</span>
+                                <span class="sidebar-text">${currentUser.role === 'admin' ? 'Input & Manajemen Renstra' : 'View Renstra'}</span>
                             </a>
 
                             <a href="javascript:void(0)" onclick="switchTab('dokumen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-folder-open w-5 text-center"></i>
                                 <span class="sidebar-text">Dokumen Perencanaan</span>
                             </a>
-
+                            <a href="javascript:void(0)" onclick="switchTab('dokumen_ukur_lapor')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen_ukur_lapor' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                <i class="fa-solid fa-file-contract w-5 text-center"></i>
+                                <span class="sidebar-text">Dokumen Pengukuran & Pelaporan</span>
+                            </a>
                             ${!isKaUnit ? `
                                 <a href="javascript:void(0)" onclick="switchTab('cascading')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'cascading' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                     <i class="fa-solid fa-sitemap w-5 text-center"></i>
-                                    <span class="sidebar-text">Cascading Bertahap</span>
+                                    <span class="sidebar-text">Cascading & Crosscutting</span>
                                 </a>
                             ` : ''}
 
@@ -850,7 +986,7 @@ function renderDashboardLayout() {
 
                             <a href="javascript:void(0)" onclick="switchTab('risiko')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'risiko' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-triangle-exclamation w-5 text-center"></i>
-                                <span class="sidebar-text">Peta Risiko & Sheet Realtime</span>
+                                <span class="sidebar-text">Peta Risiko</span>
                             </a>
 
                             <a href="javascript:void(0)" onclick="switchTab('tindaklanjut')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'tindaklanjut' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
@@ -869,19 +1005,18 @@ function renderDashboardLayout() {
                                 <i class="fa-solid fa-file-pdf w-5 text-center"></i>
                                 <span class="sidebar-text">Ekspor & Download PDF</span>
                             </a>
-
-                            <a href="javascript:void(0)" onclick="switchTab('dokumen_ukur_lapor')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen_ukur_lapor' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                <i class="fa-solid fa-file-contract w-5 text-center"></i>
-                                <span class="sidebar-text">Dokumen Pengukuran & Pelaporan</span>
-                            </a>
                         </nav>
                     </aside>
 
                     <!-- Main Content dengan Header Terkunci (Sticky Top) -->
                     <main class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-                        <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm no-print">
-                            <div class="flex items-center space-x-4">
-                                <h1 id="pageTitle" class="text-xl font-bold text-slate-900">Dashboard Utama</h1>
+                        <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm no-print">
+                         <div class="flex items-center space-x-3 sm:space-x-4">
+                             <!-- Tombol Buka Sidebar Khusus Layar HP -->
+                             <button onclick="toggleMobileSidebar()" class="md:hidden p-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 shadow-2xs focus:outline-none" title="Buka Menu">
+                                 <i class="fa-solid fa-bars text-base"></i>
+                             </button>
+                             <h1 id="pageTitle" class="text-base sm:text-xl font-bold text-slate-900">Dashboard Utama</h1>
                                 <span class="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100 hidden sm:inline-flex">
                                     <i class="fa-solid fa-building-columns mr-1"></i> ${currentUser.unit}
                                 </span>
@@ -934,28 +1069,49 @@ function renderDashboardLayout() {
             switchTab(activeTab);
         }
 
-        // Fungsi JavaScript untuk Tombol Perkecil Sidetab
-        let isSidebarCollapsed = false;
-        function toggleSidebarCollapse() {
-            const sidebar = document.getElementById('appSidebar');
-            const texts = document.querySelectorAll('.sidebar-text');
-            const profileBox = document.querySelector('.sidebar-profile-box');
-            if (!sidebar) return;
+// Fungsi Buka/Tutup Sidebar di Layar HP (Mobile)
+     function toggleMobileSidebar() {
+         const sidebar = document.getElementById('appSidebar');
+         const backdrop = document.getElementById('mobileSidebarBackdrop');
+         if (!sidebar) return;
+         const isHidden = sidebar.classList.contains('hidden');
+         if (isHidden) {
+             sidebar.classList.remove('hidden');
+             sidebar.classList.add('flex');
+             if (backdrop) backdrop.classList.remove('hidden');
+         } else {
+             sidebar.classList.add('hidden');
+             sidebar.classList.remove('flex');
+             if (backdrop) backdrop.classList.add('hidden');
+         }
+     }
 
-            isSidebarCollapsed = !isSidebarCollapsed;
-            if (isSidebarCollapsed) {
-                sidebar.classList.remove('w-72');
-                sidebar.classList.add('w-20');
-                texts.forEach(el => el.classList.add('hidden'));
-                if (profileBox) profileBox.classList.add('hidden');
-            } else {
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-72');
-                texts.forEach(el => el.classList.remove('hidden'));
-                if (profileBox) profileBox.classList.remove('hidden');
-            }
-        }
-// Fungsi untuk membuka/menutup dropdown profil saat diklik
+     // Fungsi JavaScript untuk Tombol Perkecil Sidetab (Desktop & Mobile)
+     let isSidebarCollapsed = false;
+     function toggleSidebarCollapse() {
+         if (window.innerWidth < 768) {
+             toggleMobileSidebar();
+             return;
+         }
+         const sidebar = document.getElementById('appSidebar');
+         const texts = document.querySelectorAll('.sidebar-text');
+         const profileBox = document.querySelector('.sidebar-profile-box');
+         if (!sidebar) return;
+
+         isSidebarCollapsed = !isSidebarCollapsed;
+         if (isSidebarCollapsed) {
+             sidebar.classList.remove('w-72');
+             sidebar.classList.add('w-20');
+             texts.forEach(el => el.classList.add('hidden'));
+             if (profileBox) profileBox.classList.add('hidden');
+         } else {
+             sidebar.classList.remove('w-20');
+             sidebar.classList.add('w-72');
+             texts.forEach(el => el.classList.remove('hidden'));
+             if (profileBox) profileBox.classList.remove('hidden');
+         }
+     }
+        // Fungsi untuk membuka/menutup dropdown profil saat diklik
         function toggleProfileDropdown() {
             const menu = document.getElementById('profileDropdownMenu');
             if (menu) {
@@ -985,8 +1141,12 @@ function renderDashboardLayout() {
             const content = document.getElementById('mainContent');
             if (!content) return;
             const sb = document.getElementById('appSidebar');
-            if (sb && window.innerWidth < 768) sb.classList.add('hidden');
-
+         const backdrop = document.getElementById('mobileSidebarBackdrop');
+         if (sb && window.innerWidth < 768) {
+             sb.classList.add('hidden');
+             sb.classList.remove('flex');
+             if (backdrop) backdrop.classList.add('hidden');
+         }
             if (tab === 'dashboard') renderDashboardView(content);
             else if (tab === 'renstra') renderRenstraView(content);
             else if (tab === 'dokumen') renderDokumenView(content);
@@ -1846,7 +2006,7 @@ function renderDokumenUkurLaporView(container) {
         }
 
         function renderDokumenView(container) {
-            document.getElementById('pageTitle').innerText = 'Dokumen Perencanaan Visi, Misi, Tujuan & Dokumen Utama';
+            document.getElementById('pageTitle').innerText = 'Visi, Misi, Tujuan, Strategi & Dokumen Utama';
             const isAdmin = currentUser.role === 'admin';
 
             container.innerHTML = `
@@ -2075,8 +2235,9 @@ function renderDokumenUkurLaporView(container) {
 
 function renderDashboardView(container) {
             document.getElementById('pageTitle').innerText = 'Dashboard Capaian Kinerja & Peta Risiko';
-            
-            let validCapaian = DB.capaian.filter(c => c.status === 'Valid');
+
+            // HANYA mengambil Capaian yang Valid DAN berstatus UTAMA (Support tidak boleh masuk ke Dashboard Utama)
+             let validCapaian = DB.capaian.filter(c => c.status === 'Valid' && isCapaianUtamaForDashboard(c));
             if (filterDashboardTahun !== 'Semua') {
                 validCapaian = validCapaian.filter(c => c.tahun === filterDashboardTahun);
             }
@@ -2161,7 +2322,7 @@ filteredCascading.forEach(cd => {
                 const pagu = ik ? (ik['anggaran' + ra.tahun] || 100000000) : 100000000;
                 const realAnggaran = ra.realisasiAnggaran;
                 const pAnggaran = pagu > 0 ? (realAnggaran / pagu) * 100 : 0;
-                const match = DB.capaian.filter(c => ik && c.targetDirektur === ik.namaIndikator && c.tahun === ra.tahun && c.triwulan === ra.triwulan && c.status === 'Valid');
+                const match = DB.capaian.filter(c => ik && c.targetDirektur === ik.namaIndikator && c.tahun === ra.tahun && c.triwulan === ra.triwulan && c.status === 'Valid' && isCapaianUtamaForDashboard(c));
                 const pOutput = match.length > 0 ? (match.reduce((a,b)=>a+b.realisasi,0)/match.length) : 0;
                 
                 const targetVal = ik ? ik['target' + ra.tahun] : 100;
@@ -2243,14 +2404,14 @@ filteredCascading.forEach(cd => {
                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-blue-50 text-primary-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-bullseye"></i></div>
                             <div>
-                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Tercapai</p>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Pencapaian Perkin Poltek</p>
                                 <h3 class="text-base font-bold text-slate-900 mt-0.5">${achievedCount} dari ${totalValidIndikator} tercapai</h3>
                             </div>
                         </div>
                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-circle-check"></i></div>
                             <div>
-                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Tercapai (Role)</p>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Pencapaian Perkin Tim</p>
                                 <h3 class="text-base font-bold text-slate-900 mt-0.5">${roleAchievedCount} dari ${roleTotalIndikator} tercapai</h3>
                             </div>
                         </div>
@@ -2264,21 +2425,21 @@ filteredCascading.forEach(cd => {
                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-scale-balanced"></i></div>
                             <div>
-                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Jumlah Efisien</p>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Jumlah Efisiensi</p>
                                 <h3 class="text-base font-bold text-slate-900 mt-0.5">${efficientCount}</h3>
                             </div>
                         </div>
                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-award"></i></div>
                             <div class="overflow-hidden">
-                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Unit Terbaik</p>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Unit Teratas</p>
                                 <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${bestUnit}</h3>
                             </div>
                         </div>
                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
                             <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-base font-bold shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
                             <div class="overflow-hidden">
-                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Unit Terendah</p>
+                                <p class="text-[10px] font-semibold text-slate-500 uppercase">Unit Terbawah</p>
                                 <h3 class="text-xs font-bold text-slate-900 mt-0.5 truncate">${worstUnit}</h3>
                             </div>
                         </div>
@@ -2306,73 +2467,90 @@ filteredCascading.forEach(cd => {
                             <button onclick="switchTab('cascading')" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md">Buka Menu Cascading</button>
                         </div>
                     ` : `
-                        <!-- Master KPI Table -->
+<!-- Master KPI Table -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
                                     <h3 class="font-bold text-slate-900 text-base">Tabel Master Indikator Kinerja (Direktur & Unit Terkait)</h3>
-                                    <p class="text-xs text-slate-500">Memuat indikator kinerja, target, satuan, tim kerja, PIC, % realisasi output, status tercapai/tidak, serta permasalahan</p>
+                                    <p class="text-xs text-slate-500">Memuat indikator kinerja, target, satuan, tim kerja, PIC, realisasi capaian, serta status ketercapaian</p>
                                 </div>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse text-xs">
                                     <thead>
-    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-        <th class="p-3 text-center">No</th>
-        <th class="p-3">Indikator Kinerja</th>
-        <th class="p-3 text-center">Target</th>
-        <th class="p-3 text-center">Satuan</th>
-        <th class="p-3">Tim Kerja</th>
-        <th class="p-3">PIC (Unit / Prodi)</th>
-        <th class="p-3 text-center">Realisasi Capaian</th> <!-- Kolom Baru -->
-        <th class="p-3 text-center">Status</th>
-        
-    </tr>
-</thead>
+                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                            <th class="p-3 text-center">No</th>
+                                            <th class="p-3">Indikator Kinerja</th>
+                                            <th class="p-3 text-center">Target</th>
+                                            <th class="p-3 text-center">Satuan</th>
+                                            <th class="p-3">Tim Kerja</th>
+                                            <th class="p-3">PIC (Unit / Prodi)</th>
+                                            <th class="p-3 text-center">Realisasi Capaian</th>
+                                            <th class="p-3 text-center">Status</th>
+                                        </tr>
+                                    </thead>
                                     <tbody class="divide-y divide-slate-100">
-                                        ${filteredCascading.filter(cd => filterDashboardTahun === 'Semua' || cd.tahun === filterDashboardTahun).map((cd, index) => {
-                                            let matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun && c.status === 'Valid');
-if (filterDashboardTriwulan !== 'Semua') {
-    matchedCap = matchedCap.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
-}
+                                        ${filteredCascading.filter(cd => filterDashboardTahun === 'Semua' || String(cd.tahun || '2025') === String(filterDashboardTahun)).map((cd, index) => {
+                                            const cdTahun = String(cd.tahun || '2025');
+                                            let matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && String(c.tahun || '2025') === cdTahun && c.status === 'Valid');
+                                            if (filterDashboardTriwulan !== 'Semua') {
+                                                matchedCap = matchedCap.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                                            }
                                             if (filterDashboardUnit !== 'Semua') {
                                                 matchedCap = matchedCap.filter(c => c.unit === filterDashboardUnit);
                                             }
-                                            const picNames = matchedCap.map(c => c.unit).join(', ') || 'Belum di-assign';
-                                            const timKeyStr = cd.timKeys.join(', ');
-                                            const permasalahanStr = matchedCap.map(c => c.permasalahan).filter(Boolean).join('; ') || '-';
+
+                                          // Hanya gunakan capaian yang berstatus UTAMA pada indikator ini
+                                         const activeCapList = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
+
+                                            // Urutkan berdasarkan Triwulan (TW 1 -> TW 2 -> TW 3 -> TW 4 -> Tahunan) agar elemen terakhir adalah TW terbaru
+                                            const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
+                                            const sortedCap = [...activeCapList].sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
+
+                                            // Ambil daftar PIC dari Cascading Tim maupun dari Capaian yang sudah masuk
+                                            const cascadedUnits = DB.cascadingTim
+                                             .filter(ct => ct.targetDirektur === cd.target && String(ct.tahun || '2025') === cdTahun && isTimUtamaInDir(cd, ct.timKey))
+                                             .flatMap(ct => (ct.unitTargets || []).filter(u => isUnitUtamaInTim(ct, u)));
+                                         const picUnits = Array.from(new Set([...activeCapList.map(c => c.unit), ...cascadedUnits]));
+                                         const picNames = picUnits.length > 0 ? picUnits.map(u => `${u} (Utama)`).join(', ') : 'Belum ada realisasi Utama';
+
+                                         const timKeyStr = (cd.timKeys || []).map(t => {
+                                             const isUtama = isTimUtamaInDir(cd, t);
+                                             return isUtama 
+                                                 ? `<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-bold text-[10px] mr-1 mb-1">★ ${t} (Utama)</span>`
+                                                 : `<span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 rounded font-medium text-[10px] mr-1 mb-1">🛡️ ${t} (Support)</span>`;
+                                         }).join('') || '-';
+                                            
                                             let realisasiVal = 0;
-if (matchedCap.length > 0) {
-    // Ambil inputan terakhir berdasarkan urutan validasi/input
-    realisasiVal = matchedCap[matchedCap.length - 1].realisasi;
-}
+                                            if (sortedCap.length > 0) {
+                                                realisasiVal = sortedCap[sortedCap.length - 1].realisasi;
+                                            }
                                             const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
-                                            const pRealOutput = targetVal > 0 ? ((realisasiVal / targetVal) * 100).toFixed(2) : 0;
-                                            const isTercapai = matchedCap.length > 0 && realisasiVal >= targetVal;
+                                            const isTercapai = sortedCap.length > 0 && realisasiVal >= targetVal;
 
                                             return `
                                                 <tr class="hover:bg-slate-50 transition-all">
-    <td class="p-3 text-center font-semibold text-slate-600">${index + 1}</td>
-    <td class="p-3 font-bold text-slate-900">${cd.target}</td>
-    <td class="p-3 text-center font-semibold text-primary-700">${targetVal}</td>
-    <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 rounded text-[11px] font-semibold">${cd.satuan || '%'}</span></td>
-    <td class="p-3 font-medium text-purple-700">${timKeyStr}</td>
-    <td class="p-3 font-medium text-slate-700">${picNames}</td>
-    <td class="p-3 text-center font-bold text-emerald-600">${realisasiVal}</td> <!-- Nilai Realisasi Capaian -->
-    <td class="p-3 text-center">
-        <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
-            ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
-        </span>
-    </td>
-    
-</tr>
+                                                    <td class="p-3 text-center font-semibold text-slate-600">${index + 1}</td>
+                                                    <td class="p-3 font-bold text-slate-900">${cd.target}</td>
+                                                    <td class="p-3 text-center font-semibold text-primary-700">${targetVal}</td>
+                                                    <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 rounded text-[11px] font-semibold">${cd.satuan || '%'}</span></td>
+                                                    <td class="p-3 font-semibold text-purple-700">${timKeyStr}</td>
+                                                    <td class="p-3 font-medium text-slate-700">${picNames}</td>
+                                                    <td class="p-3 text-center font-bold text-emerald-600">${realisasiVal}</td>
+                                                    <td class="p-3 text-center">
+                                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                                                            ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
                                             `;
                                         }).join('')}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-<!-- Tabel Efektivitas & Efisiensi -->
+
+                        <!-- Tabel Efektivitas & Efisiensi -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                             <div>
                                 <h3 class="font-bold text-slate-900 text-base">Tabel Analisis Efektivitas & Efisiensi Kinerja</h3>
@@ -2392,22 +2570,32 @@ if (matchedCap.length > 0) {
                                             <th class="p-3 text-center">Realisasi Anggaran (Rp)</th>
                                             <th class="p-3 text-center">% Realisasi Anggaran</th>
                                             <th class="p-3 text-center">Efektivitas</th>
-                                            <th class="p-3 text-center">Efisien</th>
+                                            <th class="p-3 text-center">Efisiensi</th>
                                             <th class="p-3 text-center">Kesimpulan</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
                                         ${filteredCascading.length === 0 ? `<tr><td colspan="12" class="p-4 text-center text-slate-400">Belum ada data indikator.</td></tr>` : filteredCascading.map((cd, index) => {
-                                            const matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun && c.status === 'Valid');
-                                            const realisasiOutput = matchedCap.length > 0 ? matchedCap[matchedCap.length - 1].realisasi : 0;
+                                            const cdTahun = String(cd.tahun || '2025');
+                                            let matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && String(c.tahun || '2025') === cdTahun && c.status === 'Valid');
+                                            if (filterDashboardTriwulan !== 'Semua') {
+                                                matchedCap = matchedCap.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                                            }
+                                            if (filterDashboardUnit !== 'Semua') {
+                                                matchedCap = matchedCap.filter(c => c.unit === filterDashboardUnit);
+                                            }
+                                            const activeCapList = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
+                                            const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
+                                            const sortedCap = [...activeCapList].sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
+
+                                            const realisasiOutput = sortedCap.length > 0 ? sortedCap[sortedCap.length - 1].realisasi : 0;
                                             const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
                                             const pRealisasiOutput = targetVal > 0 ? (realisasiOutput / targetVal) * 100 : 0;
 
-                                            // Cari data anggaran terkait berdasarkan indikator
                                             const renstratik = DB.renstraIndikatorKinerja.find(x => x.namaIndikator === cd.target);
-                                            const paguVal = renstratik ? (renstratik['anggaran' + cd.tahun] || 100000000) : 100000000;
+                                            const paguVal = renstratik ? (renstratik['anggaran' + cdTahun] || 100000000) : (cd.anggaran || 100000000);
                                             
-                                            let subRa = DB.realisasiAnggaranAdmin.filter(ra => renstratik && ra.indikatorId === renstratik.id && ra.tahun === cd.tahun);
+                                            let subRa = DB.realisasiAnggaranAdmin.filter(ra => renstratik && ra.indikatorId === renstratik.id && String(ra.tahun || '2025') === cdTahun);
                                             if (filterDashboardTriwulan !== 'Semua') {
                                                 subRa = subRa.filter(ra => ra.triwulan === filterDashboardTriwulan);
                                             }
@@ -2440,6 +2628,118 @@ if (matchedCap.length > 0) {
                                         }).join('')}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                        <!-- REVISI 5: Tabel Multi-Tahun 2025-2029 & YoY -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">Tabel Capaian Indikator Kinerja Multi-Tahun (2025 - 2029) & Year-on-Year (YoY)</h3>
+                                <p class="text-xs text-slate-500">Perbandingan Target dan Realisasi Capaian Utama dari tahun 2025 s.d 2029 beserta pertumbuhan YoY</p>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                            <th class="p-2.5 border text-center">No</th>
+                                            <th class="p-2.5 border min-w-[200px]">Indikator Kinerja</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Target 2025</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Realisasi 2025</th>
+                                            <th class="p-2.5 border text-center">Target 2026</th>
+                                            <th class="p-2.5 border text-center">Realisasi 2026</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Target 2027</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Realisasi 2027</th>
+                                            <th class="p-2.5 border text-center">Target 2028</th>
+                                            <th class="p-2.5 border text-center">Realisasi 2028</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Target 2029</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Realisasi 2029</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2025 VS 2026</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2026 VS 2027</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2027 VS 2028</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2028 VS 2029</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        ${(DB.renstraIndikatorKinerja || []).length === 0 ? `<tr><td colspan="16" class="p-4 text-center text-slate-400">Belum ada data Indikator Kinerja Renstra.</td></tr>` : DB.renstraIndikatorKinerja.map((ik, idx) => {
+                                            const getTarget = (yr) => {
+                                                const cd = DB.cascadingDirektur.find(x => (x.indikatorId === ik.id || x.target === ik.namaIndikator) && String(x.tahun || '2025') === String(yr));
+                                                if (cd && cd.targetVal !== undefined) return Number(cd.targetVal);
+                                                return ik['target' + yr] !== undefined ? Number(ik['target' + yr]) : 100;
+                                            };
+                                           const getReal = (yr) => {
+                                             if (filterDashboardTahun !== 'Semua' && String(filterDashboardTahun) !== String(yr)) return null;
+                                             let caps = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === String(yr) && c.status === 'Valid');
+                                             if (filterDashboardTim !== 'Semua') {
+                                                 caps = caps.filter(c => c.timKey === filterDashboardTim);
+                                             }
+                                             if (filterDashboardUnit !== 'Semua') {
+                                                 caps = caps.filter(c => c.unit === filterDashboardUnit);
+                                             }
+                                             if (filterDashboardTriwulan !== 'Semua') {
+                                                 caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                                             }
+                                             const finalCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
+                                             if (finalCaps.length === 0) return null;
+
+                                             // Urutkan berdasarkan urutan Triwulan agar selalu mengambil Triwulan Terakhir yang sudah Valid di tahun tersebut
+                                             const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
+                                             finalCaps.sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
+                                             return Number(finalCaps[finalCaps.length - 1].realisasi);
+                                         };
+                                            const t25 = getTarget('2025'), r25 = getReal('2025');
+                                            const t26 = getTarget('2026'), r26 = getReal('2026');
+                                            const t27 = getTarget('2027'), r27 = getReal('2027');
+                                            const t28 = getTarget('2028'), r28 = getReal('2028');
+                                            const t29 = getTarget('2029'), r29 = getReal('2029');
+
+                                            const calcYoY = (prev, curr) => {
+                                                if (prev === null || curr === null) return '<span class="text-slate-400">-</span>';
+                                                const diff = Number((curr - prev).toFixed(2));
+                                                const pct = prev !== 0 ? ((diff / prev) * 100).toFixed(1) : 0;
+                                                if (diff > 0) return `<span class="text-emerald-600 font-bold">+${diff} (+${pct}%)</span>`;
+                                                if (diff < 0) return `<span class="text-rose-600 font-bold">${diff} (${pct}%)</span>`;
+                                                return `<span class="text-slate-600 font-semibold">0 (0%)</span>`;
+                                            };
+
+                                            return `
+                                                <tr class="hover:bg-slate-50">
+                                                    <td class="p-2.5 border text-center font-semibold text-slate-600">${idx + 1}</td>
+                                                    <td class="p-2.5 border font-bold text-slate-900">${ik.namaIndikator}</td>
+                                                    <td class="p-2.5 border text-center font-semibold text-primary-700 bg-blue-50/20">${t25}</td>
+                                                    <td class="p-2.5 border text-center font-bold text-emerald-600 bg-blue-50/20">${r25 !== null ? r25 : '-'}</td>
+                                                    <td class="p-2.5 border text-center font-semibold text-primary-700">${t26}</td>
+                                                    <td class="p-2.5 border text-center font-bold text-emerald-600">${r26 !== null ? r26 : '-'}</td>
+                                                    <td class="p-2.5 border text-center font-semibold text-primary-700 bg-blue-50/20">${t27}</td>
+                                                    <td class="p-2.5 border text-center font-bold text-emerald-600 bg-blue-50/20">${r27 !== null ? r27 : '-'}</td>
+                                                    <td class="p-2.5 border text-center font-semibold text-primary-700">${t28}</td>
+                                                    <td class="p-2.5 border text-center font-bold text-emerald-600">${r28 !== null ? r28 : '-'}</td>
+                                                    <td class="p-2.5 border text-center font-semibold text-primary-700 bg-blue-50/20">${t29}</td>
+                                                    <td class="p-2.5 border text-center font-bold text-emerald-600 bg-blue-50/20">${r29 !== null ? r29 : '-'}</td>
+                                                    <td class="p-2.5 border text-center bg-amber-50/30">${calcYoY(r25, r26)}</td>
+                                                    <td class="p-2.5 border text-center bg-amber-50/30">${calcYoY(r26, r27)}</td>
+                                                    <td class="p-2.5 border text-center bg-amber-50/30">${calcYoY(r27, r28)}</td>
+                                                    <td class="p-2.5 border text-center bg-amber-50/30">${calcYoY(r28, r29)}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- REVISI 6: Grafik Target vs Realisasi 2025-2029 per Indikator -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base">Grafik Target vs Realisasi Indikator Kinerja (2025 - 2029)</h3>
+                                    <p class="text-xs text-slate-500">Perbandingan Target dan Realisasi setiap indikator dari tahun 2025 s.d 2029</p>
+                                </div>
+                                <select id="selectIndikatorMultiYearChart" onchange="renderMultiYearIndikatorChart()" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700 max-w-xs">
+                                    <option value="Semua">Rata-rata Seluruh Indikator</option>
+                                    ${(DB.renstraIndikatorKinerja || []).map(ik => `<option value="${ik.namaIndikator}">${ik.kodeIndikator ? ik.kodeIndikator + ' - ' : ''}${ik.namaIndikator}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="relative min-h-[340px]">
+                                <canvas id="targetVsRealMultiYearChart"></canvas>
                             </div>
                         </div>
                         <!-- Charts Grid -->
@@ -2613,6 +2913,7 @@ if (matchedCap.length > 0) {
                             }
                         }
                     });
+                    renderMultiYearIndikatorChart();
                     // === GRAFIK REALISASI ANGGARAN (IKUT FILTER TERPADU) ===
                     const ctxAnggaran = document.getElementById('anggaranChart').getContext('2d');
                     let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
@@ -2696,8 +2997,75 @@ if (matchedCap.length > 0) {
                 }, 100);
             }
 }
+let multiYearChartInstance = null;
+function renderMultiYearIndikatorChart() {
+            const canvas = document.getElementById('targetVsRealMultiYearChart');
+            if (!canvas) return;
+            const selEl = document.getElementById('selectIndikatorMultiYearChart');
+            const selectedInd = selEl ? selEl.value : 'Semua';
+            
+            const allYears = ['2025', '2026', '2027', '2028', '2029'];
+            const years = filterDashboardTahun !== 'Semua' ? [String(filterDashboardTahun)] : allYears;
+            const ikList = (DB.renstraIndikatorKinerja || []).filter(ik => selectedInd === 'Semua' || ik.namaIndikator === selectedInd);
+            const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
 
-function renderCascadingView(container) {
+            const targetData = years.map(yr => {
+                if (ikList.length === 0) return 0;
+                const sum = ikList.reduce((acc, ik) => {
+                    const cd = DB.cascadingDirektur.find(x => (x.indikatorId === ik.id || x.target === ik.namaIndikator) && String(x.tahun || '2025') === yr);
+                    const tVal = (cd && cd.targetVal !== undefined) ? Number(cd.targetVal) : (ik['target' + yr] !== undefined ? Number(ik['target' + yr]) : 100);
+                    return acc + tVal;
+                }, 0);
+                return Number((sum / ikList.length).toFixed(2));
+            });
+
+            const realData = years.map(yr => {
+                if (ikList.length === 0) return 0;
+                const sum = ikList.reduce((acc, ik) => {
+                    let caps = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === yr && c.status === 'Valid');
+                    if (filterDashboardTim !== 'Semua') {
+                        caps = caps.filter(c => c.timKey === filterDashboardTim);
+                    }
+                    if (filterDashboardUnit !== 'Semua') {
+                        caps = caps.filter(c => c.unit === filterDashboardUnit);
+                    }
+                    if (filterDashboardTriwulan !== 'Semua') {
+                        caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                    }
+                   const finalCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
+                    if (finalCaps.length === 0) return acc;
+
+                    // Urutkan agar mengambil Triwulan Terakhir yang divalidasi pada tahun tersebut
+                    finalCaps.sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
+                    const rVal = Number(finalCaps[finalCaps.length - 1].realisasi) || 0;
+                    return acc + rVal;
+                }, 0);
+                return Number((sum / ikList.length).toFixed(2));
+            });
+
+            if (multiYearChartInstance) multiYearChartInstance.destroy();
+            multiYearChartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: years.map(y => 'Tahun ' + y),
+                    datasets: [
+                        { label: 'Target', data: targetData, backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'Realisasi (TW Terakhir Valid)', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
+                    ]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        datalabels: { anchor: 'end', align: 'top', font: { weight: 'bold', size: 10 } }
+                    }
+                }
+            });
+        }
+        function renderCascadingView(container) {
             document.getElementById('pageTitle').innerText = 'Cascading Indikator Kinerja Bertahap';
             const isDirektur = currentUser.role === 'direktur';
             const isKetuaTim = currentUser.role === 'tim_kerja';
@@ -2715,18 +3083,20 @@ function renderCascadingView(container) {
             let filteredDir = [...DB.cascadingDirektur];
             if (filterCascadingTahun !== 'Semua') filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
 
-            // Disamakan dengan tampilan Direktur: menampilkan seluruh Tim Kerja & Unit tanpa difilter per role tim_kerja
             let filteredTim = [...DB.cascadingTim];
-            if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
+         if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
+
+         // Khusus untuk Tabel 2: Jika login sebagai Ketua Tim Kerja, tampilkan hanya sesuai tim kerjanya saja
+         let filteredTimTable = isKetuaTim ? filteredTim.filter(c => c.timKey === currentUser.timKey) : filteredTim;
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
-                    <!-- VISUALISASI POHON CASCADING DENGAN GARIS PENGHUBUNG KONEKTOR & FILTER TAHUN -->
+<!-- VISUALISASI POHON CASCADING & CROSSCUTTING (GAYA XMIND) -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Peta Pohon Organisasi Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
-                                <p class="text-xs text-slate-500">Visualisasi alur penurunan indikator kinerja institusi secara hierarki sesuai tahun terpilih.</p>
+                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Cascading & Crosscutting Indikator Kinerja</h3>
+                                <p class="text-xs text-slate-500">Visualisasi alur penurunan Perjanjian Kinerja Direktur &rarr; Indikator Kinerja &rarr; Ketua Tim Kerja &rarr; Unit/Prodi/Subbag.</p>
                             </div>
                             <div class="flex items-center space-x-2">
                                 <label class="text-xs font-semibold text-slate-600">Filter Tahun Pohon:</label>
@@ -2741,49 +3111,93 @@ function renderCascadingView(container) {
                             </div>
                         </div>
                         
-                        <div class="overflow-x-auto p-6 bg-slate-50 rounded-2xl border min-w-[800px]">
+                        <div class="overflow-x-auto p-8 bg-slate-50 rounded-2xl border min-w-[900px]">
+                            ${filteredDir.length === 0 ? `<p class="text-xs text-slate-400 text-center py-6 italic">Belum ada Indikator Kinerja yang dicascadingkan pada tahun ${filterCascadingTahun}.</p>` : `
                             <div class="flex items-center space-x-6">
+                                <!-- Root Kiri: Perjanjian Kinerja Politeknik / Direktur -->
                                 <div class="flex flex-col items-center shrink-0">
-                                    <div class="px-5 py-4 bg-blue-700 text-white rounded-2xl shadow-lg text-xs font-bold text-center w-52 border-2 border-blue-800">
-                                        <i class="fa-solid fa-user-tie mb-1 block text-sm"></i> Pimpinan Tertinggi (Direktur)
+                                    <div class="px-6 py-5 bg-blue-700 text-white rounded-2xl shadow-lg text-sm font-extrabold text-center w-60 border-2 border-blue-800 leading-snug">
+                                        Perjanjian Kinerja<br>Politeknik / Direktur
                                         <span class="block text-[10px] font-normal text-blue-200 mt-1">Tahun: ${filterCascadingTahun}</span>
                                     </div>
                                 </div>
 
-                                <div class="w-10 h-0.5 bg-blue-400 shrink-0"></div>
+                                <!-- Garis Penghubung Horizontal Utama -->
+                                <div class="w-10 h-0.5 bg-blue-600 shrink-0"></div>
 
-                                <div class="flex flex-col space-y-4 flex-1">
-                                    ${DB.timKerjaList.map(tim => {
-                                        const assignedDir = filteredDir.filter(cd => cd.timKeys.includes(tim));
-                                        if (assignedDir.length === 0) return '';
-                                        const subUnits = filteredTim.filter(ct => ct.timKey === tim && assignedDir.some(ad => ad.target === ct.targetDirektur && (ad.tahun || '2025') === (ct.tahun || '2025')));
-
+                                <!-- Daftar Cabang Indikator Kinerja (Kotak Hitam/Slate-900) -->
+                                <div class="flex flex-col space-y-6 flex-1 relative border-l-2 border-blue-600 pl-6 py-2">
+                                    ${filteredDir.map((cd) => {
+                                        const timList = Array.isArray(cd.timKeys) ? [...cd.timKeys].sort((a, b) => (isTimUtamaInDir(cd, b) ? 1 : 0) - (isTimUtamaInDir(cd, a) ? 1 : 0)) : [];
                                         return `
-                                            <div class="flex items-center space-x-4 relative">
-                                                <div class="absolute -left-6 top-0 bottom-0 w-0.5 bg-slate-300"></div>
-                                                <div class="w-6 h-0.5 bg-blue-400 shrink-0"></div>
-                                                <div class="px-4 py-3 bg-purple-700 text-white rounded-xl shadow-md text-xs font-semibold text-center w-48 shrink-0 border border-purple-800">
-                                                    <i class="fa-solid fa-users-gear mb-1 block"></i> Tim Kerja: ${tim}
+                                            <div class="flex items-center space-x-5 relative">
+                                                <div class="w-6 h-0.5 bg-blue-600 shrink-0 -ml-6"></div>
+                                                
+                                                <!-- Node Indikator Kinerja -->
+                                                <div class="px-5 py-3.5 bg-slate-900 text-white rounded-xl shadow-md text-xs font-bold w-64 shrink-0 border border-slate-800">
+                                                    <div>${cd.target}</div>
+                                                    <div class="text-[10px] font-normal text-slate-300 mt-1">Target: ${cd.targetVal !== undefined ? cd.targetVal : 100} ${cd.satuan || '%'} (${cd.tahun || '2025'})</div>
                                                 </div>
-                                                <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
-                                                <div class="flex flex-col space-y-2 flex-1 py-2">
-                                                    ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan</span>' : subUnits.map(ct => `
-                                                        <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-xs text-xs flex flex-col space-y-1.5 relative">
-                                                            <strong class="text-blue-800"><i class="fa-solid fa-bullseye text-blue-600 mr-1"></i> ${ct.targetDirektur}</strong>
-                                                            <div class="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
-                                                                ${ct.unitTargets.map(u => `<span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full font-bold text-[10px] border border-blue-100"><i class="fa-solid fa-building-columns mr-1"></i>${u}</span>`).join('')}
+
+                                                <div class="w-6 h-0.5 bg-slate-400 shrink-0"></div>
+
+                                                <!-- Daftar Ketua Tim Kerja pada Indikator Ini -->
+                                                <div class="flex flex-col space-y-3 flex-1 border-l-2 border-slate-400 pl-5 py-1">
+                                                    ${timList.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada Tim Kerja</span>' : timList.map(tim => {
+                                                        const isTimUtama = isTimUtamaInDir(cd, tim);
+                                                        const ctList = filteredTim.filter(ct => ct.timKey === tim && ct.targetDirektur === cd.target && String(ct.tahun || '2025') === String(cd.tahun || '2025'));
+                                                        const allUnits = ctList.flatMap(ct => (ct.unitTargets || []).map(u => ({
+                                                            name: u,
+                                                            isUtama: isTimUtama ? isUnitUtamaInTim(ct, u) : false
+                                                        })));
+
+                                                        return `
+                                                            <div class="flex items-center space-x-4 relative">
+                                                                <div class="w-5 h-0.5 bg-slate-400 shrink-0 -ml-5"></div>
+                                                                
+                                                                <!-- Box Ketua Tim Kerja -->
+                                                                <div class="bg-white border ${isTimUtama ? 'border-rose-300 shadow-xs' : 'border-slate-200'} rounded-xl px-3.5 py-2 w-52 shrink-0">
+                                                                    <div class="flex items-center space-x-2 text-xs font-bold text-slate-800">
+                                                                        <i class="fa-solid ${isTimUtama ? 'fa-star text-rose-500' : 'fa-shield-halved text-indigo-500'}"></i>
+                                                                        <span>Tim Kerja ${tim}</span>
+                                                                    </div>
+                                                                    <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${isTimUtama ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}">
+                                                                        ${isTimUtama ? 'UTAMA' : 'Support'}
+                                                                    </span>
+                                                                </div>
+
+                                                                ${allUnits.length > 0 ? `
+                                                                    <div class="w-5 h-0.5 bg-slate-300 shrink-0"></div>
+                                                                    <!-- Daftar Unit / Prodi / Subbag di bawah Tim Kerja pada Indikator ini -->
+                                                                    <div class="flex flex-col space-y-2 border-l-2 border-slate-300 pl-4 py-1">
+                                                                        ${allUnits.map(uObj => `
+                                                                            <div class="flex items-center space-x-2 relative">
+                                                                                <div class="w-4 h-0.5 bg-slate-300 shrink-0 -ml-4"></div>
+                                                                                <div class="bg-white border ${uObj.isUtama ? 'border-rose-300' : 'border-slate-200'} rounded-xl px-3 py-1.5 shadow-2xs">
+                                                                                    <div class="flex items-center space-x-1.5 text-xs font-bold text-slate-800">
+                                                                                        <i class="fa-solid ${uObj.isUtama ? 'fa-star text-rose-500' : 'fa-shield-halved text-indigo-500'} text-[10px]"></i>
+                                                                                        <span>${uObj.name}</span>
+                                                                                    </div>
+                                                                                    <span class="inline-block mt-0.5 px-2 py-0.5 rounded text-[9px] font-bold ${uObj.isUtama ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}">
+                                                                                        ${uObj.isUtama ? 'UTAMA' : 'Support'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        `).join('')}
+                                                                    </div>
+                                                                ` : ''}
                                                             </div>
-                                                        </div>
-                                                    `).join('')}
+                                                        `;
+                                                    }).join('')}
                                                 </div>
                                             </div>
                                         `;
                                     }).join('')}
                                 </div>
                             </div>
+                            `}
                         </div>
                     </div>
-
                     <!-- Bagian 1: Cascading Direktur ke Ketua Tim Kerja -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -2828,7 +3242,10 @@ function renderCascadingView(container) {
                                             <td class="p-4 text-center font-bold text-emerald-700">Rp ${Number(c.anggaran || 0).toLocaleString('id-ID')}</td>
                                             <td class="p-4">
                                                 <div class="flex flex-wrap gap-1.5">
-                                                    ${c.timKeys.map(t => `<span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${t}</span>`).join('')}
+                                                    ${c.timKeys.map(t => {
+                                                        const isUtama = isTimUtamaInDir(c, t);
+                                                        return `<span class="px-2.5 py-1 ${isUtama ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-300'} font-bold text-xs rounded-full flex items-center space-x-1"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i><span>${t} (${isUtama ? 'Utama' : 'Support'})</span></span>`;
+                                                    }).join('')}
                                                 </div>
                                             </td>
                                             ${(isDirektur || currentUser.role === 'admin') ? `
@@ -2851,7 +3268,7 @@ function renderCascadingView(container) {
                                 <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-network-wired text-primary-600 mr-2"></i> 2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag</h3>
                                 <p class="text-xs text-slate-500">Ketua Tim Kerja menurunkan indikator ke unit/prodi/subbag di bawah koordinasinya.</p>
                             </div>
-                            ${isKetuaTim ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
+                            <button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
@@ -2864,15 +3281,18 @@ function renderCascadingView(container) {
                                         ${isKetuaTim ? '<th class="p-4 text-center">Aksi</th>' : ''}
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    ${filteredTim.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredTim.map((c, idx) => `
+                               <tbody class="divide-y divide-slate-100">
+                                 ${filteredTimTable.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan ${isKetuaTim ? 'untuk Tim Kerja ' + currentUser.timKey + ' ' : ''}pada tahun ${filterCascadingTahun}.</td></tr>` : filteredTimTable.map((c, idx) => `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
                                             <td class="p-4 font-semibold text-slate-900">${c.targetDirektur}</td>
                                             <td class="p-4">
                                                 <div class="flex flex-wrap gap-1.5">
-                                                    ${c.unitTargets.map(u => `<span class="px-2.5 py-1 bg-blue-50 text-primary-700 text-xs rounded-full font-medium">${u}</span>`).join('')}
+                                                    ${c.unitTargets.map(u => {
+                                                        const isUtama = isUnitUtamaInTim(c, u);
+                                                        return `<span class="px-2.5 py-1 ${isUtama ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-300'} text-xs rounded-full font-bold flex items-center space-x-1"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i><span>${u} (${isUtama ? 'Utama' : 'Support'})</span></span>`;
+                                                    }).join('')}
                                                 </div>
                                             </td>
                                             ${(isKetuaTim || currentUser.role === 'admin') ? `
@@ -2889,12 +3309,15 @@ function renderCascadingView(container) {
                     </div>
                 </div>
 
-                <!-- Modal Cascading Direktur & Tim Kerja -->
-                <div id="cascadingDirModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+<!-- Modal Cascading Direktur -->
+                <div id="cascadingDirModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Direktur</h3>
-                            <button onclick="closeCascadingDirModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Direktur</h3>
+                                <p class="text-[11px] text-slate-500">Pilih satu atau lebih Tim Kerja dan tentukan Tim Utama vs Support</p>
+                            </div>
+                            <button type="button" onclick="closeCascadingDirModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveCascadingDir(event)" class="space-y-4 text-sm">
                             <div>
@@ -2911,25 +3334,43 @@ function renderCascadingView(container) {
                                 <div><span class="text-slate-500 block">Target (Renstra):</span><strong id="previewTargetVal" class="text-primary-700 text-sm">100</strong></div>
                                 <div class="text-right"><span class="text-slate-500 block">Pagu Anggaran:</span><strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong></div>
                             </div>
-                           <div>
-                                <label class="block font-semibold text-slate-700 mb-2">Pilih Ketua Tim Kerja (Pilih Salah Satu)</label>
-                                <div class="space-y-2 bg-slate-50 p-3 rounded-xl border">
-                                    ${DB.timKerjaList.map(t => `<label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="timCheck" value="${t}" required class="w-4 h-4 text-primary-600 border-slate-300"><span class="text-slate-700 font-medium">${t}</span></label>`).join('')}
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block font-semibold text-slate-700">Pilih Ketua Tim Kerja (Bisa Lebih Dari 1) & Status Peran</label>
+                                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">★ Utama = Masuk Dashboard</span>
+                                </div>
+                                <div class="space-y-2.5 bg-slate-50 p-3.5 rounded-xl border">
+                                    ${DB.timKerjaList.map((t, idx) => `
+                                        <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-all shadow-2xs">
+                                            <label class="flex items-center space-x-3 cursor-pointer flex-1">
+                                                <input type="checkbox" name="timCheck" value="${t}" onchange="toggleTimRoleSelect(${idx}, this.checked)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                                                <span class="text-slate-800 font-semibold text-xs">${t}</span>
+                                            </label>
+                                            <select id="timRole_${idx}" data-tim="${t}" onchange="handleTimRoleChange(${idx})" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
+                                                <option value="Utama">★ Tim Utama (Inti)</option>
+                                                <option value="Support">🛡️ Tim Support (Pendukung)</option>
+                                            </select>
+                                        </div>
+                                    `).join('')}
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
                                 <button type="button" onclick="closeCascadingDirModal()" class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-medium">Batal</button>
-                                <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium">Simpan Cascading</button>
+                                <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold shadow-md">Simpan Cascading</button>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+                <!-- Modal Cascading Ketua Tim Kerja -->
+                <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (${currentUser.timKey})</h3>
-                            <button onclick="closeCascadingTimModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (<span id="modalTimHeaderLabel">${currentUser.timKey || 'Semua Tim'}</span>)</h3>
+                                <p class="text-[11px] text-slate-500">Menampilkan khusus Subbag / Prodi / Unit di bawah koordinasi Tim Kerja Anda</p>
+                            </div>
+                            <button type="button" onclick="closeCascadingTimModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveCascadingTim(event)" class="space-y-4 text-sm">
                             <div>
@@ -2943,50 +3384,56 @@ function renderCascadingView(container) {
                                 <select id="timDirRef" required class="w-full p-3 bg-slate-50 border rounded-xl"></select>
                             </div>
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-2">Pilih Unit / Prodi / Subbag Tujuan (Pilih Salah Satu)</label>
-                                <div class="space-y-2 bg-slate-50 p-3 rounded-xl border max-h-48 overflow-y-auto">
-                                    ${DB.unitList.map(u => `<label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="unitCheck" value="${u}" required class="w-4 h-4 text-primary-600 border-slate-300"><span class="text-slate-700 font-medium">${u}</span></label>`).join('')}
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block font-semibold text-slate-700">Pilih Unit / Prodi / Subbag Tujuan (Bisa Lebih Dari 1)</label>
+                                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">★ Utama = Masuk Dashboard</span>
                                 </div>
+                                <div id="timUnitCheckContainer" class="space-y-2 bg-slate-50 p-3.5 rounded-xl border max-h-60 overflow-y-auto"></div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
                                 <button type="button" onclick="closeCascadingTimModal()" class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-medium">Batal</button>
-                                <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium">Simpan Cascading Unit</button>
+                                <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold shadow-md">Simpan Cascading Unit</button>
                             </div>
                         </form>
                     </div>
                 </div>
             `;
 
-            // Dipindahkan ke dalam kurung kurawal agar otomatis dijalankan saat halaman Cascading dirender
-            setTimeout(() => {
-                const yrDir = document.getElementById('dirTahunTarget');
-                if (yrDir) updateDirRenstraOptions(yrDir.value);
+        setTimeout(() => {
+            const yrDir = document.getElementById('dirTahunTarget');
+            if (yrDir) updateDirRenstraOptions(yrDir.value);
 
-                const yrEl = document.getElementById('timTahunTarget');
-                if (yrEl) updateTimDirRefOptions(yrEl.value);
-            }, 100);
-        }
+            const yrEl = document.getElementById('timTahunTarget');
+            if (yrEl) updateTimDirRefOptions(yrEl.value);
 
-        // FUNGSI YANG SEBELUMNYA HILANG: Mengisi dropdown Indikator Renstra (Tier 4) untuk Direktur
-        function updateDirRenstraOptions(tahun) {
-            const sel = document.getElementById('dirIndikatorRenstra');
-            if (!sel) return;
-            const listIndikator = DB.renstraIndikatorKinerja || [];
-            
-            if (listIndikator.length === 0) {
-                sel.innerHTML = '<option value="">Belum ada Indikator Kinerja di Renstra (Tier 4)</option>';
-                return;
+            renderTimUnitCheckboxes(currentUser.timKey);
+
+            // =====================================================================
+            // PAKSA RENDER TOMBOL JIKA HILANG KARENA PARSER ERROR
+            // =====================================================================
+            let btnCascadingTim = Array.from(document.querySelectorAll('button')).find(
+                btn => btn.textContent.includes('Tambah Cascading ke Unit')
+            );
+
+            // JIKA TOMBOL TIDAK DITEMUKAN, KITA BUAT & SUNTIKKAN LANGSUNG KE DOM
+            if (!btnCascadingTim && currentUser.role === 'tim_kerja') {
+                console.warn('[Ki-Jaro] Tombol hilang dari HTML, membuat tombol cadangan...');
+                const headerContainer = document.querySelector('.p-6.border-b.border-slate-200.flex.flex-col');
+                if (headerContainer) {
+                    const newBtn = document.createElement('button');
+                    newBtn.className = "px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2 mt-4 md:mt-0";
+                    newBtn.innerHTML = `<i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span>`;
+                    newBtn.onclick = function() { openCascadingTimModal(); };
+                    headerContainer.appendChild(newBtn);
+                    btnCascadingTim = newBtn;
+                }
             }
 
-            sel.innerHTML = listIndikator.map(ik => {
-                const targetThn = ik['target' + tahun] !== undefined ? ik['target' + tahun] : (ik.target2025 || 100);
-                const paguThn = ik['anggaran' + tahun] !== undefined ? ik['anggaran' + tahun] : (ik.anggaran2025 || 0);
-                const satuan = ik.satuan || '%';
-                const kode = ik.kodeIndikator ? `${ik.kodeIndikator} - ` : '';
-                return `<option value="${ik.id}" data-nama="${ik.namaIndikator}" data-satuan="${satuan}" data-target="${targetThn}" data-anggaran="${paguThn}">${kode}${ik.namaIndikator} (Target: ${targetThn} ${satuan})</option>`;
-            }).join('');
-
-            updateDirAnggaranPreview();
+            if (btnCascadingTim) {
+                console.log('[Ki-Jaro] Tombol "Tambah Cascading ke Unit" siap diklik.');
+                btnCascadingTim.onclick = function() { openCascadingTimModal(); };
+            }
+        }, 100);
         }
 
         function updateDirAnggaranPreview() {
@@ -3002,30 +3449,161 @@ function renderCascadingView(container) {
             if (elAnggaran) elAnggaran.innerText = `Rp ${Number(anggaran).toLocaleString('id-ID')}`;
         }
 
-        // Mengisi dropdown Indikator dari Direktur untuk Ketua Tim Kerja
+function isCurrentTimUtamaSelected() {
+            const tahunEl = document.getElementById('timTahunTarget');
+            const indEl = document.getElementById('timDirRef');
+            if (!tahunEl || !indEl || !indEl.value) return true;
+            
+            const modal = document.getElementById('cascadingTimModal');
+            const editTimKey = modal ? modal.getAttribute('data-edit-timkey') : null;
+            const activeTim = editTimKey || (currentUser && currentUser.timKey) || 'Akademik';
+            
+            const cd = (DB.cascadingDirektur || []).find(c => 
+                c.target === indEl.value && String(c.tahun || '2025') === String(tahunEl.value)
+            );
+            if (!cd) return true;
+            return isTimUtamaInDir(cd, activeTim);
+        }
+
         function updateTimDirRefOptions(tahun) {
             const sel = document.getElementById('timDirRef');
             if (!sel) return;
             const matching = (DB.cascadingDirektur || []).filter(c => {
                 const matchTahun = String(c.tahun || '2025') === String(tahun);
-                // Jika login sebagai Ketua Tim Kerja, tampilkan yang di-assign ke timnya. Jika Admin, tampilkan semua.
                 const matchTim = currentUser.role === 'admin' ? true : (Array.isArray(c.timKeys) && c.timKeys.includes(currentUser.timKey));
                 return matchTahun && matchTim;
             });
 
             sel.innerHTML = matching.length === 0 
                 ? `<option value="">Belum ada indikator dari Direktur untuk tahun ${tahun}</option>` 
-                : matching.map(c => `<option value="${c.target}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})</option>`).join('');
+                : matching.map(c => {
+                    const isUtama = currentUser.timKey ? isTimUtamaInDir(c, currentUser.timKey) : true;
+                    const roleStatus = currentUser.timKey ? (isUtama ? ' [Status Tim Anda: ★ UTAMA]' : ' [Status Tim Anda: 🛡️ SUPPORT]') : '';
+                    return `<option value="${c.target}" data-isutama="${isUtama}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})${roleStatus}</option>`;
+                }).join('');
+
+            sel.onchange = function() {
+                syncUnitRolesWithTimStatus();
+            };
+            syncUnitRolesWithTimStatus();
         }
 
-        function openCascadingDirModal() {
-            if (DB.renstraIndikatorKinerja.length === 0) {
-                showToast('Belum ada data Indikator Kinerja di Renstra. Minta Admin untuk mengisi Renstra terlebih dahulu.', 'error');
+        function syncUnitRolesWithTimStatus() {
+            const timIsUtama = isCurrentTimUtamaSelected();
+            document.querySelectorAll('select[id^="unitRole_"]').forEach((sel, idx) => {
+                const chk = document.querySelectorAll('input[name="unitCheck"]')[idx];
+                const isChecked = chk ? chk.checked : false;
+                const optUtama = sel.querySelector('option[value="Utama"]');
+                
+                if (!timIsUtama) {
+                    if (optUtama) optUtama.disabled = true;
+                    sel.value = 'Support';
+                } else {
+                    if (optUtama) optUtama.disabled = false;
+                    if (isChecked) {
+                        const existingUtama = Array.from(document.querySelectorAll('select[id^="unitRole_"]')).some(
+                            s => s.id !== sel.id && !s.disabled && s.value === 'Utama'
+                        );
+                        sel.value = !existingUtama ? 'Utama' : 'Support';
+                    }
+                }
+            });
+        }
+        
+function updateDirRenstraOptions(tahun) {
+            const sel = document.getElementById('dirIndikatorRenstra');
+            if (!sel) return;
+            
+            // Mengambil langsung seluruh indikator Renstra yang telah diinput oleh Admin
+            const listIndikator = DB.renstraIndikatorKinerja || [];
+            
+            if (listIndikator.length === 0) {
+                sel.innerHTML = '<option value="">Belum ada Indikator Kinerja di Renstra (Tier 4)</option>';
+                const elTarget = document.getElementById('previewTargetVal');
+                const elAnggaran = document.getElementById('previewAnggaranVal');
+                if (elTarget) elTarget.innerText = '100';
+                if (elAnggaran) elAnggaran.innerText = 'Rp 0';
                 return;
             }
-            document.getElementById('cascadingDirModal').classList.remove('hidden'); document.getElementById('cascadingDirModal').classList.add('flex');
+
+            // Render opsi dropdown secara aman membaca data indikator yang diinput Admin
+            sel.innerHTML = listIndikator.map(ik => {
+                const targetThn = ik['target' + tahun] !== undefined ? ik['target' + tahun] : (ik.target2025 || 100);
+                const paguThn = ik['anggaran' + tahun] !== undefined ? ik['anggaran' + tahun] : (ik.anggaran2025 || 0);
+                const satuan = ik.satuan || '%';
+                const kode = ik.kodeIndikator ? `${ik.kodeIndikator} - ` : '';
+                return `<option value="${ik.id || ik.namaIndikator}" data-nama="${ik.namaIndikator}" data-satuan="${satuan}" data-target="${targetThn}" data-anggaran="${paguThn}">${kode}${ik.namaIndikator} (Target: ${targetThn} ${satuan})</option>`;
+            }).join('');
+
+            updateDirAnggaranPreview();
+        }
+            // --- LETAKKAN DI SINI (Di atas openCascadingDirModal) ---
+        function toggleTimRoleSelect(idx, isChecked) {
+            const sel = document.getElementById(`timRole_${idx}`);
+            if (!sel) return;
+            sel.disabled = !isChecked;
+            if (isChecked) {
+                sel.className = 'p-1.5 text-xs font-bold rounded-lg border border-blue-300 bg-blue-50 text-blue-800 transition-all cursor-pointer';
+                
+                const existingUtama = Array.from(document.querySelectorAll('select[id^="timRole_"]')).some(s => !s.disabled && s.value === 'Utama' && s.id !== `timRole_${idx}`);
+                if (!existingUtama) {
+                    sel.value = 'Utama';
+                } else {
+                    sel.value = 'Support';
+                }
+            } else {
+                sel.className = 'p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer';
+                sel.value = 'Support';
+            }
+        }
+
+// Pengatur Eksklusif 1 Tim Utama
+        function handleTimRoleChange(changedIdx) {
+            const changedSel = document.getElementById(`timRole_${changedIdx}`);
+            if (changedSel && changedSel.value === 'Utama') {
+                document.querySelectorAll('select[id^="timRole_"]').forEach((s, idx) => {
+                    if (idx !== changedIdx && !s.disabled) {
+                        s.value = 'Support';
+                    }
+                });
+            }
+        }
+
+        // Pengatur Eksklusif 1 Unit Utama
+        function handleUnitRoleChange(changedIdx) {
+            const changedSel = document.getElementById(`unitRole_${changedIdx}`);
+            if (changedSel && changedSel.value === 'Utama') {
+                document.querySelectorAll('select[id^="unitRole_"]').forEach((s, idx) => {
+                    if (idx !== changedIdx && !s.disabled) {
+                        s.value = 'Support';
+                    }
+                });
+            }
+        }
+        function openCascadingDirModal() {
+            // ... kode modal direktur selanjutnya ...
+        }
+            function openCascadingDirModal() {
+            if (!DB.renstraIndikatorKinerja || DB.renstraIndikatorKinerja.length === 0) {
+                showToast('Belum ada data Indikator Kinerja di Renstra (Tier 4)! Input dulu di menu Renstra.', 'error');
+                return;
+            }
+            const modal = document.getElementById('cascadingDirModal');
+            modal.removeAttribute('data-edit-id');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Set default tahun ke 2025 atau tahun aktif, lalu panggil pembaru opsi dropdown secara paksa
             const yrDir = document.getElementById('dirTahunTarget');
-            if (yrDir) updateDirRenstraOptions(yrDir.value);
+            if (yrDir) {
+                updateDirRenstraOptions(yrDir.value);
+            }
+            
+            // Reset checklist tim kerja
+            document.querySelectorAll('input[name="timCheck"]').forEach((chk, idx) => {
+                chk.checked = false;
+                toggleTimRoleSelect(idx, false);
+            });
         }
         function closeCascadingDirModal() { document.getElementById('cascadingDirModal').classList.remove('flex'); document.getElementById('cascadingDirModal').classList.add('hidden'); }
         
@@ -3040,13 +3618,31 @@ function renderCascadingView(container) {
             const targetVal = parseFloat(opt.getAttribute('data-target')) || 100;
             const anggaran = parseFloat(opt.getAttribute('data-anggaran')) || 0;
             
-            // Diubah menjadi pilihan tunggal (hanya boleh 1 tim kerja saja)
-            const selectedTimEl = document.querySelector('input[name="timCheck"]:checked');
-            if (!selectedTimEl) {
-                showToast('Pilih salah satu Ketua Tim Kerja!', 'error');
+            const checkedEls = Array.from(document.querySelectorAll('input[name="timCheck"]:checked'));
+            if (checkedEls.length === 0) {
+                showToast('Pilih minimal satu Ketua Tim Kerja!', 'error');
                 return;
             }
-            const chosenTim = selectedTimEl.value;
+
+            const chosenTims = [];
+            const timRoles = {};
+            let hasUtama = false;
+
+            DB.timKerjaList.forEach((t, idx) => {
+                const chk = document.querySelector(`input[name="timCheck"][value="${t}"]`);
+                const roleSel = document.getElementById(`timRole_${idx}`);
+                if (chk && chk.checked) {
+                    chosenTims.push(t);
+                    const rVal = roleSel ? roleSel.value : 'Utama';
+                    timRoles[t] = rVal;
+                    if (rVal === 'Utama') hasUtama = true;
+                }
+            });
+
+            if (!hasUtama) {
+                showToast('Minimal harus ada 1 Ketua Tim Kerja dengan status "Tim Utama (Inti)" agar masuk ke Dashboard!', 'error');
+                return;
+            }
 
             if (editId) {
                 const idx = DB.cascadingDirektur.findIndex(x => x.id === editId);
@@ -3059,10 +3655,11 @@ function renderCascadingView(container) {
                         targetVal: targetVal,
                         satuan: satuan,
                         anggaran: anggaran,
-                        timKeys: [chosenTim] // Disimpan sebagai array berisi 1 item
+                        timKeys: chosenTims,
+                        timRoles: timRoles
                     };
                 }
-                showToast('Cascading Direktur berhasil diperbarui!');
+                showToast('Cascading Direktur (Utama & Support) berhasil diperbarui!');
             } else {
                 DB.cascadingDirektur.push({
                     id: 'cd_' + Date.now(),
@@ -3072,7 +3669,8 @@ function renderCascadingView(container) {
                     targetVal: targetVal,
                     satuan: satuan,
                     anggaran: anggaran,
-                    timKeys: [chosenTim], // Hanya boleh satu
+                    timKeys: chosenTims,
+                    timRoles: timRoles,
                     status: 'Aktif'
                 });
                 showToast('Cascading Direktur berhasil disimpan!');
@@ -3091,9 +3689,18 @@ function renderCascadingView(container) {
             updateDirRenstraOptions(item.tahun || '2025');
             document.getElementById('dirIndikatorRenstra').value = item.indikatorId;
             updateDirAnggaranPreview();
-            document.querySelectorAll('input[name="timCheck"]').forEach(chk => {
-                chk.checked = item.timKeys.includes(chk.value);
+
+            DB.timKerjaList.forEach((t, idx) => {
+                const chk = document.querySelector(`input[name="timCheck"][value="${t}"]`);
+                const roleSel = document.getElementById(`timRole_${idx}`);
+                const isChecked = Array.isArray(item.timKeys) && item.timKeys.includes(t);
+                if (chk) chk.checked = isChecked;
+                toggleTimRoleSelect(idx, isChecked);
+                if (isChecked && roleSel) {
+                    roleSel.value = isTimUtamaInDir(item, t) ? 'Utama' : 'Support';
+                }
             });
+
             document.getElementById('cascadingDirModal').setAttribute('data-edit-id', id);
         }
 
@@ -3113,17 +3720,121 @@ function renderCascadingView(container) {
             }
         }
 
+function toggleUnitRoleSelect(idx, isChecked) {
+            const sel = document.getElementById(`unitRole_${idx}`);
+            if (!sel) return;
+            sel.disabled = !isChecked;
+            const timIsUtama = isCurrentTimUtamaSelected();
+            const optUtama = sel.querySelector('option[value="Utama"]');
+
+            if (isChecked) {
+                sel.className = 'p-1.5 text-xs font-bold rounded-lg border border-blue-300 bg-blue-50 text-blue-800 transition-all cursor-pointer';
+                if (!timIsUtama) {
+                    if (optUtama) optUtama.disabled = true;
+                    sel.value = 'Support';
+                } else {
+                    if (optUtama) optUtama.disabled = false;
+                    const existingUtama = Array.from(document.querySelectorAll('select[id^="unitRole_"]')).some(
+                        s => s.id !== `unitRole_${idx}` && !s.disabled && s.value === 'Utama'
+                    );
+                    sel.value = !existingUtama ? 'Utama' : 'Support';
+                }
+            } else {
+                sel.className = 'p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer';
+                sel.value = 'Support';
+            }
+        }
+
+        function openCascadingTimModal() {
+            console.log('[Ki-Jaro] openCascadingTimModal dipanggil.');
+            const modal = document.getElementById('cascadingTimModal');
+            if (!modal) {
+                showToast('Modal Cascading Tim tidak ditemukan!', 'error');
+                return;
+            }
+            modal.removeAttribute('data-edit-id');
+            modal.removeAttribute('data-edit-timkey');
+            
+            // TAMPILKAN MODAL DULU
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            // BARU RENDER CHECKBOX-NYA
+            const activeTim = (currentUser && currentUser.timKey) ? currentUser.timKey : 'Akademik';
+            renderTimUnitCheckboxes(activeTim);
+            
+            const yrEl = document.getElementById('timTahunTarget');
+            if (yrEl) updateTimDirRefOptions(yrEl.value);
+        }
+        function closeCascadingTimModal() {
+            const modal = document.getElementById('cascadingTimModal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+        }
+
+        function renderTimUnitCheckboxes(targetTimKey) {
+            const container = document.getElementById('timUnitCheckContainer');
+            if (!container) return;
+            
+            const activeTim = targetTimKey || (currentUser ? currentUser.timKey : 'Akademik') || 'Akademik';
+            const headerLbl = document.getElementById('modalTimHeaderLabel');
+            if (headerLbl) headerLbl.innerText = activeTim;
+
+            let allowedUnits = DB.users
+                .filter(u => u.role === 'ketua_unit' && (!activeTim || u.timKey === activeTim))
+                .map(u => u.unit);
+
+            allowedUnits = Array.from(new Set(allowedUnits));
+
+            if (allowedUnits.length === 0) {
+                allowedUnits = Array.isArray(DB.unitList) && DB.unitList.length > 0 
+                    ? [...DB.unitList] 
+                    : ['Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'];
+            }
+
+            if (allowedUnits.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Tidak ada Unit/Prodi di bawah Tim Kerja ${activeTim}.</p>`;
+                return;
+            }
+
+            container.innerHTML = allowedUnits.map((u, idx) => `
+                <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-all shadow-2xs">
+                    <label class="flex items-center space-x-3 cursor-pointer flex-1">
+                        <input type="checkbox" name="unitCheck" value="${u}" onchange="toggleUnitRoleSelect(${idx}, this.checked)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                        <span class="text-slate-800 font-semibold text-xs">${u}</span>
+                    </label>
+                    <select id="unitRole_${idx}" data-unit="${u}" onchange="handleUnitRoleChange(${idx})" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
+                        <option value="Utama">★ Unit Utama (Inti)</option>
+                        <option value="Support">🛡️ Unit Support (Pendukung)</option>
+                    </select>
+                </div>
+            `).join('');
+        }
         function openEditCascadingTimModal(id) {
             const item = DB.cascadingTim.find(x => x.id === id);
             if (!item) return;
             openCascadingTimModal();
+            const modal = document.getElementById('cascadingTimModal');
+            modal.setAttribute('data-edit-id', id);
+            modal.setAttribute('data-edit-timkey', item.timKey);
+
+            renderTimUnitCheckboxes(item.timKey);
             document.getElementById('timTahunTarget').value = item.tahun || '2025';
             updateTimDirRefOptions(item.tahun || '2025');
             document.getElementById('timDirRef').value = item.targetDirektur;
-            document.querySelectorAll('input[name="unitCheck"]').forEach(chk => {
-                chk.checked = item.unitTargets.includes(chk.value);
+
+            document.querySelectorAll('input[name="unitCheck"]').forEach((chk, idx) => {
+                const uName = chk.value;
+                const isChecked = Array.isArray(item.unitTargets) && item.unitTargets.includes(uName);
+                chk.checked = isChecked;
+                toggleUnitRoleSelect(idx, isChecked);
+                const roleSel = document.getElementById(`unitRole_${idx}`);
+                if (isChecked && roleSel) {
+                    roleSel.value = isUnitUtamaInTim(item, uName) ? 'Utama' : 'Support';
+                }
             });
-            document.getElementById('cascadingTimModal').setAttribute('data-edit-id', id);
         }
 
         async function confirmDeleteCascadingTim(id) {
@@ -3138,26 +3849,59 @@ function renderCascadingView(container) {
             }
         }
 
-        function openCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('hidden'); document.getElementById('cascadingTimModal').classList.add('flex'); }
-        function closeCascadingTimModal() { document.getElementById('cascadingTimModal').classList.remove('flex'); document.getElementById('cascadingTimModal').classList.add('hidden'); }
-
-        async function saveCascadingTim(e) {
+async function saveCascadingTim(e) {
             e.preventDefault();
-            const editId = document.getElementById('cascadingTimModal').getAttribute('data-edit-id');
+            const modal = document.getElementById('cascadingTimModal');
+            const editId = modal.getAttribute('data-edit-id');
+            const editTimKey = modal.getAttribute('data-edit-timkey');
             const tahun = document.getElementById('timTahunTarget').value;
             const targetDir = document.getElementById('timDirRef').value;
             if (!targetDir) {
                 showToast('Pilih indikator rujukan yang valid!', 'error');
                 return;
             }
-            
-            // Diubah menjadi pilihan tunggal (hanya boleh 1 unit/prodi)
-            const selectedUnitEl = document.querySelector('input[name="unitCheck"]:checked');
-            if (!selectedUnitEl) {
-                showToast('Pilih salah satu Unit / Prodi / Subbag tujuan!', 'error');
+
+            const activeTimKey = editTimKey || currentUser.timKey || 'Akademik';
+
+            // Validasi: Cegah input indikator yang sama pada tahun yang sama untuk Tim Kerja ini
+            const isDuplicate = (DB.cascadingTim || []).some(ct => {
+                const sameTim = String(ct.timKey) === String(activeTimKey);
+                const sameIndikator = String(ct.targetDirektur).trim().toLowerCase() === String(targetDir).trim().toLowerCase();
+                const sameTahun = String(ct.tahun || '2025') === String(tahun);
+                const notSelf = editId ? String(ct.id) !== String(editId) : true;
+                return sameTim && sameIndikator && sameTahun && notSelf;
+            });
+
+            if (isDuplicate) {
+                showToast(`Indikator "${targetDir}" pada tahun ${tahun} sudah pernah diinput oleh Tim Kerja ${activeTimKey}! Silakan pilih indikator lain atau tahun yang berbeda.`, 'error');
+                return;
+            }            
+            const checkedUnitEls = Array.from(document.querySelectorAll('input[name="unitCheck"]:checked'));
+            if (checkedUnitEls.length === 0) {
+                showToast('Pilih minimal satu Unit / Prodi / Subbag tujuan!', 'error');
                 return;
             }
-            const chosenUnit = selectedUnitEl.value;
+
+            const timIsUtama = isCurrentTimUtamaSelected();
+            const chosenUnits = [];
+            const unitRoles = {};
+            let utamaCount = 0;
+
+            document.querySelectorAll('input[name="unitCheck"]').forEach((chk, idx) => {
+                if (chk.checked) {
+                    const uName = chk.value;
+                    chosenUnits.push(uName);
+                    const roleSel = document.getElementById(`unitRole_${idx}`);
+                    const rVal = !timIsUtama ? 'Support' : (roleSel ? roleSel.value : 'Utama');
+                    unitRoles[uName] = rVal;
+                    if (rVal === 'Utama') utamaCount++;
+                }
+            });
+
+            if (timIsUtama && utamaCount !== 1) {
+                showToast('Karena Tim Kerja Anda berstatus Utama pada indikator ini, wajib ada tepat 1 Unit Utama (Inti)!', 'error');
+                return;
+            }
 
             if (editId) {
                 const idx = DB.cascadingTim.findIndex(x => x.id === editId);
@@ -3166,7 +3910,9 @@ function renderCascadingView(container) {
                         ...DB.cascadingTim[idx],
                         tahun: tahun,
                         targetDirektur: targetDir,
-                        unitTargets: [chosenUnit] // Disimpan sebagai array berisi 1 item
+                        timKey: editTimKey || currentUser.timKey || 'Akademik',
+                        unitTargets: chosenUnits,
+                        unitRoles: unitRoles
                     };
                 }
                 showToast('Cascading Unit berhasil diperbarui!');
@@ -3176,7 +3922,8 @@ function renderCascadingView(container) {
                     tahun: tahun,
                     targetDirektur: targetDir,
                     timKey: currentUser.timKey || 'Akademik',
-                    unitTargets: [chosenUnit] // Hanya boleh satu
+                    unitTargets: chosenUnits,
+                    unitRoles: unitRoles
                 });
                 showToast('Cascading ke Unit/Prodi berhasil disimpan!');
             }
@@ -3185,17 +3932,7 @@ function renderCascadingView(container) {
             closeCascadingTimModal();
             renderCascadingView(document.getElementById('mainContent'));
         }
-
-        async function confirmDeleteCascadingTim(idx) {
-            const item = DB.cascadingTim[idx];
-            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}"?`)) {
-                DB.cascadingTim.splice(idx, 1);
-                await saveToMySQL();
-                showToast('Cascading Tim dihapus.', 'info');
-                renderCascadingView(document.getElementById('mainContent'));
-            }
-        }
-
+        
         function renderCapaianView(container) {
             document.getElementById('pageTitle').innerText = 'Input & Validasi Capaian Kinerja & Program Kerja';
             const isKaUnit = currentUser.role === 'ketua_unit';
@@ -3246,14 +3983,6 @@ function renderCascadingView(container) {
                                 <span>Log Error Capaian</span>
                             </button>
                             <!-- ===================================== -->
-
-                            ${isKaUnit ? `
-                                <button onclick="openCapaianModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                    <i class="fa-solid fa-plus"></i>
-                                    <span>Input Program Baru</span>
-                                </button>
-                            ` : ''}
-                        </div>
                             ${isKaUnit ? `
                                 <button onclick="openCapaianModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
                                     <i class="fa-solid fa-plus"></i>
@@ -3270,6 +3999,7 @@ function renderCascadingView(container) {
                                     <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                                         <th class="p-4">Unit / Prodi</th>
                                         <th class="p-4">Indikator Utama (Direktur)</th>
+                                        <th class="p-4 text-center">Kategori</th>
                                         <th class="p-4">Program Kerja Intervensi</th>
                                         <th class="p-4">Tahun & Periode</th>
                                         <th class="p-4">Target / Realisasi</th>
@@ -3280,12 +4010,22 @@ function renderCascadingView(container) {
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
                                     ${displayCapaian.length === 0 ? `
-                                        <tr><td colspan="7" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada tahun ${filterCapaianTahun}.</td></tr>
-                                    ` : displayCapaian.map((c, idx) => `
-                                        <tr class="hover:bg-slate-50/80 transition-all">
-                                            <td class="p-4 font-semibold text-slate-800">${c.unit}</td>
-                                            <td class="p-4 text-xs font-semibold text-primary-700">${c.targetDirektur}</td>
-                                            <td class="p-4 text-slate-900 font-medium">${c.program}</td>
+                                     <tr><td colspan="9" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada tahun ${filterCapaianTahun}.</td></tr>
+                                 ` : displayCapaian.map((c, idx) => {
+                                     const tahunCap = String(c.tahun || '2025');
+                                     const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahunCap) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
+                                     const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahunCap && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && x.unitTargets.includes(c.unit));
+                                     const isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
+                                     return `
+                                     <tr class="hover:bg-slate-50/80 transition-all">
+                                         <td class="p-4 font-semibold text-slate-800">${c.unit}</td>
+                                         <td class="p-4 text-xs font-semibold text-primary-700">${c.targetDirektur}</td>
+                                         <td class="p-4 text-center">
+                                             <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isUtama ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'}">
+                                                 ${isUtama ? 'Utama' : 'Support'}
+                                             </span>
+                                         </td>
+                                         <td class="p-4 text-slate-900 font-medium">${c.program}</td>
                                             <td class="p-4">
                                                 <span class="px-2 py-0.5 bg-blue-50 text-primary-700 font-semibold text-xs rounded mr-1">${c.tahun || '2025'}</span>
                                                 <span class="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700">${c.triwulan}</span>
@@ -3342,9 +4082,9 @@ ${isKaUnit ? `
                                                         `}
                                                     </div>
                                                 ` : ''}
-                                            </td>
-                                        </tr>
-                                    `).join('')}
+                                           </td>
+                                    </tr>
+                                `; }).join('')}
                                 </tbody>
                             </table>
                         </div>
@@ -3363,13 +4103,19 @@ ${isKaUnit ? `
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator Kinerja yang Diintervensi</label>
                                 <select id="inputIndikatorRef" required class="w-full p-3 bg-slate-50 border rounded-xl" onchange="updateSatuanAndTargetRef(this)">
-                                    ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => {
-                                        const dirObj = DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur);
-                                        const satuan = dirObj ? (dirObj.satuan || '%') : '%';
-                                        const targetVal = dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100;
-                                        return `<option value="${ct.targetDirektur}" data-tahun="${ct.tahun || '2025'}" data-satuan="${satuan}" data-targetval="${targetVal}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun: ${ct.tahun || '2025'})</option>`;
-                                    }).join('')}
-                                </select>
+                                 ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => {
+                                     const tahun = String(ct.tahun || '2025');
+                                     const dirObj = DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur);
+                                     const satuan = dirObj ? (dirObj.satuan || '%') : '%';
+                                     const targetVal = dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100;
+                                     const isUtama = dirObj ? (isTimUtamaInDir(dirObj, ct.timKey) && isUnitUtamaInTim(ct, currentUser.unit)) : isUnitUtamaInTim(ct, currentUser.unit);
+                                     return `<option value="${ct.targetDirektur}" data-tahun="${tahun}" data-satuan="${satuan}" data-targetval="${targetVal}" data-timkey="${ct.timKey}" data-isutama="${isUtama}">${ct.targetDirektur} (Tahun: ${tahun} - ${isUtama ? 'Utama' : 'Support'})</option>`;
+                                 }).join('')}
+                             </select>
+                                <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs mt-3">
+    <span class="font-semibold text-slate-700">Kategori Indikator bagi Unit Anda:</span>
+    <span id="badgeKategoriModal" class="px-3 py-1 bg-blue-600 text-white font-bold rounded-full text-[10px]">UTAMA</span>
+</div>
                             </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Nama Program Kerja</label>
@@ -3514,13 +4260,40 @@ async function confirmDeleteCapaian(id) {
         renderCapaianView(document.getElementById('mainContent'));
     }
 }
-        function updateSatuanAndTargetRef(selectEl) {
-            const opt = selectEl.options[selectEl.selectedIndex];
-            const satuan = opt.getAttribute('data-satuan') || '%';
-            const targetVal = opt.getAttribute('data-targetval') || '100';
-            document.getElementById('inputSatuan').value = satuan;
-            document.getElementById('inputTarget').value = targetVal;
-        }
+        function updateSatuanAndTargetRef(selectEl, preserveExisting = false) {
+    if (!selectEl || selectEl.selectedIndex === -1) return;
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const satuan = opt.getAttribute('data-satuan') || '%';
+    const targetVal = opt.getAttribute('data-targetval') || '100';
+    const isUtama = opt.getAttribute('data-isutama') === 'true';
+
+    const satuanEl = document.getElementById('inputSatuan');
+    const targetEl = document.getElementById('inputTarget');
+    const badgeEl = document.getElementById('badgeKategoriModal');
+    if (!satuanEl || !targetEl) return;
+
+    if (badgeEl) {
+        badgeEl.innerText = isUtama ? 'UTAMA' : 'Support';
+        badgeEl.className = isUtama ? 'px-3 py-1 bg-blue-600 text-white font-bold rounded-full text-[10px]' : 'px-3 py-1 bg-slate-600 text-white font-bold rounded-full text-[10px]';
+    }
+
+    if (!preserveExisting) {
+        satuanEl.value = satuan;
+        targetEl.value = targetVal;
+    }
+
+    if (isUtama) {
+        satuanEl.readOnly = true;
+        targetEl.readOnly = true;
+        satuanEl.className = 'w-full p-3 bg-slate-100 border rounded-xl font-semibold text-slate-600 cursor-not-allowed';
+        targetEl.className = 'w-full p-3 bg-slate-100 border rounded-xl font-bold text-primary-700 cursor-not-allowed';
+    } else {
+        satuanEl.readOnly = false;
+        targetEl.readOnly = false;
+        satuanEl.className = 'w-full p-3 bg-white border border-blue-400 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500';
+        targetEl.className = 'w-full p-3 bg-white border border-blue-400 rounded-xl font-bold text-primary-700 focus:ring-2 focus:ring-blue-500';
+    }
+}
 
         function openCapaianModal(mode, id = null) {
             if (mode === 'edit' && id) {
@@ -3926,18 +4699,6 @@ async function confirmDeleteCapaian(id) {
                                 <span>Log Error Risiko</span>
                             </button>
                             <!-- ============================== -->
-
-                            <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                                <i class="fa-solid fa-file-excel"></i>
-                                <span>Ekspor CSV Risiko</span>
-                            </button>
-                            ${isKaUnit ? `
-                                <button onclick="openRisikoModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                    <i class="fa-solid fa-plus"></i>
-                                    <span>Input Risiko Baru</span>
-                                </button>
-                            ` : ''}
-                        </div>
                             <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
                                 <i class="fa-solid fa-file-excel"></i>
                                 <span>Ekspor CSV Risiko</span>
@@ -4334,6 +5095,7 @@ async function confirmDeleteCapaian(id) {
                                         <option value="direktur">Direktur</option>
                                         <option value="tim_kerja">Ketua Tim Kerja</option>
                                         <option value="ketua_unit">Ketua Prodi / Unit</option>
+                                        <option value="viewer">Viewer (Hanya Lihat Semua Menu kecuali Manajemen User)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -4378,6 +5140,13 @@ async function confirmDeleteCapaian(id) {
                 document.getElementById('uPassword').value = '';
                 document.getElementById('uRole').value = 'ketua_unit';
                 document.getElementById('uUnit').value = '';
+            }
+        }
+        function closeUserModal() {
+            const modal = document.getElementById('userModal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
             }
         }
        // Fungsi otomatis menyamakan daftar DB.unitList dengan unit milik user ber-role ketua_unit
@@ -4445,7 +5214,7 @@ async function confirmDeleteCapaian(id) {
             showToast(`Password untuk ${DB.users[idx].name} direset menjadi: 123456`);
         }
 
-        function renderLaporanView(container) {
+function renderLaporanView(container) {
             document.getElementById('pageTitle').innerText = 'Cetak Laporan Kinerja (Ekspor PDF) & Ekspor CSV';
             
             const isKaUnit = currentUser.role === 'ketua_unit';
@@ -4458,15 +5227,74 @@ async function confirmDeleteCapaian(id) {
                 validCapaian = validCapaian.filter(c => c.timKey === currentUser.timKey);
             }
 
+            const renderReportRows = (list) => {
+                if (list.length === 0) return '<tr><td colspan="11" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi</td></tr>';
+                return list.map((c, idx) => {
+                    const tahun = String(c.tahun || '2025');
+                    const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
+                    const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
+                    const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
+                    const targetVal = Number(c.target) || 100;
+                    const realVal = Number(c.realisasi) || 0;
+                    const pOutput = targetVal > 0 ? (realVal / targetVal) * 100 : 0;
+                    const isTercapai = realVal >= targetVal;
+
+                    // Cek Kategori (Utama / Support)
+                    const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
+                    const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahun && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit));
+                    const isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
+
+                    const paguVal = ikObj ? (Number(ikObj['anggaran' + tahun]) || 100000000) : 100000000;
+                    const subRa = DB.realisasiAnggaranAdmin.filter(ra => ikObj && ra.indikatorId === ikObj.id && String(ra.tahun) === tahun);
+                    const realAnggaranVal = subRa.reduce((a, b) => a + Number(b.realisasiAnggaran || 0), 0);
+                    const pAnggaran = paguVal > 0 ? (realAnggaranVal / paguVal) * 100 : 0;
+
+                    const isEfektif = pOutput >= 100;
+                    const isEfisien = pAnggaran <= pOutput;
+
+                    return `
+                    <tr>
+                        <td class="p-2 border text-center font-semibold">${idx + 1}</td>
+                        <td class="p-2 border font-semibold text-slate-800">${c.unit || '-'}</td>
+                        <td class="p-2 border text-center">
+                            <span class="px-2 py-0.5 rounded font-bold text-[10px] ${isUtama ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700'}">
+                                ${isUtama ? 'Utama' : 'Support'}
+                            </span>
+                        </td>
+                        <td class="p-2 border">${sasaranKinerjaText}</td>
+                        <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
+                        <td class="p-2 border text-center font-semibold">${c.target}</td>
+                        <td class="p-2 border text-center">${c.satuan || '%'}</td>
+                        <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi}</td>
+                        <td class="p-2 border text-center">
+                            <span class="px-2 py-0.5 rounded font-bold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                                ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
+                            </span>
+                        </td>
+                        <td class="p-2 border text-center">
+                            <span class="px-2 py-0.5 rounded font-bold ${isEfektif ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                                ${isEfektif ? 'Efektif' : 'Tidak Efektif'}
+                            </span>
+                        </td>
+                        <td class="p-2 border text-center">
+                            <span class="px-2 py-0.5 rounded font-bold ${isEfisien ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                                ${isEfisien ? 'Efisien' : 'Tidak Efisien'}
+                            </span>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            };
+    
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto space-y-6 no-print">
                         <div class="flex flex-col md:flex-row items-center justify-between gap-4 border-b pb-4">
                             <div>
                                 <h3 class="font-bold text-slate-900 text-base">Pengaturan Ekspor & Download PDF & Ekspor CSV</h3>
-                                <p class="text-xs text-slate-500">Sesuaikan filter triwulan, kolom CSV, dan nama penandatangan dokumen</p>
+                                <p class="text-xs text-slate-500">Sesuaikan filter triwulan, pilih kolom CSV via pop-up, dan nama penandatangan dokumen</p>
                             </div>
-                            <div class="flex items-center space-x-3">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <select id="printPeriode" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
                                     <option value="Semua">Semua Periode</option>
                                     <option value="TW 1">Triwulan 1</option>
@@ -4474,9 +5302,13 @@ async function confirmDeleteCapaian(id) {
                                     <option value="TW 3">Triwulan 3</option>
                                     <option value="TW 4">Triwulan 4</option>
                                 </select>
-                                <button onclick="triggerPrintPDF()" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow flex items-center space-x-2">
+                                <button onclick="triggerPrintPDF()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-2">
                                     <i class="fa-solid fa-file-pdf"></i>
                                     <span>Ekspor & Download PDF</span>
+                                </button>
+                                <button onclick="openExportCapaianCsvModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-2">
+                                    <i class="fa-solid fa-file-excel"></i>
+                                    <span>Pilih Kolom & Ekspor CSV</span>
                                 </button>
                             </div>
                         </div>
@@ -4499,24 +5331,6 @@ async function confirmDeleteCapaian(id) {
                                 <input type="text" id="customNama3" value="${currentUser.name}" class="w-full p-2 bg-white border rounded-lg text-xs">
                             </div>
                         </div>
-
-                        <!-- CSV Column Selection Checkboxes -->
-                        <div class="border-t pt-4 space-y-3">
-                            <h4 class="font-bold text-slate-800 text-sm">Pilih Kolom untuk Ekspor CSV</h4>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_unit" checked class="rounded text-primary-600"><span>Unit / Prodi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_indikator" checked class="rounded text-primary-600"><span>Indikator Utama</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_program" checked class="rounded text-primary-600"><span>Program Kerja</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_periode" checked class="rounded text-primary-600"><span>Periode & Satuan</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_target" checked class="rounded text-primary-600"><span>Target & Realisasi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_status" checked class="rounded text-primary-600"><span>Status Validasi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_tindak" checked class="rounded text-primary-600"><span>Tindak Lanjut</span></label>
-                            </div>
-                            <button onclick="downloadCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-2">
-                                <i class="fa-solid fa-file-excel"></i>
-                                <span>Download CSV (Sesuai Kolom Terpilih)</span>
-                            </button>
-                        </div>
                     </div>
 
                     <div id="printableArea" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto space-y-6">
@@ -4531,56 +5345,100 @@ async function confirmDeleteCapaian(id) {
                             <h3 class="font-bold text-slate-900 text-base border-l-4 border-primary-600 pl-3">Rekapitulasi Capaian Kinerja</h3>
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead class="bg-slate-50 border">
-                                    <tr>
-                                        <th class="p-2 border text-center w-10">No.</th>
-                                        <th class="p-2 border">Sasaran Kinerja</th>
-                                        <th class="p-2 border">Indikator Kinerja</th>
-                                        <th class="p-2 border text-center">Target</th>
-                                        <th class="p-2 border text-center">Satuan</th>
-                                        <th class="p-2 border text-center">Realisasi</th>
-                                        <th class="p-2 border text-center">Status</th>
-                                    </tr>
-                                </thead>
+                                 <tr>
+                                     <th class="p-2 border text-center w-10">No.</th>
+                                     <th class="p-2 border">Unit / Prodi</th>
+                                     <th class="p-2 border text-center">Kategori</th>
+                                     <th class="p-2 border">Sasaran Kinerja</th>
+                                     <th class="p-2 border">Indikator Kinerja</th>
+                                     <th class="p-2 border text-center">Target</th>
+                                     <th class="p-2 border text-center">Satuan</th>
+                                     <th class="p-2 border text-center">Realisasi</th>
+                                     <th class="p-2 border text-center">Status</th>
+                                     <th class="p-2 border text-center">Efektivitas</th>
+                                     <th class="p-2 border text-center">Efisiensi</th>
+                                 </tr>
+                             </thead>
                                 <tbody id="printTableBody">
-                                    ${validCapaian.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi</td></tr>' : validCapaian.map((c, idx) => {
-                                        const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
-                                        const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
-                                        const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
-                                        const isTercapai = Number(c.realisasi) >= Number(c.target);
-                                        return `
-                                        <tr>
-                                            <td class="p-2 border text-center font-semibold">${idx + 1}</td>
-                                            <td class="p-2 border">${sasaranKinerjaText}</td>
-                                            <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
-                                            <td class="p-2 border text-center font-semibold">${c.target}</td>
-                                            <td class="p-2 border text-center">${c.satuan || '%'}</td>
-                                            <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi}</td>
-                                            <td class="p-2 border text-center">
-                                                <span class="px-2 py-0.5 rounded font-bold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
-                                                    ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        `;
-                                    }).join('')}
+                                    ${renderReportRows(validCapaian)}
                                 </tbody>
                             </table>
                         </div>
 
                         <div class="pt-8 grid grid-cols-3 gap-4 text-center text-xs">
                             <div>
-                                <p class="mb-16"><span id="lblJabatan1" class="border-b border-dotted pb-0.5 block">Direktur</span><br><strong id="lblNama1" class="mt-1 block">Prof. Dr. H. Direktur, M.Si.</strong></p>
+                                <p class="mb-16"><span id="lblJabatan1" class="border-b border-dotted pb-0.5 block">Direktur</span><br><strong id="lblNama1" class="mt-1 block">Dr. Supardi S.Pd., M.Pd</strong></p>
                             </div>
                             <div>
-                                <p class="mb-16"><span id="lblJabatan2" class="border-b border-dotted pb-0.5 block">Ketua Tim Kerja</span><br><strong id="lblNama2" class="mt-1 block">Dr. Ahmad Akademik, M.T.</strong></p>
+                                <p class="mb-16"><span id="lblJabatan2" class="border-b border-dotted pb-0.5 block">Ketua Tim Kerja</span><br><strong id="lblNama2" class="mt-1 block">xxxxxxx</strong></p>
                             </div>
                             <div>
                                 <p class="mb-16"><span id="lblJabatan3" class="border-b border-dotted pb-0.5 block">Ketua Unit / Prodi</span><br><strong id="lblNama3" class="mt-1 block">${currentUser.name}</strong></p>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Capaian Kinerja (Revisi 8) -->
+                    <div id="exportCapaianCsvModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 no-print">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4">
+                            <div class="flex justify-between items-center border-b pb-4">
+                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i> Pilih Kolom untuk Ekspor CSV</h3>
+                                <button type="button" onclick="closeExportCapaianCsvModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            </div>
+                            <p class="text-xs text-slate-500">Centang kolom-kolom pada sistem yang ingin Anda ekstrak ke dalam file CSV:</p>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5 text-xs bg-slate-50 p-4 rounded-xl border max-h-72 overflow-y-auto">
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_1" checked class="rounded text-emerald-600"><span>1. Nomor</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_2" checked class="rounded text-emerald-600"><span>2. Tahun</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_3" checked class="rounded text-emerald-600"><span>3. Periode / Triwulan</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_4" checked class="rounded text-emerald-600"><span>4. Tim Kerja</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_5" checked class="rounded text-emerald-600"><span>5. Unit / Prodi / Subbag</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_6" checked class="rounded text-emerald-600"><span>6. Kategori (Utama/Support)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_7" checked class="rounded text-emerald-600"><span>7. Tujuan Kemenperin (Tier 1)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_8" checked class="rounded text-emerald-600"><span>8. Sasaran BPSDMI (Tier 2)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_9" checked class="rounded text-emerald-600"><span>9. Sasaran Kinerja (Tier 3)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_10" checked class="rounded text-emerald-600"><span>10. Indikator Kinerja Utama</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_11" checked class="rounded text-emerald-600"><span>11. Program Kerja Intervensi</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_12" checked class="rounded text-emerald-600"><span>12. Target</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_13" checked class="rounded text-emerald-600"><span>13. Realisasi</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_14" checked class="rounded text-emerald-600"><span>14. Satuan</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_15" checked class="rounded text-emerald-600"><span>15. % Capaian Output</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_16" checked class="rounded text-emerald-600"><span>16. Status Ketercapaian</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_17" checked class="rounded text-emerald-600"><span>17. Pagu Anggaran (Rp)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_18" checked class="rounded text-emerald-600"><span>18. Realisasi Anggaran (Rp)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_19" checked class="rounded text-emerald-600"><span>19. Efektivitas</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_20" checked class="rounded text-emerald-600"><span>20. Efisiensi</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_21" checked class="rounded text-emerald-600"><span>21. Permasalahan</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_22" checked class="rounded text-emerald-600"><span>22. Link Bukti Kinerja</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_23" checked class="rounded text-emerald-600"><span>23. Status Validasi</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_24" checked class="rounded text-emerald-600"><span>24. Arahan / Rekomendasi</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_25" checked class="rounded text-emerald-600"><span>25. Penyesuaian</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_26" checked class="rounded text-emerald-600"><span>26. Status Tindak Lanjut</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_27" checked class="rounded text-emerald-600"><span>27. Link Bukti Tindak Lanjut</span></label>
+                            </div>
+                            <div class="flex justify-between items-center pt-2">
+                                <div class="space-x-2 text-xs">
+                                    <button type="button" onclick="document.querySelectorAll('input[id^=cap_csv_]').forEach(c => c.checked = true)" class="text-blue-600 font-semibold underline">Pilih Semua</button>
+                                    <button type="button" onclick="document.querySelectorAll('input[id^=cap_csv_]').forEach(c => c.checked = false)" class="text-slate-500 font-semibold underline">Hapus Centang</button>
+                                </div>
+                                <div class="space-x-2">
+                                    <button type="button" onclick="closeExportCapaianCsvModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">Batal</button>
+                                    <button type="button" onclick="downloadCSV()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow">Download CSV Terpilih</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
+        }
+
+        function openExportCapaianCsvModal() {
+            const modal = document.getElementById('exportCapaianCsvModal');
+            if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        }
+
+        function closeExportCapaianCsvModal() {
+            const modal = document.getElementById('exportCapaianCsvModal');
+            if (modal) { modal.classList.remove('flex'); modal.classList.add('hidden'); }
         }
 
         function triggerPrintPDF() {
@@ -4607,25 +5465,42 @@ async function confirmDeleteCapaian(id) {
                 validCapaian = validCapaian.filter(c => c.timKey === currentUser.timKey);
             }
 
-           const tbody = document.getElementById('printTableBody');
-            tbody.innerHTML = validCapaian.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi untuk periode ini</td></tr>' : validCapaian.map((c, idx) => {
+            const tbody = document.getElementById('printTableBody');
+            tbody.innerHTML = validCapaian.length === 0 ? '<tr><td colspan="11" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi untuk periode ini</td></tr>' : validCapaian.map((c, idx) => {
+                const tahun = String(c.tahun || '2025');
                 const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
                 const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
                 const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
-                const isTercapai = Number(c.realisasi) >= Number(c.target);
+                const targetVal = Number(c.target) || 100;
+                const realVal = Number(c.realisasi) || 0;
+                const pOutput = targetVal > 0 ? (realVal / targetVal) * 100 : 0;
+                const isTercapai = realVal >= targetVal;
+
+                const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
+                const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahun && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit));
+                const isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
+
+                const paguVal = ikObj ? (Number(ikObj['anggaran' + tahun]) || 100000000) : 100000000;
+                const subRa = DB.realisasiAnggaranAdmin.filter(ra => ikObj && ra.indikatorId === ikObj.id && String(ra.tahun) === tahun);
+                const realAnggaranVal = subRa.reduce((a, b) => a + Number(b.realisasiAnggaran || 0), 0);
+                const pAnggaran = paguVal > 0 ? (realAnggaranVal / paguVal) * 100 : 0;
+
+                const isEfektif = pOutput >= 100;
+                const isEfisien = pAnggaran <= pOutput;
+
                 return `
                 <tr>
                     <td class="p-2 border text-center font-semibold">${idx + 1}</td>
+                    <td class="p-2 border font-semibold text-slate-800">${c.unit || '-'}</td>
+                    <td class="p-2 border text-center font-bold ${isUtama ? 'text-blue-700' : 'text-slate-600'}">${isUtama ? 'Utama' : 'Support'}</td>
                     <td class="p-2 border">${sasaranKinerjaText}</td>
                     <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
                     <td class="p-2 border text-center font-semibold">${c.target}</td>
                     <td class="p-2 border text-center">${c.satuan || '%'}</td>
                     <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi}</td>
-                    <td class="p-2 border text-center">
-                        <span class="font-bold ${isTercapai ? 'text-emerald-700' : 'text-rose-700'}">
-                            ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
-                        </span>
-                    </td>
+                    <td class="p-2 border text-center"><span class="font-bold ${isTercapai ? 'text-emerald-700' : 'text-rose-700'}">${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}</span></td>
+                    <td class="p-2 border text-center"><span class="font-bold ${isEfektif ? 'text-emerald-700' : 'text-rose-700'}">${isEfektif ? 'Efektif' : 'Tidak Efektif'}</span></td>
+                    <td class="p-2 border text-center"><span class="font-bold ${isEfisien ? 'text-emerald-700' : 'text-rose-700'}">${isEfisien ? 'Efisien' : 'Tidak Efisien'}</span></td>
                 </tr>
                 `;
             }).join('');
@@ -4634,47 +5509,97 @@ async function confirmDeleteCapaian(id) {
         }
 
         function downloadCSV() {
-            const chk_unit = document.getElementById('chk_unit').checked;
-            const chk_indikator = document.getElementById('chk_indikator').checked;
-            const chk_program = document.getElementById('chk_program').checked;
-            const chk_periode = document.getElementById('chk_periode').checked;
-            const chk_target = document.getElementById('chk_target').checked;
-            const chk_status = document.getElementById('chk_status').checked;
-            const chk_tindak = document.getElementById('chk_tindak').checked;
+            const headers = [
+                "Nomor", "Tahun", "Periode", "Tim Kerja", "Unit / Prodi", "Kategori",
+                "Tujuan Kemenperin", "Sasaran BPSDMI", "Sasaran Kinerja", "Indikator Kinerja Utama",
+                "Program Kerja Intervensi", "Target", "Realisasi", "Satuan", "% Capaian Output",
+                "Status Ketercapaian", "Pagu Anggaran (Rp)", "Realisasi Anggaran (Rp)", "Efektivitas",
+                "Efisiensi", "Permasalahan", "Link Bukti Kinerja", "Status Validasi",
+                "Arahan / Rekomendasi", "Penyesuaian", "Status Tindak Lanjut", "Link Bukti Tindak Lanjut"
+            ];
 
-            let headers = [];
-            if (chk_unit) headers.push("Unit");
-            if (chk_indikator) headers.push("Indikator Utama");
-            if (chk_program) headers.push("Program Kerja");
-            if (chk_periode) headers.push("Periode");
-            if (chk_target) headers.push("Target", "Realisasi");
-            if (chk_status) headers.push("Status Validasi");
-            if (chk_tindak) headers.push("Tindak Lanjut");
+            let cols = [];
+            for (let i = 1; i <= 27; i++) {
+                const chk = document.getElementById(`cap_csv_${i}`);
+                if (chk && chk.checked) cols.push(i - 1);
+            }
 
-            let csvRows = [headers.join(",")];
-            DB.capaian.forEach(c => {
-                let row = [];
-                if (chk_unit) row.push(`"${c.unit}"`);
-                if (chk_indikator) row.push(`"${c.targetDirektur}"`);
-                if (chk_program) row.push(`"${c.program}"`);
-                if (chk_periode) row.push(`"${c.triwulan}"`);
-                if (chk_target) row.push(c.target, c.realisasi);
-                if (chk_status) row.push(`"${c.status}"`);
-                if (chk_tindak) row.push(`"${c.statusTindakLanjut}"`);
-                csvRows.push(row.join(","));
+            if (cols.length === 0) {
+                showToast('Pilih minimal 1 kolom untuk didownload!', 'error');
+                return;
+            }
+
+            let csvRows = [cols.map(idx => `"${headers[idx]}"`).join(",")];
+
+            DB.capaian.forEach((c, index) => {
+                const tahun = String(c.tahun || '2025');
+                const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
+                const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
+                const bpObj = skObj ? DB.renstraBPSDMI.find(bp => bp.id === skObj.bpsdmiId) : null;
+                const tkObj = bpObj ? DB.renstraTujuanKemenperin.find(tk => tk.id === bpObj.tujuanKemenperinId) : null;
+
+                const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
+                const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahun && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && x.unitTargets.includes(c.unit));
+                const isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
+
+                const targetVal = Number(c.target) || 100;
+                const realVal = Number(c.realisasi) || 0;
+                const pOutput = targetVal > 0 ? ((realVal / targetVal) * 100).toFixed(2) : 0;
+                const isTercapai = realVal >= targetVal ? 'Tercapai' : 'Tidak Tercapai';
+
+                const paguVal = ikObj ? (Number(ikObj['anggaran' + tahun]) || 100000000) : 100000000;
+                const subRa = DB.realisasiAnggaranAdmin.filter(ra => ikObj && ra.indikatorId === ikObj.id && String(ra.tahun) === tahun);
+                const realAnggaranVal = subRa.reduce((a, b) => a + Number(b.realisasiAnggaran || 0), 0);
+                const pAnggaran = paguVal > 0 ? (realAnggaranVal / paguVal) * 100 : 0;
+
+                const efektifStr = Number(pOutput) >= 100 ? 'Efektif' : 'Tidak Efektif';
+                const efisienStr = pAnggaran <= Number(pOutput) ? 'Efisien' : 'Tidak Efisien';
+
+                const rowData = [
+                    index + 1,
+                    tahun,
+                    c.triwulan || '-',
+                    c.timKey || '-',
+                    c.unit || '-',
+                    isUtama ? 'Utama' : 'Support',
+                    tkObj ? tkObj.sasaran : '-',
+                    bpObj ? bpObj.sasaran : '-',
+                    skObj ? skObj.sasaranKinerja : '-',
+                    c.targetDirektur || '-',
+                    c.program || '-',
+                    targetVal,
+                    realVal,
+                    c.satuan || '%',
+                    pOutput + '%',
+                    isTercapai,
+                    paguVal,
+                    realAnggaranVal,
+                    efektifStr,
+                    efisienStr,
+                    c.permasalahan || '-',
+                    c.linkBukti || '-',
+                    c.status || '-',
+                    c.rekomendasi || '-',
+                    Array.isArray(c.penyesuaian) ? c.penyesuaian.join('; ') : '-',
+                    c.statusTindakLanjut || '-',
+                    c.linkBuktiTindakLanjut || '-'
+                ];
+
+                let selectedRow = cols.map(idx => `"${String(rowData[idx]).replace(/"/g, '""')}"`);
+                csvRows.push(selectedRow.join(","));
             });
 
             const blob = new Blob([csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.setAttribute('href', url);
-            a.setAttribute('download', 'laporan_ki_jaro.csv');
+            a.setAttribute('download', 'laporan_lengkap_ki_jaro.csv');
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            closeExportCapaianCsvModal();
             showToast('File CSV berhasil diunduh!');
         }
-
         // === SINKRONISASI STABIL & LENGKAP KE MYSQL ===
         async function loadDataFromMySQL() {
             try {
@@ -4990,23 +5915,49 @@ function downloadTemplateRisiko() {
 }
 function downloadTemplateCapaian() {
     const headers = [
-        "Indikator Kinerja", "Nama Program Kerja", "Periode Triwulan / Tahunan", 
-        "Tahun", "Realisasi (Bisa Desimal)", "Link Bukti Kinerja", "Permasalahan yang Dihadapi"
+        "Unit / Prodi",
+        "Indikator Utama (Direktur)",
+        "Kategori (Utama/Support)",
+        "Program Kerja Intervensi",
+        "Tahun",
+        "Periode (TW 1/TW 2/TW 3/TW 4/Tahunan)",
+        "Target",
+        "Realisasi",
+        "Satuan",
+        "Link Bukti Kinerja",
+        "Permasalahan"
     ];
+
+    // Ambil contoh indikator yang dicascadingkan ke unit user saat ini (jika ada)
+    const myCascading = DB.cascadingTim.find(ct => ct.unitTargets && ct.unitTargets.includes(currentUser.unit));
+    const sampleIndikator = myCascading ? myCascading.targetDirektur : "Meningkatnya Kualitas Lulusan";
+    const sampleTahun = myCascading ? (myCascading.tahun || "2025") : "2025";
+    const dirObj = DB.cascadingDirektur.find(cd => cd.target === sampleIndikator && String(cd.tahun || '2025') === String(sampleTahun)) || DB.cascadingDirektur.find(cd => cd.target === sampleIndikator);
+    const isUtama = (dirObj && myCascading) ? (isTimUtamaInDir(dirObj, myCascading.timKey) && isUnitUtamaInTim(myCascading, currentUser.unit)) : true;
+
     const sampleRow = [
-        "Meningkatnya Kualitas Lulusan", "Workshop Kurikulum Vokasi", "TW 1", 
-        "2025", "90.5", "https://drive.google.com/...", "Keterbatasan fasilitas lab"
+        `"${currentUser.unit}"`,
+        `"${sampleIndikator}"`,
+        `"${isUtama ? 'Utama' : 'Support'}"`,
+        `"Workshop Kurikulum Vokasi"`,
+        `"${sampleTahun}"`,
+        `"TW 1"`,
+        `"${dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100}"`,
+        `"90.5"`,
+        `"${dirObj ? (dirObj.satuan || '%') : '%'}"`,
+        `"https://drive.google.com/..."`,
+        `"Keterbatasan fasilitas laboratorium"`
     ];
     
-    let csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), sampleRow.join(",")].join("\n");
+    let csvContent = "data:text/csv;charset=utf-8," + [headers.map(h => `"${h}"`).join(","), sampleRow.join(",")].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "template_capaian_kinerja_ki_jaro.csv");
+    link.setAttribute("download", `template_capaian_kinerja_${currentUser.unit.replace(/\s+/g, '_')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast("Template Capaian Kinerja berhasil diunduh!");
+    showToast("Template Capaian Kinerja sesuai tabel terbaru berhasil diunduh!");
 }
 
 let lastCapaianErrorLog = [];
@@ -5019,65 +5970,118 @@ async function handleImportCapaian(event) {
     reader.onload = async function(e) {
         const text = e.target.result;
         const separator = text.includes(';') ? ';' : ',';
-        const rows = text.split("\n").map(r => r.split(separator).map(val => val.trim().replace(/^"|"$/g, '')));
+        const rows = text.split(/\r?\n/).filter(line => line.trim() !== '').map(r => r.split(separator).map(val => val.trim().replace(/^"|"$/g, '')));
         
+        if (rows.length < 2) {
+            showToast('File CSV kosong atau tidak sesuai format!', 'error');
+            return;
+        }
+
+        const headerCols = rows[0].map(h => h.toLowerCase());
+        const isNewFormat = headerCols.length >= 9 && headerCols[0].includes('unit');
+
         let successCount = 0;
         let failCount = 0;
-        lastCapaianErrorLog = ["Baris,Indikator Kinerja,Periode,Keterangan Error"];
+        lastCapaianErrorLog = ["Baris,Unit,Indikator Kinerja,Periode,Keterangan Error"];
 
         for (let i = 1; i < rows.length; i++) {
             const cols = rows[i];
-            if (cols.length < 2 || !cols[0]) continue;
+            if (cols.length < 2 || (!cols[0] && !cols[1])) continue;
 
             const rowNum = i + 1;
-            const indikator = (cols[0] || '').trim();
-            const program = (cols[1] || '').trim();
-            const triwulan = (cols[2] || 'TW 1').trim();
-            const tahun = (cols[3] || '2025').trim();
-            const realisasi = parseFloat(cols[4]) || 0;
-            const linkBukti = (cols[5] || '').trim();
-            const permasalahan = (cols[6] || '').trim();
+            let fileUnit, indikator, kategoriInput, program, tahun, triwulan, targetInput, realisasi, satuanInput, linkBukti, permasalahan;
 
-            // Validasi Hak Akses: Cek apakah indikator ini dicascadingkan ke unit login saat ini
-            const isCascadedToMe = currentUser.role === 'admin' || currentUser.role === 'direktur' || DB.cascadingTim.some(ct => 
-                ct.unitTargets.includes(currentUser.unit) && ct.targetDirektur.toLowerCase() === indikator.toLowerCase()
-            );
+            if (isNewFormat) {
+                // Format Baru (11 Kolom sesuai Tabel Capaian Kinerja saat ini)
+                fileUnit      = (cols[0] || currentUser.unit).trim();
+                indikator     = (cols[1] || '').trim();
+                kategoriInput = (cols[2] || '').trim();
+                program       = (cols[3] || '').trim();
+                tahun         = (cols[4] || '2025').trim();
+                triwulan      = (cols[5] || 'TW 1').trim();
+                targetInput   = parseFloat(cols[6]);
+                realisasi     = parseFloat(cols[7]) || 0;
+                satuanInput   = (cols[8] || '').trim();
+                linkBukti     = (cols[9] || '').trim();
+                permasalahan  = (cols[10] || '').trim();
+            } else {
+                // Dukungan Format Lama (7 Kolom)
+                fileUnit      = currentUser.unit;
+                indikator     = (cols[0] || '').trim();
+                program       = (cols[1] || '').trim();
+                triwulan      = (cols[2] || 'TW 1').trim();
+                tahun         = (cols[3] || '2025').trim();
+                realisasi     = parseFloat(cols[4]) || 0;
+                linkBukti     = (cols[5] || '').trim();
+                permasalahan  = (cols[6] || '').trim();
+            }
 
-            if (currentUser.role === 'ketua_unit' && !isCascadedToMe) {
+            const activeUnit = currentUser.role === 'ketua_unit' ? currentUser.unit : (fileUnit || currentUser.unit);
+
+            if (currentUser.role === 'ketua_unit' && fileUnit && fileUnit.toLowerCase() !== currentUser.unit.toLowerCase()) {
                 failCount++;
-                lastCapaianErrorLog.push(`${rowNum},"${indikator}","${triwulan}","Indikator tidak dicascadingkan ke unit Anda (${currentUser.unit})"`);
+                lastCapaianErrorLog.push(`${rowNum},"${fileUnit}","${indikator}","${triwulan}","Unit pada file (${fileUnit}) tidak sesuai dengan unit login Anda (${currentUser.unit})"`);
                 continue;
             }
 
-            // Validasi Duplikasi: Indikator kinerja pada triwulan dan tahun yang sama
+            // Cek cascading ke unit terkait
+            const ctMatch = DB.cascadingTim.find(ct => 
+                Array.isArray(ct.unitTargets) &&
+                ct.unitTargets.some(u => u.toLowerCase() === activeUnit.toLowerCase()) && 
+                ct.targetDirektur.toLowerCase() === indikator.toLowerCase() &&
+                String(ct.tahun || '2025') === String(tahun)
+            ) || DB.cascadingTim.find(ct => 
+                Array.isArray(ct.unitTargets) &&
+                ct.unitTargets.some(u => u.toLowerCase() === activeUnit.toLowerCase()) && 
+                ct.targetDirektur.toLowerCase() === indikator.toLowerCase()
+            );
+
+            if (currentUser.role === 'ketua_unit' && !ctMatch) {
+                failCount++;
+                lastCapaianErrorLog.push(`${rowNum},"${activeUnit}","${indikator}","${triwulan}","Indikator tidak dicascadingkan ke unit Anda (${activeUnit})"`);
+                continue;
+            }
+
+            // Cek duplikasi pada unit, indikator, triwulan, dan tahun yang sama
             const isDuplicate = DB.capaian.some(c => 
-                c.unit === currentUser.unit && 
+                c.unit.toLowerCase() === activeUnit.toLowerCase() && 
                 c.targetDirektur.toLowerCase() === indikator.toLowerCase() && 
                 c.triwulan.toLowerCase() === triwulan.toLowerCase() && 
-                (c.tahun || '2025') === tahun
+                String(c.tahun || '2025') === String(tahun)
             );
 
             if (isDuplicate) {
                 failCount++;
-                lastCapaianErrorLog.push(`${rowNum},"${indikator}","${triwulan}","Indikator kinerja pada triwulan dan tahun yang sama sudah diinput sebelumnya"`);
+                lastCapaianErrorLog.push(`${rowNum},"${activeUnit}","${indikator}","${triwulan}","Indikator kinerja pada triwulan dan tahun yang sama sudah diinput sebelumnya"`);
                 continue;
             }
 
-            const dirRef = DB.cascadingDirektur.find(cd => cd.target.toLowerCase() === indikator.toLowerCase());
-            const targetVal = dirRef && dirRef.targetVal !== undefined ? dirRef.targetVal : 100;
-            const satuanVal = dirRef ? (dirRef.satuan || '%') : '%';
-            const timKeyRef = dirRef && dirRef.timKeys.length > 0 ? dirRef.timKeys[0] : (currentUser.timKey || 'Akademik');
+            const dirRef = DB.cascadingDirektur.find(cd => cd.target.toLowerCase() === indikator.toLowerCase() && String(cd.tahun || '2025') === String(tahun)) || DB.cascadingDirektur.find(cd => cd.target.toLowerCase() === indikator.toLowerCase());
+            const timKeyRef = ctMatch ? ctMatch.timKey : (dirRef && dirRef.timKeys.length > 0 ? dirRef.timKeys[0] : (currentUser.timKey || 'Akademik'));
+
+            // Cek apakah indikator ini berstatus UTAMA atau SUPPORT bagi unit tersebut
+            const isUtama = (dirRef && ctMatch) 
+                ? (isTimUtamaInDir(dirRef, ctMatch.timKey) && isUnitUtamaInTim(ctMatch, activeUnit)) 
+                : (ctMatch ? isUnitUtamaInTim(ctMatch, activeUnit) : false);
+
+            // Jika UTAMA, kunci Target & Satuan sesuai ketetapan Direktur. Jika SUPPORT, izinkan Target & Satuan kustom dari file CSV!
+            const defaultTarget = dirRef && dirRef.targetVal !== undefined ? Number(dirRef.targetVal) : 100;
+            const defaultSatuan = dirRef ? (dirRef.satuan || '%') : '%';
+
+            const finalTarget = isUtama ? defaultTarget : (!isNaN(targetInput) && targetInput > 0 ? targetInput : defaultTarget);
+            const finalSatuan = isUtama ? defaultSatuan : (satuanInput || defaultSatuan);
 
             const newCapaian = {
                 id: 'cp_imp_' + Date.now() + '_' + i,
-                unit: currentUser.unit,
+                unit: activeUnit,
                 timKey: timKeyRef,
-                targetDirektur: indikator,
+                targetDirektur: dirRef ? dirRef.target : indikator,
+                kategori: isUtama ? 'Utama' : 'Support',
                 tahun: tahun,
                 program: program,
                 triwulan: triwulan,
-                satuan: satuanVal,
-                target: targetVal,
+                satuan: finalSatuan,
+                target: finalTarget,
                 realisasi: realisasi,
                 status: 'Menunggu Validasi',
                 permasalahan: permasalahan,
@@ -5101,13 +6105,12 @@ async function handleImportCapaian(event) {
             showToast(`Import selesai: ${successCount} sukses, ${failCount} gagal. Download log error untuk melihat detail.`, 'error');
         } else {
             if (logBtn) logBtn.classList.add('hidden');
-            showToast(`Import Capaian Kinerja Berhasil! ${successCount} data ditambahkan.`);
+            showToast(`Import Capaian Kinerja Berhasil! ${successCount} data ditambahkan sesuai struktur tabel terbaru.`);
         }
         renderCapaianView(document.getElementById('mainContent'));
     };
     reader.readAsText(file);
 }
-
 function downloadLogCapaianError() {
     let csvContent = "data:text/csv;charset=utf-8," + lastCapaianErrorLog.join("\n");
     const encodedUri = encodeURI(csvContent);
