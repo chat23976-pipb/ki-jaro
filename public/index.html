@@ -3129,40 +3129,41 @@ function renderCascadingView(container) {
                 </div>
             `;
 
-                       setTimeout(() => {
-                const yrDir = document.getElementById('dirTahunTarget');
-                if (yrDir) updateDirRenstraOptions(yrDir.value);
+        setTimeout(() => {
+            const yrDir = document.getElementById('dirTahunTarget');
+            if (yrDir) updateDirRenstraOptions(yrDir.value);
 
-                const yrEl = document.getElementById('timTahunTarget');
-                if (yrEl) updateTimDirRefOptions(yrEl.value);
+            const yrEl = document.getElementById('timTahunTarget');
+            if (yrEl) updateTimDirRefOptions(yrEl.value);
 
-                renderTimUnitCheckboxes(currentUser.timKey);
+            renderTimUnitCheckboxes(currentUser.timKey);
 
-                // =====================================================================
-                // TAMBAHAN BEST PRACTICE: Fallback Event Listener & Debugging DOM
-                // =====================================================================
-                const btnCascadingTim = Array.from(document.querySelectorAll('button')).find(
-                    btn => btn.textContent.includes('Tambah Cascading ke Unit')
-                );
+            // =====================================================================
+            // PAKSA RENDER TOMBOL JIKA HILANG KARENA PARSER ERROR
+            // =====================================================================
+            let btnCascadingTim = Array.from(document.querySelectorAll('button')).find(
+                btn => btn.textContent.includes('Tambah Cascading ke Unit')
+            );
 
-                if (btnCascadingTim) {
-                    console.log('[Ki-Jaro] Tombol "Tambah Cascading ke Unit" ditemukan & siap diklik.');
-                    
-                    // Fallback tambahan: Jika atribut onclick bawaan gagal, kita paksa tembak lewat JS
-                    if (!btnCascadingTim.hasAttribute('data-listener-attached')) {
-                        btnCascadingTim.addEventListener('click', function(e) {
-                            // Cegah bentrok jika onclick bawaan sebenarnya berjalan
-                            if (typeof openCascadingTimModal === 'function') {
-                                console.log('[Ki-Jaro] Fallback listener: Menjalankan openCascadingTimModal()');
-                                // openCascadingTimModal(); // (Opsional: buka komentar ini jika onclick bawaan benar-benar mati total)
-                            }
-                        });
-                        btnCascadingTim.setAttribute('data-listener-attached', 'true');
-                    }
-                } else {
-                    console.warn('[Ki-Jaro] Peringatan: Tombol "Tambah Cascading ke Unit" TIDAK ditemukan di DOM. Pastikan Anda login sebagai Ketua Tim Kerja.');
+            // JIKA TOMBOL TIDAK DITEMUKAN, KITA BUAT & SUNTIKKAN LANGSUNG KE DOM
+            if (!btnCascadingTim && currentUser.role === 'tim_kerja') {
+                console.warn('[Ki-Jaro] Tombol hilang dari HTML, membuat tombol cadangan...');
+                const headerContainer = document.querySelector('.p-6.border-b.border-slate-200.flex.flex-col');
+                if (headerContainer) {
+                    const newBtn = document.createElement('button');
+                    newBtn.className = "px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2 mt-4 md:mt-0";
+                    newBtn.innerHTML = `<i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span>`;
+                    newBtn.onclick = function() { openCascadingTimModal(); };
+                    headerContainer.appendChild(newBtn);
+                    btnCascadingTim = newBtn;
                 }
-            }, 100);
+            }
+
+            if (btnCascadingTim) {
+                console.log('[Ki-Jaro] Tombol "Tambah Cascading ke Unit" siap diklik.');
+                btnCascadingTim.onclick = function() { openCascadingTimModal(); };
+            }
+        }, 100);
         }
 
         function updateDirAnggaranPreview() {
