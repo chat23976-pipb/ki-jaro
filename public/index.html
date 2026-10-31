@@ -126,25 +126,24 @@ button { position: relative; z-index: 10; }
             return Array.isArray(ct.unitTargets) && ct.unitTargets[0] === unitName;
         }
 
-        // Helper Enterprise: Cek apakah Capaian suatu Unit berhak masuk ke Dashboard Kinerja Utama
-        function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
-            if (!capaianItem) return false;
-            const tahun = String(capaianItem.tahun || '2025');
-            const cd = cdObj || DB.cascadingDirektur.find(x => x.target === capaianItem.targetDirektur && String(x.tahun || '2025') === tahun);
-            if (!cd) return false;
+// Helper Enterprise: Cek apakah Capaian suatu Unit berhak masuk ke Dashboard Kinerja Utama (Wajib Tim Utama & Unit Utama)
+     function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
+         if (!capaianItem) return false;
+         const tahun = String(capaianItem.tahun || '2025');
+         const cd = cdObj || DB.cascadingDirektur.find(x => x.target === capaianItem.targetDirektur && String(x.tahun || '2025') === tahun) || DB.cascadingDirektur.find(x => x.target === capaianItem.targetDirektur);
+         if (!cd) return false;
 
-            if (!isTimUtamaInDir(cd, capaianItem.timKey)) return false;
+         // Cari cascading tim yang memuat indikator dan unit ini pada tahun terkait
+         const ctList = DB.cascadingTim.filter(x => 
+             x.targetDirektur === cd.target && 
+             String(x.tahun || '2025') === String(cd.tahun || tahun) && 
+             Array.isArray(x.unitTargets) && x.unitTargets.includes(capaianItem.unit)
+         );
+         if (ctList.length === 0) return false;
 
-            const ct = DB.cascadingTim.find(x => 
-                x.targetDirektur === cd.target && 
-                String(x.tahun || '2025') === tahun && 
-                x.timKey === capaianItem.timKey &&
-                Array.isArray(x.unitTargets) && x.unitTargets.includes(capaianItem.unit)
-            );
-            if (!ct) return false;
-
-            return isUnitUtamaInTim(ct, capaianItem.unit);
-        }
+         // Hanya bernilai TRUE jika di salah satu jalur cascading: Tim Kerja berstatus UTAMA di Direktur DAN Unit berstatus UTAMA di Tim Kerja tersebut
+         return ctList.some(ct => isTimUtamaInDir(cd, ct.timKey) && isUnitUtamaInTim(ct, capaianItem.unit));
+     }
         let DB = {
             users: [
                 { id: 'u1', username: 'deni.saputra@poltek-petrokimia.ac.id', password: '123', name: 'Administrator Sistem', role: 'admin', unit: 'Pusat Data & Sistem' },
@@ -794,7 +793,7 @@ function triggerGoogleLogin() {
             const canvas = document.getElementById('landingPreviewChart');
             if (!canvas) return;
 
-            const validCapaian = DB.capaian.filter(c => c.status === 'Valid' && (c.tahun || '2025') === filterLandingTahun);
+            const validCapaian = DB.capaian.filter(c => c.status === 'Valid' && (c.tahun || '2025') === filterLandingTahun && isCapaianUtamaForDashboard(c));
             const filteredCascading = DB.cascadingDirektur.filter(cd => (cd.tahun || '2025') === filterLandingTahun);
 
             const colorPalette = [
@@ -2207,8 +2206,8 @@ function renderDokumenUkurLaporView(container) {
 function renderDashboardView(container) {
             document.getElementById('pageTitle').innerText = 'Dashboard Capaian Kinerja & Peta Risiko';
 
-            // Mengambil seluruh capaian yang sudah Valid (Utama diprioritaskan, namun tetap aman membaca realisasi valid yang ada)
-            let validCapaian = DB.capaian.filter(c => c.status === 'Valid');
+            // HANYA mengambil Capaian yang Valid DAN berstatus UTAMA (Support tidak boleh masuk ke Dashboard Utama)
+             let validCapaian = DB.capaian.filter(c => c.status === 'Valid' && isCapaianUtamaForDashboard(c));
             if (filterDashboardTahun !== 'Semua') {
                 validCapaian = validCapaian.filter(c => c.tahun === filterDashboardTahun);
             }
@@ -2471,9 +2470,8 @@ filteredCascading.forEach(cd => {
                                                 matchedCap = matchedCap.filter(c => c.unit === filterDashboardUnit);
                                             }
 
-                                            // Prioritaskan capaian dari Unit Utama jika ada, jika belum ada gunakan capaian Valid yang tersedia
-                                            const utamaCap = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
-                                            const activeCapList = utamaCap.length > 0 ? utamaCap : matchedCap;
+                                          // Hanya gunakan capaian yang berstatus UTAMA pada indikator ini
+                                         const activeCapList = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
 
                                             // Urutkan berdasarkan Triwulan (TW 1 -> TW 2 -> TW 3 -> TW 4 -> Tahunan) agar elemen terakhir adalah TW terbaru
                                             const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
@@ -2481,13 +2479,18 @@ filteredCascading.forEach(cd => {
 
                                             // Ambil daftar PIC dari Cascading Tim maupun dari Capaian yang sudah masuk
                                             const cascadedUnits = DB.cascadingTim
-                                                .filter(ct => ct.targetDirektur === cd.target && String(ct.tahun || '2025') === cdTahun)
-                                                .flatMap(ct => ct.unitTargets || []);
-                                            const picUnits = Array.from(new Set([...activeCapList.map(c => c.unit), ...cascadedUnits]));
-                                            const picNames = picUnits.length > 0 ? picUnits.join(', ') : 'Belum ditentukan';
+                                             .filter(ct => ct.targetDirektur === cd.target && String(ct.tahun || '2025') === cdTahun && isTimUtamaInDir(cd, ct.timKey))
+                                             .flatMap(ct => (ct.unitTargets || []).filter(u => isUnitUtamaInTim(ct, u)));
+                                         const picUnits = Array.from(new Set([...activeCapList.map(c => c.unit), ...cascadedUnits]));
+                                         const picNames = picUnits.length > 0 ? picUnits.map(u => `${u} (Utama)`).join(', ') : 'Belum ada realisasi Utama';
 
-                                            const timKeyStr = (cd.timKeys || []).join(', ') || '-';
-
+                                         const timKeyStr = (cd.timKeys || []).map(t => {
+                                             const isUtama = isTimUtamaInDir(cd, t);
+                                             return isUtama 
+                                                 ? `<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-bold text-[10px] mr-1 mb-1">★ ${t} (Utama)</span>`
+                                                 : `<span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 rounded font-medium text-[10px] mr-1 mb-1">🛡️ ${t} (Support)</span>`;
+                                         }).join('') || '-';
+                                            
                                             let realisasiVal = 0;
                                             if (sortedCap.length > 0) {
                                                 realisasiVal = sortedCap[sortedCap.length - 1].realisasi;
@@ -2551,9 +2554,7 @@ filteredCascading.forEach(cd => {
                                             if (filterDashboardUnit !== 'Semua') {
                                                 matchedCap = matchedCap.filter(c => c.unit === filterDashboardUnit);
                                             }
-                                            const utamaCap = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
-                                            const activeCapList = utamaCap.length > 0 ? utamaCap : matchedCap;
-
+                                            const activeCapList = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
                                             const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
                                             const sortedCap = [...activeCapList].sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
 
@@ -2646,8 +2647,7 @@ filteredCascading.forEach(cd => {
                                              if (filterDashboardTriwulan !== 'Semua') {
                                                  caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
                                              }
-                                             const utamaCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
-                                             const finalCaps = utamaCaps.length > 0 ? utamaCaps : caps;
+                                             const finalCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
                                              if (finalCaps.length === 0) return null;
 
                                              // Urutkan berdasarkan urutan Triwulan agar selalu mengambil Triwulan Terakhir yang sudah Valid di tahun tersebut
@@ -3002,8 +3002,7 @@ function renderMultiYearIndikatorChart() {
                     if (filterDashboardTriwulan !== 'Semua') {
                         caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
                     }
-                    const utamaCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
-                    const finalCaps = utamaCaps.length > 0 ? utamaCaps : caps;
+                   const finalCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
                     if (finalCaps.length === 0) return acc;
 
                     // Urutkan agar mengambil Triwulan Terakhir yang divalidasi pada tahun tersebut
@@ -5861,23 +5860,49 @@ function downloadTemplateRisiko() {
 }
 function downloadTemplateCapaian() {
     const headers = [
-        "Indikator Kinerja", "Nama Program Kerja", "Periode Triwulan / Tahunan", 
-        "Tahun", "Realisasi (Bisa Desimal)", "Link Bukti Kinerja", "Permasalahan yang Dihadapi"
+        "Unit / Prodi",
+        "Indikator Utama (Direktur)",
+        "Kategori (Utama/Support)",
+        "Program Kerja Intervensi",
+        "Tahun",
+        "Periode (TW 1/TW 2/TW 3/TW 4/Tahunan)",
+        "Target",
+        "Realisasi",
+        "Satuan",
+        "Link Bukti Kinerja",
+        "Permasalahan"
     ];
+
+    // Ambil contoh indikator yang dicascadingkan ke unit user saat ini (jika ada)
+    const myCascading = DB.cascadingTim.find(ct => ct.unitTargets && ct.unitTargets.includes(currentUser.unit));
+    const sampleIndikator = myCascading ? myCascading.targetDirektur : "Meningkatnya Kualitas Lulusan";
+    const sampleTahun = myCascading ? (myCascading.tahun || "2025") : "2025";
+    const dirObj = DB.cascadingDirektur.find(cd => cd.target === sampleIndikator && String(cd.tahun || '2025') === String(sampleTahun)) || DB.cascadingDirektur.find(cd => cd.target === sampleIndikator);
+    const isUtama = (dirObj && myCascading) ? (isTimUtamaInDir(dirObj, myCascading.timKey) && isUnitUtamaInTim(myCascading, currentUser.unit)) : true;
+
     const sampleRow = [
-        "Meningkatnya Kualitas Lulusan", "Workshop Kurikulum Vokasi", "TW 1", 
-        "2025", "90.5", "https://drive.google.com/...", "Keterbatasan fasilitas lab"
+        `"${currentUser.unit}"`,
+        `"${sampleIndikator}"`,
+        `"${isUtama ? 'Utama' : 'Support'}"`,
+        `"Workshop Kurikulum Vokasi"`,
+        `"${sampleTahun}"`,
+        `"TW 1"`,
+        `"${dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100}"`,
+        `"90.5"`,
+        `"${dirObj ? (dirObj.satuan || '%') : '%'}"`,
+        `"https://drive.google.com/..."`,
+        `"Keterbatasan fasilitas laboratorium"`
     ];
     
-    let csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), sampleRow.join(",")].join("\n");
+    let csvContent = "data:text/csv;charset=utf-8," + [headers.map(h => `"${h}"`).join(","), sampleRow.join(",")].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "template_capaian_kinerja_ki_jaro.csv");
+    link.setAttribute("download", `template_capaian_kinerja_${currentUser.unit.replace(/\s+/g, '_')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast("Template Capaian Kinerja berhasil diunduh!");
+    showToast("Template Capaian Kinerja sesuai tabel terbaru berhasil diunduh!");
 }
 
 let lastCapaianErrorLog = [];
@@ -5890,65 +5915,118 @@ async function handleImportCapaian(event) {
     reader.onload = async function(e) {
         const text = e.target.result;
         const separator = text.includes(';') ? ';' : ',';
-        const rows = text.split("\n").map(r => r.split(separator).map(val => val.trim().replace(/^"|"$/g, '')));
+        const rows = text.split(/\r?\n/).filter(line => line.trim() !== '').map(r => r.split(separator).map(val => val.trim().replace(/^"|"$/g, '')));
         
+        if (rows.length < 2) {
+            showToast('File CSV kosong atau tidak sesuai format!', 'error');
+            return;
+        }
+
+        const headerCols = rows[0].map(h => h.toLowerCase());
+        const isNewFormat = headerCols.length >= 9 && headerCols[0].includes('unit');
+
         let successCount = 0;
         let failCount = 0;
-        lastCapaianErrorLog = ["Baris,Indikator Kinerja,Periode,Keterangan Error"];
+        lastCapaianErrorLog = ["Baris,Unit,Indikator Kinerja,Periode,Keterangan Error"];
 
         for (let i = 1; i < rows.length; i++) {
             const cols = rows[i];
-            if (cols.length < 2 || !cols[0]) continue;
+            if (cols.length < 2 || (!cols[0] && !cols[1])) continue;
 
             const rowNum = i + 1;
-            const indikator = (cols[0] || '').trim();
-            const program = (cols[1] || '').trim();
-            const triwulan = (cols[2] || 'TW 1').trim();
-            const tahun = (cols[3] || '2025').trim();
-            const realisasi = parseFloat(cols[4]) || 0;
-            const linkBukti = (cols[5] || '').trim();
-            const permasalahan = (cols[6] || '').trim();
+            let fileUnit, indikator, kategoriInput, program, tahun, triwulan, targetInput, realisasi, satuanInput, linkBukti, permasalahan;
 
-            // Validasi Hak Akses: Cek apakah indikator ini dicascadingkan ke unit login saat ini
-            const isCascadedToMe = currentUser.role === 'admin' || currentUser.role === 'direktur' || DB.cascadingTim.some(ct => 
-                ct.unitTargets.includes(currentUser.unit) && ct.targetDirektur.toLowerCase() === indikator.toLowerCase()
-            );
+            if (isNewFormat) {
+                // Format Baru (11 Kolom sesuai Tabel Capaian Kinerja saat ini)
+                fileUnit      = (cols[0] || currentUser.unit).trim();
+                indikator     = (cols[1] || '').trim();
+                kategoriInput = (cols[2] || '').trim();
+                program       = (cols[3] || '').trim();
+                tahun         = (cols[4] || '2025').trim();
+                triwulan      = (cols[5] || 'TW 1').trim();
+                targetInput   = parseFloat(cols[6]);
+                realisasi     = parseFloat(cols[7]) || 0;
+                satuanInput   = (cols[8] || '').trim();
+                linkBukti     = (cols[9] || '').trim();
+                permasalahan  = (cols[10] || '').trim();
+            } else {
+                // Dukungan Format Lama (7 Kolom)
+                fileUnit      = currentUser.unit;
+                indikator     = (cols[0] || '').trim();
+                program       = (cols[1] || '').trim();
+                triwulan      = (cols[2] || 'TW 1').trim();
+                tahun         = (cols[3] || '2025').trim();
+                realisasi     = parseFloat(cols[4]) || 0;
+                linkBukti     = (cols[5] || '').trim();
+                permasalahan  = (cols[6] || '').trim();
+            }
 
-            if (currentUser.role === 'ketua_unit' && !isCascadedToMe) {
+            const activeUnit = currentUser.role === 'ketua_unit' ? currentUser.unit : (fileUnit || currentUser.unit);
+
+            if (currentUser.role === 'ketua_unit' && fileUnit && fileUnit.toLowerCase() !== currentUser.unit.toLowerCase()) {
                 failCount++;
-                lastCapaianErrorLog.push(`${rowNum},"${indikator}","${triwulan}","Indikator tidak dicascadingkan ke unit Anda (${currentUser.unit})"`);
+                lastCapaianErrorLog.push(`${rowNum},"${fileUnit}","${indikator}","${triwulan}","Unit pada file (${fileUnit}) tidak sesuai dengan unit login Anda (${currentUser.unit})"`);
                 continue;
             }
 
-            // Validasi Duplikasi: Indikator kinerja pada triwulan dan tahun yang sama
+            // Cek cascading ke unit terkait
+            const ctMatch = DB.cascadingTim.find(ct => 
+                Array.isArray(ct.unitTargets) &&
+                ct.unitTargets.some(u => u.toLowerCase() === activeUnit.toLowerCase()) && 
+                ct.targetDirektur.toLowerCase() === indikator.toLowerCase() &&
+                String(ct.tahun || '2025') === String(tahun)
+            ) || DB.cascadingTim.find(ct => 
+                Array.isArray(ct.unitTargets) &&
+                ct.unitTargets.some(u => u.toLowerCase() === activeUnit.toLowerCase()) && 
+                ct.targetDirektur.toLowerCase() === indikator.toLowerCase()
+            );
+
+            if (currentUser.role === 'ketua_unit' && !ctMatch) {
+                failCount++;
+                lastCapaianErrorLog.push(`${rowNum},"${activeUnit}","${indikator}","${triwulan}","Indikator tidak dicascadingkan ke unit Anda (${activeUnit})"`);
+                continue;
+            }
+
+            // Cek duplikasi pada unit, indikator, triwulan, dan tahun yang sama
             const isDuplicate = DB.capaian.some(c => 
-                c.unit === currentUser.unit && 
+                c.unit.toLowerCase() === activeUnit.toLowerCase() && 
                 c.targetDirektur.toLowerCase() === indikator.toLowerCase() && 
                 c.triwulan.toLowerCase() === triwulan.toLowerCase() && 
-                (c.tahun || '2025') === tahun
+                String(c.tahun || '2025') === String(tahun)
             );
 
             if (isDuplicate) {
                 failCount++;
-                lastCapaianErrorLog.push(`${rowNum},"${indikator}","${triwulan}","Indikator kinerja pada triwulan dan tahun yang sama sudah diinput sebelumnya"`);
+                lastCapaianErrorLog.push(`${rowNum},"${activeUnit}","${indikator}","${triwulan}","Indikator kinerja pada triwulan dan tahun yang sama sudah diinput sebelumnya"`);
                 continue;
             }
 
-            const dirRef = DB.cascadingDirektur.find(cd => cd.target.toLowerCase() === indikator.toLowerCase());
-            const targetVal = dirRef && dirRef.targetVal !== undefined ? dirRef.targetVal : 100;
-            const satuanVal = dirRef ? (dirRef.satuan || '%') : '%';
-            const timKeyRef = dirRef && dirRef.timKeys.length > 0 ? dirRef.timKeys[0] : (currentUser.timKey || 'Akademik');
+            const dirRef = DB.cascadingDirektur.find(cd => cd.target.toLowerCase() === indikator.toLowerCase() && String(cd.tahun || '2025') === String(tahun)) || DB.cascadingDirektur.find(cd => cd.target.toLowerCase() === indikator.toLowerCase());
+            const timKeyRef = ctMatch ? ctMatch.timKey : (dirRef && dirRef.timKeys.length > 0 ? dirRef.timKeys[0] : (currentUser.timKey || 'Akademik'));
+
+            // Cek apakah indikator ini berstatus UTAMA atau SUPPORT bagi unit tersebut
+            const isUtama = (dirRef && ctMatch) 
+                ? (isTimUtamaInDir(dirRef, ctMatch.timKey) && isUnitUtamaInTim(ctMatch, activeUnit)) 
+                : (ctMatch ? isUnitUtamaInTim(ctMatch, activeUnit) : false);
+
+            // Jika UTAMA, kunci Target & Satuan sesuai ketetapan Direktur. Jika SUPPORT, izinkan Target & Satuan kustom dari file CSV!
+            const defaultTarget = dirRef && dirRef.targetVal !== undefined ? Number(dirRef.targetVal) : 100;
+            const defaultSatuan = dirRef ? (dirRef.satuan || '%') : '%';
+
+            const finalTarget = isUtama ? defaultTarget : (!isNaN(targetInput) && targetInput > 0 ? targetInput : defaultTarget);
+            const finalSatuan = isUtama ? defaultSatuan : (satuanInput || defaultSatuan);
 
             const newCapaian = {
                 id: 'cp_imp_' + Date.now() + '_' + i,
-                unit: currentUser.unit,
+                unit: activeUnit,
                 timKey: timKeyRef,
-                targetDirektur: indikator,
+                targetDirektur: dirRef ? dirRef.target : indikator,
+                kategori: isUtama ? 'Utama' : 'Support',
                 tahun: tahun,
                 program: program,
                 triwulan: triwulan,
-                satuan: satuanVal,
-                target: targetVal,
+                satuan: finalSatuan,
+                target: finalTarget,
                 realisasi: realisasi,
                 status: 'Menunggu Validasi',
                 permasalahan: permasalahan,
@@ -5972,13 +6050,12 @@ async function handleImportCapaian(event) {
             showToast(`Import selesai: ${successCount} sukses, ${failCount} gagal. Download log error untuk melihat detail.`, 'error');
         } else {
             if (logBtn) logBtn.classList.add('hidden');
-            showToast(`Import Capaian Kinerja Berhasil! ${successCount} data ditambahkan.`);
+            showToast(`Import Capaian Kinerja Berhasil! ${successCount} data ditambahkan sesuai struktur tabel terbaru.`);
         }
         renderCapaianView(document.getElementById('mainContent'));
     };
     reader.readAsText(file);
 }
-
 function downloadLogCapaianError() {
     let csvContent = "data:text/csv;charset=utf-8," + lastCapaianErrorLog.join("\n");
     const encodedUri = encodeURI(csvContent);
