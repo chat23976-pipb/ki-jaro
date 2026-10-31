@@ -2902,7 +2902,7 @@ function renderCascadingView(container) {
                                                 </div>
                                                 <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
                                                 <div class="flex flex-col space-y-2 flex-1 py-2">
-                                                    ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan</span>' : subUnits.map(ct => {
+                                                                                                       ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan</span>' : subUnits.map(ct => {
                                                         const parentCd = assignedDir.find(ad => ad.target === ct.targetDirektur && (ad.tahun || '2025') === (ct.tahun || '2025'));
                                                         const isTimUtama = isTimUtamaInDir(parentCd, tim);
                                                         return `
@@ -3434,81 +3434,66 @@ function toggleUnitRoleSelect(idx, isChecked) {
     }
 }
 
-function openCascadingTimModal() {
-    console.log('[Ki-Jaro] openCascadingTimModal dipanggil. currentUser:', currentUser?.role, currentUser?.timKey);
-    const modal = document.getElementById('cascadingTimModal');
-    if (!modal) {
-        showToast('Modal Cascading Tim tidak ditemukan di halaman!', 'error');
-        return;
-    }
-    modal.removeAttribute('data-edit-id');
-    modal.removeAttribute('data-edit-timkey');
-    
-    // TAMPILKAN MODAL DULU, baru render isinya
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-
-    // Baru render setelah modal visible (DOM sudah pasti ada)
-    const activeTim = (currentUser && currentUser.timKey) ? currentUser.timKey : 'Akademik';
-    renderTimUnitCheckboxes(activeTim);
-
-    const yrEl = document.getElementById('timTahunTarget');
-    if (yrEl) {
-        updateTimDirRefOptions(yrEl.value);
-    }
-}
-
-        function closeCascadingTimModal() {
+        function openCascadingTimModal() {
+            console.log('[Ki-Jaro] openCascadingTimModal dipanggil.');
             const modal = document.getElementById('cascadingTimModal');
-            if (modal) {
-                modal.classList.remove('flex');
-                modal.classList.add('hidden');
+            if (!modal) {
+                showToast('Modal Cascading Tim tidak ditemukan!', 'error');
+                return;
             }
+            modal.removeAttribute('data-edit-id');
+            modal.removeAttribute('data-edit-timkey');
+            
+            // TAMPILKAN MODAL DULU
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            // BARU RENDER CHECKBOX-NYA
+            const activeTim = (currentUser && currentUser.timKey) ? currentUser.timKey : 'Akademik';
+            renderTimUnitCheckboxes(activeTim);
+            
+            const yrEl = document.getElementById('timTahunTarget');
+            if (yrEl) updateTimDirRefOptions(yrEl.value);
         }
 
-function renderTimUnitCheckboxes(targetTimKey) {
-    const container = document.getElementById('timUnitCheckContainer');
-    if (!container) {
-        console.warn('[Ki-Jaro] timUnitCheckContainer tidak ditemukan saat renderTimUnitCheckboxes dipanggil');
-        return;
-    }
-    
-    const activeTim = targetTimKey || (currentUser ? currentUser.timKey : 'Akademik') || 'Akademik';
-    const headerLbl = document.getElementById('modalTimHeaderLabel');
-    if (headerLbl) headerLbl.innerText = activeTim;
+        function renderTimUnitCheckboxes(targetTimKey) {
+            const container = document.getElementById('timUnitCheckContainer');
+            if (!container) return;
+            
+            const activeTim = targetTimKey || (currentUser ? currentUser.timKey : 'Akademik') || 'Akademik';
+            const headerLbl = document.getElementById('modalTimHeaderLabel');
+            if (headerLbl) headerLbl.innerText = activeTim;
 
-    let allowedUnits = DB.users
-        .filter(u => u.role === 'ketua_unit' && (!activeTim || u.timKey === activeTim))
-        .map(u => u.unit);
+            let allowedUnits = DB.users
+                .filter(u => u.role === 'ketua_unit' && (!activeTim || u.timKey === activeTim))
+                .map(u => u.unit);
 
-    allowedUnits = Array.from(new Set(allowedUnits));
+            allowedUnits = Array.from(new Set(allowedUnits));
 
-    // FALLBACK: jika kosong, ambil dari DB.unitList sebagai cadangan
-    if (allowedUnits.length === 0) {
-        console.warn('[Ki-Jaro] Tidak ada user ketua_unit untuk tim "' + activeTim + '", pakai fallback DB.unitList');
-        allowedUnits = Array.isArray(DB.unitList) && DB.unitList.length > 0 
-            ? [...DB.unitList] 
-            : ['Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'];
-    }
+            if (allowedUnits.length === 0) {
+                allowedUnits = Array.isArray(DB.unitList) && DB.unitList.length > 0 
+                    ? [...DB.unitList] 
+                    : ['Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'];
+            }
 
-    if (allowedUnits.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Tidak ada Unit/Prodi di bawah Tim Kerja ${activeTim}.</p>`;
-        return;
-    }
+            if (allowedUnits.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Tidak ada Unit/Prodi di bawah Tim Kerja ${activeTim}.</p>`;
+                return;
+            }
 
-    container.innerHTML = allowedUnits.map((u, idx) => `
-        <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-all shadow-2xs">
-            <label class="flex items-center space-x-3 cursor-pointer flex-1">
-                <input type="checkbox" name="unitCheck" value="${u}" onchange="toggleUnitRoleSelect(${idx}, this.checked)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-                <span class="text-slate-800 font-semibold text-xs">${u}</span>
-            </label>
-            <select id="unitRole_${idx}" data-unit="${u}" onchange="handleUnitRoleChange(${idx})" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
-                <option value="Utama">★ Unit Utama (Inti)</option>
-                <option value="Support">🛡️ Unit Support (Pendukung)</option>
-            </select>
-        </div>
-    `).join('');
-}
+            container.innerHTML = allowedUnits.map((u, idx) => `
+                <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-all shadow-2xs">
+                    <label class="flex items-center space-x-3 cursor-pointer flex-1">
+                        <input type="checkbox" name="unitCheck" value="${u}" onchange="toggleUnitRoleSelect(${idx}, this.checked)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                        <span class="text-slate-800 font-semibold text-xs">${u}</span>
+                    </label>
+                    <select id="unitRole_${idx}" data-unit="${u}" onchange="handleUnitRoleChange(${idx})" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
+                        <option value="Utama">★ Unit Utama (Inti)</option>
+                        <option value="Support">🛡️ Unit Support (Pendukung)</option>
+                    </select>
+                </div>
+            `).join('');
+        }
         function openEditCascadingTimModal(id) {
             const item = DB.cascadingTim.find(x => x.id === id);
             if (!item) return;
