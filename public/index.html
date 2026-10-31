@@ -493,17 +493,20 @@ let landingChartInstance = null;
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 ml-1">Email Resmi Institusi</label>
                                 <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-blue-600 text-xs">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-blue-600 text-xs z-10 pointer-events-none">
                                         <i class="fa-solid fa-envelope"></i>
                                     </span>
                                     <input type="email" id="usernameInput" required 
                                         class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15 transition-all outline-none"
                                         placeholder="nama@poltek-petrokimia.ac.id">
-                            
+                                </div>
+                                <p class="text-[10px] text-slate-400 mt-1 ml-1"><i class="fa-solid fa-shield-halved text-blue-500 mr-1"></i>Hanya email yang terdaftar di Database Admin</p>
+                            </div>
+
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 ml-1">Kata Sandi</label>
                                 <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-blue-600 text-xs">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-blue-600 text-xs z-10 pointer-events-none">
                                         <i class="fa-solid fa-lock"></i>
                                     </span>
                                     <input type="password" id="passwordInput" required 
@@ -916,8 +919,11 @@ function renderDashboardLayout() {
 
             app.innerHTML = `
                 <div class="min-h-screen flex bg-slate-100 overflow-x-hidden">
-                    <!-- Sidebar Biru Penuh dengan Tombol Collapse ke Samping -->
-                    <aside id="appSidebar" class="w-72 min-h-screen bg-blue-700 text-white flex flex-col shadow-xl z-30 no-print transition-all duration-300 shrink-0">
+                    <!-- Backdrop Gelap Khusus Layar HP saat Sidebar Dibuka -->
+                 <div id="mobileSidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 hidden md:hidden no-print"></div>
+
+                 <!-- Sidebar Biru Penuh (Support Mobile Drawer & Desktop Collapse) -->
+                 <aside id="appSidebar" class="fixed md:static inset-y-0 left-0 w-72 min-h-screen bg-blue-700 text-white hidden md:flex flex-col shadow-2xl md:shadow-xl z-50 md:z-30 no-print transition-all duration-300 shrink-0">
                         <div class="p-6 border-b border-blue-600 flex items-center justify-between bg-blue-700">
                             <div class="flex items-center space-x-3 overflow-hidden sidebar-brand-container">
                                 <div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shrink-0">
@@ -955,7 +961,7 @@ function renderDashboardLayout() {
 
                             <a href="javascript:void(0)" onclick="switchTab('renstra')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'renstra' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-book-bookmark w-5 text-center"></i>
-                                <span class="sidebar-text">${currentUser.role === 'admin' ? 'Input & Manajemen Renstra' : 'View Renstra (Hierarki Kemenperin)'}</span>
+                                <span class="sidebar-text">${currentUser.role === 'admin' ? 'Input & Manajemen Renstra' : 'View Renstra'}</span>
                             </a>
 
                             <a href="javascript:void(0)" onclick="switchTab('dokumen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dokumen' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
@@ -1006,9 +1012,13 @@ function renderDashboardLayout() {
 
                     <!-- Main Content dengan Header Terkunci (Sticky Top) -->
                     <main class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-                        <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm no-print">
-                            <div class="flex items-center space-x-4">
-                                <h1 id="pageTitle" class="text-xl font-bold text-slate-900">Dashboard Utama</h1>
+                        <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm no-print">
+                         <div class="flex items-center space-x-3 sm:space-x-4">
+                             <!-- Tombol Buka Sidebar Khusus Layar HP -->
+                             <button onclick="toggleMobileSidebar()" class="md:hidden p-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 shadow-2xs focus:outline-none" title="Buka Menu">
+                                 <i class="fa-solid fa-bars text-base"></i>
+                             </button>
+                             <h1 id="pageTitle" class="text-base sm:text-xl font-bold text-slate-900">Dashboard Utama</h1>
                                 <span class="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100 hidden sm:inline-flex">
                                     <i class="fa-solid fa-building-columns mr-1"></i> ${currentUser.unit}
                                 </span>
@@ -1061,28 +1071,49 @@ function renderDashboardLayout() {
             switchTab(activeTab);
         }
 
-        // Fungsi JavaScript untuk Tombol Perkecil Sidetab
-        let isSidebarCollapsed = false;
-        function toggleSidebarCollapse() {
-            const sidebar = document.getElementById('appSidebar');
-            const texts = document.querySelectorAll('.sidebar-text');
-            const profileBox = document.querySelector('.sidebar-profile-box');
-            if (!sidebar) return;
+// Fungsi Buka/Tutup Sidebar di Layar HP (Mobile)
+     function toggleMobileSidebar() {
+         const sidebar = document.getElementById('appSidebar');
+         const backdrop = document.getElementById('mobileSidebarBackdrop');
+         if (!sidebar) return;
+         const isHidden = sidebar.classList.contains('hidden');
+         if (isHidden) {
+             sidebar.classList.remove('hidden');
+             sidebar.classList.add('flex');
+             if (backdrop) backdrop.classList.remove('hidden');
+         } else {
+             sidebar.classList.add('hidden');
+             sidebar.classList.remove('flex');
+             if (backdrop) backdrop.classList.add('hidden');
+         }
+     }
 
-            isSidebarCollapsed = !isSidebarCollapsed;
-            if (isSidebarCollapsed) {
-                sidebar.classList.remove('w-72');
-                sidebar.classList.add('w-20');
-                texts.forEach(el => el.classList.add('hidden'));
-                if (profileBox) profileBox.classList.add('hidden');
-            } else {
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-72');
-                texts.forEach(el => el.classList.remove('hidden'));
-                if (profileBox) profileBox.classList.remove('hidden');
-            }
-        }
-// Fungsi untuk membuka/menutup dropdown profil saat diklik
+     // Fungsi JavaScript untuk Tombol Perkecil Sidetab (Desktop & Mobile)
+     let isSidebarCollapsed = false;
+     function toggleSidebarCollapse() {
+         if (window.innerWidth < 768) {
+             toggleMobileSidebar();
+             return;
+         }
+         const sidebar = document.getElementById('appSidebar');
+         const texts = document.querySelectorAll('.sidebar-text');
+         const profileBox = document.querySelector('.sidebar-profile-box');
+         if (!sidebar) return;
+
+         isSidebarCollapsed = !isSidebarCollapsed;
+         if (isSidebarCollapsed) {
+             sidebar.classList.remove('w-72');
+             sidebar.classList.add('w-20');
+             texts.forEach(el => el.classList.add('hidden'));
+             if (profileBox) profileBox.classList.add('hidden');
+         } else {
+             sidebar.classList.remove('w-20');
+             sidebar.classList.add('w-72');
+             texts.forEach(el => el.classList.remove('hidden'));
+             if (profileBox) profileBox.classList.remove('hidden');
+         }
+     }
+        // Fungsi untuk membuka/menutup dropdown profil saat diklik
         function toggleProfileDropdown() {
             const menu = document.getElementById('profileDropdownMenu');
             if (menu) {
@@ -1112,8 +1143,12 @@ function renderDashboardLayout() {
             const content = document.getElementById('mainContent');
             if (!content) return;
             const sb = document.getElementById('appSidebar');
-            if (sb && window.innerWidth < 768) sb.classList.add('hidden');
-
+         const backdrop = document.getElementById('mobileSidebarBackdrop');
+         if (sb && window.innerWidth < 768) {
+             sb.classList.add('hidden');
+             sb.classList.remove('flex');
+             if (backdrop) backdrop.classList.add('hidden');
+         }
             if (tab === 'dashboard') renderDashboardView(content);
             else if (tab === 'renstra') renderRenstraView(content);
             else if (tab === 'dokumen') renderDokumenView(content);
@@ -2619,10 +2654,10 @@ filteredCascading.forEach(cd => {
                                             <th class="p-2.5 border text-center">Realisasi 2028</th>
                                             <th class="p-2.5 border text-center bg-blue-50/40">Target 2029</th>
                                             <th class="p-2.5 border text-center bg-blue-50/40">Realisasi 2029</th>
-                                            <th class="p-2.5 border text-center bg-amber-50">2025 Vs 2026</th>
-                                            <th class="p-2.5 border text-center bg-amber-50">2026 Vs 2027</th>
-                                            <th class="p-2.5 border text-center bg-amber-50">2027 Vs 2028</th>
-                                            <th class="p-2.5 border text-center bg-amber-50">2028 Vs 2029</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2025 VS 2026</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2026 VS 2027</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2027 VS 2028</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2028 VS 2029</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
@@ -3827,7 +3862,22 @@ async function saveCascadingTim(e) {
                 showToast('Pilih indikator rujukan yang valid!', 'error');
                 return;
             }
-            
+
+            const activeTimKey = editTimKey || currentUser.timKey || 'Akademik';
+
+            // Validasi: Cegah input indikator yang sama pada tahun yang sama untuk Tim Kerja ini
+            const isDuplicate = (DB.cascadingTim || []).some(ct => {
+                const sameTim = String(ct.timKey) === String(activeTimKey);
+                const sameIndikator = String(ct.targetDirektur).trim().toLowerCase() === String(targetDir).trim().toLowerCase();
+                const sameTahun = String(ct.tahun || '2025') === String(tahun);
+                const notSelf = editId ? String(ct.id) !== String(editId) : true;
+                return sameTim && sameIndikator && sameTahun && notSelf;
+            });
+
+            if (isDuplicate) {
+                showToast(`Indikator "${targetDir}" pada tahun ${tahun} sudah pernah diinput oleh Tim Kerja ${activeTimKey}! Silakan pilih indikator lain atau tahun yang berbeda.`, 'error');
+                return;
+            }            
             const checkedUnitEls = Array.from(document.querySelectorAll('input[name="unitCheck"]:checked'));
             if (checkedUnitEls.length === 0) {
                 showToast('Pilih minimal satu Unit / Prodi / Subbag tujuan!', 'error');
@@ -4651,18 +4701,6 @@ async function confirmDeleteCapaian(id) {
                                 <span>Log Error Risiko</span>
                             </button>
                             <!-- ============================== -->
-
-                            <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                                <i class="fa-solid fa-file-excel"></i>
-                                <span>Ekspor CSV Risiko</span>
-                            </button>
-                            ${isKaUnit ? `
-                                <button onclick="openRisikoModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                    <i class="fa-solid fa-plus"></i>
-                                    <span>Input Risiko Baru</span>
-                                </button>
-                            ` : ''}
-                        </div>
                             <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
                                 <i class="fa-solid fa-file-excel"></i>
                                 <span>Ekspor CSV Risiko</span>
