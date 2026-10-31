@@ -397,7 +397,7 @@ let landingChartInstance = null;
                                 <div class="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/40 border border-slate-100 space-y-6 h-full flex flex-col justify-between">
                                     <div class="border-b border-slate-100 pb-4">
                                         <h3 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                                            <i class="fa-solid fa-folder-open text-blue-600"></i> Dokumen Perencanaan
+                                            <i class="fa-solid fa-folder-open text-blue-600"></i> VMTS & Dokumen Perencanaan
                                         </h3>
                                         <p class="text-xs text-slate-500">Dokumen perencanaan strategis yang dipublikasikan</p>
                                     </div>
@@ -969,7 +969,7 @@ function renderDashboardLayout() {
                             ${!isKaUnit ? `
                                 <a href="javascript:void(0)" onclick="switchTab('cascading')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'cascading' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                     <i class="fa-solid fa-sitemap w-5 text-center"></i>
-                                    <span class="sidebar-text">Cascading Bertahap</span>
+                                    <span class="sidebar-text">Cascading & Crosscutting</span>
                                 </a>
                             ` : ''}
 
@@ -980,7 +980,7 @@ function renderDashboardLayout() {
 
                             <a href="javascript:void(0)" onclick="switchTab('risiko')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'risiko' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-triangle-exclamation w-5 text-center"></i>
-                                <span class="sidebar-text">Peta Risiko & Sheet Realtime</span>
+                                <span class="sidebar-text">Peta Risiko</span>
                             </a>
 
                             <a href="javascript:void(0)" onclick="switchTab('tindaklanjut')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'tindaklanjut' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
@@ -1976,7 +1976,7 @@ function renderDokumenUkurLaporView(container) {
         }
 
         function renderDokumenView(container) {
-            document.getElementById('pageTitle').innerText = 'Dokumen Perencanaan Visi, Misi, Tujuan & Dokumen Utama';
+            document.getElementById('pageTitle').innerText = 'Visi, Misi, Tujuan, Strategi & Dokumen Utama';
             const isAdmin = currentUser.role === 'admin';
 
             container.innerHTML = `
@@ -2623,9 +2623,9 @@ filteredCascading.forEach(cd => {
                                             <th class="p-2.5 border text-center bg-blue-50/40">Target 2029</th>
                                             <th class="p-2.5 border text-center bg-blue-50/40">Realisasi 2029</th>
                                             <th class="p-2.5 border text-center bg-amber-50">2025 Vs 2026</th>
-                                            <th class="p-2.5 border text-center bg-amber-50">26 Vs 27</th>
-                                            <th class="p-2.5 border text-center bg-amber-50">27 Vs 28</th>
-                                            <th class="p-2.5 border text-center bg-amber-50">28 Vs 29</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2026 Vs 2027</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2027 Vs 2028</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2028 Vs 2029</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
@@ -3054,7 +3054,10 @@ function renderMultiYearIndikatorChart() {
             if (filterCascadingTahun !== 'Semua') filteredDir = filteredDir.filter(c => c.tahun === filterCascadingTahun);
 
             let filteredTim = [...DB.cascadingTim];
-            if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
+         if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => c.tahun === filterCascadingTahun);
+
+         // Khusus untuk Tabel 2: Jika login sebagai Ketua Tim Kerja, tampilkan hanya sesuai tim kerjanya saja
+         let filteredTimTable = isKetuaTim ? filteredTim.filter(c => c.timKey === currentUser.timKey) : filteredTim;
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
@@ -3248,8 +3251,8 @@ function renderMultiYearIndikatorChart() {
                                         ${isKetuaTim ? '<th class="p-4 text-center">Aksi</th>' : ''}
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    ${filteredTim.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredTim.map((c, idx) => `
+                               <tbody class="divide-y divide-slate-100">
+                                 ${filteredTimTable.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan ${isKetuaTim ? 'untuk Tim Kerja ' + currentUser.timKey + ' ' : ''}pada tahun ${filterCascadingTahun}.</td></tr>` : filteredTimTable.map((c, idx) => `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
@@ -5192,8 +5195,9 @@ function renderLaporanView(container) {
             }
 
             const renderReportRows = (list) => {
-                if (list.length === 0) return '<tr><td colspan="9" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi</td></tr>';
+                if (list.length === 0) return '<tr><td colspan="11" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi</td></tr>';
                 return list.map((c, idx) => {
+                    const tahun = String(c.tahun || '2025');
                     const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
                     const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
                     const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
@@ -5202,7 +5206,11 @@ function renderLaporanView(container) {
                     const pOutput = targetVal > 0 ? (realVal / targetVal) * 100 : 0;
                     const isTercapai = realVal >= targetVal;
 
-                    const tahun = String(c.tahun || '2025');
+                    // Cek Kategori (Utama / Support)
+                    const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
+                    const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahun && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit));
+                    const isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
+
                     const paguVal = ikObj ? (Number(ikObj['anggaran' + tahun]) || 100000000) : 100000000;
                     const subRa = DB.realisasiAnggaranAdmin.filter(ra => ikObj && ra.indikatorId === ikObj.id && String(ra.tahun) === tahun);
                     const realAnggaranVal = subRa.reduce((a, b) => a + Number(b.realisasiAnggaran || 0), 0);
@@ -5214,6 +5222,12 @@ function renderLaporanView(container) {
                     return `
                     <tr>
                         <td class="p-2 border text-center font-semibold">${idx + 1}</td>
+                        <td class="p-2 border font-semibold text-slate-800">${c.unit || '-'}</td>
+                        <td class="p-2 border text-center">
+                            <span class="px-2 py-0.5 rounded font-bold text-[10px] ${isUtama ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700'}">
+                                ${isUtama ? 'Utama' : 'Support'}
+                            </span>
+                        </td>
                         <td class="p-2 border">${sasaranKinerjaText}</td>
                         <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
                         <td class="p-2 border text-center font-semibold">${c.target}</td>
@@ -5238,7 +5252,7 @@ function renderLaporanView(container) {
                     `;
                 }).join('');
             };
-
+    
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto space-y-6 no-print">
@@ -5298,18 +5312,20 @@ function renderLaporanView(container) {
                             <h3 class="font-bold text-slate-900 text-base border-l-4 border-primary-600 pl-3">Rekapitulasi Capaian Kinerja</h3>
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead class="bg-slate-50 border">
-                                    <tr>
-                                        <th class="p-2 border text-center w-10">No.</th>
-                                        <th class="p-2 border">Sasaran Kinerja</th>
-                                        <th class="p-2 border">Indikator Kinerja</th>
-                                        <th class="p-2 border text-center">Target</th>
-                                        <th class="p-2 border text-center">Satuan</th>
-                                        <th class="p-2 border text-center">Realisasi</th>
-                                        <th class="p-2 border text-center">Status</th>
-                                        <th class="p-2 border text-center">Efektivitas</th>
-                                        <th class="p-2 border text-center">Efisien</th>
-                                    </tr>
-                                </thead>
+                                 <tr>
+                                     <th class="p-2 border text-center w-10">No.</th>
+                                     <th class="p-2 border">Unit / Prodi</th>
+                                     <th class="p-2 border text-center">Kategori</th>
+                                     <th class="p-2 border">Sasaran Kinerja</th>
+                                     <th class="p-2 border">Indikator Kinerja</th>
+                                     <th class="p-2 border text-center">Target</th>
+                                     <th class="p-2 border text-center">Satuan</th>
+                                     <th class="p-2 border text-center">Realisasi</th>
+                                     <th class="p-2 border text-center">Status</th>
+                                     <th class="p-2 border text-center">Efektivitas</th>
+                                     <th class="p-2 border text-center">Efisiensi</th>
+                                 </tr>
+                             </thead>
                                 <tbody id="printTableBody">
                                     ${renderReportRows(validCapaian)}
                                 </tbody>
@@ -5417,7 +5433,8 @@ function renderLaporanView(container) {
             }
 
             const tbody = document.getElementById('printTableBody');
-            tbody.innerHTML = validCapaian.length === 0 ? '<tr><td colspan="9" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi untuk periode ini</td></tr>' : validCapaian.map((c, idx) => {
+            tbody.innerHTML = validCapaian.length === 0 ? '<tr><td colspan="11" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi untuk periode ini</td></tr>' : validCapaian.map((c, idx) => {
+                const tahun = String(c.tahun || '2025');
                 const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
                 const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
                 const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
@@ -5426,7 +5443,10 @@ function renderLaporanView(container) {
                 const pOutput = targetVal > 0 ? (realVal / targetVal) * 100 : 0;
                 const isTercapai = realVal >= targetVal;
 
-                const tahun = String(c.tahun || '2025');
+                const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
+                const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahun && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit));
+                const isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
+
                 const paguVal = ikObj ? (Number(ikObj['anggaran' + tahun]) || 100000000) : 100000000;
                 const subRa = DB.realisasiAnggaranAdmin.filter(ra => ikObj && ra.indikatorId === ikObj.id && String(ra.tahun) === tahun);
                 const realAnggaranVal = subRa.reduce((a, b) => a + Number(b.realisasiAnggaran || 0), 0);
@@ -5438,6 +5458,8 @@ function renderLaporanView(container) {
                 return `
                 <tr>
                     <td class="p-2 border text-center font-semibold">${idx + 1}</td>
+                    <td class="p-2 border font-semibold text-slate-800">${c.unit || '-'}</td>
+                    <td class="p-2 border text-center font-bold ${isUtama ? 'text-blue-700' : 'text-slate-600'}">${isUtama ? 'Utama' : 'Support'}</td>
                     <td class="p-2 border">${sasaranKinerjaText}</td>
                     <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
                     <td class="p-2 border text-center font-semibold">${c.target}</td>
