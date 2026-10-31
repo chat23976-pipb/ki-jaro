@@ -912,7 +912,8 @@ function renderDashboardLayout() {
                 admin: 'Administrator Sistem',
                 direktur: 'Direktur',
                 tim_kerja: 'Ketua Tim Kerja',
-                ketua_unit: 'Ketua Prodi / Subbag / Unit'
+                ketua_unit: 'Ketua Prodi / Subbag / Unit',
+                viewer: 'Viewer (Monitoring & Evaluasi)'
             };
 
             const isKaUnit = currentUser.role === 'ketua_unit';
@@ -2578,6 +2579,106 @@ if (matchedCap.length > 0) {
                                 </table>
                             </div>
                         </div>
+                        <!-- REVISI 5: Tabel Multi-Tahun 2025-2029 & YoY -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">Tabel Capaian Indikator Kinerja Multi-Tahun (2025 - 2029) & Year-on-Year (YoY)</h3>
+                                <p class="text-xs text-slate-500">Perbandingan Target dan Realisasi Capaian Utama dari tahun 2025 s.d 2029 beserta pertumbuhan YoY</p>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                            <th class="p-2.5 border text-center">No</th>
+                                            <th class="p-2.5 border min-w-[200px]">Indikator Kinerja</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Target 2025</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Realisasi 2025</th>
+                                            <th class="p-2.5 border text-center">Target 2026</th>
+                                            <th class="p-2.5 border text-center">Realisasi 2026</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Target 2027</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Realisasi 2027</th>
+                                            <th class="p-2.5 border text-center">Target 2028</th>
+                                            <th class="p-2.5 border text-center">Realisasi 2028</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Target 2029</th>
+                                            <th class="p-2.5 border text-center bg-blue-50/40">Realisasi 2029</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">2025 Vs 2026</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">26 Vs 27</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">27 Vs 28</th>
+                                            <th class="p-2.5 border text-center bg-amber-50">28 Vs 29</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        ${(DB.renstraIndikatorKinerja || []).length === 0 ? `<tr><td colspan="16" class="p-4 text-center text-slate-400">Belum ada data Indikator Kinerja Renstra.</td></tr>` : DB.renstraIndikatorKinerja.map((ik, idx) => {
+                                            const getTarget = (yr) => {
+                                                const cd = DB.cascadingDirektur.find(x => (x.indikatorId === ik.id || x.target === ik.namaIndikator) && String(x.tahun || '2025') === String(yr));
+                                                if (cd && cd.targetVal !== undefined) return Number(cd.targetVal);
+                                                return ik['target' + yr] !== undefined ? Number(ik['target' + yr]) : 100;
+                                            };
+                                            const getReal = (yr) => {
+                                                let caps = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === String(yr) && c.status === 'Valid' && isCapaianUtamaForDashboard(c));
+                                                if (filterDashboardTriwulan !== 'Semua') {
+                                                    caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                                                }
+                                                if (caps.length === 0) return null;
+                                                return Number(caps[caps.length - 1].realisasi);
+                                            };
+                                            const t25 = getTarget('2025'), r25 = getReal('2025');
+                                            const t26 = getTarget('2026'), r26 = getReal('2026');
+                                            const t27 = getTarget('2027'), r27 = getReal('2027');
+                                            const t28 = getTarget('2028'), r28 = getReal('2028');
+                                            const t29 = getTarget('2029'), r29 = getReal('2029');
+
+                                            const calcYoY = (prev, curr) => {
+                                                if (prev === null || curr === null) return '<span class="text-slate-400">-</span>';
+                                                const diff = Number((curr - prev).toFixed(2));
+                                                const pct = prev !== 0 ? ((diff / prev) * 100).toFixed(1) : 0;
+                                                if (diff > 0) return `<span class="text-emerald-600 font-bold">+${diff} (+${pct}%)</span>`;
+                                                if (diff < 0) return `<span class="text-rose-600 font-bold">${diff} (${pct}%)</span>`;
+                                                return `<span class="text-slate-600 font-semibold">0 (0%)</span>`;
+                                            };
+
+                                            return `
+                                                <tr class="hover:bg-slate-50">
+                                                    <td class="p-2.5 border text-center font-semibold text-slate-600">${idx + 1}</td>
+                                                    <td class="p-2.5 border font-bold text-slate-900">${ik.namaIndikator}</td>
+                                                    <td class="p-2.5 border text-center font-semibold text-primary-700 bg-blue-50/20">${t25}</td>
+                                                    <td class="p-2.5 border text-center font-bold text-emerald-600 bg-blue-50/20">${r25 !== null ? r25 : '-'}</td>
+                                                    <td class="p-2.5 border text-center font-semibold text-primary-700">${t26}</td>
+                                                    <td class="p-2.5 border text-center font-bold text-emerald-600">${r26 !== null ? r26 : '-'}</td>
+                                                    <td class="p-2.5 border text-center font-semibold text-primary-700 bg-blue-50/20">${t27}</td>
+                                                    <td class="p-2.5 border text-center font-bold text-emerald-600 bg-blue-50/20">${r27 !== null ? r27 : '-'}</td>
+                                                    <td class="p-2.5 border text-center font-semibold text-primary-700">${t28}</td>
+                                                    <td class="p-2.5 border text-center font-bold text-emerald-600">${r28 !== null ? r28 : '-'}</td>
+                                                    <td class="p-2.5 border text-center font-semibold text-primary-700 bg-blue-50/20">${t29}</td>
+                                                    <td class="p-2.5 border text-center font-bold text-emerald-600 bg-blue-50/20">${r29 !== null ? r29 : '-'}</td>
+                                                    <td class="p-2.5 border text-center bg-amber-50/30">${calcYoY(r25, r26)}</td>
+                                                    <td class="p-2.5 border text-center bg-amber-50/30">${calcYoY(r26, r27)}</td>
+                                                    <td class="p-2.5 border text-center bg-amber-50/30">${calcYoY(r27, r28)}</td>
+                                                    <td class="p-2.5 border text-center bg-amber-50/30">${calcYoY(r28, r29)}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- REVISI 6: Grafik Target vs Realisasi 2025-2029 per Indikator -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base">Grafik Target vs Realisasi Indikator Kinerja (2025 - 2029)</h3>
+                                    <p class="text-xs text-slate-500">Perbandingan Target dan Realisasi setiap indikator dari tahun 2025 s.d 2029</p>
+                                </div>
+                                <select id="selectIndikatorMultiYearChart" onchange="renderMultiYearIndikatorChart()" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700 max-w-xs">
+                                    <option value="Semua">Rata-rata Seluruh Indikator</option>
+                                    ${(DB.renstraIndikatorKinerja || []).map(ik => `<option value="${ik.namaIndikator}">${ik.kodeIndikator ? ik.kodeIndikator + ' - ' : ''}${ik.namaIndikator}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="relative min-h-[340px]">
+                                <canvas id="targetVsRealMultiYearChart"></canvas>
+                            </div>
+                        </div>
                         <!-- Charts Grid -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                             <div>
@@ -2749,6 +2850,7 @@ if (matchedCap.length > 0) {
                             }
                         }
                     });
+                    renderMultiYearIndikatorChart();
                     // === GRAFIK REALISASI ANGGARAN (IKUT FILTER TERPADU) ===
                     const ctxAnggaran = document.getElementById('anggaranChart').getContext('2d');
                     let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
@@ -2832,7 +2934,60 @@ if (matchedCap.length > 0) {
                 }, 100);
             }
 }
+let multiYearChartInstance = null;
+        function renderMultiYearIndikatorChart() {
+            const canvas = document.getElementById('targetVsRealMultiYearChart');
+            if (!canvas) return;
+            const selEl = document.getElementById('selectIndikatorMultiYearChart');
+            const selectedInd = selEl ? selEl.value : 'Semua';
+            const years = ['2025', '2026', '2027', '2028', '2029'];
+            const ikList = (DB.renstraIndikatorKinerja || []).filter(ik => selectedInd === 'Semua' || ik.namaIndikator === selectedInd);
 
+            const targetData = years.map(yr => {
+                if (ikList.length === 0) return 0;
+                const sum = ikList.reduce((acc, ik) => {
+                    const cd = DB.cascadingDirektur.find(x => (x.indikatorId === ik.id || x.target === ik.namaIndikator) && String(x.tahun || '2025') === yr);
+                    const tVal = (cd && cd.targetVal !== undefined) ? Number(cd.targetVal) : (ik['target' + yr] !== undefined ? Number(ik['target' + yr]) : 100);
+                    return acc + tVal;
+                }, 0);
+                return Number((sum / ikList.length).toFixed(2));
+            });
+
+            const realData = years.map(yr => {
+                if (ikList.length === 0) return 0;
+                const sum = ikList.reduce((acc, ik) => {
+                    let caps = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === yr && c.status === 'Valid' && isCapaianUtamaForDashboard(c));
+                    if (filterDashboardTriwulan !== 'Semua') {
+                        caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                    }
+                    const rVal = caps.length > 0 ? Number(caps[caps.length - 1].realisasi) : 0;
+                    return acc + rVal;
+                }, 0);
+                return Number((sum / ikList.length).toFixed(2));
+            });
+
+            if (multiYearChartInstance) multiYearChartInstance.destroy();
+            multiYearChartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: years.map(y => 'Tahun ' + y),
+                    datasets: [
+                        { label: 'Target', data: targetData, backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'Realisasi', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
+                    ]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        datalabels: { anchor: 'end', align: 'top', font: { weight: 'bold', size: 10 } }
+                    }
+                }
+            });
+        }
 function renderCascadingView(container) {
             document.getElementById('pageTitle').innerText = 'Cascading Indikator Kinerja Bertahap';
             const isDirektur = currentUser.role === 'direktur';
@@ -2856,12 +3011,12 @@ function renderCascadingView(container) {
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
-                    <!-- VISUALISASI POHON CASCADING -->
+<!-- VISUALISASI POHON CASCADING & CROSSCUTTING (GAYA XMIND) -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Peta Pohon Organisasi Cascading Kinerja (Direktur &rarr; Tim Kerja &rarr; Unit)</h3>
-                                <p class="text-xs text-slate-500">Visualisasi alur penurunan indikator kinerja institusi secara hierarki sesuai tahun terpilih.</p>
+                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Cascading & Crosscutting Indikator Kinerja</h3>
+                                <p class="text-xs text-slate-500">Visualisasi alur penurunan Perjanjian Kinerja Direktur &rarr; Indikator Kinerja &rarr; Ketua Tim Kerja &rarr; Unit/Prodi/Subbag.</p>
                             </div>
                             <div class="flex items-center space-x-2">
                                 <label class="text-xs font-semibold text-slate-600">Filter Tahun Pohon:</label>
@@ -2876,50 +3031,82 @@ function renderCascadingView(container) {
                             </div>
                         </div>
                         
-                        <div class="overflow-x-auto p-6 bg-slate-50 rounded-2xl border min-w-[800px]">
+                        <div class="overflow-x-auto p-8 bg-slate-50 rounded-2xl border min-w-[900px]">
+                            ${filteredDir.length === 0 ? `<p class="text-xs text-slate-400 text-center py-6 italic">Belum ada Indikator Kinerja yang dicascadingkan pada tahun ${filterCascadingTahun}.</p>` : `
                             <div class="flex items-center space-x-6">
+                                <!-- Root Kiri: Perjanjian Kinerja Politeknik / Direktur -->
                                 <div class="flex flex-col items-center shrink-0">
-                                    <div class="px-5 py-4 bg-blue-700 text-white rounded-2xl shadow-lg text-xs font-bold text-center w-52 border-2 border-blue-800">
-                                        <i class="fa-solid fa-user-tie mb-1 block text-sm"></i> Pimpinan Tertinggi (Direktur)
+                                    <div class="px-6 py-5 bg-blue-700 text-white rounded-2xl shadow-lg text-sm font-extrabold text-center w-60 border-2 border-blue-800 leading-snug">
+                                        Perjanjian Kinerja<br>Politeknik / Direktur
                                         <span class="block text-[10px] font-normal text-blue-200 mt-1">Tahun: ${filterCascadingTahun}</span>
                                     </div>
                                 </div>
 
-                                <div class="w-10 h-0.5 bg-blue-400 shrink-0"></div>
+                                <!-- Garis Penghubung Horizontal Utama -->
+                                <div class="w-10 h-0.5 bg-blue-600 shrink-0"></div>
 
-                                <div class="flex flex-col space-y-4 flex-1">
-                                    ${DB.timKerjaList.map(tim => {
-                                        const assignedDir = filteredDir.filter(cd => cd.timKeys.includes(tim));
-                                        if (assignedDir.length === 0) return '';
-                                        const subUnits = filteredTim.filter(ct => ct.timKey === tim && assignedDir.some(ad => ad.target === ct.targetDirektur && (ad.tahun || '2025') === (ct.tahun || '2025')));
-
+                                <!-- Daftar Cabang Indikator Kinerja (Kotak Hitam/Slate-900) -->
+                                <div class="flex flex-col space-y-6 flex-1 relative border-l-2 border-blue-600 pl-6 py-2">
+                                    ${filteredDir.map((cd) => {
+                                        const timList = Array.isArray(cd.timKeys) ? [...cd.timKeys].sort((a, b) => (isTimUtamaInDir(cd, b) ? 1 : 0) - (isTimUtamaInDir(cd, a) ? 1 : 0)) : [];
                                         return `
-                                            <div class="flex items-center space-x-4 relative">
-                                                <div class="absolute -left-6 top-0 bottom-0 w-0.5 bg-slate-300"></div>
-                                                <div class="w-6 h-0.5 bg-blue-400 shrink-0"></div>
-                                                <div class="px-4 py-3 bg-gradient-to-br from-purple-700 to-indigo-800 text-white rounded-xl shadow-md text-xs font-semibold text-center w-52 shrink-0 border border-purple-800">
-                                                    <i class="fa-solid fa-users-gear mb-1 block"></i> Tim Kerja: ${tim}
+                                            <div class="flex items-center space-x-5 relative">
+                                                <div class="w-6 h-0.5 bg-blue-600 shrink-0 -ml-6"></div>
+                                                
+                                                <!-- Node Indikator Kinerja -->
+                                                <div class="px-5 py-3.5 bg-slate-900 text-white rounded-xl shadow-md text-xs font-bold w-64 shrink-0 border border-slate-800">
+                                                    <div>${cd.target}</div>
+                                                    <div class="text-[10px] font-normal text-slate-300 mt-1">Target: ${cd.targetVal !== undefined ? cd.targetVal : 100} ${cd.satuan || '%'} (${cd.tahun || '2025'})</div>
                                                 </div>
-                                                <div class="w-8 h-0.5 bg-blue-400 shrink-0"></div>
-                                                <div class="flex flex-col space-y-2 flex-1 py-2">
-                                                                                                       ${subUnits.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada unit diturunkan</span>' : subUnits.map(ct => {
-                                                        const parentCd = assignedDir.find(ad => ad.target === ct.targetDirektur && (ad.tahun || '2025') === (ct.tahun || '2025'));
-                                                        const isTimUtama = isTimUtamaInDir(parentCd, tim);
+
+                                                <div class="w-6 h-0.5 bg-slate-400 shrink-0"></div>
+
+                                                <!-- Daftar Ketua Tim Kerja pada Indikator Ini -->
+                                                <div class="flex flex-col space-y-3 flex-1 border-l-2 border-slate-400 pl-5 py-1">
+                                                    ${timList.length === 0 ? '<span class="text-xs text-slate-400 italic">Belum ada Tim Kerja</span>' : timList.map(tim => {
+                                                        const isTimUtama = isTimUtamaInDir(cd, tim);
+                                                        const ctList = filteredTim.filter(ct => ct.timKey === tim && ct.targetDirektur === cd.target && String(ct.tahun || '2025') === String(cd.tahun || '2025'));
+                                                        const allUnits = ctList.flatMap(ct => (ct.unitTargets || []).map(u => ({
+                                                            name: u,
+                                                            isUtama: isTimUtama ? isUnitUtamaInTim(ct, u) : false
+                                                        })));
+
                                                         return `
-                                                        <div class="p-3 bg-white border ${isTimUtama ? 'border-blue-300 ring-1 ring-blue-500/10' : 'border-slate-200'} rounded-xl shadow-xs text-xs flex flex-col space-y-1.5 relative">
-                                                            <div class="flex items-center justify-between gap-2">
-                                                                <strong class="text-blue-900"><i class="fa-solid fa-bullseye text-blue-600 mr-1"></i> ${ct.targetDirektur}</strong>
-                                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${isTimUtama ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
-                                                                    Tim ${isTimUtama ? '★ Utama' : '🛡️ Support'}
-                                                                </span>
+                                                            <div class="flex items-center space-x-4 relative">
+                                                                <div class="w-5 h-0.5 bg-slate-400 shrink-0 -ml-5"></div>
+                                                                
+                                                                <!-- Box Ketua Tim Kerja -->
+                                                                <div class="bg-white border ${isTimUtama ? 'border-rose-300 shadow-xs' : 'border-slate-200'} rounded-xl px-3.5 py-2 w-52 shrink-0">
+                                                                    <div class="flex items-center space-x-2 text-xs font-bold text-slate-800">
+                                                                        <i class="fa-solid ${isTimUtama ? 'fa-star text-rose-500' : 'fa-shield-halved text-indigo-500'}"></i>
+                                                                        <span>Tim Kerja ${tim}</span>
+                                                                    </div>
+                                                                    <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${isTimUtama ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}">
+                                                                        ${isTimUtama ? 'UTAMA' : 'Support'}
+                                                                    </span>
+                                                                </div>
+
+                                                                ${allUnits.length > 0 ? `
+                                                                    <div class="w-5 h-0.5 bg-slate-300 shrink-0"></div>
+                                                                    <!-- Daftar Unit / Prodi / Subbag di bawah Tim Kerja pada Indikator ini -->
+                                                                    <div class="flex flex-col space-y-2 border-l-2 border-slate-300 pl-4 py-1">
+                                                                        ${allUnits.map(uObj => `
+                                                                            <div class="flex items-center space-x-2 relative">
+                                                                                <div class="w-4 h-0.5 bg-slate-300 shrink-0 -ml-4"></div>
+                                                                                <div class="bg-white border ${uObj.isUtama ? 'border-rose-300' : 'border-slate-200'} rounded-xl px-3 py-1.5 shadow-2xs">
+                                                                                    <div class="flex items-center space-x-1.5 text-xs font-bold text-slate-800">
+                                                                                        <i class="fa-solid ${uObj.isUtama ? 'fa-star text-rose-500' : 'fa-shield-halved text-indigo-500'} text-[10px]"></i>
+                                                                                        <span>${uObj.name}</span>
+                                                                                    </div>
+                                                                                    <span class="inline-block mt-0.5 px-2 py-0.5 rounded text-[9px] font-bold ${uObj.isUtama ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}">
+                                                                                        ${uObj.isUtama ? 'UTAMA' : 'Support'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        `).join('')}
+                                                                    </div>
+                                                                ` : ''}
                                                             </div>
-                                                            <div class="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
-                                                                ${ct.unitTargets.map(u => {
-                                                                    const isUUtama = isUnitUtamaInTim(ct, u);
-                                                                    return `<span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] border ${isUUtama ? 'bg-blue-600 text-white border-blue-700 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-300'}"><i class="fa-solid ${isUUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1"></i>${u} - ${isUUtama ? 'Utama' : 'Support'}</span>`;
-                                                                }).join('')}
-                                                            </div>
-                                                        </div>
                                                         `;
                                                     }).join('')}
                                                 </div>
@@ -2928,7 +3115,9 @@ function renderCascadingView(container) {
                                     }).join('')}
                                 </div>
                             </div>
+                            `}
                         </div>
+                    </div>
                     <!-- Bagian 1: Cascading Direktur ke Ketua Tim Kerja -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -4811,6 +5000,7 @@ async function confirmDeleteCapaian(id) {
                                         <option value="direktur">Direktur</option>
                                         <option value="tim_kerja">Ketua Tim Kerja</option>
                                         <option value="ketua_unit">Ketua Prodi / Unit</option>
+                                        <option value="viewer">Viewer (Hanya Lihat Semua Menu kecuali Manajemen User)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -4929,7 +5119,7 @@ async function confirmDeleteCapaian(id) {
             showToast(`Password untuk ${DB.users[idx].name} direset menjadi: 123456`);
         }
 
-        function renderLaporanView(container) {
+function renderLaporanView(container) {
             document.getElementById('pageTitle').innerText = 'Cetak Laporan Kinerja (Ekspor PDF) & Ekspor CSV';
             
             const isKaUnit = currentUser.role === 'ketua_unit';
@@ -4942,15 +5132,63 @@ async function confirmDeleteCapaian(id) {
                 validCapaian = validCapaian.filter(c => c.timKey === currentUser.timKey);
             }
 
+            const renderReportRows = (list) => {
+                if (list.length === 0) return '<tr><td colspan="9" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi</td></tr>';
+                return list.map((c, idx) => {
+                    const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
+                    const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
+                    const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
+                    const targetVal = Number(c.target) || 100;
+                    const realVal = Number(c.realisasi) || 0;
+                    const pOutput = targetVal > 0 ? (realVal / targetVal) * 100 : 0;
+                    const isTercapai = realVal >= targetVal;
+
+                    const tahun = String(c.tahun || '2025');
+                    const paguVal = ikObj ? (Number(ikObj['anggaran' + tahun]) || 100000000) : 100000000;
+                    const subRa = DB.realisasiAnggaranAdmin.filter(ra => ikObj && ra.indikatorId === ikObj.id && String(ra.tahun) === tahun);
+                    const realAnggaranVal = subRa.reduce((a, b) => a + Number(b.realisasiAnggaran || 0), 0);
+                    const pAnggaran = paguVal > 0 ? (realAnggaranVal / paguVal) * 100 : 0;
+
+                    const isEfektif = pOutput >= 100;
+                    const isEfisien = pAnggaran <= pOutput;
+
+                    return `
+                    <tr>
+                        <td class="p-2 border text-center font-semibold">${idx + 1}</td>
+                        <td class="p-2 border">${sasaranKinerjaText}</td>
+                        <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
+                        <td class="p-2 border text-center font-semibold">${c.target}</td>
+                        <td class="p-2 border text-center">${c.satuan || '%'}</td>
+                        <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi}</td>
+                        <td class="p-2 border text-center">
+                            <span class="px-2 py-0.5 rounded font-bold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                                ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
+                            </span>
+                        </td>
+                        <td class="p-2 border text-center">
+                            <span class="px-2 py-0.5 rounded font-bold ${isEfektif ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                                ${isEfektif ? 'Efektif' : 'Tidak Efektif'}
+                            </span>
+                        </td>
+                        <td class="p-2 border text-center">
+                            <span class="px-2 py-0.5 rounded font-bold ${isEfisien ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                                ${isEfisien ? 'Efisien' : 'Tidak Efisien'}
+                            </span>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            };
+
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto space-y-6 no-print">
                         <div class="flex flex-col md:flex-row items-center justify-between gap-4 border-b pb-4">
                             <div>
                                 <h3 class="font-bold text-slate-900 text-base">Pengaturan Ekspor & Download PDF & Ekspor CSV</h3>
-                                <p class="text-xs text-slate-500">Sesuaikan filter triwulan, kolom CSV, dan nama penandatangan dokumen</p>
+                                <p class="text-xs text-slate-500">Sesuaikan filter triwulan, pilih kolom CSV via pop-up, dan nama penandatangan dokumen</p>
                             </div>
-                            <div class="flex items-center space-x-3">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <select id="printPeriode" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
                                     <option value="Semua">Semua Periode</option>
                                     <option value="TW 1">Triwulan 1</option>
@@ -4958,9 +5196,13 @@ async function confirmDeleteCapaian(id) {
                                     <option value="TW 3">Triwulan 3</option>
                                     <option value="TW 4">Triwulan 4</option>
                                 </select>
-                                <button onclick="triggerPrintPDF()" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow flex items-center space-x-2">
+                                <button onclick="triggerPrintPDF()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-2">
                                     <i class="fa-solid fa-file-pdf"></i>
                                     <span>Ekspor & Download PDF</span>
+                                </button>
+                                <button onclick="openExportCapaianCsvModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-2">
+                                    <i class="fa-solid fa-file-excel"></i>
+                                    <span>Pilih Kolom & Ekspor CSV</span>
                                 </button>
                             </div>
                         </div>
@@ -4982,24 +5224,6 @@ async function confirmDeleteCapaian(id) {
                                 <input type="text" id="customJabatan3" value="Ketua Unit / Prodi" class="w-full p-2 bg-white border rounded-lg text-xs mb-1">
                                 <input type="text" id="customNama3" value="${currentUser.name}" class="w-full p-2 bg-white border rounded-lg text-xs">
                             </div>
-                        </div>
-
-                        <!-- CSV Column Selection Checkboxes -->
-                        <div class="border-t pt-4 space-y-3">
-                            <h4 class="font-bold text-slate-800 text-sm">Pilih Kolom untuk Ekspor CSV</h4>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_unit" checked class="rounded text-primary-600"><span>Unit / Prodi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_indikator" checked class="rounded text-primary-600"><span>Indikator Utama</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_program" checked class="rounded text-primary-600"><span>Program Kerja</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_periode" checked class="rounded text-primary-600"><span>Periode & Satuan</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_target" checked class="rounded text-primary-600"><span>Target & Realisasi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_status" checked class="rounded text-primary-600"><span>Status Validasi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="chk_tindak" checked class="rounded text-primary-600"><span>Tindak Lanjut</span></label>
-                            </div>
-                            <button onclick="downloadCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-2">
-                                <i class="fa-solid fa-file-excel"></i>
-                                <span>Download CSV (Sesuai Kolom Terpilih)</span>
-                            </button>
                         </div>
                     </div>
 
@@ -5024,49 +5248,89 @@ async function confirmDeleteCapaian(id) {
                                         <th class="p-2 border text-center">Realisasi</th>
                                         <th class="p-2 border text-center">Status</th>
                                         <th class="p-2 border text-center">Efektivitas</th>
-                                        <th class="p-2 border text-center">Efisiensi</th>
+                                        <th class="p-2 border text-center">Efisien</th>
                                     </tr>
                                 </thead>
                                 <tbody id="printTableBody">
-                                    ${validCapaian.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi</td></tr>' : validCapaian.map((c, idx) => {
-                                        const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
-                                        const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
-                                        const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
-                                        const isTercapai = Number(c.realisasi) >= Number(c.target);
-                                        return `
-                                        <tr>
-                                            <td class="p-2 border text-center font-semibold">${idx + 1}</td>
-                                            <td class="p-2 border">${sasaranKinerjaText}</td>
-                                            <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
-                                            <td class="p-2 border text-center font-semibold">${c.target}</td>
-                                            <td class="p-2 border text-center">${c.satuan || '%'}</td>
-                                            <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi}</td>
-                                            <td class="p-2 border text-center">
-                                                <span class="px-2 py-0.5 rounded font-bold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
-                                                    ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        `;
-                                    }).join('')}
+                                    ${renderReportRows(validCapaian)}
                                 </tbody>
                             </table>
                         </div>
 
                         <div class="pt-8 grid grid-cols-3 gap-4 text-center text-xs">
                             <div>
-                                <p class="mb-16"><span id="lblJabatan1" class="border-b border-dotted pb-0.5 block">Direktur</span><br><strong id="lblNama1" class="mt-1 block">Prof. Dr. H. Direktur, M.Si.</strong></p>
+                                <p class="mb-16"><span id="lblJabatan1" class="border-b border-dotted pb-0.5 block">Direktur</span><br><strong id="lblNama1" class="mt-1 block">Dr. Supardi S.Pd., M.Pd</strong></p>
                             </div>
                             <div>
-                                <p class="mb-16"><span id="lblJabatan2" class="border-b border-dotted pb-0.5 block">Ketua Tim Kerja</span><br><strong id="lblNama2" class="mt-1 block">Dr. Ahmad Akademik, M.T.</strong></p>
+                                <p class="mb-16"><span id="lblJabatan2" class="border-b border-dotted pb-0.5 block">Ketua Tim Kerja</span><br><strong id="lblNama2" class="mt-1 block">xxxxxxx</strong></p>
                             </div>
                             <div>
                                 <p class="mb-16"><span id="lblJabatan3" class="border-b border-dotted pb-0.5 block">Ketua Unit / Prodi</span><br><strong id="lblNama3" class="mt-1 block">${currentUser.name}</strong></p>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Capaian Kinerja (Revisi 8) -->
+                    <div id="exportCapaianCsvModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 no-print">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4">
+                            <div class="flex justify-between items-center border-b pb-4">
+                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i> Pilih Kolom untuk Ekspor CSV</h3>
+                                <button type="button" onclick="closeExportCapaianCsvModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            </div>
+                            <p class="text-xs text-slate-500">Centang kolom-kolom pada sistem yang ingin Anda ekstrak ke dalam file CSV:</p>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5 text-xs bg-slate-50 p-4 rounded-xl border max-h-72 overflow-y-auto">
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_1" checked class="rounded text-emerald-600"><span>1. Nomor</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_2" checked class="rounded text-emerald-600"><span>2. Tahun</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_3" checked class="rounded text-emerald-600"><span>3. Periode / Triwulan</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_4" checked class="rounded text-emerald-600"><span>4. Tim Kerja</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_5" checked class="rounded text-emerald-600"><span>5. Unit / Prodi / Subbag</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_6" checked class="rounded text-emerald-600"><span>6. Kategori (Utama/Support)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_7" checked class="rounded text-emerald-600"><span>7. Tujuan Kemenperin (Tier 1)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_8" checked class="rounded text-emerald-600"><span>8. Sasaran BPSDMI (Tier 2)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_9" checked class="rounded text-emerald-600"><span>9. Sasaran Kinerja (Tier 3)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_10" checked class="rounded text-emerald-600"><span>10. Indikator Kinerja Utama</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_11" checked class="rounded text-emerald-600"><span>11. Program Kerja Intervensi</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_12" checked class="rounded text-emerald-600"><span>12. Target</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_13" checked class="rounded text-emerald-600"><span>13. Realisasi</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_14" checked class="rounded text-emerald-600"><span>14. Satuan</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_15" checked class="rounded text-emerald-600"><span>15. % Capaian Output</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_16" checked class="rounded text-emerald-600"><span>16. Status Ketercapaian</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_17" checked class="rounded text-emerald-600"><span>17. Pagu Anggaran (Rp)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_18" checked class="rounded text-emerald-600"><span>18. Realisasi Anggaran (Rp)</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_19" checked class="rounded text-emerald-600"><span>19. Efektivitas</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_20" checked class="rounded text-emerald-600"><span>20. Efisiensi</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_21" checked class="rounded text-emerald-600"><span>21. Permasalahan</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_22" checked class="rounded text-emerald-600"><span>22. Link Bukti Kinerja</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_23" checked class="rounded text-emerald-600"><span>23. Status Validasi</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_24" checked class="rounded text-emerald-600"><span>24. Arahan / Rekomendasi</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_25" checked class="rounded text-emerald-600"><span>25. Penyesuaian</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_26" checked class="rounded text-emerald-600"><span>26. Status Tindak Lanjut</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_27" checked class="rounded text-emerald-600"><span>27. Link Bukti Tindak Lanjut</span></label>
+                            </div>
+                            <div class="flex justify-between items-center pt-2">
+                                <div class="space-x-2 text-xs">
+                                    <button type="button" onclick="document.querySelectorAll('input[id^=cap_csv_]').forEach(c => c.checked = true)" class="text-blue-600 font-semibold underline">Pilih Semua</button>
+                                    <button type="button" onclick="document.querySelectorAll('input[id^=cap_csv_]').forEach(c => c.checked = false)" class="text-slate-500 font-semibold underline">Hapus Centang</button>
+                                </div>
+                                <div class="space-x-2">
+                                    <button type="button" onclick="closeExportCapaianCsvModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">Batal</button>
+                                    <button type="button" onclick="downloadCSV()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow">Download CSV Terpilih</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
+        }
+
+        function openExportCapaianCsvModal() {
+            const modal = document.getElementById('exportCapaianCsvModal');
+            if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        }
+
+        function closeExportCapaianCsvModal() {
+            const modal = document.getElementById('exportCapaianCsvModal');
+            if (modal) { modal.classList.remove('flex'); modal.classList.add('hidden'); }
         }
 
         function triggerPrintPDF() {
@@ -5093,12 +5357,25 @@ async function confirmDeleteCapaian(id) {
                 validCapaian = validCapaian.filter(c => c.timKey === currentUser.timKey);
             }
 
-           const tbody = document.getElementById('printTableBody');
-            tbody.innerHTML = validCapaian.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi untuk periode ini</td></tr>' : validCapaian.map((c, idx) => {
+            const tbody = document.getElementById('printTableBody');
+            tbody.innerHTML = validCapaian.length === 0 ? '<tr><td colspan="9" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi untuk periode ini</td></tr>' : validCapaian.map((c, idx) => {
                 const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
                 const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
                 const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
-                const isTercapai = Number(c.realisasi) >= Number(c.target);
+                const targetVal = Number(c.target) || 100;
+                const realVal = Number(c.realisasi) || 0;
+                const pOutput = targetVal > 0 ? (realVal / targetVal) * 100 : 0;
+                const isTercapai = realVal >= targetVal;
+
+                const tahun = String(c.tahun || '2025');
+                const paguVal = ikObj ? (Number(ikObj['anggaran' + tahun]) || 100000000) : 100000000;
+                const subRa = DB.realisasiAnggaranAdmin.filter(ra => ikObj && ra.indikatorId === ikObj.id && String(ra.tahun) === tahun);
+                const realAnggaranVal = subRa.reduce((a, b) => a + Number(b.realisasiAnggaran || 0), 0);
+                const pAnggaran = paguVal > 0 ? (realAnggaranVal / paguVal) * 100 : 0;
+
+                const isEfektif = pOutput >= 100;
+                const isEfisien = pAnggaran <= pOutput;
+
                 return `
                 <tr>
                     <td class="p-2 border text-center font-semibold">${idx + 1}</td>
@@ -5107,11 +5384,9 @@ async function confirmDeleteCapaian(id) {
                     <td class="p-2 border text-center font-semibold">${c.target}</td>
                     <td class="p-2 border text-center">${c.satuan || '%'}</td>
                     <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi}</td>
-                    <td class="p-2 border text-center">
-                        <span class="font-bold ${isTercapai ? 'text-emerald-700' : 'text-rose-700'}">
-                            ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
-                        </span>
-                    </td>
+                    <td class="p-2 border text-center"><span class="font-bold ${isTercapai ? 'text-emerald-700' : 'text-rose-700'}">${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}</span></td>
+                    <td class="p-2 border text-center"><span class="font-bold ${isEfektif ? 'text-emerald-700' : 'text-rose-700'}">${isEfektif ? 'Efektif' : 'Tidak Efektif'}</span></td>
+                    <td class="p-2 border text-center"><span class="font-bold ${isEfisien ? 'text-emerald-700' : 'text-rose-700'}">${isEfisien ? 'Efisien' : 'Tidak Efisien'}</span></td>
                 </tr>
                 `;
             }).join('');
@@ -5120,47 +5395,97 @@ async function confirmDeleteCapaian(id) {
         }
 
         function downloadCSV() {
-            const chk_unit = document.getElementById('chk_unit').checked;
-            const chk_indikator = document.getElementById('chk_indikator').checked;
-            const chk_program = document.getElementById('chk_program').checked;
-            const chk_periode = document.getElementById('chk_periode').checked;
-            const chk_target = document.getElementById('chk_target').checked;
-            const chk_status = document.getElementById('chk_status').checked;
-            const chk_tindak = document.getElementById('chk_tindak').checked;
+            const headers = [
+                "Nomor", "Tahun", "Periode", "Tim Kerja", "Unit / Prodi", "Kategori",
+                "Tujuan Kemenperin", "Sasaran BPSDMI", "Sasaran Kinerja", "Indikator Kinerja Utama",
+                "Program Kerja Intervensi", "Target", "Realisasi", "Satuan", "% Capaian Output",
+                "Status Ketercapaian", "Pagu Anggaran (Rp)", "Realisasi Anggaran (Rp)", "Efektivitas",
+                "Efisiensi", "Permasalahan", "Link Bukti Kinerja", "Status Validasi",
+                "Arahan / Rekomendasi", "Penyesuaian", "Status Tindak Lanjut", "Link Bukti Tindak Lanjut"
+            ];
 
-            let headers = [];
-            if (chk_unit) headers.push("Unit");
-            if (chk_indikator) headers.push("Indikator Utama");
-            if (chk_program) headers.push("Program Kerja");
-            if (chk_periode) headers.push("Periode");
-            if (chk_target) headers.push("Target", "Realisasi");
-            if (chk_status) headers.push("Status Validasi");
-            if (chk_tindak) headers.push("Tindak Lanjut");
+            let cols = [];
+            for (let i = 1; i <= 27; i++) {
+                const chk = document.getElementById(`cap_csv_${i}`);
+                if (chk && chk.checked) cols.push(i - 1);
+            }
 
-            let csvRows = [headers.join(",")];
-            DB.capaian.forEach(c => {
-                let row = [];
-                if (chk_unit) row.push(`"${c.unit}"`);
-                if (chk_indikator) row.push(`"${c.targetDirektur}"`);
-                if (chk_program) row.push(`"${c.program}"`);
-                if (chk_periode) row.push(`"${c.triwulan}"`);
-                if (chk_target) row.push(c.target, c.realisasi);
-                if (chk_status) row.push(`"${c.status}"`);
-                if (chk_tindak) row.push(`"${c.statusTindakLanjut}"`);
-                csvRows.push(row.join(","));
+            if (cols.length === 0) {
+                showToast('Pilih minimal 1 kolom untuk didownload!', 'error');
+                return;
+            }
+
+            let csvRows = [cols.map(idx => `"${headers[idx]}"`).join(",")];
+
+            DB.capaian.forEach((c, index) => {
+                const tahun = String(c.tahun || '2025');
+                const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
+                const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
+                const bpObj = skObj ? DB.renstraBPSDMI.find(bp => bp.id === skObj.bpsdmiId) : null;
+                const tkObj = bpObj ? DB.renstraTujuanKemenperin.find(tk => tk.id === bpObj.tujuanKemenperinId) : null;
+
+                const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
+                const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahun && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && x.unitTargets.includes(c.unit));
+                const isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
+
+                const targetVal = Number(c.target) || 100;
+                const realVal = Number(c.realisasi) || 0;
+                const pOutput = targetVal > 0 ? ((realVal / targetVal) * 100).toFixed(2) : 0;
+                const isTercapai = realVal >= targetVal ? 'Tercapai' : 'Tidak Tercapai';
+
+                const paguVal = ikObj ? (Number(ikObj['anggaran' + tahun]) || 100000000) : 100000000;
+                const subRa = DB.realisasiAnggaranAdmin.filter(ra => ikObj && ra.indikatorId === ikObj.id && String(ra.tahun) === tahun);
+                const realAnggaranVal = subRa.reduce((a, b) => a + Number(b.realisasiAnggaran || 0), 0);
+                const pAnggaran = paguVal > 0 ? (realAnggaranVal / paguVal) * 100 : 0;
+
+                const efektifStr = Number(pOutput) >= 100 ? 'Efektif' : 'Tidak Efektif';
+                const efisienStr = pAnggaran <= Number(pOutput) ? 'Efisien' : 'Tidak Efisien';
+
+                const rowData = [
+                    index + 1,
+                    tahun,
+                    c.triwulan || '-',
+                    c.timKey || '-',
+                    c.unit || '-',
+                    isUtama ? 'Utama' : 'Support',
+                    tkObj ? tkObj.sasaran : '-',
+                    bpObj ? bpObj.sasaran : '-',
+                    skObj ? skObj.sasaranKinerja : '-',
+                    c.targetDirektur || '-',
+                    c.program || '-',
+                    targetVal,
+                    realVal,
+                    c.satuan || '%',
+                    pOutput + '%',
+                    isTercapai,
+                    paguVal,
+                    realAnggaranVal,
+                    efektifStr,
+                    efisienStr,
+                    c.permasalahan || '-',
+                    c.linkBukti || '-',
+                    c.status || '-',
+                    c.rekomendasi || '-',
+                    Array.isArray(c.penyesuaian) ? c.penyesuaian.join('; ') : '-',
+                    c.statusTindakLanjut || '-',
+                    c.linkBuktiTindakLanjut || '-'
+                ];
+
+                let selectedRow = cols.map(idx => `"${String(rowData[idx]).replace(/"/g, '""')}"`);
+                csvRows.push(selectedRow.join(","));
             });
 
             const blob = new Blob([csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.setAttribute('href', url);
-            a.setAttribute('download', 'laporan_ki_jaro.csv');
+            a.setAttribute('download', 'laporan_lengkap_ki_jaro.csv');
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            closeExportCapaianCsvModal();
             showToast('File CSV berhasil diunduh!');
         }
-
         // === SINKRONISASI STABIL & LENGKAP KE MYSQL ===
         async function loadDataFromMySQL() {
             try {
