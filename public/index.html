@@ -4931,7 +4931,7 @@ function renderUnitSubCheckboxes(targetUnit) {
             const isKetuaTim = currentUser.role === 'tim_kerja';
             const isAdmin = currentUser.role === 'admin';
 
-           let displayCapaian = DB.capaian;
+          let displayCapaian = DB.capaian;
             const myParentUnit = getParentUnitForSubUser(currentUser);
             if (isSubUnit) {
                 displayCapaian = DB.capaian.filter(c => c.unit.toLowerCase() === myParentUnit.toLowerCase() || c.inputByUsername === currentUser.username);
@@ -4947,9 +4947,6 @@ function renderUnitSubCheckboxes(targetUnit) {
                 });
             }
                 const validUnits = DB.cascadingTim.filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets);
-                // Ketua Tim Kerja HANYA melihat capaian yang:
-                // 1) Diinput langsung oleh Ketua Unit, ATAU
-                // 2) Diinput oleh level bawah (Sekretaris/Kalab/Dosen/Tendik) DAN SUDAH divalidasi Tahap 1 (Valid) oleh Ketua Unit/Prodi
                 displayCapaian = DB.capaian.filter(c => {
                     const matchScope = validUnits.includes(c.unit) && c.timKey === currentUser.timKey;
                     if (!matchScope) return false;
