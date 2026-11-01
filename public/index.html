@@ -157,18 +157,19 @@ button { position: relative; z-index: 10; }
         // FASE 1: FONDASI KEAMANAN (XSS, CSRF, RATE LIMIT, SESSION, IDLE TIMEOUT)
         // =========================================================================
         const ROLE_LABELS = {
-            admin: 'Administrator Sistem',
-            direktur: 'Direktur',
-            tim_kerja: 'Ketua Tim Kerja',
-            ketua_unit: 'Ketua Prodi / Subbag / Unit',
-            viewer: 'Viewer (Monitoring & Evaluasi)',
-            sekretaris: 'Sekretaris',
-            kalab: 'Kepala Laboratorium',
-            koordinator: 'Koordinator Bidang',
-            dosen: 'Dosen',
-            tendik: 'Tenaga Kependidikan (Tendik)'
-        };
-
+         admin: 'Administrator Sistem',
+         direktur: 'Direktur',
+         pudir2: 'Pembantu Direktur II (Pudir 2)',
+         program: 'Tim Program / Evaluasi (Program)',
+         tim_kerja: 'Ketua Tim Kerja',
+         ketua_unit: 'Ketua Prodi / Subbag / Unit',
+         viewer: 'Viewer (Monitoring & Evaluasi)',
+         sekretaris: 'Sekretaris',
+         kalab: 'Kepala Laboratorium',
+         koordinator: 'Koordinator Bidang',
+         dosen: 'Dosen',
+         tendik: 'Tenaga Kependidikan (Tendik)'
+     };
         // Daftar role fungsional tingkat bawah di bawah Unit/Prodi
         const SUB_UNIT_ROLES = ['sekretaris', 'kalab', 'koordinator', 'dosen', 'tendik'];
 
@@ -420,6 +421,10 @@ button { position: relative; z-index: 10; }
             capaian: [],                 
             risiko: [],                  
             realisasiAnggaranAdmin: [],  
+            monevLakip: [],              // Fase 3 Poin 13
+            monevSakip: [],              // Fase 3 Poin 14
+            monevRenstra: [],            // Fase 3 Poin 15
+            masukanItjen: [],            // Fase 3 Poin 16 & 17  
             dokumenPerencanaan: [
                 { nama: 'Renstra Politeknik Industri Petrokimia Banten 2025-2029', kategori: 'Renstra', tahun: '2025-2029', link: '#' },
                 { nama: 'RKA-KL Politeknik Industri Petrokimia Banten', kategori: 'RKA-KL', tahun: '2025', link: '#' },
@@ -1400,7 +1405,16 @@ function renderDashboardLayout() {
                                 <i class="fa-solid fa-list-check w-5 text-center"></i>
                                 <span class="sidebar-text">Monitoring Tindak Lanjut</span>
                             </a>
+                            <a href="javascript:void(0)" onclick="switchTab('monev')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'monev' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                <i class="fa-solid fa-clipboard-check w-5 text-center"></i>
+                                <span class="sidebar-text">Monev (LAKIP, SAKIP, Renstra)</span>
+                            </a>
 
+                            <a href="javascript:void(0)" onclick="switchTab('itjen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'itjen' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                <i class="fa-solid fa-shield-halved w-5 text-center"></i>
+                                <span class="sidebar-text">Masukan ITJEN & Tindak Lanjut</span>
+                            </a>
+                            
                             ${currentUser.role === 'admin' ? `
                                 <a href="javascript:void(0)" onclick="switchTab('admin')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                     <i class="fa-solid fa-users-gear w-5 text-center"></i>
@@ -1574,6 +1588,8 @@ function renderDashboardLayout() {
             else if (tab === 'capaian') renderCapaianView(content);
             else if (tab === 'risiko') renderRisikoView(content);
             else if (tab === 'tindaklanjut') renderTindakLanjutMonitorView(content);
+            else if (tab === 'monev') renderMonevView(content);
+            else if (tab === 'itjen') renderItjenView(content);
             else if (tab === 'admin') renderAdminView(content);
             else if (tab === 'laporan') renderLaporanView(content);
             else if (tab === 'dokumen_ukur_lapor') renderDokumenUkurLaporView(content);
@@ -6178,6 +6194,192 @@ async function saveCascadingTim(e) {
                     </div>
                 </div>
             `;
+        }
+        // =========================================================================
+        // FASE 3: MODUL MONEV LAKIP, SAKIP, & RENSTRA (Poin 12 - 15)
+        // =========================================================================
+        let activeMonevTab = 'lakip';
+
+        function renderMonevView(container) {
+            document.getElementById('pageTitle').innerText = 'Monitoring & Evaluasi (Monev LAKIP, SAKIP, Renstra)';
+            const canUpload = currentUser.role === 'program' || currentUser.role === 'admin';
+
+            if (!DB.monevLakip) DB.monevLakip = [];
+            if (!DB.monevSakip) DB.monevSakip = [];
+            if (!DB.monevRenstra) DB.monevRenstra = [];
+
+            const currentData = activeMonevTab === 'lakip' ? DB.monevLakip : (activeMonevTab === 'sakip' ? DB.monevSakip : DB.monevRenstra);
+
+            container.innerHTML = `
+                <div class="space-y-6 animate-fadeIn">
+                    <!-- Sub-Tab Navigasi -->
+                    <div class="flex space-x-2 border-b border-slate-200 pb-3">
+                        <button onclick="activeMonevTab = 'lakip'; renderMonevView(document.getElementById('mainContent'));" class="px-5 py-2.5 rounded-xl font-bold text-xs transition-all ${activeMonevTab === 'lakip' ? 'bg-blue-600 text-white shadow' : 'bg-white text-slate-600 border hover:bg-slate-50'}">
+                            <i class="fa-solid fa-file-lines mr-1.5"></i> Monev LAKIP
+                        </button>
+                        <button onclick="activeMonevTab = 'sakip'; renderMonevView(document.getElementById('mainContent'));" class="px-5 py-2.5 rounded-xl font-bold text-xs transition-all ${activeMonevTab === 'sakip' ? 'bg-blue-600 text-white shadow' : 'bg-white text-slate-600 border hover:bg-slate-50'}">
+                            <i class="fa-solid fa-folder-closed mr-1.5"></i> Monev SAKIP
+                        </button>
+                        <button onclick="activeMonevTab = 'renstra'; renderMonevView(document.getElementById('mainContent'));" class="px-5 py-2.5 rounded-xl font-bold text-xs transition-all ${activeMonevTab === 'renstra' ? 'bg-blue-600 text-white shadow' : 'bg-white text-slate-600 border hover:bg-slate-50'}">
+                            <i class="fa-solid fa-book-open mr-1.5"></i> Monev Renstra
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base uppercase">Dokumen Evaluasi & Bukti Kegiatan (${activeMonevTab.toUpperCase()})</h3>
+                                <p class="text-xs text-slate-500">Unggah absensi, notulen, undangan, serta dokumentasi foto kegiatan monev</p>
+                            </div>
+                            ${canUpload && !isPureViewer() ? `
+                                <button onclick="openMonevModal('${activeMonevTab}')" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-2">
+                                    <i class="fa-solid fa-upload"></i>
+                                    <span>Upload Berkas Monev</span>
+                                </button>
+                            ` : ''}
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead class="bg-slate-50 text-slate-700 font-semibold border-b">
+                                    <tr>
+                                        <th class="p-3 text-center w-12">No</th>
+                                        <th class="p-3">Nama Kegiatan / Evaluasi</th>
+                                        <th class="p-3 text-center">Periode / Tahun</th>
+                                        <th class="p-3">Berkas Upload (Absen, Notulen, Undangan)</th>
+                                        <th class="p-3 text-center">Dokumentasi Foto</th>
+                                        <th class="p-3">Pengunggah</th>
+                                        ${canUpload && !isPureViewer() ? '<th class="p-3 text-center">Aksi</th>' : ''}
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    ${currentData.length === 0 ? `<tr><td colspan="${canUpload ? 7 : 6}" class="p-8 text-center text-slate-400">Belum ada data monev ${activeMonevTab.toUpperCase()} terunggah.</td></tr>` : currentData.map((item, idx) => `
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-3 text-center font-semibold text-slate-600">${idx + 1}</td>
+                                            <td class="p-3 font-bold text-slate-900">${sanitizeHTML(item.namaKegiatan)}</td>
+                                            <td class="p-3 text-center font-semibold">${sanitizeHTML(item.tahun)}</td>
+                                            <td class="p-3 space-y-1">
+                                                ${item.linkAbsen ? `<a href="${item.linkAbsen}" target="_blank" class="block text-blue-600 underline font-semibold"><i class="fa-solid fa-file-lines mr-1"></i> Absensi</a>` : ''}
+                                                ${item.linkNotulen ? `<a href="${item.linkNotulen}" target="_blank" class="block text-blue-600 underline font-semibold"><i class="fa-solid fa-file-pen mr-1"></i> Notulen</a>` : ''}
+                                                ${item.linkUndangan ? `<a href="${item.linkUndangan}" target="_blank" class="block text-blue-600 underline font-semibold"><i class="fa-solid fa-envelope-open-text mr-1"></i> Undangan</a>` : ''}
+                                            </td>
+                                            <td class="p-3 text-center">
+                                                ${item.linkFoto ? `<a href="${item.linkFoto}" target="_blank" class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg font-bold text-[10px] inline-flex items-center"><i class="fa-solid fa-image mr-1"></i> Lihat Foto</a>` : '<span class="text-slate-400">-</span>'}
+                                            </td>
+                                            <td class="p-3 text-slate-600">${sanitizeHTML(item.uploaderName || '-')}</td>
+                                            ${canUpload && !isPureViewer() ? `
+                                                <td class="p-3 text-center">
+                                                    <button onclick="deleteMonevDoc('${activeMonevTab}', ${idx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                </td>
+                                            ` : ''}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Upload Monev -->
+                <div id="monevModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <h3 id="monevModalTitle" class="font-bold text-slate-900 text-base">Upload Berkas Monev</h3>
+                            <button type="button" onclick="closeMonevModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <form onsubmit="saveMonevDoc(event)" class="space-y-3.5 text-sm">
+                            <input type="hidden" id="monevJenis" value="lakip">
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Kegiatan / Evaluasi</label>
+                                <input type="text" id="mNama" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Contoh: Evaluasi Triwulan I LAKIP...">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1 text-xs">Periode / Tahun</label>
+                                <input type="text" id="mTahun" required value="2025" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="2025 / TW 1">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1 text-xs">Link Absensi (URL Google Drive)</label>
+                                <input type="url" id="mAbsen" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="https://drive.google.com/...">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1 text-xs">Link Notulen Rapat</label>
+                                <input type="url" id="mNotulen" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="https://drive.google.com/...">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1 text-xs">Link Undangan Rapat</label>
+                                <input type="url" id="mUndangan" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="https://drive.google.com/...">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1 text-xs">Link Dokumentasi Foto Kegiatan</label>
+                                <input type="url" id="mFoto" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="https://drive.google.com/...">
+                            </div>
+                            <div class="flex justify-end space-x-2 pt-2 border-t">
+                                <button type="button" onclick="closeMonevModal()" class="px-4 py-2 bg-slate-200 rounded-xl text-xs font-semibold">Batal</button>
+                                <button type="submit" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold shadow">Simpan & Unggah</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openMonevModal(jenis) {
+            document.getElementById('monevJenis').value = jenis;
+            document.getElementById('mNama').value = '';
+            document.getElementById('mTahun').value = '2025';
+            document.getElementById('mAbsen').value = '';
+            document.getElementById('mNotulen').value = '';
+            document.getElementById('mUndangan').value = '';
+            document.getElementById('mFoto').value = '';
+            document.getElementById('monevModalTitle').innerText = `Upload Berkas Monev ${jenis.toUpperCase()}`;
+            
+            const modal = document.getElementById('monevModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeMonevModal() {
+            const modal = document.getElementById('monevModal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+        }
+
+        async function saveMonevDoc(e) {
+            e.preventDefault();
+            const jenis = document.getElementById('monevJenis').value;
+            const obj = {
+                id: 'mv_' + Date.now(),
+                namaKegiatan: sanitizeHTML(document.getElementById('mNama').value.trim()),
+                tahun: sanitizeHTML(document.getElementById('mTahun').value.trim()),
+                linkAbsen: document.getElementById('mAbsen').value.trim(),
+                linkNotulen: document.getElementById('mNotulen').value.trim(),
+                linkUndangan: document.getElementById('mUndangan').value.trim(),
+                linkFoto: document.getElementById('mFoto').value.trim(),
+                uploaderName: currentUser.name,
+                uploaderRole: currentUser.role
+            };
+
+            if (jenis === 'lakip') DB.monevLakip.push(obj);
+            else if (jenis === 'sakip') DB.monevSakip.push(obj);
+            else if (jenis === 'renstra') DB.monevRenstra.push(obj);
+
+            await saveToMySQL();
+            closeMonevModal();
+            showToast(`Berkas Monev ${jenis.toUpperCase()} berhasil diunggah!`);
+            renderMonevView(document.getElementById('mainContent'));
+        }
+
+        async function deleteMonevDoc(jenis, idx) {
+            if (!confirm('Hapus dokumen monev ini?')) return;
+            if (jenis === 'lakip') DB.monevLakip.splice(idx, 1);
+            else if (jenis === 'sakip') DB.monevSakip.splice(idx, 1);
+            else if (jenis === 'renstra') DB.monevRenstra.splice(idx, 1);
+
+            await saveToMySQL();
+            showToast('Dokumen monev berhasil dihapus.', 'info');
+            renderMonevView(document.getElementById('mainContent'));
         }
 
         function openUserModal(mode, idx = -1) {
