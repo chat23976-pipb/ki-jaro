@@ -6498,25 +6498,27 @@ async function saveCascadingTim(e) {
                 </div>
 
                 <!-- Modal Tindak Lanjut oleh Tim Program -->
-             <div id="tindakLanjutItjenModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                 <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+             <div id="tindakLanjutItjenModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
+                 <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-100">
                      <div class="flex justify-between items-center border-b pb-4">
-                         <h3 class="font-bold text-slate-900 text-base">Isi Tindak Lanjut & Bukti (Tim Program)</h3>
-                         <button type="button" onclick="closeTindakLanjutItjenModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                         <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                             <i class="fa-solid fa-pen-to-square text-amber-500"></i> Isi Tindak Lanjut & Bukti ITJEN
+                         </h3>
+                         <button type="button" onclick="closeTindakLanjutItjenModal()" class="text-slate-400 hover:text-slate-600 text-lg p-1"><i class="fa-solid fa-xmark"></i></button>
                      </div>
                      <input type="hidden" id="tlItjenId">
-                     <form onsubmit="saveTindakLanjutItjen(event)" class="space-y-3.5 text-sm">
+                     <form onsubmit="saveTindakLanjutItjen(event)" class="space-y-4 text-sm">
                          <div>
                              <label class="block font-semibold text-slate-700 mb-1 text-xs">Uraian Tindak Lanjut / Perbaikan</label>
-                             <textarea id="tlItjUraian" rows="3" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Uraikan langkah penyelesaian..."></textarea>
+                             <textarea id="tlItjUraian" rows="3" required class="w-full p-3 bg-slate-50 border rounded-xl text-xs outline-none focus:border-amber-500 focus:bg-white transition-all" placeholder="Uraikan langkah penyelesaian..."></textarea>
                          </div>
                          <div>
                              <label class="block font-semibold text-slate-700 mb-1 text-xs">Link Bukti Tindak Lanjut (Google Drive / URL)</label>
-                             <input type="url" id="tlItjLink" placeholder="https://drive.google.com/..." class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs">
+                             <input type="url" id="tlItjLink" placeholder="https://drive.google.com/..." class="w-full p-3 bg-slate-50 border rounded-xl text-xs outline-none focus:border-amber-500 focus:bg-white transition-all">
                          </div>
-                         <div class="flex justify-end space-x-2 pt-2 border-t">
-                             <button type="button" onclick="closeTindakLanjutItjenModal()" class="px-4 py-2 bg-slate-200 rounded-xl text-xs font-semibold">Batal</button>
-                             <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-semibold shadow">Kirim Tindak Lanjut</button>
+                         <div class="flex justify-end space-x-2 pt-3 border-t">
+                             <button type="button" onclick="closeTindakLanjutItjenModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all">Batal</button>
+                             <button type="submit" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-md transition-all">Kirim Tindak Lanjut</button>
                          </div>
                      </form>
                  </div>
@@ -6579,12 +6581,23 @@ async function saveCascadingTim(e) {
         function openTindakLanjutItjenModal(id) {
          if (!requireWriteAccess(['program', 'admin'])) return;
          document.getElementById('tlItjenId').value = id;
-         const found = DB.masukanItjen.find(x => x.id === id);
+         const found = DB.masukanItjen.find(x => String(x.id) === String(id));
          document.getElementById('tlItjUraian').value = found ? found.tindakLanjut || '' : '';
          document.getElementById('tlItjLink').value = found ? found.linkBuktiTl || '' : '';
+
          const modal = document.getElementById('tindakLanjutItjenModal');
-         modal.classList.remove('hidden');
-         modal.classList.add('flex');
+         if (modal) {
+             modal.classList.remove('hidden');
+             modal.classList.add('flex');
+         }
+     }
+
+     function closeTindakLanjutItjenModal() {
+         const modal = document.getElementById('tindakLanjutItjenModal');
+         if (modal) {
+             modal.classList.remove('flex');
+             modal.classList.add('hidden');
+         }
      }
 
      async function saveTindakLanjutItjen(e) {
@@ -6593,7 +6606,8 @@ async function saveCascadingTim(e) {
          const id = document.getElementById('tlItjenId').value;
          const uraian = sanitizeHTML(document.getElementById('tlItjUraian').value.trim());
          const linkBukti = document.getElementById('tlItjLink').value.trim();
-         const found = DB.masukanItjen.find(x => x.id === id);
+
+         const found = DB.masukanItjen.find(x => String(x.id) === String(id));
          if (found) {
              found.tindakLanjut = uraian;
              found.linkBuktiTl = linkBukti;
