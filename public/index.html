@@ -4931,21 +4931,13 @@ function renderUnitSubCheckboxes(targetUnit) {
             const isKetuaTim = currentUser.role === 'tim_kerja';
             const isAdmin = currentUser.role === 'admin';
 
-          let displayCapaian = DB.capaian;
+            let displayCapaian = DB.capaian;
             const myParentUnit = getParentUnitForSubUser(currentUser);
             if (isSubUnit) {
                 displayCapaian = DB.capaian.filter(c => c.unit.toLowerCase() === myParentUnit.toLowerCase() || c.inputByUsername === currentUser.username);
             } else if (isKaUnit) {
                 displayCapaian = DB.capaian.filter(c => c.unit.toLowerCase() === currentUser.unit.toLowerCase());
             } else if (isKetuaTim) {
-                const validUnits = DB.cascadingTim.filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets);
-                displayCapaian = DB.capaian.filter(c => {
-                    const matchScope = validUnits.includes(c.unit) && c.timKey === currentUser.timKey;
-                    if (!matchScope) return false;
-                    if (c.isSubUnitInput && c.statusProdi !== 'Valid') return false;
-                    return true;
-                });
-            }
                 const validUnits = DB.cascadingTim.filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets);
                 displayCapaian = DB.capaian.filter(c => {
                     const matchScope = validUnits.includes(c.unit) && c.timKey === currentUser.timKey;
@@ -5087,7 +5079,6 @@ function renderUnitSubCheckboxes(targetUnit) {
                                             </td>
                                             <td class="p-4 text-xs text-slate-600 font-medium">${sanitizeHTML(c.permasalahan || '-')}</td>
                                             <td class="p-4 space-y-2">
-                                                <!-- Tampilan Status Validasi Tahap 1 (Prodi/Unit) — DISEMBUNYIKAN dari Ketua Tim Kerja sesuai Poin 8 -->
                                                 ${!isKetuaTim && c.isSubUnitInput ? `
                                                     <div class="flex items-center space-x-1.5 text-[11px]">
                                                         <span class="text-slate-500 font-semibold">Validasi Tahap 1 (Unit):</span>
@@ -5102,7 +5093,6 @@ function renderUnitSubCheckboxes(targetUnit) {
                                                     </div>
                                                 ` : ''}
 
-                                                <!-- Status Validasi Akhir (Ketua Tim Kerja) -->
                                                 <div class="flex items-center space-x-2">
                                                     <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${
                                                         c.status === 'Valid' ? 'bg-emerald-50 text-emerald-700' : c.status === 'Tidak Valid' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
@@ -5122,7 +5112,6 @@ function renderUnitSubCheckboxes(targetUnit) {
                                                     ` : ''}
                                                 </div>
 
-                                                <!-- Arahan / Komentar Ketua Tim Kerja & Tindak Lanjut (Tindak lanjut hanya diisi Ketua Prodi/Unit; level bawah hanya membaca) -->
                                                 ${c.rekomendasi ? `
                                                     <div class="bg-primary-50 p-2.5 rounded-xl text-xs space-y-1 border border-primary-100">
                                                         <p class="text-primary-800"><strong class="font-semibold"><i class="fa-solid fa-comment-dots mr-1"></i>Arahan Ketua Tim Kerja:</strong> ${sanitizeHTML(c.rekomendasi)}</p>
@@ -5148,7 +5137,7 @@ function renderUnitSubCheckboxes(targetUnit) {
                     </div>
                 </div>
 
-                <!-- Modal Input / Edit Capaian (Dilengkapi Field "Uraian Pekerjaan" - Fase 2 Poin 10) -->
+                <!-- Modal Input / Edit Capaian -->
                 <div id="capaianModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-4">
@@ -5173,7 +5162,6 @@ function renderUnitSubCheckboxes(targetUnit) {
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Program Kerja</label>
                                 <input type="text" id="inputProgram" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Contoh: Optimalisasi Laboratorium...">
                             </div>
-                            <!-- FASE 2 POIN 10: Field Uraian Pekerjaan -->
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Uraian Pekerjaan</label>
                                 <textarea id="inputUraianPekerjaan" rows="2" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Tuliskan rincian / uraian pekerjaan yang dilaksanakan..."></textarea>
@@ -5220,7 +5208,7 @@ function renderUnitSubCheckboxes(targetUnit) {
                     </div>
                 </div>
 
-                <!-- Modal Validasi Tahap 1 oleh Ketua Prodi/Subbag/Unit (Hanya Valid/Tidak Valid tanpa saran - Fase 2 Poin 8) -->
+                <!-- Modal Validasi Tahap 1 oleh Ketua Prodi/Subbag/Unit -->
                 <div id="validateProdiModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-3">
@@ -5286,7 +5274,7 @@ function renderUnitSubCheckboxes(targetUnit) {
                     </div>
                 </div>
 
-                <!-- Modal Update Bukti Tindak Lanjut (Hanya Ketua Prodi/Subbag/Unit) -->
+                <!-- Modal Update Bukti Tindak Lanjut -->
                 <div id="tindakLanjutModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
