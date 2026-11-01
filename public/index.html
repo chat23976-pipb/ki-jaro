@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ki-Jaro - Kinerja-Jawara-Petro (Sistem Informasi Kinerja & Manajemen Risiko)</title>
+    <!-- Google Analytics (GA4) - Fase 1 Poin 7 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KIJARO2026"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-KIJARO2026', { 'anonymize_ip': true, 'cookie_flags': 'SameSite=None;Secure' });
+    </script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js & Chart.js DataLabels Plugin -->
@@ -80,34 +88,213 @@ button { position: relative; z-index: 10; }
 
     <!-- Toast Notification Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2"></div>
-<!-- Modal Ganti Password Mandiri -->
-<div id="changePasswordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+<!-- Modal Edit Profil & Password Mandiri (Fase 1 Poin 6) -->
+<div id="changePasswordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 my-8">
         <div class="flex justify-between items-center border-b pb-4">
-            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-key text-primary-600 mr-2"></i>Ganti Password Akun</h3>
-            <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-user-pen text-primary-600 mr-2"></i>Edit Profil & Keamanan Akun</h3>
+            <button type="button" onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
         </div>
-        <form onsubmit="handleSelfChangePassword(event)" class="space-y-4 text-sm">
+        <form onsubmit="handleSelfEditProfile(event)" class="space-y-4 text-sm">
+            <!-- Upload Foto Profil -->
+            <div class="flex flex-col items-center space-y-2 pb-2 border-b border-slate-100">
+                <div id="profileEditPreviewContainer" class="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-2xl overflow-hidden border-2 border-blue-400 shadow-sm">
+                    <span id="profileEditInitial">U</span>
+                    <img id="profileEditPreviewImg" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                </div>
+                <label class="cursor-pointer px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition-all border border-blue-200">
+                    <i class="fa-solid fa-camera mr-1"></i> Upload Foto Profil
+                    <input type="file" id="selfAvatarInput" accept="image/*" class="hidden" onchange="previewSelfAvatar(event)">
+                </label>
+                <input type="hidden" id="selfAvatarBase64" value="">
+            </div>
+
             <div>
-                <label class="block font-semibold text-slate-700 mb-1">Password Lama</label>
-                <input type="password" id="selfOldPass" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Masukkan password saat ini">
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar</label>
+                <input type="text" id="selfProfileName" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
             </div>
             <div>
-                <label class="block font-semibold text-slate-700 mb-1">Password Baru</label>
-                <input type="password" id="selfNewPass" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Minimal 3 karakter">
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Unit / Prodi / Subbag</label>
+                <input type="text" id="selfProfileUnit" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
             </div>
-            <div>
-                <label class="block font-semibold text-slate-700 mb-1">Konfirmasi Password Baru</label>
-                <input type="password" id="selfConfirmPass" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Ulangi password baru">
+
+            <div class="pt-2 border-t border-slate-100">
+                <p class="text-[11px] font-bold text-slate-500 uppercase mb-2"><i class="fa-solid fa-lock mr-1"></i>Ganti Password (Kosongkan jika tidak diubah)</p>
+                <div class="space-y-2.5">
+                    <div>
+                        <input type="password" id="selfOldPass" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Password Lama (Wajib jika ganti password)">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="password" id="selfNewPass" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Password Baru">
+                        <input type="password" id="selfConfirmPass" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Ulangi Password Baru">
+                    </div>
+                </div>
             </div>
-            <div class="flex justify-end space-x-2 pt-2">
-                <button type="button" onclick="closeChangePasswordModal()" class="px-4 py-2 bg-slate-200 rounded-xl text-slate-700">Batal</button>
-                <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-xl font-semibold">Simpan Perubahan</button>
+
+            <div class="flex justify-end space-x-2 pt-3 border-t">
+                <button type="button" onclick="closeChangePasswordModal()" class="px-4 py-2 bg-slate-200 rounded-xl text-slate-700 text-xs font-semibold">Batal</button>
+                <button type="submit" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold shadow">Simpan Profil</button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- Modal Pilih Role Saat Login / Switch Role jika >1 Role (Fase 1 Poin 1) -->
+<div id="roleSelectorModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center z-[90] p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 space-y-5 border border-slate-100 animate-fadeIn">
+        <div class="text-center space-y-1">
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-xl mb-2 shadow-xs">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <h3 class="text-lg font-black text-slate-900">Pilih Peran Akses (Multi-Role)</h3>
+            <p class="text-xs text-slate-500">Akun Anda memiliki lebih dari 1 role. Pilih role untuk sesi ini:</p>
+        </div>
+        <div id="roleSelectorList" class="space-y-2.5 max-h-64 overflow-y-auto pr-1"></div>
+    </div>
+</div>
     <script>
+        // =========================================================================
+        // FASE 1: FONDASI KEAMANAN (XSS, CSRF, RATE LIMIT, SESSION, IDLE TIMEOUT)
+        // =========================================================================
+        const ROLE_LABELS = {
+            admin: 'Administrator Sistem',
+            direktur: 'Direktur',
+            tim_kerja: 'Ketua Tim Kerja',
+            ketua_unit: 'Ketua Prodi / Subbag / Unit',
+            viewer: 'Viewer (Monitoring & Evaluasi)',
+            sekretaris: 'Sekretaris',
+            kalab: 'Kepala Laboratorium',
+            koordinator: 'Koordinator Bidang',
+            dosen: 'Dosen',
+            tendik: 'Tenaga Kependidikan (Tendik)'
+        };
+
+        // Daftar role fungsional tingkat bawah di bawah Unit/Prodi
+        const SUB_UNIT_ROLES = ['sekretaris', 'kalab', 'koordinator', 'dosen', 'tendik'];
+
+        // 1. Sanitasi Anti-XSS untuk input teks
+        function sanitizeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // 2. Token Anti-CSRF & Session Fixation Protection
+        function initSecurityTokens() {
+            if (!sessionStorage.getItem('kijaro_csrf_token')) {
+                const array = new Uint32Array(4);
+                window.crypto.getRandomValues(array);
+                sessionStorage.setItem('kijaro_csrf_token', Array.from(array, dec => dec.toString(16)).join(''));
+            }
+        }
+        initSecurityTokens();
+
+        function rotateSessionToken() {
+            const array = new Uint32Array(4);
+            window.crypto.getRandomValues(array);
+            const newToken = 'sess_' + Array.from(array, dec => dec.toString(16)).join('');
+            sessionStorage.setItem('kijaro_session_id', newToken);
+            initSecurityTokens();
+            return newToken;
+        }
+
+        // 3. Rate Limiter Login (Maksimal 5 percobaan gagal per 5 menit)
+        let loginRateLimit = { attempts: 0, lockUntil: 0 };
+        function checkLoginRateLimit() {
+            const now = Date.now();
+            if (loginRateLimit.lockUntil > now) {
+                const waitSec = Math.ceil((loginRateLimit.lockUntil - now) / 1000);
+                showToast(`Terlalu banyak percobaan login gagal! Coba lagi dalam ${waitSec} detik.`, 'error');
+                return false;
+            }
+            return true;
+        }
+        function recordFailedLogin() {
+            loginRateLimit.attempts += 1;
+            if (loginRateLimit.attempts >= 5) {
+                loginRateLimit.lockUntil = Date.now() + (5 * 60 * 1000); // Kunci 5 menit
+                loginRateLimit.attempts = 0;
+            }
+        }
+        function resetLoginRateLimit() {
+            loginRateLimit.attempts = 0;
+            loginRateLimit.lockUntil = 0;
+        }
+
+        // 4. Validasi Role & Guard Aksi Mutasi (Pure Read-Only untuk Viewer)
+        function isPureViewer() {
+            return currentUser && currentUser.role === 'viewer';
+        }
+        function requireWriteAccess(allowedRoles = null) {
+            if (!currentUser) {
+                showToast('Sesi tidak valid. Silakan login kembali.', 'error');
+                return false;
+            }
+            if (isPureViewer()) {
+                showToast('Akses Ditolak: Role Viewer bersifat Pure Read-Only (Hanya Lihat)!', 'error');
+                return false;
+            }
+            if (Array.isArray(allowedRoles) && !allowedRoles.includes(currentUser.role)) {
+                showToast('Akses Ditolak: Role Anda tidak memiliki izin untuk aksi ini!', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        // 5. Auto Logout Idle > 1 Jam (3.600.000 ms) Tanpa Aktivitas (Fase 1 Poin 4)
+        const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 1 Jam
+        let idleTimer = null;
+
+        function updateLastActivity() {
+            if (!currentUser) return;
+            localStorage.setItem('ki_jaro_last_active', String(Date.now()));
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(checkIdleTimeout, IDLE_TIMEOUT_MS);
+        }
+
+        function checkIdleTimeout() {
+            if (!currentUser) return;
+            const lastActive = parseInt(localStorage.getItem('ki_jaro_last_active') || String(Date.now()), 10);
+            if (Date.now() - lastActive >= IDLE_TIMEOUT_MS) {
+                currentUser = null;
+                localStorage.removeItem('ki_jaro_user');
+                localStorage.removeItem('ki_jaro_last_active');
+                sessionStorage.clear();
+                renderLogin();
+                showToast('Sesi Anda telah berakhir karena tidak ada aktivitas lebih dari 1 jam. Silakan login kembali.', 'error');
+            } else {
+                const remaining = IDLE_TIMEOUT_MS - (Date.now() - lastActive);
+                if (idleTimer) clearTimeout(idleTimer);
+                idleTimer = setTimeout(checkIdleTimeout, remaining);
+            }
+        }
+
+        ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(evt => {
+            window.addEventListener(evt, updateLastActivity, { passive: true });
+        });
+
+        // 6. Helper Render Avatar User (Menampilkan Foto Profil di Seluruh UI atau Inisial)
+        function renderUserAvatarHtml(userObj, sizeClasses = 'w-9 h-9 text-sm', borderClasses = 'border border-blue-400') {
+            if (!userObj) return '';
+            if (userObj.avatar && userObj.avatar.startsWith('data:image')) {
+                return `<img src="${userObj.avatar}" alt="${sanitizeHTML(userObj.name)}" class="${sizeClasses} rounded-full object-cover shrink-0 ${borderClasses}">`;
+            }
+            const initial = (userObj.name || 'U').charAt(0).toUpperCase();
+            return `<div class="${sizeClasses} rounded-full bg-blue-800 text-white flex items-center justify-center font-bold shrink-0 ${borderClasses}">${initial}</div>`;
+        }
+
+        // 7. Helper Normalisasi Multi-Role pada User
+        function getUserRoles(userObj) {
+            if (!userObj) return ['viewer'];
+            if (Array.isArray(userObj.roles) && userObj.roles.length > 0) {
+                return Array.from(new Set(userObj.roles));
+            }
+            return [userObj.role || 'viewer'];
+        }
         // Helper Enterprise: Cek apakah Tim Kerja berstatus UTAMA pada Cascading Direktur
         function isTimUtamaInDir(cd, timKey) {
             if (!cd) return false;
@@ -658,15 +845,12 @@ function triggerGoogleLogin() {
                 found.username = email;
             }
 
-            const chooser = document.getElementById('googleChooserModal');
-            if (chooser) chooser.remove();
-            closeLoginModal();
-
-            currentUser = found;
-            localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
-            showToast(`Autentikasi Google Berhasil! Selamat datang, ${currentUser.name}`);
-            renderDashboardLayout();
-        }
+           const chooser = document.getElementById('googleChooserModal');
+         if (chooser) chooser.remove();
+         closeLoginModal();
+         resetLoginRateLimit();
+         completeUserLoginFlow(found, 'Login Google SSO Berhasil!');
+     }
 
         // Fungsi Cadangan jika pop-up diblokir browser
         function openGoogleAccountChooserModal() {
@@ -781,14 +965,11 @@ function triggerGoogleLogin() {
             }
 
             const chooser = document.getElementById('googleChooserModal');
-            if (chooser) chooser.remove();
-            closeLoginModal();
-
-            currentUser = found;
-            localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
-            showToast(`Login Google SSO Berhasil! Selamat datang, ${currentUser.name}`);
-            renderDashboardLayout();
-        }
+         if (chooser) chooser.remove();
+         closeLoginModal();
+         resetLoginRateLimit();
+         completeUserLoginFlow(found, 'Login Google SSO Berhasil!');
+     }
         function updateLandingChart() {
             const canvas = document.getElementById('landingPreviewChart');
             if (!canvas) return;
@@ -883,40 +1064,220 @@ function triggerGoogleLogin() {
                 }
             });
         }
-        function handleLogin(e) {
-            e.preventDefault();
-            const u = document.getElementById('usernameInput').value.trim();
-            const p = document.getElementById('passwordInput').value.trim();
-            const found = DB.users.find(x => x.username === u && x.password === p);
-            if (found) {
-                currentUser = found;
-                localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
-                showToast(`Selamat datang, ${currentUser.name} (${currentUser.role.toUpperCase()})`);
-                renderDashboardLayout();
-            } else {
-                showToast('Username atau password salah!', 'error');
-            }
-        }
+        function completeUserLoginFlow(userAccount, greetingPrefix = 'Selamat datang') {
+         rotateSessionToken();
+         const roles = getUserRoles(userAccount);
+         userAccount.roles = roles;
 
-        function logout() {
-            currentUser = null;
-            localStorage.removeItem('ki_jaro_user');
-            renderLogin();
-            showToast('Anda telah keluar sistem.', 'info');
-        }
+         if (roles.length > 1) {
+             // Jika punya >1 role, tampilkan pop-up pilihan role terlebih dahulu
+             openRoleSelectorModal(userAccount, greetingPrefix);
+         } else {
+             // Jika hanya 1 role, langsung masuk tanpa dialog
+             userAccount.role = roles[0];
+             currentUser = userAccount;
+             localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
+             updateLastActivity();
+             showToast(`${greetingPrefix}, ${currentUser.name} (${ROLE_LABELS[currentUser.role] || currentUser.role.toUpperCase()})`);
+             renderDashboardLayout();
+         }
+     }
 
+     function openRoleSelectorModal(userAccount, greetingPrefix = 'Selamat datang') {
+         const modal = document.getElementById('roleSelectorModal');
+         const listEl = document.getElementById('roleSelectorList');
+         if (!modal || !listEl) return;
+
+         const roles = getUserRoles(userAccount);
+         listEl.innerHTML = roles.map(r => `
+             <button type="button" onclick="selectActiveRole('${userAccount.id}', '${r}', '${greetingPrefix}')" class="w-full p-3.5 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-2xl flex items-center justify-between transition-all group text-left">
+                 <div class="flex items-center space-x-3">
+                     <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                         <i class="fa-solid fa-user-check"></i>
+                     </div>
+                     <div>
+                         <p class="text-xs font-bold text-slate-900 group-hover:text-blue-700">${ROLE_LABELS[r] || r.toUpperCase()}</p>
+                         <p class="text-[10px] text-slate-500">Unit: ${sanitizeHTML(userAccount.unit || '-')}</p>
+                     </div>
+                 </div>
+                 <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-blue-600"></i>
+             </button>
+         `).join('');
+
+         modal.classList.remove('hidden');
+         modal.classList.add('flex');
+     }
+
+     function selectActiveRole(userId, chosenRole, greetingPrefix = 'Selamat datang') {
+         const found = DB.users.find(u => String(u.id) === String(userId)) || currentUser;
+         if (!found) return;
+         const roles = getUserRoles(found);
+         if (!roles.includes(chosenRole)) {
+             showToast('Role tidak valid untuk akun Anda!', 'error');
+             return;
+         }
+         found.roles = roles;
+         found.role = chosenRole;
+         currentUser = found;
+         localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
+         updateLastActivity();
+
+         const modal = document.getElementById('roleSelectorModal');
+         if (modal) {
+             modal.classList.remove('flex');
+             modal.classList.add('hidden');
+         }
+         showToast(`${greetingPrefix}, ${currentUser.name} [Mode: ${ROLE_LABELS[chosenRole] || chosenRole}]`);
+         activeTab = 'dashboard';
+         renderDashboardLayout();
+     }
+
+     function handleLogin(e) {
+         e.preventDefault();
+         if (!checkLoginRateLimit()) return;
+
+         const u = document.getElementById('usernameInput').value.trim().toLowerCase();
+         const p = document.getElementById('passwordInput').value.trim();
+         const found = DB.users.find(x => x.username.toLowerCase() === u && x.password === p);
+         if (found) {
+             resetLoginRateLimit();
+             closeLoginModal();
+             completeUserLoginFlow(found, 'Selamat datang');
+         } else {
+             recordFailedLogin();
+             showToast('Email atau kata sandi salah!', 'error');
+         }
+     }
+
+     function logout() {
+         currentUser = null;
+         if (idleTimer) clearTimeout(idleTimer);
+         localStorage.removeItem('ki_jaro_user');
+         localStorage.removeItem('ki_jaro_last_active');
+         sessionStorage.clear();
+         renderLogin();
+         showToast('Anda telah keluar sistem.', 'info');
+     }
+
+     // Fungsi Buka / Simpan Edit Profil & Password Mandiri (Fase 1 Poin 6)
+     function openChangePasswordModal() {
+         if (!currentUser) return;
+         const modal = document.getElementById('changePasswordModal');
+         if (!modal) return;
+
+         document.getElementById('selfProfileName').value = currentUser.name || '';
+         document.getElementById('selfProfileUnit').value = currentUser.unit || '';
+         document.getElementById('selfOldPass').value = '';
+         document.getElementById('selfNewPass').value = '';
+         document.getElementById('selfConfirmPass').value = '';
+         document.getElementById('selfAvatarBase64').value = currentUser.avatar || '';
+
+         const imgEl = document.getElementById('profileEditPreviewImg');
+         const initEl = document.getElementById('profileEditInitial');
+         if (currentUser.avatar && currentUser.avatar.startsWith('data:image')) {
+             imgEl.src = currentUser.avatar;
+             imgEl.classList.remove('hidden');
+             initEl.classList.add('hidden');
+         } else {
+             imgEl.src = '';
+             imgEl.classList.add('hidden');
+             initEl.innerText = (currentUser.name || 'U').charAt(0).toUpperCase();
+             initEl.classList.remove('hidden');
+         }
+
+         const dropdown = document.getElementById('profileDropdownMenu');
+         if (dropdown) dropdown.classList.add('hidden');
+
+         modal.classList.remove('hidden');
+         modal.classList.add('flex');
+     }
+
+     function closeChangePasswordModal() {
+         const modal = document.getElementById('changePasswordModal');
+         if (modal) {
+             modal.classList.remove('flex');
+             modal.classList.add('hidden');
+         }
+     }
+
+     function previewSelfAvatar(event) {
+         const file = event.target.files[0];
+         if (!file) return;
+         if (file.size > 1500000) {
+             showToast('Ukuran foto maksimal 1.5 MB!', 'error');
+             return;
+         }
+         const reader = new FileReader();
+         reader.onload = function(e) {
+             const base64 = e.target.result;
+             document.getElementById('selfAvatarBase64').value = base64;
+             const imgEl = document.getElementById('profileEditPreviewImg');
+             const initEl = document.getElementById('profileEditInitial');
+             imgEl.src = base64;
+             imgEl.classList.remove('hidden');
+             initEl.classList.add('hidden');
+         };
+         reader.readAsText ? reader.readAsDataURL(file) : null;
+     }
+
+     async function handleSelfEditProfile(e) {
+         e.preventDefault();
+         if (!currentUser) return;
+
+         const newName = sanitizeHTML(document.getElementById('selfProfileName').value.trim());
+         const newUnit = sanitizeHTML(document.getElementById('selfProfileUnit').value.trim());
+         const newAvatar = document.getElementById('selfAvatarBase64').value;
+
+         const oldPass = document.getElementById('selfOldPass').value;
+         const newPass = document.getElementById('selfNewPass').value;
+         const confirmPass = document.getElementById('selfConfirmPass').value;
+
+         const userIdx = DB.users.findIndex(u => String(u.id) === String(currentUser.id) || u.username === currentUser.username);
+
+         if (newPass || confirmPass) {
+             if (oldPass !== currentUser.password) {
+                 showToast('Password lama tidak sesuai!', 'error');
+                 return;
+             }
+             if (newPass.length < 3) {
+                 showToast('Password baru minimal 3 karakter!', 'error');
+                 return;
+             }
+             if (newPass !== confirmPass) {
+                 showToast('Konfirmasi password baru tidak cocok!', 'error');
+                 return;
+             }
+             currentUser.password = newPass;
+             if (userIdx !== -1) DB.users[userIdx].password = newPass;
+         }
+
+         const oldUnit = currentUser.unit;
+         currentUser.name = newName;
+         currentUser.unit = newUnit;
+         currentUser.avatar = newAvatar;
+
+         if (userIdx !== -1) {
+             DB.users[userIdx].name = newName;
+             DB.users[userIdx].unit = newUnit;
+             DB.users[userIdx].avatar = newAvatar;
+         }
+
+         // Jika nama unit diubah oleh ketua_unit, sinkronkan juga di daftar unit
+         if (oldUnit && oldUnit !== newUnit) {
+             syncUnitListFromUsers();
+         }
+
+         localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
+         await saveToMySQL();
+         closeChangePasswordModal();
+         showToast('Profil dan tampilan avatar berhasil diperbarui!');
+         renderDashboardLayout();
+     }
 function renderDashboardLayout() {
             const app = document.getElementById('app');
-            const roleLabels = {
-                admin: 'Administrator Sistem',
-                direktur: 'Direktur',
-                tim_kerja: 'Ketua Tim Kerja',
-                ketua_unit: 'Ketua Prodi / Subbag / Unit',
-                viewer: 'Viewer (Monitoring & Evaluasi)'
-            };
-
-            const isKaUnit = currentUser.role === 'ketua_unit';
-
+            const roleLabels = ROLE_LABELS;
+         const isKaUnit = currentUser.role === 'ketua_unit' || SUB_UNIT_ROLES.includes(currentUser.role);
+         const userRolesList = getUserRoles(currentUser);
             app.innerHTML = `
                 <div class="min-h-screen flex bg-slate-100 overflow-x-hidden">
                     <!-- Backdrop Gelap Khusus Layar HP saat Sidebar Dibuka -->
@@ -941,16 +1302,14 @@ function renderDashboardLayout() {
                         </div>
 
                         <div class="p-4 border-b border-blue-600 bg-blue-700/80 sidebar-profile-box">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-9 h-9 rounded-full bg-blue-800 text-white flex items-center justify-center font-bold text-sm shrink-0 border border-blue-400">
-                                    ${currentUser.name.charAt(0)}
-                                </div>
-                                <div class="overflow-hidden sidebar-text">
-                                    <p class="text-sm font-semibold text-white truncate">${currentUser.name}</p>
-                                    <span class="inline-block px-2 py-0.5 text-[10px] font-semibold bg-blue-800 text-blue-100 rounded-full mt-0.5">${roleLabels[currentUser.role]}</span>
-                                </div>
-                            </div>
-                        </div>
+                         <div class="flex items-center space-x-3">
+                             ${renderUserAvatarHtml(currentUser, 'w-10 h-10 text-sm', 'border-2 border-blue-300 shadow-xs')}
+                             <div class="overflow-hidden sidebar-text">
+                                 <p class="text-sm font-semibold text-white truncate">${sanitizeHTML(currentUser.name)}</p>
+                                 <span class="inline-block px-2 py-0.5 text-[10px] font-semibold bg-blue-800 text-blue-100 rounded-full mt-0.5">${roleLabels[currentUser.role] || currentUser.role}</span>
+                             </div>
+                         </div>
+                     </div>
 
                         <!-- Menu Sidetab Warna Putih Elegan & Kontras -->
                         <nav class="flex-1 p-3 space-y-1.5 overflow-y-auto text-sm">
@@ -1028,35 +1387,42 @@ function renderDashboardLayout() {
                                 </a>
 
                                 <div class="relative pl-4 border-l border-slate-200">
-                                    <button id="profileDropdownBtn" onclick="toggleProfileDropdown()" class="flex items-center space-x-3 px-3 py-1.5 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200 text-left focus:outline-none">
-                                        <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
-                                            ${currentUser.name.charAt(0)}
-                                        </div>
-                                        <div class="hidden sm:block">
-                                            <span class="block text-xs font-bold text-slate-900 leading-tight">${currentUser.name}</span>
-                                            <span class="block text-[10px] text-slate-500 font-medium">${roleLabels[currentUser.role]}</span>
-                                        </div>
-                                        <i class="fa-solid fa-chevron-down text-xs text-slate-400 ml-1 transition-transform duration-200" id="profileChevron"></i>
-                                    </button>
+                                 <button id="profileDropdownBtn" onclick="toggleProfileDropdown()" class="flex items-center space-x-3 px-3 py-1.5 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200 text-left focus:outline-none">
+                                     ${renderUserAvatarHtml(currentUser, 'w-9 h-9 text-sm', 'border border-blue-200 shadow-xs')}
+                                     <div class="hidden sm:block">
+                                         <span class="block text-xs font-bold text-slate-900 leading-tight">${sanitizeHTML(currentUser.name)}</span>
+                                         <span class="block text-[10px] text-slate-500 font-medium">${roleLabels[currentUser.role] || currentUser.role}</span>
+                                     </div>
+                                     <i class="fa-solid fa-chevron-down text-xs text-slate-400 ml-1 transition-transform duration-200" id="profileChevron"></i>
+                                 </button>
 
-                                    <div id="profileDropdownMenu" class="hidden absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 animate-fadeIn">
-                                        <div class="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
-                                            <p class="text-xs font-bold text-slate-900 truncate">${currentUser.name}</p>
-                                            <p class="text-[10px] text-slate-500 truncate mt-0.5">${currentUser.unit}</p>
-                                        </div>
-                                        <div class="p-1">
-                                            <a href="javascript:void(0)" onclick="openChangePasswordModal()" class="flex items-center space-x-3 px-3 py-2.5 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl font-medium transition-all">
-                                                <i class="fa-solid fa-key text-blue-600 w-4 text-center"></i>
-                                                <span>Ganti Password</span>
-                                            </a>
-                                            <div class="border-t border-slate-100 my-1"></div>
-                                            <a href="javascript:void(0)" onclick="logout()" class="flex items-center space-x-3 px-3 py-2.5 text-xs text-rose-600 hover:bg-rose-50 rounded-xl font-bold transition-all">
-                                                <i class="fa-solid fa-right-from-bracket text-rose-600 w-4 text-center"></i>
-                                                <span>Keluar Sistem (Logout)</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
+                                 <div id="profileDropdownMenu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 animate-fadeIn">
+                                     <div class="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50 flex items-center space-x-3">
+                                         ${renderUserAvatarHtml(currentUser, 'w-10 h-10 text-sm', 'border border-blue-300')}
+                                         <div class="overflow-hidden">
+                                             <p class="text-xs font-bold text-slate-900 truncate">${sanitizeHTML(currentUser.name)}</p>
+                                             <p class="text-[10px] text-slate-500 truncate mt-0.5">${sanitizeHTML(currentUser.unit)}</p>
+                                         </div>
+                                     </div>
+                                     <div class="p-1">
+                                         <a href="javascript:void(0)" onclick="openChangePasswordModal()" class="flex items-center space-x-3 px-3 py-2.5 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl font-medium transition-all">
+                                             <i class="fa-solid fa-user-pen text-blue-600 w-4 text-center"></i>
+                                             <span>Edit Profil & Password</span>
+                                         </a>
+                                         ${userRolesList.length > 1 ? `
+                                             <a href="javascript:void(0)" onclick="openRoleSelectorModal(currentUser, 'Beralih Role')" class="flex items-center space-x-3 px-3 py-2.5 text-xs text-indigo-700 hover:bg-indigo-50 rounded-xl font-semibold transition-all">
+                                                 <i class="fa-solid fa-repeat text-indigo-600 w-4 text-center"></i>
+                                                 <span>Ganti Role Aktif (${userRolesList.length} Role)</span>
+                                             </a>
+                                         ` : ''}
+                                         <div class="border-t border-slate-100 my-1"></div>
+                                         <a href="javascript:void(0)" onclick="logout()" class="flex items-center space-x-3 px-3 py-2.5 text-xs text-rose-600 hover:bg-rose-50 rounded-xl font-bold transition-all">
+                                             <i class="fa-solid fa-right-from-bracket text-rose-600 w-4 text-center"></i>
+                                             <span>Keluar Sistem (Logout)</span>
+                                         </a>
+                                     </div>
+                                 </div>
+                             </div>
                             </div>
                         </header>
 
@@ -3268,7 +3634,7 @@ function renderMultiYearIndikatorChart() {
                                 <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-network-wired text-primary-600 mr-2"></i> 2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag</h3>
                                 <p class="text-xs text-slate-500">Ketua Tim Kerja menurunkan indikator ke unit/prodi/subbag di bawah koordinasinya.</p>
                             </div>
-                            <button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>
+                           ${(isKetuaTim || currentUser.role === 'admin') && !isPureViewer() ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
@@ -3967,28 +4333,29 @@ async function saveCascadingTim(e) {
                             </div>
 
                             <!-- === TAMBAHKAN TOMBOL DI BAWAH INI === -->
-                            <button onclick="downloadTemplateCapaian()" class="mt-5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                                <i class="fa-solid fa-download"></i>
-                                <span>Template Capaian</span>
-                            </button>
+                            ${!isPureViewer() ? `
+                             <button onclick="downloadTemplateCapaian()" class="mt-5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
+                                 <i class="fa-solid fa-download"></i>
+                                 <span>Template Capaian</span>
+                             </button>
 
-                            <label class="mt-5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow cursor-pointer">
-                                <i class="fa-solid fa-file-excel"></i>
-                                <span>Import Capaian</span>
-                                <input type="file" id="importCapaianFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportCapaian(event)">
-                            </label>
+                             <label class="mt-5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow cursor-pointer">
+                                 <i class="fa-solid fa-file-excel"></i>
+                                 <span>Import Capaian</span>
+                                 <input type="file" id="importCapaianFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportCapaian(event)">
+                             </label>
 
-                            <button id="btnDownloadLogCapaian" onclick="downloadLogCapaianError()" class="mt-5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow hidden">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                <span>Log Error Capaian</span>
-                            </button>
-                            <!-- ===================================== -->
-                            ${isKaUnit ? `
-                                <button onclick="openCapaianModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                    <i class="fa-solid fa-plus"></i>
-                                    <span>Input Program Baru</span>
-                                </button>
-                            ` : ''}
+                             <button id="btnDownloadLogCapaian" onclick="downloadLogCapaianError()" class="mt-5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow hidden">
+                                 <i class="fa-solid fa-triangle-exclamation"></i>
+                                 <span>Log Error Capaian</span>
+                             </button>
+                         ` : ''}
+                         ${isKaUnit && !isPureViewer() ? `
+                             <button onclick="openCapaianModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
+                                 <i class="fa-solid fa-plus"></i>
+                                 <span>Input Program Baru</span>
+                             </button>
+                         ` : ''}
                         </div>
                     </div>
 
@@ -4682,36 +5049,35 @@ async function confirmDeleteCapaian(id) {
                                 </select>
                             </div>
 
-                            <!-- === TAMBAHKAN TOMBOL DI SINI === -->
-                            <button onclick="downloadTemplateRisiko()" class="mt-5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                                <i class="fa-solid fa-download"></i>
-                                <span>Template Risiko</span>
-                            </button>
+                            ${!isPureViewer() ? `
+                             <button onclick="downloadTemplateRisiko()" class="mt-5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
+                                 <i class="fa-solid fa-download"></i>
+                                 <span>Template Risiko</span>
+                             </button>
 
-                            <label class="mt-5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow cursor-pointer">
-                                <i class="fa-solid fa-file-excel"></i>
-                                <span>Import Risiko</span>
-                                <input type="file" id="importRisikoFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportRisiko(event)">
-                            </label>
+                             <label class="mt-5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow cursor-pointer">
+                                 <i class="fa-solid fa-file-excel"></i>
+                                 <span>Import Risiko</span>
+                                 <input type="file" id="importRisikoFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportRisiko(event)">
+                             </label>
 
-                            <button id="btnDownloadLogRisiko" onclick="downloadLogRisikoError()" class="mt-5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow hidden">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                <span>Log Error Risiko</span>
-                            </button>
-                            <!-- ============================== -->
-                            <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                                <i class="fa-solid fa-file-excel"></i>
-                                <span>Ekspor CSV Risiko</span>
-                            </button>
-                            ${isKaUnit ? `
-                                <button onclick="openRisikoModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                    <i class="fa-solid fa-plus"></i>
-                                    <span>Input Risiko Baru</span>
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-
+                             <button id="btnDownloadLogRisiko" onclick="downloadLogRisikoError()" class="mt-5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow hidden">
+                                 <i class="fa-solid fa-triangle-exclamation"></i>
+                                 <span>Log Error Risiko</span>
+                             </button>
+                         ` : ''}
+                         <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
+                             <i class="fa-solid fa-file-excel"></i>
+                             <span>Ekspor CSV Risiko</span>
+                         </button>
+                         ${isKaUnit && !isPureViewer() ? `
+                             <button onclick="openRisikoModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
+                                 <i class="fa-solid fa-plus"></i>
+                                 <span>Input Risiko Baru</span>
+                             </button>
+                         ` : ''}
+                     </div>
+                     
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-4 bg-slate-50 border-b flex justify-between items-center text-xs font-semibold text-slate-700">
                             <span><i class="fa-solid fa-table text-primary-600 mr-1"></i> Header Google Sheets: [Unit, Tim Kerja, Indikator Kinerja, Pernyataan Risiko, Sebab Internal, Sebab Eksternal, Dampak, Skor Awal, Pengendalian, Skor Residu, Kuadran]</span>
@@ -5020,13 +5386,17 @@ async function confirmDeleteCapaian(id) {
         }
 
         function renderAdminView(container) {
-            document.getElementById('pageTitle').innerText = 'Manajemen Pejabat, Pengguna & Hak Akses (Admin)';
+            if (!requireWriteAccess(['admin'])) {
+                container.innerHTML = `<div class="p-8 text-center bg-white rounded-2xl border"><p class="text-rose-600 font-bold">Akses Ditolak: Hanya Administrator yang dapat mengakses halaman ini.</p></div>`;
+                return;
+            }
+            document.getElementById('pageTitle').innerText = 'Manajemen Pejabat, Multi-Role & Hak Akses (Admin)';
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                         <div>
-                            <h3 class="font-bold text-slate-900 text-base">Pengaturan Akun Pejabat & Unit Kerja</h3>
-                            <p class="text-xs text-slate-500">Direktur, 3 Tim Kerja, dan 12 Ketua Unit/Prodi (Tambah, Edit, Hapus)</p>
+                            <h3 class="font-bold text-slate-900 text-base">Pengaturan Akun Pejabat, Staf & Multi-Role</h3>
+                            <p class="text-xs text-slate-500">Mendukung Multi-Role (>1 role per akun) serta role Sekretaris, Kalab, Koordinator, Dosen, & Tendik</p>
                         </div>
                         <button onclick="openUserModal('add')" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
                             <i class="fa-solid fa-user-plus"></i>
@@ -5038,80 +5408,93 @@ async function confirmDeleteCapaian(id) {
                         <table class="w-full text-left border-collapse text-sm">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                    <th class="p-4">Nama Pejabat</th>
+                                    <th class="p-4">Nama Pejabat / Pegawai</th>
                                     <th class="p-4">Email Google (@poltek-petrokimia.ac.id)</th>
-                                    <th class="p-4">Role Akses</th>
+                                    <th class="p-4">Role Akses (Multi-Role)</th>
                                     <th class="p-4">Tim Kerja / Unit Terkait</th>
                                     <th class="p-4 text-center">Aksi (Edit / Hapus / Reset)</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
-                                ${DB.users.map((u, idx) => `
+                                ${DB.users.map((u, idx) => {
+                                    const rolesArr = getUserRoles(u);
+                                    return `
                                     <tr class="hover:bg-slate-50 transition-all">
-                                        <td class="p-4 font-semibold text-slate-900">${u.name}</td>
-                                        <td class="p-4 text-slate-600">${u.username}</td>
-                                        <td class="p-4"><span class="px-2.5 py-1 bg-blue-50 text-primary-700 text-xs font-semibold rounded-full uppercase">${u.role}</span></td>
-                                        <td class="p-4 text-slate-600">${u.timKey ? u.timKey + ' / ' : ''}${u.unit}</td>
-                                        <td class="p-4 text-center space-x-2">
+                                        <td class="p-4 font-semibold text-slate-900 flex items-center space-x-2.5">
+                                            ${renderUserAvatarHtml(u, 'w-8 h-8 text-xs', 'border border-blue-200')}
+                                            <span>${sanitizeHTML(u.name)}</span>
+                                        </td>
+                                        <td class="p-4 text-slate-600">${sanitizeHTML(u.username)}</td>
+                                        <td class="p-4">
+                                            <div class="flex flex-wrap gap-1">
+                                                ${rolesArr.map(r => `<span class="px-2.5 py-0.5 bg-blue-50 text-primary-700 border border-blue-200 text-[10px] font-bold rounded-full uppercase">${ROLE_LABELS[r] || r}</span>`).join('')}
+                                            </div>
+                                        </td>
+                                        <td class="p-4 text-slate-600">${u.timKey ? sanitizeHTML(u.timKey) + ' / ' : ''}${sanitizeHTML(u.unit)}</td>
+                                        <td class="p-4 text-center space-x-1.5">
                                             <button onclick="openUserModal('edit', ${idx})" class="px-2.5 py-1 bg-blue-100 hover:bg-blue-200 text-primary-700 text-xs font-semibold rounded-lg" title="Edit"><i class="fa-solid fa-pen"></i></button>
                                             <button onclick="confirmDeleteUser(${idx})" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-600 text-xs font-semibold rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                             <button onclick="resetPassword(${idx})" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-semibold rounded-lg" title="Reset Pass"><i class="fa-solid fa-key"></i></button>
                                         </td>
                                     </tr>
-                                `).join('')}
+                                `;}).join('')}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- Modal User Add/Edit -->
-                <div id="userModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+                <!-- Modal User Add/Edit (Mendukung Multi-Role Checkbox & Role Baru) -->
+                <div id="userModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-4">
-                            <h3 id="userModalTitle" class="font-bold text-slate-900 text-base">Tambah / Edit Pejabat Sistem</h3>
-                            <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            <h3 id="userModalTitle" class="font-bold text-slate-900 text-base">Tambah / Edit Pejabat & Pegawai</h3>
+                            <button type="button" onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveUser(event)" class="space-y-4 text-sm">
                             <input type="hidden" id="editUserIndex" value="-1">
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap & Gelar</label>
-                                <input type="text" id="uName" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Nama Pejabat">
+                                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar</label>
+                                <input type="text" id="uName" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Nama Pejabat / Dosen / Tendik">
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Username</label>
-                                    <input type="text" id="uUsername" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="username">
+                                    <label class="block font-semibold text-slate-700 mb-1 text-xs">Email Institusi (Username)</label>
+                                    <input type="email" id="uUsername" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="nama@poltek-petrokimia.ac.id">
                                 </div>
                                 <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Password</label>
-                                    <input type="password" id="uPassword" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="••••••••">
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Role</label>
-                                    <select id="uRole" class="w-full p-3 bg-slate-50 border rounded-xl">
-                                        <option value="admin">Admin</option>
-                                        <option value="direktur">Direktur</option>
-                                        <option value="tim_kerja">Ketua Tim Kerja</option>
-                                        <option value="ketua_unit">Ketua Prodi / Unit</option>
-                                        <option value="viewer">Viewer (Hanya Lihat Semua Menu kecuali Manajemen User)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Tim Kerja</label>
-                                    <select id="uTimKey" class="w-full p-3 bg-slate-50 border rounded-xl">
-                                        ${DB.timKerjaList.map(t => `<option value="${t}">${t}</option>`).join('')}
-                                    </select>
+                                    <label class="block font-semibold text-slate-700 mb-1 text-xs">Password</label>
+                                    <input type="password" id="uPassword" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="••••••••">
                                 </div>
                             </div>
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Nama Unit / Prodi Terkait</label>
-                                <input type="text" id="uUnit" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: Prodi TMIP / UPPM">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <label class="block font-semibold text-slate-700 text-xs">Pilih Role Akses (Bisa Pilih >1 / Multi-Role)</label>
+                                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Centang minimal 1</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border max-h-48 overflow-y-auto text-xs">
+                                    ${Object.entries(ROLE_LABELS).map(([rKey, rLabel]) => `
+                                        <label class="flex items-center space-x-2 p-1.5 bg-white rounded-lg border border-slate-200 hover:border-blue-400 cursor-pointer">
+                                            <input type="checkbox" name="uRoleCheck" value="${rKey}" class="rounded text-blue-600 focus:ring-blue-500">
+                                            <span class="font-semibold text-slate-700 text-[11px]">${rLabel}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
                             </div>
-                            <div class="flex justify-end space-x-3 pt-2">
-                                <button type="button" onclick="closeUserModal()" class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-medium">Batal</button>
-                                <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium">Simpan Pejabat</button>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block font-semibold text-slate-700 mb-1 text-xs">Tim Kerja Koordinasi</label>
+                                    <select id="uTimKey" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs">
+                                        ${DB.timKerjaList.map(t => `<option value="${t}">${t}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Unit / Prodi / Lab Terkait</label>
+                                    <input type="text" id="uUnit" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Contoh: Prodi TMIP / Lab Kimia">
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-3 pt-2 border-t">
+                                <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
+                                <button type="submit" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold text-xs shadow">Simpan Pejabat / User</button>
                             </div>
                         </form>
                     </div>
@@ -5120,28 +5503,37 @@ async function confirmDeleteCapaian(id) {
         }
 
         function openUserModal(mode, idx = -1) {
-            document.getElementById('userModal').classList.remove('hidden');
-            document.getElementById('userModal').classList.add('flex');
+            const modal = document.getElementById('userModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
             if (mode === 'edit' && idx !== -1) {
                 const u = DB.users[idx];
-                document.getElementById('userModalTitle').innerText = 'Edit Pejabat Sistem';
+                const uRoles = getUserRoles(u);
+                document.getElementById('userModalTitle').innerText = 'Edit Pejabat / Pegawai (Multi-Role)';
                 document.getElementById('editUserIndex').value = idx;
                 document.getElementById('uName').value = u.name;
                 document.getElementById('uUsername').value = u.username;
                 document.getElementById('uPassword').value = u.password;
-                document.getElementById('uRole').value = u.role;
                 document.getElementById('uTimKey').value = u.timKey || DB.timKerjaList[0];
                 document.getElementById('uUnit').value = u.unit;
+                document.querySelectorAll('input[name="uRoleCheck"]').forEach(chk => {
+                    chk.checked = uRoles.includes(chk.value);
+                });
             } else {
-                document.getElementById('userModalTitle').innerText = 'Tambah Pejabat Sistem';
+                document.getElementById('userModalTitle').innerText = 'Tambah Pejabat / Pegawai Baru';
                 document.getElementById('editUserIndex').value = -1;
                 document.getElementById('uName').value = '';
                 document.getElementById('uUsername').value = '';
                 document.getElementById('uPassword').value = '';
-                document.getElementById('uRole').value = 'ketua_unit';
                 document.getElementById('uUnit').value = '';
+                document.querySelectorAll('input[name="uRoleCheck"]').forEach(chk => {
+                    chk.checked = (chk.value === 'ketua_unit');
+                });
             }
         }
+
         function closeUserModal() {
             const modal = document.getElementById('userModal');
             if (modal) {
@@ -5149,50 +5541,71 @@ async function confirmDeleteCapaian(id) {
                 modal.classList.add('hidden');
             }
         }
-       // Fungsi otomatis menyamakan daftar DB.unitList dengan unit milik user ber-role ketua_unit
-    function syncUnitListFromUsers() {
-        const defaultUnits = [
-            'Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 
-            'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 
-            'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'
-        ];
-        const userUnits = DB.users
-            .filter(u => u.role === 'ketua_unit' && u.unit && u.unit.trim() !== '')
-            .map(u => u.unit.trim());
-        
-        // Gabungkan unit bawaan dengan unit baru dari user tanpa duplikat
-        DB.unitList = Array.from(new Set([...defaultUnits, ...userUnits]));
-    }
 
-    async function saveUser(e) {
-        e.preventDefault();
-        const idx = parseInt(document.getElementById('editUserIndex').value);
-        const userData = {
-            id: idx !== -1 ? DB.users[idx].id : 'u' + (Date.now()),
-            name: document.getElementById('uName').value.trim(),
-            username: document.getElementById('uUsername').value.trim(),
-            password: document.getElementById('uPassword').value.trim(),
-            role: document.getElementById('uRole').value,
-            timKey: document.getElementById('uTimKey').value,
-            unit: document.getElementById('uUnit').value.trim()
-        };
-
-        if (idx !== -1) {
-            DB.users[idx] = userData;
-            showToast('Data pejabat berhasil diperbarui!');
-        } else {
-            DB.users.push(userData);
-            showToast('Pejabat baru berhasil ditambahkan!');
+        function syncUnitListFromUsers() {
+            const defaultUnits = [
+                'Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 
+                'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 
+                'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'
+            ];
+            const userUnits = DB.users
+                .filter(u => {
+                    const rList = getUserRoles(u);
+                    return rList.includes('ketua_unit') && u.unit && u.unit.trim() !== '';
+                })
+                .map(u => u.unit.trim());
+            
+            DB.unitList = Array.from(new Set([...defaultUnits, ...userUnits]));
         }
 
-        // Sinkronkan unit baru ke DB.unitList agar muncul di Cascading & Dashboard
-        syncUnitListFromUsers();
+        async function saveUser(e) {
+            e.preventDefault();
+            if (!requireWriteAccess(['admin'])) return;
 
-        await saveToMySQL();
-        closeUserModal();
-        renderAdminView(document.getElementById('mainContent'));
-    }
+            const idx = parseInt(document.getElementById('editUserIndex').value);
+            const selectedRoles = Array.from(document.querySelectorAll('input[name="uRoleCheck"]:checked')).map(c => c.value);
 
+            if (selectedRoles.length === 0) {
+                showToast('Pilih minimal 1 Role untuk user ini!', 'error');
+                return;
+            }
+
+            const existingUser = idx !== -1 ? DB.users[idx] : {};
+            const userData = {
+                ...existingUser,
+                id: idx !== -1 ? DB.users[idx].id : 'u' + Date.now(),
+                name: sanitizeHTML(document.getElementById('uName').value.trim()),
+                username: document.getElementById('uUsername').value.trim().toLowerCase(),
+                password: document.getElementById('uPassword').value.trim(),
+                role: selectedRoles[0],
+                roles: selectedRoles,
+                timKey: document.getElementById('uTimKey').value,
+                unit: sanitizeHTML(document.getElementById('uUnit').value.trim())
+            };
+
+            if (idx !== -1) {
+                DB.users[idx] = userData;
+                if (currentUser && String(currentUser.id) === String(userData.id)) {
+                    currentUser.name = userData.name;
+                    currentUser.unit = userData.unit;
+                    currentUser.roles = userData.roles;
+                    if (!userData.roles.includes(currentUser.role)) {
+                        currentUser.role = userData.role;
+                    }
+                    localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
+                }
+                showToast('Data pejabat & multi-role berhasil diperbarui!');
+            } else {
+                DB.users.push(userData);
+                showToast('User baru berhasil ditambahkan!');
+            }
+
+            syncUnitListFromUsers();
+            await saveToMySQL();
+            closeUserModal();
+            renderAdminView(document.getElementById('mainContent'));
+        }
+        
     async function confirmDeleteUser(idx) {
         const u = DB.users[idx];
         if (u.role === 'admin' && DB.users.filter(x => x.role === 'admin').length <= 1) {
@@ -5644,21 +6057,40 @@ function renderLaporanView(container) {
         }
 
         window.onload = async function() {
-            await loadDataFromMySQL();
-            const savedUser = localStorage.getItem('ki_jaro_user');
-            if (savedUser) {
-                try {
-                    const parsed = JSON.parse(savedUser);
-                    const freshUser = DB.users.find(u => u.username === parsed.username);
-                    currentUser = freshUser || parsed;
-                    renderDashboardLayout();
-                } catch (e) {
-                    renderLogin();
-                }
-            } else {
-                renderLogin();
-            }
-        };
+         await loadDataFromMySQL();
+         const savedUser = localStorage.getItem('ki_jaro_user');
+         const lastActive = parseInt(localStorage.getItem('ki_jaro_last_active') || '0', 10);
+
+         if (savedUser) {
+             // Cek apakah sudah idle > 1 jam saat tab dibuka kembali
+             if (lastActive > 0 && (Date.now() - lastActive >= IDLE_TIMEOUT_MS)) {
+                 localStorage.removeItem('ki_jaro_user');
+                 localStorage.removeItem('ki_jaro_last_active');
+                 renderLogin();
+                 showToast('Sesi Anda telah berakhir (>1 jam tanpa aktivitas). Silakan login kembali.', 'info');
+                 return;
+             }
+             try {
+                 const parsed = JSON.parse(savedUser);
+                 const freshUser = DB.users.find(u => u.username === parsed.username);
+                 if (freshUser) {
+                     const roles = getUserRoles(freshUser);
+                     freshUser.roles = roles;
+                     // Pertahankan role aktif dari sesi sebelumnya jika masih valid
+                     freshUser.role = (parsed.role && roles.includes(parsed.role)) ? parsed.role : roles[0];
+                     currentUser = freshUser;
+                 } else {
+                     currentUser = parsed;
+                 }
+                 updateLastActivity();
+                 renderDashboardLayout();
+             } catch (e) {
+                 renderLogin();
+             }
+         } else {
+             renderLogin();
+         }
+     };
         function openExportRisikoCsvModal() {
             const modal = document.getElementById('exportRisikoCsvModal');
             if (modal) {
