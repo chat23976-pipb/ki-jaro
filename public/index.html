@@ -4932,15 +4932,20 @@ function renderUnitSubCheckboxes(targetUnit) {
             const isAdmin = currentUser.role === 'admin';
 
            let displayCapaian = DB.capaian;
-         const myParentUnit = getParentUnitForSubUser(currentUser);
-         if (isSubUnit) {
-             displayCapaian = DB.capaian.filter(c => c.unit.toLowerCase() === myParentUnit.toLowerCase() || c.inputByUsername === currentUser.username);
-         } else if (isKaUnit) {
-             displayCapaian = DB.capaian.filter(c => c.unit.toLowerCase() === currentUser.unit.toLowerCase());
-         }
+            const myParentUnit = getParentUnitForSubUser(currentUser);
+            if (isSubUnit) {
+                displayCapaian = DB.capaian.filter(c => c.unit.toLowerCase() === myParentUnit.toLowerCase() || c.inputByUsername === currentUser.username);
             } else if (isKaUnit) {
-                displayCapaian = DB.capaian.filter(c => c.unit === currentUser.unit);
+                displayCapaian = DB.capaian.filter(c => c.unit.toLowerCase() === currentUser.unit.toLowerCase());
             } else if (isKetuaTim) {
+                const validUnits = DB.cascadingTim.filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets);
+                displayCapaian = DB.capaian.filter(c => {
+                    const matchScope = validUnits.includes(c.unit) && c.timKey === currentUser.timKey;
+                    if (!matchScope) return false;
+                    if (c.isSubUnitInput && c.statusProdi !== 'Valid') return false;
+                    return true;
+                });
+            }
                 const validUnits = DB.cascadingTim.filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets);
                 // Ketua Tim Kerja HANYA melihat capaian yang:
                 // 1) Diinput langsung oleh Ketua Unit, ATAU
