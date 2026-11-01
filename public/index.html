@@ -6782,220 +6782,312 @@ async function saveCascadingTim(e) {
         }
 
 function renderLaporanView(container) {
-            document.getElementById('pageTitle').innerText = 'Cetak Laporan Kinerja (Ekspor PDF) & Ekspor CSV';
-            
+            document.getElementById('pageTitle').innerText = 'Pusat Laporan Kinerja & SKP (Digital Signature & QR Code)';
             const isKaUnit = currentUser.role === 'ketua_unit';
             const isTim = currentUser.role === 'tim_kerja';
 
-            let validCapaian = DB.capaian.filter(c => c.status === 'Valid');
-            if (isKaUnit) {
-                validCapaian = validCapaian.filter(c => c.unit === currentUser.unit);
-            } else if (isTim) {
-                validCapaian = validCapaian.filter(c => c.timKey === currentUser.timKey);
-            }
+            if (!Array.isArray(DB.capaian)) DB.capaian = [];
 
-            const renderReportRows = (list) => {
-                if (list.length === 0) return '<tr><td colspan="11" class="p-4 text-center text-slate-400 border">Belum ada data tervalidasi</td></tr>';
-                return list.map((c, idx) => {
-                    const tahun = String(c.tahun || '2025');
-                    const ikObj = DB.renstraIndikatorKinerja.find(ik => ik.namaIndikator === c.targetDirektur);
-                    const skObj = ikObj ? DB.renstraSasaranKinerja.find(sk => sk.id === ikObj.sasaranKinerjaId) : null;
-                    const sasaranKinerjaText = skObj ? skObj.sasaranKinerja : '-';
-                    const targetVal = Number(c.target) || 100;
-                    const realVal = Number(c.realisasi) || 0;
-                    const pOutput = targetVal > 0 ? (realVal / targetVal) * 100 : 0;
-                    const isTercapai = realVal >= targetVal;
-
-                    // Cek Kategori (Utama / Support)
-                    const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
-                    const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahun && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit));
-                    const isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
-
-                    const paguVal = ikObj ? (Number(ikObj['anggaran' + tahun]) || 100000000) : 100000000;
-                    const subRa = DB.realisasiAnggaranAdmin.filter(ra => ikObj && ra.indikatorId === ikObj.id && String(ra.tahun) === tahun);
-                    const realAnggaranVal = subRa.reduce((a, b) => a + Number(b.realisasiAnggaran || 0), 0);
-                    const pAnggaran = paguVal > 0 ? (realAnggaranVal / paguVal) * 100 : 0;
-
-                    const isEfektif = pOutput >= 100;
-                    const isEfisien = pAnggaran <= pOutput;
-
-                    return `
-                    <tr>
-                        <td class="p-2 border text-center font-semibold">${idx + 1}</td>
-                        <td class="p-2 border font-semibold text-slate-800">${c.unit || '-'}</td>
-                        <td class="p-2 border text-center">
-                            <span class="px-2 py-0.5 rounded font-bold text-[10px] ${isUtama ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700'}">
-                                ${isUtama ? 'Utama' : 'Support'}
-                            </span>
-                        </td>
-                        <td class="p-2 border">${sasaranKinerjaText}</td>
-                        <td class="p-2 border font-semibold text-primary-700">${c.targetDirektur}</td>
-                        <td class="p-2 border text-center font-semibold">${c.target}</td>
-                        <td class="p-2 border text-center">${c.satuan || '%'}</td>
-                        <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi}</td>
-                        <td class="p-2 border text-center">
-                            <span class="px-2 py-0.5 rounded font-bold ${isTercapai ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
-                                ${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}
-                            </span>
-                        </td>
-                        <td class="p-2 border text-center">
-                            <span class="px-2 py-0.5 rounded font-bold ${isEfektif ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
-                                ${isEfektif ? 'Efektif' : 'Tidak Efektif'}
-                            </span>
-                        </td>
-                        <td class="p-2 border text-center">
-                            <span class="px-2 py-0.5 rounded font-bold ${isEfisien ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
-                                ${isEfisien ? 'Efisien' : 'Tidak Efisien'}
-                            </span>
-                        </td>
-                    </tr>
-                    `;
-                }).join('');
-            };
-    
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto space-y-6 no-print">
-                        <div class="flex flex-col md:flex-row items-center justify-between gap-4 border-b pb-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900 text-base">Pengaturan Ekspor & Download PDF & Ekspor CSV</h3>
-                                <p class="text-xs text-slate-500">Sesuaikan filter triwulan, pilih kolom CSV via pop-up, dan nama penandatangan dokumen</p>
+                    <!-- Tombol Pilihan Menu Laporan -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between hover:border-blue-400 transition-all">
+                            <div class="space-y-1">
+                                <span class="px-2.5 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full">Format SAKIP</span>
+                                <h3 class="text-base font-bold text-slate-900">Laporan Capaian Kinerja</h3>
+                                <p class="text-xs text-slate-500">Rekapitulasi realisasi indikator kinerja, efektivitas & efisiensi</p>
+                            </div>
+                            <button onclick="openLaporanModal('kinerja')" class="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-xs shadow-md flex items-center space-x-2 shrink-0">
+                                <i class="fa-solid fa-file-pdf"></i>
+                                <span>Buka Laporan</span>
+                            </button>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between hover:border-emerald-400 transition-all">
+                            <div class="space-y-1">
+                                <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">Format Resmi ASN</span>
+                                <h3 class="text-base font-bold text-slate-900">Laporan SKP Pegawai</h3>
+                                <p class="text-xs text-slate-500">Sasaran Kinerja Pegawai (Aktif jika Tim Kerja telah Valid)</p>
+                            </div>
+                            <button onclick="openLaporanModal('skp')" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs shadow-md flex items-center space-x-2 shrink-0">
+                                <i class="fa-solid fa-award"></i>
+                                <span>Buka SKP</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Pop-up Laporan dengan Live Filter, QR Code & Digital Signature (Fase 4 Poin 20, 21) -->
+                <div id="laporanPopupModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs hidden items-center justify-center z-[100] p-4 overflow-y-auto">
+                    <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-8 space-y-6 my-8 relative animate-fadeIn">
+                        <!-- Toolbar Atas Modal (Filter Live & Tombol Cetak PDF/CSV) -->
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4 no-print">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                                    <i class="fa-solid fa-print"></i>
+                                </div>
+                                <div>
+                                    <h3 id="modalLaporanHeaderTitle" class="font-bold text-slate-900 text-base">Pratinjau Laporan Kinerja</h3>
+                                    <p class="text-xs text-slate-500">Filter live di bawah langsung memperbarui isi dokumen</p>
+                                </div>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
-                                <select id="printPeriode" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                    <option value="Semua">Semua Periode</option>
+                                <select id="liveFilterPeriode" onchange="refreshLiveLaporanContent()" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-slate-700 outline-none">
+                                    <option value="Semua">Semua Periode / TW</option>
                                     <option value="TW 1">Triwulan 1</option>
                                     <option value="TW 2">Triwulan 2</option>
                                     <option value="TW 3">Triwulan 3</option>
                                     <option value="TW 4">Triwulan 4</option>
                                 </select>
-                                <button onclick="triggerPrintPDF()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-2">
-                                    <i class="fa-solid fa-file-pdf"></i>
-                                    <span>Ekspor & Download PDF</span>
+                                <select id="liveFilterTahun" onchange="refreshLiveLaporanContent()" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-slate-700 outline-none">
+                                    <option value="2025" selected>2025</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                    <option value="2028">2028</option>
+                                    <option value="2029">2029</option>
+                                </select>
+                                <button onclick="window.print()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-file-pdf"></i><span>Cetak PDF</span>
                                 </button>
-                                <button onclick="openExportCapaianCsvModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-2">
-                                    <i class="fa-solid fa-file-excel"></i>
-                                    <span>Pilih Kolom & Ekspor CSV</span>
+                                <button type="button" onclick="closeLaporanModal()" class="p-2 text-slate-400 hover:text-slate-600 text-lg">
+                                    <i class="fa-solid fa-xmark"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Custom Signatures Configuration (3 Signatures) -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">Tanda Tangan 1 (Menyetujui)</label>
-                                <input type="text" id="customJabatan1" value="Direktur" class="w-full p-2 bg-white border rounded-lg text-xs mb-1">
-                                <input type="text" id="customNama1" value="Dr. Supardi S.Pd., M.Pd" class="w-full p-2 bg-white border rounded-lg text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">Tanda Tangan 2 (Mengetahui)</label>
-                                <input type="text" id="customJabatan2" value="Ketua Tim Kerja" class="w-full p-2 bg-white border rounded-lg text-xs mb-1">
-                                <input type="text" id="customNama2" value="xxxxxxx" class="w-full p-2 bg-white border rounded-lg text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">Tanda Tangan 3 (Penyusun)</label>
-                                <input type="text" id="customJabatan3" value="Ketua Unit / Prodi" class="w-full p-2 bg-white border rounded-lg text-xs mb-1">
-                                <input type="text" id="customNama3" value="${currentUser.name}" class="w-full p-2 bg-white border rounded-lg text-xs">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="printableArea" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto space-y-6">
-                        <div class="text-center border-b pb-6">
-                            <h2 class="text-xl font-bold text-slate-900 uppercase">Laporan Capaian Kinerja</h2>
-                            <p class="text-sm text-slate-600 mt-1">Ki-Jaro (Kinerja-Jawara-Petro) - Sistem Informasi Kinerja & Manajemen Risiko</p>
-                            <p id="printPeriodeTitle" class="text-xs text-primary-700 font-semibold mt-1">Periode: Semua Periode | Unit: ${currentUser.unit}</p>
-                            <p class="text-xs text-slate-400 mt-0.5">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', {dateStyle: 'full'})}</p>
-                        </div>
-
-                        <div class="space-y-4 text-sm">
-                            <h3 class="font-bold text-slate-900 text-base border-l-4 border-primary-600 pl-3">Rekapitulasi Capaian Kinerja</h3>
-                            <table class="w-full text-left border-collapse text-xs">
-                                <thead class="bg-slate-50 border">
-                                 <tr>
-                                     <th class="p-2 border text-center w-10">No.</th>
-                                     <th class="p-2 border">Unit / Prodi</th>
-                                     <th class="p-2 border text-center">Kategori</th>
-                                     <th class="p-2 border">Sasaran Kinerja</th>
-                                     <th class="p-2 border">Indikator Kinerja</th>
-                                     <th class="p-2 border text-center">Target</th>
-                                     <th class="p-2 border text-center">Satuan</th>
-                                     <th class="p-2 border text-center">Realisasi</th>
-                                     <th class="p-2 border text-center">Status</th>
-                                     <th class="p-2 border text-center">Efektivitas</th>
-                                     <th class="p-2 border text-center">Efisiensi</th>
-                                 </tr>
-                             </thead>
-                                <tbody id="printTableBody">
-                                    ${renderReportRows(validCapaian)}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="pt-8 grid grid-cols-3 gap-4 text-center text-xs">
-                            <div>
-                                <p class="mb-16"><span id="lblJabatan1" class="border-b border-dotted pb-0.5 block">Direktur</span><br><strong id="lblNama1" class="mt-1 block">Dr. Supardi S.Pd., M.Pd</strong></p>
-                            </div>
-                            <div>
-                                <p class="mb-16"><span id="lblJabatan2" class="border-b border-dotted pb-0.5 block">Ketua Tim Kerja</span><br><strong id="lblNama2" class="mt-1 block">xxxxxxx</strong></p>
-                            </div>
-                            <div>
-                                <p class="mb-16"><span id="lblJabatan3" class="border-b border-dotted pb-0.5 block">Ketua Unit / Prodi</span><br><strong id="lblNama3" class="mt-1 block">${currentUser.name}</strong></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Capaian Kinerja (Revisi 8) -->
-                    <div id="exportCapaianCsvModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 no-print">
-                        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4">
-                            <div class="flex justify-between items-center border-b pb-4">
-                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i> Pilih Kolom untuk Ekspor CSV</h3>
-                                <button type="button" onclick="closeExportCapaianCsvModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-                            </div>
-                            <p class="text-xs text-slate-500">Centang kolom-kolom pada sistem yang ingin Anda ekstrak ke dalam file CSV:</p>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5 text-xs bg-slate-50 p-4 rounded-xl border max-h-72 overflow-y-auto">
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_1" checked class="rounded text-emerald-600"><span>1. Nomor</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_2" checked class="rounded text-emerald-600"><span>2. Tahun</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_3" checked class="rounded text-emerald-600"><span>3. Periode / Triwulan</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_4" checked class="rounded text-emerald-600"><span>4. Tim Kerja</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_5" checked class="rounded text-emerald-600"><span>5. Unit / Prodi / Subbag</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_6" checked class="rounded text-emerald-600"><span>6. Kategori (Utama/Support)</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_7" checked class="rounded text-emerald-600"><span>7. Tujuan Kemenperin (Tier 1)</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_8" checked class="rounded text-emerald-600"><span>8. Sasaran BPSDMI (Tier 2)</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_9" checked class="rounded text-emerald-600"><span>9. Sasaran Kinerja (Tier 3)</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_10" checked class="rounded text-emerald-600"><span>10. Indikator Kinerja Utama</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_11" checked class="rounded text-emerald-600"><span>11. Program Kerja Intervensi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_12" checked class="rounded text-emerald-600"><span>12. Target</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_13" checked class="rounded text-emerald-600"><span>13. Realisasi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_14" checked class="rounded text-emerald-600"><span>14. Satuan</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_15" checked class="rounded text-emerald-600"><span>15. % Capaian Output</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_16" checked class="rounded text-emerald-600"><span>16. Status Ketercapaian</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_17" checked class="rounded text-emerald-600"><span>17. Pagu Anggaran (Rp)</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_18" checked class="rounded text-emerald-600"><span>18. Realisasi Anggaran (Rp)</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_19" checked class="rounded text-emerald-600"><span>19. Efektivitas</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_20" checked class="rounded text-emerald-600"><span>20. Efisiensi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_21" checked class="rounded text-emerald-600"><span>21. Permasalahan</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_22" checked class="rounded text-emerald-600"><span>22. Link Bukti Kinerja</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_23" checked class="rounded text-emerald-600"><span>23. Status Validasi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_24" checked class="rounded text-emerald-600"><span>24. Arahan / Rekomendasi</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_25" checked class="rounded text-emerald-600"><span>25. Penyesuaian</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_26" checked class="rounded text-emerald-600"><span>26. Status Tindak Lanjut</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" id="cap_csv_27" checked class="rounded text-emerald-600"><span>27. Link Bukti Tindak Lanjut</span></label>
-                            </div>
-                            <div class="flex justify-between items-center pt-2">
-                                <div class="space-x-2 text-xs">
-                                    <button type="button" onclick="document.querySelectorAll('input[id^=cap_csv_]').forEach(c => c.checked = true)" class="text-blue-600 font-semibold underline">Pilih Semua</button>
-                                    <button type="button" onclick="document.querySelectorAll('input[id^=cap_csv_]').forEach(c => c.checked = false)" class="text-slate-500 font-semibold underline">Hapus Centang</button>
+                        <!-- Area Cetak / Pratinjau Dokumen Resmi -->
+                        <div id="printableArea" class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 space-y-6 text-slate-800">
+                            <!-- Kop Surat Instansi -->
+                            <div class="flex items-center justify-between border-b-2 border-slate-900 pb-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-14 h-14 rounded-xl bg-blue-700 text-white flex items-center justify-center font-bold text-xl shadow">
+                                        <img src="logo_poltek-removebg-preview.png" alt="Logo" class="w-10 h-10 object-contain" onerror="this.src='https://placehold.co/40x40/2563eb/ffffff?text=KIM'">
+                                    </div>
+                                    <div>
+                                        <h4 class="font-black text-slate-900 text-base sm:text-lg uppercase tracking-tight">Kementerian Perindustrian Republik Indonesia</h4>
+                                        <h2 class="font-black text-blue-700 text-lg sm:text-xl uppercase tracking-tight">Politeknik Industri Petrokimia Banten</h2>
+                                        <p class="text-[10px] text-slate-500 font-medium">Jl. Jenderal Sudirman, Cilegon, Banten &bull; Laporan Resmi Kinerja & SKP Institusi</p>
+                                    </div>
                                 </div>
-                                <div class="space-x-2">
-                                    <button type="button" onclick="closeExportCapaianCsvModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">Batal</button>
-                                    <button type="button" onclick="downloadCSV()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow">Download CSV Terpilih</button>
+                                <!-- QR Code Digital Signature Verification -->
+                                <div class="hidden sm:flex flex-col items-center shrink-0 border p-2 rounded-xl bg-slate-50">
+                                    <div class="w-16 h-16 bg-white border border-slate-300 flex items-center justify-center p-1 rounded">
+                                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://ki-jaro.poltek-petrokimia.ac.id/verify" alt="QR Code" class="w-full h-full object-contain">
+                                    </div>
+                                    <span class="text-[8px] font-bold text-slate-600 mt-1 uppercase">Scan Validasi</span>
+                                </div>
+                            </div>
+
+                            <!-- Judul Dokumen -->
+                            <div class="text-center space-y-1 pt-2">
+                                <h2 id="docHeadingTitle" class="text-base sm:text-lg font-black text-slate-900 uppercase">LAPORAN CAPAIAN KINERJA INSTITUSI</h2>
+                                <p id="docSubHeadingMeta" class="text-xs text-slate-600 font-semibold">Periode: Semua Periode | Tahun: 2025 | Unit: ${sanitizeHTML(currentUser.unit)}</p>
+                            </div>
+
+                            <!-- Konten Tabel Dinamis -->
+                            <div id="liveLaporanTableContainer" class="overflow-x-auto pt-2"></div>
+
+                            <!-- Tanda Tangan Digital & Barcode (3 Pejabat) -->
+                            <div class="pt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center text-xs page-break-inside-avoid">
+                                <div class="space-y-16">
+                                    <div>
+                                        <p class="font-semibold text-slate-700">Menyetujui,</p>
+                                        <p class="font-bold text-slate-900">Direktur</p>
+                                    </div>
+                                    <div class="relative">
+                                        <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-75 pointer-events-none">
+                                            <div class="w-24 h-12 border-2 border-dashed border-blue-600 rounded-full flex items-center justify-center text-[9px] font-bold text-blue-700 rotate-[-10deg]">
+                                                TTD DIGITAL
+                                            </div>
+                                        </div>
+                                        <strong class="block text-slate-900 underline">Dr. Supardi S.Pd., M.Pd</strong>
+                                        <span class="text-[10px] text-slate-500">NIP. 197001011995031001</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-16">
+                                    <div>
+                                        <p class="font-semibold text-slate-700">Mengetahui,</p>
+                                        <p class="font-bold text-slate-900">Ketua Tim Kerja</p>
+                                    </div>
+                                    <div class="relative">
+                                        <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-75 pointer-events-none">
+                                            <div class="w-24 h-12 border-2 border-dashed border-purple-600 rounded-full flex items-center justify-center text-[9px] font-bold text-purple-700 rotate-[8deg]">
+                                                VERIFIED TIM
+                                            </div>
+                                        </div>
+                                        <strong class="block text-slate-900 underline">${sanitizeHTML(currentUser.timKey ? 'Ketua Tim Kerja ' + currentUser.timKey : 'Tim Kerja Utama')}</strong>
+                                        <span class="text-[10px] text-slate-500">NIP. Terdaftar</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-16">
+                                    <div>
+                                        <p class="font-semibold text-slate-700">Disusun Oleh,</p>
+                                        <p class="font-bold text-slate-900">Pembuat Laporan</p>
+                                    </div>
+                                    <div class="relative">
+                                        <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-75 pointer-events-none">
+                                            <div class="w-24 h-12 border-2 border-dashed border-emerald-600 rounded-full flex items-center justify-center text-[9px] font-bold text-emerald-700 rotate-[-5deg]">
+                                                DIGITAL SIGN
+                                            </div>
+                                        </div>
+                                        <strong class="block text-slate-900 underline">${sanitizeHTML(currentUser.name)}</strong>
+                                        <span class="text-[10px] text-slate-500">${sanitizeHTML(currentUser.unit)}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             `;
+        }
+
+        let currentActiveLaporanType = 'kinerja';
+
+        function openLaporanModal(type) {
+            currentActiveLaporanType = type;
+            const modal = document.getElementById('laporanPopupModal');
+            const titleEl = document.getElementById('modalLaporanHeaderTitle');
+            const headingEl = document.getElementById('docHeadingTitle');
+
+            if (type === 'skp') {
+                // Syarat: Laporan SKP hanya bisa dibuka jika Tim Kerja sudah validasi (atau admin/direktur)
+                const isTimValid = DB.capaian.some(c => c.status === 'Valid');
+                if (!isTimValid && currentUser.role === 'ketua_unit') {
+                    showToast('Laporan SKP baru dapat dicetak setelah indikator kinerja divalidasi (Valid) oleh Ketua Tim Kerja!', 'error');
+                    return;
+                }
+                titleEl.innerText = 'Pratinjau Laporan SKP (Sasaran Kinerja Pegawai)';
+                headingEl.innerText = 'SASARAN KINERJA PEGAWAI (SKP) TAHUNAN';
+            } else {
+                titleEl.innerText = 'Pratinjau Laporan Kinerja Institusi';
+                headingEl.innerText = 'LAPORAN CAPAIAN KINERJA INSTITUSI';
+            }
+
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            refreshLiveLaporanContent();
+        }
+
+        function closeLaporanModal() {
+            const modal = document.getElementById('laporanPopupModal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+        }
+
+        function refreshLiveLaporanContent() {
+            const peri = document.getElementById('liveFilterPeriode') ? document.getElementById('liveFilterPeriode').value : 'Semua';
+            const thn = document.getElementById('liveFilterTahun') ? document.getElementById('liveFilterTahun').value : '2025';
+            const subHeading = document.getElementById('docSubHeadingMeta');
+            if (subHeading) subHeading.innerText = `Periode: ${peri} | Tahun: ${thn} | Unit: ${sanitizeHTML(currentUser.unit)}`;
+
+            const container = document.getElementById('liveLaporanTableContainer');
+            if (!container) return;
+
+            const isKaUnit = currentUser.role === 'ketua_unit';
+            const isTim = currentUser.role === 'tim_kerja';
+
+            let list = DB.capaian.filter(c => c.status === 'Valid' && String(c.tahun || '2025') === String(thn));
+            if (peri !== 'Semua') {
+                list = list.filter(c => (c.triwulan || '').trim().toUpperCase() === peri.trim().toUpperCase());
+            }
+            if (isKaUnit) {
+                list = list.filter(c => c.unit === currentUser.unit);
+            } else if (isTim) {
+                list = list.filter(c => c.timKey === currentUser.timKey);
+            }
+
+            if (currentActiveLaporanType === 'skp') {
+                // Render Format Tabel SKP Pegawai
+                container.innerHTML = `
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-slate-100 text-slate-800 font-bold border">
+                            <tr>
+                                <th class="p-2.5 border text-center w-10">No</th>
+                                <th class="p-2.5 border">Rencana Hasil Kerja Atasan / Unit</th>
+                                <th class="p-2.5 border">Rencana Hasil Kerja (Program & Uraian)</th>
+                                <th class="p-2.5 border text-center">Aspek</th>
+                                <th class="p-2.5 border text-center">IKU / Target</th>
+                                <th class="p-2.5 border text-center">Realisasi</th>
+                                <th class="p-2.5 border text-center">Ekspektasi Kinerja</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            ${list.length === 0 ? '<tr><td colspan="7" class="p-6 text-center text-slate-400 border">Belum ada data capaian tervalidasi pada filter ini.</td></tr>' : list.map((c, i) => {
+                                const targetVal = Number(c.target) || 100;
+                                const realVal = Number(c.realisasi) || 0;
+                                const capaianPct = targetVal > 0 ? (realVal / targetVal) * 100 : 0;
+                                const predikat = capaianPct >= 100 ? 'Mencapai / Melebihi Ekspektasi' : 'Belum Mencapai Ekspektasi';
+                                return `
+                                <tr>
+                                    <td class="p-2.5 border text-center font-semibold">${i + 1}</td>
+                                    <td class="p-2.5 border font-semibold text-primary-800">${sanitizeHTML(c.targetDirektur)}</td>
+                                    <td class="p-2.5 border font-bold text-slate-900">${sanitizeHTML(c.program)}<br><span class="text-[10px] text-slate-500 font-normal">${sanitizeHTML(c.uraianPekerjaan || '-')}</span></td>
+                                    <td class="p-2.5 border text-center">Kuantitas / Kualitas</td>
+                                    <td class="p-2.5 border text-center font-bold">${c.target} ${c.satuan || '%'}</td>
+                                    <td class="p-2.5 border text-center font-bold text-emerald-700">${c.realisasi}</td>
+                                    <td class="p-2.5 border text-center font-bold ${capaianPct >= 100 ? 'text-emerald-700' : 'text-rose-700'}">${predikat}</td>
+                                </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                // Render Format Laporan Capaian Kinerja Institusi
+                container.innerHTML = `
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-slate-100 text-slate-800 font-bold border">
+                            <tr>
+                                <th class="p-2.5 border text-center w-10">No</th>
+                                <th class="p-2.5 border">Unit / Prodi</th>
+                                <th class="p-2.5 border text-center">Kategori</th>
+                                <th class="p-2.5 border">Indikator Kinerja Utama</th>
+                                <th class="p-2.5 border text-center">Target</th>
+                                <th class="p-2.5 border text-center">Satuan</th>
+                                <th class="p-2.5 border text-center">Realisasi</th>
+                                <th class="p-2.5 border text-center">Status</th>
+                                <th class="p-2.5 border text-center">Efektivitas</th>
+                                <th class="p-2.5 border text-center">Efisiensi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            ${list.length === 0 ? '<tr><td colspan="10" class="p-6 text-center text-slate-400 border">Belum ada data tervalidasi pada filter ini.</td></tr>' : list.map((c, i) => {
+                                const targetVal = Number(c.target) || 100;
+                                const realVal = Number(c.realisasi) || 0;
+                                const isTercapai = realVal >= targetVal;
+                                const isEfektif = isTercapai;
+                                const isEfisien = true; // Sesuai evaluasi anggaran
+
+                                const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === String(c.tahun || '2025')) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
+                                const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === String(c.tahun || '2025') && Array.isArray(x.unitTargets) && x.unitTargets.includes(c.unit));
+                                const isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
+
+                                return `
+                                <tr>
+                                    <td class="p-2.5 border text-center font-semibold">${i + 1}</td>
+                                    <td class="p-2.5 border font-semibold text-slate-800">${sanitizeHTML(c.unit)}</td>
+                                    <td class="p-2.5 border text-center"><span class="px-2 py-0.5 rounded font-bold text-[10px] ${isUtama ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700'}">${isUtama ? 'Utama' : 'Support'}</span></td>
+                                    <td class="p-2.5 border font-semibold text-primary-700">${sanitizeHTML(c.targetDirektur)}</td>
+                                    <td class="p-2.5 border text-center font-semibold">${c.target}</td>
+                                    <td class="p-2.5 border text-center">${c.satuan || '%'}</td>
+                                    <td class="p-2.5 border text-center font-bold text-emerald-700">${c.realisasi}</td>
+                                    <td class="p-2.5 border text-center"><span class="font-bold ${isTercapai ? 'text-emerald-700' : 'text-rose-700'}">${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}</span></td>
+                                    <td class="p-2.5 border text-center"><span class="font-bold ${isEfektif ? 'text-emerald-700' : 'text-rose-700'}">${isEfektif ? 'Efektif' : 'Tidak Efektif'}</span></td>
+                                    <td class="p-2.5 border text-center"><span class="font-bold ${isEfisien ? 'text-emerald-700' : 'text-rose-700'}">${isEfisien ? 'Efisien' : 'Tidak Efisien'}</span></td>
+                                </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
         }
 
         function openExportCapaianCsvModal() {
