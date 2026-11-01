@@ -173,6 +173,39 @@ button { position: relative; z-index: 10; }
         // Daftar role fungsional tingkat bawah di bawah Unit/Prodi
         const SUB_UNIT_ROLES = ['sekretaris', 'kalab', 'koordinator', 'dosen', 'tendik'];
 
+        // Helper: Mendapatkan Unit Induk tempat staf/dosen/sekretaris bernaung
+        function getParentUnitForSubUser(userObj) {
+            if (!userObj) return '';
+            // Jika user punya field unit spesifik (misal "UPPM" atau "Prodi TMIP")
+            if (userObj.unit && !SUB_UNIT_ROLES.includes(userObj.unit.toLowerCase())) {
+                return userObj.unit;
+            }
+            // Jika berdasarkan username atau role penamaan
+            const uname = (userObj.username || '').toLowerCase();
+            if (uname.includes('uppm')) return 'UPPM';
+            if (uname.includes('tmip')) return 'Prodi TMIP';
+            if (uname.includes('tiip')) return 'Prodi TIIP';
+            if (uname.includes('tpip')) return 'Prodi TPIP';
+            if (uname.includes('lsp')) return 'LSP';
+            if (uname.includes('cdc')) return 'CDC';
+            if (uname.includes('inkubator')) return 'Inkubator Bisnis';
+            if (uname.includes('transformasi')) return 'Transformasi Digital 4.0';
+            if (uname.includes('spm')) return 'SPM';
+            if (uname.includes('pmb')) return 'PMB';
+            if (uname.includes('subbag_umum') || uname.includes('keuangan')) return 'Subbag Umum dan Keuangan';
+            if (uname.includes('subbag_akademik') || uname.includes('kemahasiswaan')) return 'Subbag Akademik Kemahasiswaan dan Kerjasama';
+            return userObj.unit || 'Prodi TMIP';
+        }
+
+        // Helper: Mendapatkan Subbag penanggung jawab untuk Tendik & Koordinator Bidang
+        function getSubbagTargetForRole(userObj) {
+            const unit = getParentUnitForSubUser(userObj).toLowerCase();
+            // Prodi, UPPM, SPM, PMB, LSP, CDC, Inkubator, Transformasi masuk ke Subbag Akademik/Umum terdekat
+            if (unit.includes('prodi') || unit.includes('uppm') || unit.includes('spm') || unit.includes('pmb') || unit.includes('lsp') || unit.includes('cdc') || unit.includes('inkubator')) {
+                return 'Subbag Akademik Kemahasiswaan dan Kerjasama';
+            }
+            return 'Subbag Umum dan Keuangan';
+        }
         // 1. Sanitasi Anti-XSS untuk input teks
         function sanitizeHTML(str) {
             if (str === null || str === undefined) return '';
@@ -4562,29 +4595,38 @@ async function saveCascadingTim(e) {
             syncSubUnitRolesWithUnitStatus();
         }
 
-        function renderUnitSubCheckboxes(targetUnit) {
+function renderUnitSubCheckboxes(targetUnit) {
             const container = document.getElementById('unitSubCheckContainer');
             if (!container) return;
             const activeUnit = targetUnit || currentUser.unit;
             const hdr = document.getElementById('modalUnitHeaderLabel');
             if (hdr) hdr.innerText = activeUnit;
 
-            // Cari user di DB.users yang berada di unit ini dan memiliki role level bawah, ditambah daftar jabatan fungsional standar
+            // Filter user yang HANYA berada di Unit/Prodi yang sama (atau subbag induknya)
             const unitUsers = DB.users.filter(u => {
                 const rList = getUserRoles(u);
                 const hasSubRole = rList.some(r => SUB_UNIT_ROLES.includes(r));
-                return hasSubRole && (!activeUnit || u.unit === activeUnit || currentUser.role === 'admin');
+                const pUnit = getParentUnitForSubUser(u);
+                const matchesUnit = pUnit.toLowerCase() === activeUnit.toLowerCase() || (currentUser.role === 'admin');
+                return hasSubRole && matchesUnit;
             });
 
             const items = [];
             unitUsers.forEach(u => {
-                items.push({ key: u.username, label: `${u.name} (${u.roles ? u.roles.map(r => ROLE_LABELS[r] || r).join(', ') : (ROLE_LABELS[u.role] || u.role)})` });
+                items.push({ 
+                    key: u.username, 
+                    label: `${u.name} (${ROLE_LABELS[u.role] || u.role}) — Unit: ${u.unit}` 
+                });
             });
 
-            // Tambahkan jabatan struktural/fungsional standar di bawah unit jika belum ada akun spesifiknya
-            SUB_UNIT_ROLES.forEach(rKey => {
-                items.push({ key: `${rKey}_${activeUnit}`, label: `${ROLE_LABELS[rKey]} - ${activeUnit}` });
-            });
+            // Jika belum ada user spesifik terdaftar, sediakan opsi standar untuk unit ini
+            if (items.length === 0) {
+                items.push({ key: `sekretaris_${activeUnit}`, label: `Sekretaris - ${activeUnit}` });
+                items.push({ key: `kalab_${activeUnit}`, label: `Kepala Laboratorium - ${activeUnit}` });
+                items.push({ key: `koordinator_${activeUnit}`, label: `Koordinator Bidang - ${activeUnit}` });
+                items.push({ key: `dosen_${activeUnit}`, label: `Dosen / Pengajar - ${activeUnit}` });
+                items.push({ key: `tendik_${activeUnit}`, label: `Tenaga Kependidikan - ${activeUnit}` });
+            }
 
             container.innerHTML = items.map((item, idx) => `
                 <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-emerald-400 transition-all shadow-2xs">
@@ -4889,10 +4931,13 @@ async function saveCascadingTim(e) {
             const isKetuaTim = currentUser.role === 'tim_kerja';
             const isAdmin = currentUser.role === 'admin';
 
-            let displayCapaian = DB.capaian;
-            if (isSubUnit) {
-                // Level bawah melihat capaian unitnya (termasuk arahan Ketua Tim Kerja)
-                displayCapaian = DB.capaian.filter(c => c.unit === currentUser.unit);
+           let displayCapaian = DB.capaian;
+         const myParentUnit = getParentUnitForSubUser(currentUser);
+         if (isSubUnit) {
+             displayCapaian = DB.capaian.filter(c => c.unit.toLowerCase() === myParentUnit.toLowerCase() || c.inputByUsername === currentUser.username);
+         } else if (isKaUnit) {
+             displayCapaian = DB.capaian.filter(c => c.unit.toLowerCase() === currentUser.unit.toLowerCase());
+         }
             } else if (isKaUnit) {
                 displayCapaian = DB.capaian.filter(c => c.unit === currentUser.unit);
             } else if (isKetuaTim) {
