@@ -2291,40 +2291,6 @@ function renderDokumenUkurLaporView(container) {
                 `;
             }
         }
-                titleEl.innerText = isEdit ? 'Edit Indikator Kinerja & Anggaran' : 'Input Indikator Kinerja & Target 5 Tahun (Tier 4)';
-                formEl.innerHTML = `
-                    <div><label class="block font-semibold mb-1">Pilih Sasaran Kinerja (Intervensi)</label><select id="r_parent" required class="w-full p-3 bg-slate-50 border rounded-xl">${DB.renstraSasaranKinerja.map(x => `<option value="${x.id}" ${item.sasaranKinerjaId === x.id ? 'selected' : ''}>${x.kode} - ${x.sasaranKinerja}</option>`).join('')}</select></div>
-                    <div><label class="block font-semibold mb-1">Kode Indikator</label><input type="text" id="r_kodeIndikator" required value="${item.kodeIndikator}" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: IK-01"></div>
-                    <div><label class="block font-semibold mb-1">Nama Indikator Kinerja</label><textarea id="r_namaIndikator" rows="2" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Nama indikator utama...">${item.namaIndikator}</textarea></div>
-                    <div><label class="block font-semibold mb-1">Satuan</label><input type="text" id="r_satuan" required value="${item.satuan}" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="%, Dokumen, Orang"></div>
-                    
-                    <div class="space-y-3 bg-slate-50 p-4 rounded-xl border">
-                        <h4 class="font-bold text-xs text-slate-700">Target & Alokasi Pagu Anggaran 2025 - 2029</h4>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div><label class="block text-xs font-semibold mb-1">Target 2025</label><input type="number" step="any" id="r_2025" required value="${item.target2025}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                            <div><label class="block text-xs font-semibold mb-1">Pagu 2025 (Rp)</label><input type="number" id="r_ang2025" required value="${item.anggaran2025 || 0}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div><label class="block text-xs font-semibold mb-1">Target 2026</label><input type="number" step="any" id="r_2026" required value="${item.target2026}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                            <div><label class="block text-xs font-semibold mb-1">Pagu 2026 (Rp)</label><input type="number" id="r_ang2026" required value="${item.anggaran2026 || 0}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div><label class="block text-xs font-semibold mb-1">Target 2027</label><input type="number" step="any" id="r_2027" required value="${item.target2027}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                            <div><label class="block text-xs font-semibold mb-1">Pagu 2027 (Rp)</label><input type="number" id="r_ang2027" required value="${item.anggaran2027 || 0}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div><label class="block text-xs font-semibold mb-1">Target 2028</label><input type="number" step="any" id="r_2028" required value="${item.target2028}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                            <div><label class="block text-xs font-semibold mb-1">Pagu 2028 (Rp)</label><input type="number" id="r_ang2028" required value="${item.anggaran2028 || 0}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div><label class="block text-xs font-semibold mb-1">Target 2029</label><input type="number" step="any" id="r_2029" required value="${item.target2029}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                            <div><label class="block text-xs font-semibold mb-1">Pagu 2029 (Rp)</label><input type="number" id="r_ang2029" required value="${item.anggaran2029 || 0}" class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                        </div>
-                    </div>
-                    <div class="flex justify-end space-x-2 pt-2"><button type="button" onclick="closeRenstraModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button><button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-xl">Simpan</button></div>
-                `;
-            }
-        }
         function closeRenstraModal() { document.getElementById('renstraModal').classList.remove('flex'); document.getElementById('renstraModal').classList.add('hidden'); }
 
         function openRealisasiAnggaranModal(mode, idx = -1) {
