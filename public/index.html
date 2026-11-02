@@ -1310,7 +1310,7 @@ function triggerGoogleLogin() {
              imgEl.classList.remove('hidden');
              initEl.classList.add('hidden');
          };
-         reader.readAsText ? reader.readAsDataURL(file) : null;
+         reader.readAsDataURL(file);
      }
 
      async function handleSelfEditProfile(e) {
@@ -7593,18 +7593,17 @@ async function saveCascadingTim(e) {
 
             const existingUser = idx !== -1 ? DB.users[idx] : {};
             const userData = {
-                ...existingUser,
-                id: idx !== -1 ? DB.users[idx].id : 'u' + Date.now(),
-                name: sanitizeHTML(document.getElementById('uName').value.trim()),
-                username: document.getElementById('uUsername').value.trim().toLowerCase(),
-                password: document.getElementById('uPassword').value.trim(),
-                role: selectedRoles[0],
-                roles: selectedRoles,
-                timKey: document.getElementById('uTimKey').value,
-                unit: sanitizeHTML(document.getElementById('uUnit').value.trim())
-                name: document.getElementById('uName').value.trim(),
-                nip: document.getElementById('uNip') ? document.getElementById('uNip').value.trim() : '',
-            };
+    ...existingUser,
+    id: idx !== -1 ? DB.users[idx].id : 'u' + Date.now(),
+    name: sanitizeHTML(document.getElementById('uName').value.trim()),
+    nip: document.getElementById('uNip') ? document.getElementById('uNip').value.trim() : '',
+    username: document.getElementById('uUsername').value.trim().toLowerCase(),
+    password: document.getElementById('uPassword').value.trim(),
+    role: selectedRoles[0],
+    roles: selectedRoles,
+    timKey: document.getElementById('uTimKey').value,
+    unit: sanitizeHTML(document.getElementById('uUnit').value.trim())
+};
 
             if (idx !== -1) {
                 DB.users[idx] = userData;
@@ -9742,7 +9741,7 @@ function downloadLogRisikoError() {
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
-            await loadFromMySQL();
+            await loadDataFromMySQL();
             const savedUser = localStorage.getItem('ki_jaro_user');
             if (savedUser) {
                 try {
@@ -9756,7 +9755,6 @@ function downloadLogRisikoError() {
             renderLogin();
         });
 
-    </script>
     <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Manajemen Risiko -->
 <div id="exportRisikoCsvModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4">
