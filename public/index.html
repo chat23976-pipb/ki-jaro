@@ -1314,21 +1314,21 @@ function triggerGoogleLogin() {
      }
 
      async function handleSelfEditProfile(e) {
-      e.preventDefault();
-      if (!currentUser) return;
+         e.preventDefault();
+         if (!currentUser) return;
 
-      const userIdx = DB.users.findIndex(u => String(u.id) === String(currentUser.id) || u.username === currentUser.username);
-      const newName = sanitizeHTML(document.getElementById('selfProfileName').value.trim());
-      const newNip = document.getElementById('selfProfileNip') ? sanitizeHTML(document.getElementById('selfProfileNip').value.trim()) : (currentUser.nip || '');
-      currentUser.nip = newNip;
-      if (userIdx !== -1) DB.users[userIdx].nip = newNip;
+         const userIdx = DB.users.findIndex(u => String(u.id) === String(currentUser.id) || u.username === currentUser.username);
+         const newName = sanitizeHTML(document.getElementById('selfProfileName').value.trim());
+         const newNip = document.getElementById('selfProfileNip') ? sanitizeHTML(document.getElementById('selfProfileNip').value.trim()) : (currentUser.nip || '');
+         currentUser.nip = newNip;
+         if (userIdx !== -1) DB.users[userIdx].nip = newNip;
 
-      const newUnit = sanitizeHTML(document.getElementById('selfProfileUnit').value.trim());
-      const newAvatar = document.getElementById('selfAvatarBase64').value;
+         const newUnit = sanitizeHTML(document.getElementById('selfProfileUnit').value.trim());
+         const newAvatar = document.getElementById('selfAvatarBase64').value;
 
-      const oldPass = document.getElementById('selfOldPass').value;
-      const newPass = document.getElementById('selfNewPass').value;
-      const confirmPass = document.getElementById('selfConfirmPass').value;
+         const oldPass = document.getElementById('selfOldPass').value;
+         const newPass = document.getElementById('selfNewPass').value;
+         const confirmPass = document.getElementById('selfConfirmPass').value;
 
          if (newPass || confirmPass) {
              if (oldPass !== currentUser.password) {
