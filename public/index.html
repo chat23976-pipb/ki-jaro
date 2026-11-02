@@ -9715,6 +9715,22 @@ function downloadLogRisikoError() {
     link.click();
     document.body.removeChild(link);
 }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadFromMySQL();
+            const savedUser = localStorage.getItem('ki_jaro_user');
+            if (savedUser) {
+                try {
+                    currentUser = JSON.parse(savedUser);
+                    renderDashboardLayout();
+                    return;
+                } catch (e) {
+                    localStorage.removeItem('ki_jaro_user');
+                }
+            }
+            renderLogin();
+        });
+
     </script>
     <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Manajemen Risiko -->
 <div id="exportRisikoCsvModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
