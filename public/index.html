@@ -5096,6 +5096,7 @@ function updateDirRenstraOptions(tahun) {
                      sesuai: document.getElementById('dirRangeSesuai') ? document.getElementById('dirRangeSesuai').value.trim() : '100%',
                      atas: document.getElementById('dirRangeAtas') ? document.getElementById('dirRangeAtas').value.trim() : '> 100%'
                  },
+                 status: 'Aktif'
                     };
                 }
                 showToast('Cascading Direktur (Utama & Support) berhasil diperbarui!');
@@ -9715,6 +9716,31 @@ function downloadLogRisikoError() {
     document.body.removeChild(link);
 }
 
+        
+        async function loadFromMySQL() {
+            try {
+                const localBackup = localStorage.getItem('ki_jaro_db_backup');
+                if (localBackup) {
+                    const parsed = JSON.parse(localBackup);
+                    DB = { ...DB, ...parsed };
+                }
+                const response = await fetch('/api/state');
+                if (response.ok) {
+                    const serverDB = await response.json();
+                    if (serverDB && Object.keys(serverDB).length > 0) {
+                        DB = { ...DB, ...serverDB };
+                    }
+                }
+            } catch (err) {
+                console.warn('Menggunakan database lokal.');
+            }
+            if (!Array.isArray(DB.cascadingUnit)) DB.cascadingUnit = [];
+            if (!Array.isArray(DB.approvalLaporan)) DB.approvalLaporan = [];
+            if (!Array.isArray(DB.approvalSKP)) DB.approvalSKP = [];
+            if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+            if (typeof syncUnitListFromUsers === 'function') syncUnitListFromUsers();
+        }
+
         window.addEventListener('DOMContentLoaded', async () => {
             await loadFromMySQL();
             const savedUser = localStorage.getItem('ki_jaro_user');
@@ -9729,21 +9755,7 @@ function downloadLogRisikoError() {
             }
             renderLogin();
         });
-window.addEventListener('DOMContentLoaded', async () => {
-            await loadFromMySQL();
-            const savedUser = localStorage.getItem('ki_jaro_user');
-            if (savedUser) {
-                try {
-                    currentUser = JSON.parse(savedUser);
-                    renderDashboardLayout();
-                    return;
-                } catch (e) {
-                    localStorage.removeItem('ki_jaro_user');
-                }
-            }
-            renderLogin();
-        });
-    </script>
+
     </script>
     <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Manajemen Risiko -->
 <div id="exportRisikoCsvModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
