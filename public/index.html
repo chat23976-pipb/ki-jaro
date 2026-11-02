@@ -437,10 +437,12 @@ button { position: relative; z-index: 10; }
                 { id: 'u17', username: 'subbag_akademik@poltek-petrokimia.ac.id', password: '123', name: 'Kasubbag Akademik', role: 'ketua_unit', unit: 'Subbag Akademik Kemahasiswaan dan Kerjasama', timKey: 'Umum dan Keuangan' }
             ],
             timKerjaList: ['Akademik', 'Umum dan Keuangan', 'Kemahasiswaan dan Kerjasama'],
-            unitList: [
-                'Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 
-                'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 
-                'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'
+           unitList: [
+                'SPM', 'Prodi TPIP', 'Prodi TMIP', 'Prodi TIIP', 'Teaching Factory', 
+                'UPPM', 'Perpustakaan', 'Transformasi Digital 4.0', 'LSP', 
+                'Subbag Akademik Kemahasiswaan dan Kerjasama',
+                'Subbag Umum dan Keuangan', 'Satuan Pengawasan Internal',
+                'CDC', 'Humas', 'PMB', 'Inkubator Bisnis'
             ],
             
             renstraTujuanKemenperin: [], 
@@ -3624,10 +3626,9 @@ function renderMultiYearIndikatorChart() {
                         <div class="overflow-x-auto p-8 bg-slate-50 rounded-2xl border min-w-[950px]">
                             ${filteredDir.length === 0 ? `<p class="text-xs text-slate-400 text-center py-6 italic">Belum ada Indikator Kinerja yang dicascadingkan pada tahun ${filterCascadingTahun}.</p>` : `
                             <div class="flex items-center space-x-6">
-                                <!-- Root Kiri: Perjanjian Kinerja Politeknik / Direktur -->
                                 <div class="flex flex-col items-center shrink-0">
-                                    <div class="px-6 py-5 bg-blue-700 text-white rounded-2xl shadow-lg text-sm font-extrabold text-center w-60 border-2 border-blue-800 leading-snug">
-                                        Perjanjian Kinerja<br>Politeknik / Direktur
+                                    <div class="px-6 py-5 bg-blue-700 text-white rounded-2xl shadow-lg text-sm font-extrabold text-center w-56 border-2 border-blue-800 leading-snug">
+                                        Direktur<br><span class="text-xs font-semibold text-blue-100">(Perjanjian Kinerja)</span>
                                         <span class="block text-[10px] font-normal text-blue-200 mt-1">Tahun: ${filterCascadingTahun}</span>
                                     </div>
                                 </div>
@@ -3639,7 +3640,7 @@ function renderMultiYearIndikatorChart() {
                                     ${filteredDir.map((cd) => {
                                         const timList = Array.isArray(cd.timKeys) ? [...cd.timKeys].sort((a, b) => (isTimUtamaInDir(cd, b) ? 1 : 0) - (isTimUtamaInDir(cd, a) ? 1 : 0)) : [];
                                         return `
-                                            <div class="flex items-center space-x-5 relative">
+                                            <div class="flex items-center space-x-4 relative">
                                                 <div class="w-6 h-0.5 bg-blue-600 shrink-0 -ml-6"></div>
                                                 <div class="px-5 py-3.5 bg-slate-900 text-white rounded-xl shadow-md text-xs font-bold w-64 shrink-0 border border-slate-800">
                                                     <div>${cd.target}</div>
@@ -3661,9 +3662,9 @@ function renderMultiYearIndikatorChart() {
                                                                 <div class="bg-white border ${isTimUtama ? 'border-rose-300 shadow-xs' : 'border-slate-200'} rounded-xl px-3.5 py-2 w-52 shrink-0">
                                                                     <div class="flex items-center space-x-2 text-xs font-bold text-slate-800">
                                                                         <i class="fa-solid ${isTimUtama ? 'fa-star text-rose-500' : 'fa-shield-halved text-indigo-500'}"></i>
-                                                                        <span>Tim Kerja ${tim}</span>
+                                                                        <span>Tim Kerja (${tim})</span>
                                                                     </div>
-                                                                    <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${isTimUtama ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}">
+                                                                    <span class="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-bold ${isTimUtama ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600'}">
                                                                         ${isTimUtama ? 'UTAMA' : 'Support'}
                                                                     </span>
                                                                 </div>
@@ -3686,7 +3687,7 @@ function renderMultiYearIndikatorChart() {
                                                                                         <i class="fa-solid ${uObj.isUtama ? 'fa-star text-rose-500' : 'fa-shield-halved text-indigo-500'} text-[10px]"></i>
                                                                                         <span>${uObj.name}</span>
                                                                                     </div>
-                                                                                    <span class="inline-block mt-0.5 px-2 py-0.5 rounded text-[9px] font-bold ${uObj.isUtama ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}">
+                                                                                    <span class="inline-block mt-0.5 px-2 py-0.5 rounded text-[9px] font-bold ${uObj.isUtama ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600'}">
                                                                                         ${uObj.isUtama ? 'UTAMA' : 'Support'}
                                                                                     </span>
                                                                                 </div>
@@ -3735,7 +3736,7 @@ function renderMultiYearIndikatorChart() {
                                         <th class="p-4">Tahun & Sasaran Kinerja (Renstra)</th>
                                         <th class="p-4 text-center">Target</th>
                                         <th class="p-4 text-center">Satuan</th>
-                                        <th class="p-4 text-center">Pagu Anggaran (Renstra)</th>
+                                        <th class="p-4 text-center">Pagu Anggaran</th>
                                         <th class="p-4">Tim Kerja Terpilih</th>
                                         ${(isDirektur || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
                                     </tr>
@@ -3743,10 +3744,7 @@ function renderMultiYearIndikatorChart() {
                                 <tbody class="divide-y divide-slate-100">
                                     ${filteredDir.length === 0 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data cascading dari Direktur untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredDir.map((c) => `
                                         <tr class="hover:bg-slate-50 transition-all">
-                                            <td class="p-4">
-                                                <span class="px-2 py-0.5 bg-blue-50 text-primary-700 font-semibold text-xs rounded mr-2">Tahun: ${c.tahun || '2025'}</span>
-                                                <span class="font-semibold text-slate-900">${c.target}</span>
-                                            </td>
+                                            <td class="p-4"><span class="px-2 py-0.5 bg-blue-50 text-primary-700 font-semibold text-xs rounded mr-2">Tahun: ${c.tahun || '2025'}</span><span class="font-semibold text-slate-900">${c.target}</span></td>
                                             <td class="p-4 text-center font-bold text-primary-700">${c.targetVal !== undefined ? c.targetVal : 100}</td>
                                             <td class="p-4 text-center"><span class="px-2.5 py-1 bg-slate-100 rounded text-xs font-semibold">${c.satuan || '%'}</span></td>
                                             <td class="p-4 text-center font-bold text-emerald-700">Rp ${Number(c.anggaran || 0).toLocaleString('id-ID')}</td>
@@ -3770,6 +3768,7 @@ function renderMultiYearIndikatorChart() {
                             </table>
                         </div>
                     </div>
+                    ` : ''}
 
                     <!-- Bagian 2: Cascading Ketua Tim Kerja ke Unit / Prodi (Level 2) -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -3797,18 +3796,58 @@ function renderMultiYearIndikatorChart() {
                                             <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
                                             <td class="p-4 font-semibold text-slate-900">${c.targetDirektur}</td>
+                                            <td class="p-4"><div class="flex flex-wrap gap-1.5">${c.unitTargets.map(u => {
+                                                const isUtama = isUnitUtamaInTim(c, u);
+                                                return `<span class="px-2.5 py-1 ${isUtama ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 border'} text-xs rounded-full font-bold"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i>${u} (${isUtama ? 'Utama' : 'Support'})</span>`;
+                                            }).join('')}</div></td>
+                                            ${(isKetuaTim || isAdmin) ? `<td class="p-4 text-center space-x-1"><button onclick="openEditCascadingTimModal('${c.id}')" class="p-1.5 bg-blue-100 text-primary-700 rounded-lg text-xs"><i class="fa-solid fa-pen"></i></button><button onclick="confirmDeleteCascadingTim('${c.id}')" class="p-1.5 bg-rose-100 text-rose-600 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button></td>` : ''}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- LEVEL 3: Cascading Ketua Prodi / Subbag / Unit ke Sekretaris, Anggota, Dosen, Koordinator -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-emerald-200 overflow-hidden">
+                        <div class="p-6 border-b border-emerald-100 bg-emerald-50/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-users-rays text-emerald-600 mr-2"></i> Level 3: Cascading Ketua Prodi / Subbag / Unit ke Bawahan Langsung</h3>
+                                <p class="text-xs text-slate-600">Terkunci sesuai O-Chart: Ketua Prodi A hanya bisa mencascading ke Sekretaris/Anggota/Dosen Prodi A; Kasubbag hanya ke Koordinator di bawah Subbag-nya.</p>
+                            </div>
+                            ${(isKaUnit || isAdmin) ? `<button onclick="openCascadingUnitModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow-md flex items-center space-x-2 shrink-0"><i class="fa-solid fa-plus"></i><span>Tambah Cascading Level 3</span></button>` : ''}
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                        <th class="p-4">Unit / Prodi / Subbag Induk</th>
+                                        <th class="p-4">Tahun</th>
+                                        <th class="p-4">Indikator Kinerja yang Dicascadingkan</th>
+                                        <th class="p-4">Pelaksana Bawahan (Sekretaris / Anggota / Dosen / Koordinator)</th>
+                                        ${(isKaUnit || isAdmin) ? '<th class="p-4 text-center">Aksi</th>' : ''}
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${filteredUnitTable.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading Level 3 ${isKaUnit ? 'untuk ' + currentUser.unit : ''} pada tahun ${filterCascadingTahun}.</td></tr>` : filteredUnitTable.map((cu) => `
+                                        <tr class="hover:bg-slate-50 transition-all">
+                                            <td class="p-4"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold text-xs rounded-full">${cu.unit}</span></td>
+                                            <td class="p-4 font-bold text-primary-700">${cu.tahun || '2025'}</td>
+                                            <td class="p-4 font-semibold text-slate-900">${cu.targetDirektur}</td>
                                             <td class="p-4">
                                                 <div class="flex flex-wrap gap-1.5">
-                                                    ${c.unitTargets.map(u => {
-                                                        const isUtama = isUnitUtamaInTim(c, u);
-                                                        return `<span class="px-2.5 py-1 ${isUtama ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-300'} text-xs rounded-full font-bold flex items-center space-x-1"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i><span>${u} (${isUtama ? 'Utama' : 'Support'})</span></span>`;
+                                                    ${(cu.subTargets || []).map(st => {
+                                                        const isUtama = isSubRoleUtamaInUnit(cu, st);
+                                                        const usr = DB.users.find(u => u.username === st);
+                                                        const label = usr ? `${usr.name} (${usr.subPosition || ROLE_LABELS_GLOBAL[usr.role] || usr.role})` : st;
+                                                        return `<span class="px-2.5 py-1 ${isUtama ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 border'} text-xs rounded-full font-bold"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i>${label} (${isUtama ? 'Utama' : 'Support'})</span>`;
                                                     }).join('')}
                                                 </div>
                                             </td>
                                             ${(isKetuaTim || isAdmin) && !isPureViewer() ? `
                                                 <td class="p-4 text-center space-x-1">
-                                                    <button onclick="openEditCascadingTimModal('${c.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="confirmDeleteCascadingTim('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                    <button onclick="openEditCascadingUnitModal('${cu.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="confirmDeleteCascadingUnit('${cu.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -3879,7 +3918,7 @@ function renderMultiYearIndikatorChart() {
                     <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
                         <div class="flex justify-between items-center border-b pb-4">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Direktur</h3>
+                                <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Direktur (Level 1)</h3>
                                 <p class="text-[11px] text-slate-500">Pilih satu atau lebih Tim Kerja dan tentukan Tim Utama vs Support</p>
                             </div>
                             <button type="button" onclick="closeCascadingDirModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -3900,18 +3939,15 @@ function renderMultiYearIndikatorChart() {
                                 <div class="text-right"><span class="text-slate-500 block">Pagu Anggaran:</span><strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong></div>
                             </div>
                             <div>
-                                <div class="flex items-center justify-between mb-2">
-                                    <label class="block font-semibold text-slate-700">Pilih Ketua Tim Kerja (Bisa Lebih Dari 1) & Status Peran</label>
-                                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">★ Utama = Masuk Dashboard</span>
-                                </div>
+                                <label class="block font-semibold text-slate-700 mb-2">Pilih Ketua Tim Kerja & Status Peran</label>
                                 <div class="space-y-2.5 bg-slate-50 p-3.5 rounded-xl border">
                                     ${DB.timKerjaList.map((t, idx) => `
-                                        <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-all shadow-2xs">
+                                        <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200">
                                             <label class="flex items-center space-x-3 cursor-pointer flex-1">
-                                                <input type="checkbox" name="timCheck" value="${t}" onchange="toggleTimRoleSelect(${idx}, this.checked)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                                                <input type="checkbox" name="timCheck" value="${t}" onchange="toggleTimRoleSelect(${idx}, this.checked)" class="w-4 h-4 text-blue-600 rounded">
                                                 <span class="text-slate-800 font-semibold text-xs">${t}</span>
                                             </label>
-                                            <select id="timRole_${idx}" data-tim="${t}" onchange="handleTimRoleChange(${idx})" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
+                                            <select id="timRole_${idx}" data-tim="${t}" onchange="handleTimRoleChange(${idx})" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400">
                                                 <option value="Utama">★ Tim Utama (Inti)</option>
                                                 <option value="Support">🛡️ Tim Support (Pendukung)</option>
                                             </select>
@@ -3932,8 +3968,8 @@ function renderMultiYearIndikatorChart() {
                     <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
                         <div class="flex justify-between items-center border-b pb-4">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (<span id="modalTimHeaderLabel">${currentUser.timKey || 'Semua Tim'}</span>)</h3>
-                                <p class="text-[11px] text-slate-500">Menampilkan khusus Subbag / Prodi / Unit di bawah koordinasi Tim Kerja Anda</p>
+                                <h3 class="font-bold text-slate-900 text-base">Cascading Level 2 (<span id="modalTimHeaderLabel">${currentUser.timKey || 'Semua Tim'}</span>)</h3>
+                                <p class="text-[11px] text-slate-500">Menampilkan khusus Subbag / Prodi / Unit di bawah koordinasi Tim Kerja Anda sesuai O-Chart</p>
                             </div>
                             <button type="button" onclick="closeCascadingTimModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
@@ -3949,10 +3985,7 @@ function renderMultiYearIndikatorChart() {
                                 <select id="timDirRef" required class="w-full p-3 bg-slate-50 border rounded-xl"></select>
                             </div>
                             <div>
-                                <div class="flex items-center justify-between mb-2">
-                                    <label class="block font-semibold text-slate-700">Pilih Unit / Prodi / Subbag Tujuan (Bisa Lebih Dari 1)</label>
-                                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">★ Utama = Masuk Dashboard</span>
-                                </div>
+                                <label class="block font-semibold text-slate-700 mb-2">Pilih Unit / Prodi / Subbag Tujuan</label>
                                 <div id="timUnitCheckContainer" class="space-y-2 bg-slate-50 p-3.5 rounded-xl border max-h-60 overflow-y-auto"></div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-2">
@@ -4408,17 +4441,13 @@ function toggleUnitRoleSelect(idx, isChecked) {
             const headerLbl = document.getElementById('modalTimHeaderLabel');
             if (headerLbl) headerLbl.innerText = activeTim;
 
-            let allowedUnits = DB.users
-                .filter(u => u.role === 'ketua_unit' && (!activeTim || u.timKey === activeTim))
+            // Ambil daftar unit dari OCHART_HIERARCHY sesuai Tim Kerja yang sedang login
+            const ochartUnits = OCHART_HIERARCHY[activeTim] ? Object.keys(OCHART_HIERARCHY[activeTim]) : [];
+            const userUnits = DB.users
+                .filter(u => u.role === 'ketua_unit' && u.timKey === activeTim)
                 .map(u => u.unit);
 
-            allowedUnits = Array.from(new Set(allowedUnits));
-
-            if (allowedUnits.length === 0) {
-                allowedUnits = Array.isArray(DB.unitList) && DB.unitList.length > 0 
-                    ? [...DB.unitList] 
-                    : ['Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'];
-            }
+            const allowedUnits = Array.from(new Set([...ochartUnits, ...userUnits]));
 
             if (allowedUnits.length === 0) {
                 container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Tidak ada Unit/Prodi di bawah Tim Kerja ${activeTim}.</p>`;
@@ -4438,6 +4467,7 @@ function toggleUnitRoleSelect(idx, isChecked) {
                 </div>
             `).join('');
         }
+
         function openEditCascadingTimModal(id) {
             const item = DB.cascadingTim.find(x => x.id === id);
             if (!item) return;
@@ -4475,7 +4505,7 @@ function toggleUnitRoleSelect(idx, isChecked) {
             }
         }
 
-async function saveCascadingTim(e) {
+        async function saveCascadingTim(e) {
             e.preventDefault();
             const modal = document.getElementById('cascadingTimModal');
             const editId = modal.getAttribute('data-edit-id');
@@ -4488,8 +4518,6 @@ async function saveCascadingTim(e) {
             }
 
             const activeTimKey = editTimKey || currentUser.timKey || 'Akademik';
-
-            // Validasi: Cegah input indikator yang sama pada tahun yang sama untuk Tim Kerja ini
             const isDuplicate = (DB.cascadingTim || []).some(ct => {
                 const sameTim = String(ct.timKey) === String(activeTimKey);
                 const sameIndikator = String(ct.targetDirektur).trim().toLowerCase() === String(targetDir).trim().toLowerCase();
@@ -4499,7 +4527,7 @@ async function saveCascadingTim(e) {
             });
 
             if (isDuplicate) {
-                showToast(`Indikator "${targetDir}" pada tahun ${tahun} sudah pernah diinput oleh Tim Kerja ${activeTimKey}! Silakan pilih indikator lain atau tahun yang berbeda.`, 'error');
+                showToast(`Indikator "${targetDir}" pada tahun ${tahun} sudah pernah diinput oleh Tim Kerja ${activeTimKey}!`, 'error');
                 return;
             }            
             const checkedUnitEls = Array.from(document.querySelectorAll('input[name="unitCheck"]:checked'));
@@ -4536,7 +4564,7 @@ async function saveCascadingTim(e) {
                         ...DB.cascadingTim[idx],
                         tahun: tahun,
                         targetDirektur: targetDir,
-                        timKey: editTimKey || currentUser.timKey || 'Akademik',
+                        timKey: activeTimKey,
                         unitTargets: chosenUnits,
                         unitRoles: unitRoles
                     };
@@ -4547,7 +4575,7 @@ async function saveCascadingTim(e) {
                     id: 'ct_' + Date.now(),
                     tahun: tahun,
                     targetDirektur: targetDir,
-                    timKey: currentUser.timKey || 'Akademik',
+                    timKey: activeTimKey,
                     unitTargets: chosenUnits,
                     unitRoles: unitRoles
                 });
@@ -6185,7 +6213,7 @@ function renderUnitSubCheckboxes(targetUnit) {
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar</label>
                                 <input type="text" id="uName" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Nama Pejabat / Dosen / Tendik">
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block font-semibold text-slate-700 mb-1 text-xs">Email Institusi (Username)</label>
                                     <input type="email" id="uUsername" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="nama@poltek-petrokimia.ac.id">
@@ -6209,7 +6237,7 @@ function renderUnitSubCheckboxes(targetUnit) {
                                     `).join('')}
                                 </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block font-semibold text-slate-700 mb-1 text-xs">Tim Kerja Koordinasi</label>
                                     <select id="uTimKey" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs">
