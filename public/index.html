@@ -5017,9 +5017,6 @@ function updateDirRenstraOptions(tahun) {
                 });
             }
         }
-        function openCascadingDirModal() {
-            // ... kode modal direktur selanjutnya ...
-        }
             function openCascadingDirModal() {
             if (!DB.renstraIndikatorKinerja || DB.renstraIndikatorKinerja.length === 0) {
                 showToast('Belum ada data Indikator Kinerja di Renstra (Tier 4)! Input dulu di menu Renstra.', 'error');
@@ -5104,26 +5101,25 @@ function updateDirRenstraOptions(tahun) {
                 }
                 showToast('Cascading Direktur (Utama & Support) berhasil diperbarui!');
             } else {
-                DB.cascadingDirektur.push({
-                    id: 'cd_' + Date.now(),
-                    indikatorId: sel.value,
-                    tahun: tahun,
-                    target: indikatorName,
-                    targetVal: targetVal,
-                    satuan: satuan,
-                    anggaran: anggaran,
-                    timKeys: chosenTims,
-                    timRoles: timRoles,
-                 rangeEkspektasi: {
-                     bawah: document.getElementById('dirRangeBawah') ? document.getElementById('dirRangeBawah').value.trim() : '< 100%',
-                     sesuai: document.getElementById('dirRangeSesuai') ? document.getElementById('dirRangeSesuai').value.trim() : '100%',
-                     atas: document.getElementById('dirRangeAtas') ? document.getElementById('dirRangeAtas').value.trim() : '> 100%'
-                 },
-                 status: 'Aktif'
-                    status: 'Aktif'
-                });
-                showToast('Cascading Direktur berhasil disimpan!');
-            }
+             DB.cascadingDirektur.push({
+                 id: 'cd_' + Date.now(),
+                 indikatorId: sel.value,
+                 tahun: tahun,
+                 target: indikatorName,
+                 targetVal: targetVal,
+                 satuan: satuan,
+                 anggaran: anggaran,
+                 timKeys: chosenTims,
+                 timRoles: timRoles,
+              rangeEkspektasi: {
+                  bawah: document.getElementById('dirRangeBawah') ? document.getElementById('dirRangeBawah').value.trim() : '< 100%',
+                  sesuai: document.getElementById('dirRangeSesuai') ? document.getElementById('dirRangeSesuai').value.trim() : '100%',
+                  atas: document.getElementById('dirRangeAtas') ? document.getElementById('dirRangeAtas').value.trim() : '> 100%'
+              },
+              status: 'Aktif'
+             });
+             showToast('Cascading Direktur berhasil disimpan!');
+         }
 
             await saveToMySQL();
             closeCascadingDirModal();
