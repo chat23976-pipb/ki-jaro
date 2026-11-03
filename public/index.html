@@ -7847,13 +7847,18 @@ async function saveCascadingTim(e) {
         }
 
 // =========================================================================
-        // REVISI 6: AUDIT LOG — REKAM JEJAK AKTIVITAS & PERUBAHAN DATA (KHUSUS ADMIN)
+        // REVISI 13: AUDIT LOG DENGAN FILTER TANGGAL (DARI - SAMPAI) & EKSPOR CSV / PDF
         // =========================================================================
+        let filterAuditFromDate = '';
+        let filterAuditToDate = '';
+
         function recordAuditLog(aksi, modul, detail) {
             if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+            const now = new Date();
             DB.auditLogs.unshift({
                 id: 'log_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-                waktu: new Date().toLocaleString('id-ID'),
+                isoDate: now.toISOString().split('T')[0],
+                waktu: now.toLocaleString('id-ID'),
                 user: currentUser ? currentUser.name : 'Sistem',
                 username: currentUser ? currentUser.username : '-',
                 role: currentUser ? (ROLE_LABELS[currentUser.role] || currentUser.role) : '-',
@@ -7865,22 +7870,90 @@ async function saveCascadingTim(e) {
             if (DB.auditLogs.length > 500) DB.auditLogs = DB.auditLogs.slice(0, 500);
         }
 
+        function parseLogDateISO(log) {
+            if (log.isoDate) return log.isoDate;
+            if (!log.waktu) return '';
+            // Parse format id-ID "dd/mm/yyyy, hh.mm.ss"
+            const parts = String(log.waktu).split(',')[0].trim().split(/[\/\-]/);
+            if (parts.length === 3) {
+                const d = parts[0].padStart(2, '0');
+                const m = parts[1].padStart(2, '0');
+                const y = parts[2].length === 4 ? parts[2] : '2026';
+                return `${y}-${m}-${d}`;
+            }
+            return '';
+        }
+
+        function getFilteredAuditLogsList() {
+            if (!Array.isArray(DB.auditLogs)) return [];
+            return DB.auditLogs.filter(log => {
+                const logIso = parseLogDateISO(log);
+                if (filterAuditFromDate && logIso && logIso < filterAuditFromDate) return false;
+                if (filterAuditToDate && logIso && logIso > filterAuditToDate) return false;
+                return true;
+            });
+        }
+
+        function exportAuditLogCSV() {
+            const list = getFilteredAuditLogsList();
+            if (list.length === 0) {
+                showToast('Tidak ada data Audit Log pada rentang tanggal ini!', 'error');
+                return;
+            }
+            const headers = ['No', 'Waktu', 'Nama Pengguna', 'Role', 'Unit Kerja', 'Modul', 'Aksi', 'Rincian Perubahan Data'];
+            const rows = list.map((l, i) => [
+                i + 1,
+                `"${String(l.waktu || '').replace(/"/g, '""')}"`,
+                `"${String(l.user || '').replace(/"/g, '""')}"`,
+                `"${String(l.role || '').replace(/"/g, '""')}"`,
+                `"${String(l.unit || '').replace(/"/g, '""')}"`,
+                `"${String(l.modul || '').replace(/"/g, '""')}"`,
+                `"${String(l.aksi || '').replace(/"/g, '""')}"`,
+                `"${String(l.detail || '').replace(/"/g, '""')}"`
+            ].join(','));
+            const blob = new Blob([[headers.join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audit_log_kijaro_${filterAuditFromDate || 'awal'}_sd_${filterAuditToDate || 'akhir'}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('File CSV Audit Log berhasil diunduh!');
+        }
+
         function renderAuditLogView(container) {
             document.getElementById('pageTitle').innerText = 'Audit Log — Rekam Jejak Aktivitas & Perubahan Data';
             if (currentUser.role !== 'admin') {
                 container.innerHTML = `<div class="p-8 bg-white rounded-2xl border text-center text-rose-600 font-bold">Akses Ditolak: Menu Audit Log hanya untuk Administrator Sistem.</div>`;
                 return;
             }
-            if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+            const filteredLogs = getFilteredAuditLogsList();
 
             container.innerHTML = `
-                <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="space-y-6 animate-fadeIn" id="printableArea">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div>
                             <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-clock-rotate-left text-primary-600 mr-2"></i>Rekam Jejak Aktivitas Pengguna & Perubahan Data</h3>
-                            <p class="text-xs text-slate-500">Mencatat seluruh aktivitas mutasi data, validasi, cascading, dan persetujuan SKP secara real-time</p>
+                            <p class="text-xs text-slate-500">Filter berdasarkan rentang tanggal serta ekspor ke CSV atau PDF</p>
                         </div>
-                        <span class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold">${DB.auditLogs.length} Aktivitas Tercatat</span>
+                        <div class="flex flex-wrap items-end gap-2.5 no-print">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Dari Tanggal</label>
+                                <input type="date" value="${filterAuditFromDate}" onchange="filterAuditFromDate = this.value; renderAuditLogView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Sampai Tanggal</label>
+                                <input type="date" value="${filterAuditToDate}" onchange="filterAuditToDate = this.value; renderAuditLogView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
+                            </div>
+                            <button type="button" onclick="filterAuditFromDate=''; filterAuditToDate=''; renderAuditLogView(document.getElementById('mainContent'));" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">Reset</button>
+                            <button type="button" onclick="exportAuditLogCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow flex items-center space-x-1.5">
+                                <i class="fa-solid fa-file-csv"></i><span>Export CSV</span>
+                            </button>
+                            <button type="button" onclick="window.print()" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow flex items-center space-x-1.5">
+                                <i class="fa-solid fa-file-pdf"></i><span>Export PDF</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -7897,7 +7970,7 @@ async function saveCascadingTim(e) {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y">
-                                    ${DB.auditLogs.length === 0 ? `<tr><td colspan="6" class="p-8 text-center text-slate-400">Belum ada rekam jejak aktivitas tercatat.</td></tr>` : DB.auditLogs.map(log => `
+                                    ${filteredLogs.length === 0 ? `<tr><td colspan="6" class="p-8 text-center text-slate-400">Tidak ada rekam jejak aktivitas pada rentang tanggal ini.</td></tr>` : filteredLogs.map(log => `
                                         <tr class="hover:bg-slate-50">
                                             <td class="p-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">${sanitizeHTML(log.waktu)}</td>
                                             <td class="p-3.5 font-bold text-slate-900">${sanitizeHTML(log.user)}<span class="block text-[10px] text-blue-600 font-semibold">${sanitizeHTML(log.role)}</span></td>
@@ -7930,6 +8003,31 @@ async function saveCascadingTim(e) {
             return 'KIJARO-SHA256-' + (h2 >>> 0).toString(16).padStart(8, '0').toUpperCase() + (h1 >>> 0).toString(16).padStart(8, '0').toUpperCase();
         }
 
+        let filterLapKinerjaTahun = 'Semua';
+        let filterLapKinerjaTw = 'Semua';
+        let filterLapSkpTahun = 'Semua';
+        let filterLapSkpTw = 'Semua';
+
+        function getAdminDirekturData() {
+            const dir = (DB.users || []).find(u => getUserRoles(u).includes('direktur'));
+            return {
+                name: dir ? dir.name : 'Dr. Supardi S.Pd., M.Pd',
+                nip: (dir && dir.nip) ? dir.nip : '197504122001121002'
+            };
+        }
+
+        function getAdminTimKerjaList() {
+            return (DB.users || []).filter(u => getUserRoles(u).includes('tim_kerja'));
+        }
+
+        function syncSelectedTimNip(selectId, nipInputId) {
+            const sel = document.getElementById(selectId);
+            const nipEl = document.getElementById(nipInputId);
+            if (!sel || !nipEl || sel.selectedIndex === -1) return;
+            const opt = sel.options[sel.selectedIndex];
+            nipEl.value = opt.getAttribute('data-nip') || '-';
+        }
+
         function renderLaporanView(container) {
             document.getElementById('pageTitle').innerText = 'Approval & Cetak Laporan Capaian Kinerja & SKP (QR Hash)';
             if (!Array.isArray(DB.approvalLaporan)) DB.approvalLaporan = [];
@@ -7939,32 +8037,38 @@ async function saveCascadingTim(e) {
             const isKetuaTim = currentUser.role === 'tim_kerja';
             const isAdmin = currentUser.role === 'admin';
 
-            // Filter daftar request sesuai kewenangan
+            const dirInfo = getAdminDirekturData();
+            const timUsers = getAdminTimKerjaList();
+            const defaultTimUser = timUsers.find(t => t.timKey === currentUser.timKey) || timUsers[0] || { name: 'Ketua Tim Kerja', nip: '-' };
+
+            // Filter daftar request sesuai kewenangan + Filter Tahun & Triwulan (Revisi 11)
             const listLapKinerja = DB.approvalLaporan.filter(r => {
-                if (isAdmin || isDirektur) return true;
-                if (isKetuaTim) return r.timKey === currentUser.timKey || r.requesterUsername === currentUser.username;
-                return r.requesterUsername === currentUser.username || r.unit === currentUser.unit;
+                const matchRole = (isAdmin || isDirektur) ? true : (isKetuaTim ? (r.timKey === currentUser.timKey || r.requesterUsername === currentUser.username) : (r.requesterUsername === currentUser.username || r.unit === currentUser.unit));
+                const matchThn = filterLapKinerjaTahun === 'Semua' || String(r.tahun || '2025') === String(filterLapKinerjaTahun);
+                const matchTw = filterLapKinerjaTw === 'Semua' || String(r.triwulan || '').trim().toUpperCase() === String(filterLapKinerjaTw).trim().toUpperCase();
+                return matchRole && matchThn && matchTw;
             });
 
             const listSKP = DB.approvalSKP.filter(r => {
-                if (isAdmin || isDirektur) return true;
-                if (isKetuaTim) return r.timKey === currentUser.timKey || r.requesterUsername === currentUser.username;
-                return r.requesterUsername === currentUser.username;
+                const matchRole = (isAdmin || isDirektur) ? true : (isKetuaTim ? (r.timKey === currentUser.timKey || r.requesterUsername === currentUser.username) : (r.requesterUsername === currentUser.username));
+                const matchThn = filterLapSkpTahun === 'Semua' || String(r.tahun || '2025') === String(filterLapSkpTahun);
+                const matchTw = filterLapSkpTw === 'Semua' || String(r.triwulan || '').trim().toUpperCase() === String(filterLapSkpTw).trim().toUpperCase();
+                return matchRole && matchThn && matchTw;
             });
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
-                    <!-- 2 TABEL INFORMASI STATUS APPROVAL REQUEST DENGAN PEMBATAS VERTIKAL -->
+                    <!-- 2 TABEL INFORMASI STATUS APPROVAL REQUEST DENGAN FILTER TAHUN & TRIWULAN (REVISI 11) -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start relative no-print">
                         
-                        <!-- KOLOM KIRI: TABEL STATUS APPROVAL LAPORAN CAPAIAN KINERJA -->
+                        <!-- KOLOM KIRI: TABEL 1. STATUS APPROVAL LAPORAN CAPAIAN KINERJA -->
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
                                 <div>
                                     <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
                                         <i class="fa-solid fa-file-circle-check text-blue-600"></i> 1. Status Approval Laporan Capaian Kinerja
                                     </h3>
-                                    <p class="text-xs text-slate-500">Dapat didownload apabila capaian telah divalidasi oleh Ketua Tim Kerja</p>
+                                    <p class="text-xs text-slate-500">Otomatis dilengkapi QR Code apabila telah divalidasi oleh Ketua Tim Kerja</p>
                                 </div>
                                 ${!isPureViewer() ? `
                                     <button onclick="openRequestLaporanKinerjaModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
@@ -7973,9 +8077,34 @@ async function saveCascadingTim(e) {
                                 ` : ''}
                             </div>
 
-                            <div class="overflow-x-auto">
+                            <!-- Filter Tahun & Triwulan Tabel 1 (Revisi 11) -->
+                            <div class="grid grid-cols-2 gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 text-xs">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filter Tahun</label>
+                                    <select onchange="filterLapKinerjaTahun = this.value; renderLaporanView(document.getElementById('mainContent'));" class="w-full p-1.5 bg-white border rounded-lg font-bold text-slate-700">
+                                        <option value="Semua" ${filterLapKinerjaTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
+                                        <option value="2025" ${filterLapKinerjaTahun === '2025' ? 'selected' : ''}>2025</option>
+                                        <option value="2026" ${filterLapKinerjaTahun === '2026' ? 'selected' : ''}>2026</option>
+                                        <option value="2027" ${filterLapKinerjaTahun === '2027' ? 'selected' : ''}>2027</option>
+                                        <option value="2028" ${filterLapKinerjaTahun === '2028' ? 'selected' : ''}>2028</option>
+                                        <option value="2029" ${filterLapKinerjaTahun === '2029' ? 'selected' : ''}>2029</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filter Triwulan</label>
+                                    <select onchange="filterLapKinerjaTw = this.value; renderLaporanView(document.getElementById('mainContent'));" class="w-full p-1.5 bg-white border rounded-lg font-bold text-slate-700">
+                                        <option value="Semua" ${filterLapKinerjaTw === 'Semua' ? 'selected' : ''}>Semua Triwulan</option>
+                                        <option value="TW 1" ${filterLapKinerjaTw === 'TW 1' ? 'selected' : ''}>TW 1</option>
+                                        <option value="TW 2" ${filterLapKinerjaTw === 'TW 2' ? 'selected' : ''}>TW 2</option>
+                                        <option value="TW 3" ${filterLapKinerjaTw === 'TW 3' ? 'selected' : ''}>TW 3</option>
+                                        <option value="TW 4" ${filterLapKinerjaTw === 'TW 4' ? 'selected' : ''}>TW 4</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto max-h-96 overflow-y-auto">
                                 <table class="w-full text-left border-collapse text-xs">
-                                    <thead class="bg-slate-50 text-slate-700 font-bold border-b">
+                                    <thead class="bg-slate-50 text-slate-700 font-bold border-b sticky top-0">
                                         <tr>
                                             <th class="p-3">Pemohon / Unit</th>
                                             <th class="p-3 text-center">Periode</th>
@@ -7984,11 +8113,10 @@ async function saveCascadingTim(e) {
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
-                                        ${listLapKinerja.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada request laporan capaian kinerja.</td></tr>` : listLapKinerja.map(req => {
-                                            // Cek apakah semua indikator yang dipilih pada periode tersebut sudah Valid oleh Ketua Tim Kerja
+                                        ${listLapKinerja.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada request laporan capaian kinerja pada filter ini.</td></tr>` : listLapKinerja.map(req => {
                                             const caps = DB.capaian.filter(c => req.capaianIds.includes(c.id));
                                             const allValid = caps.length > 0 && caps.every(c => c.status === 'Valid');
-                                            const statusText = allValid ? 'Disetujui (Siap Cetak)' : 'Menunggu Validasi Ketua Tim Kerja';
+                                            const statusText = allValid ? 'Disetujui (QR Code Aktif)' : 'Menunggu Validasi Ketua Tim Kerja';
                                             return `
                                                 <tr class="hover:bg-slate-50">
                                                     <td class="p-3 font-bold text-slate-900">${sanitizeHTML(req.requesterName)}<span class="block text-[10px] text-slate-500">${sanitizeHTML(req.unit)}</span></td>
@@ -8001,7 +8129,7 @@ async function saveCascadingTim(e) {
                                                     <td class="p-3 text-center">
                                                         ${allValid ? `
                                                             <button onclick="previewAndPrintLaporanKinerja('${req.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-xs">
-                                                                <i class="fa-solid fa-print mr-1"></i>Lihat & Download PDF
+                                                                <i class="fa-solid fa-qrcode mr-1"></i>Lihat & Download PDF
                                                             </button>
                                                         ` : `<span class="text-[10px] text-slate-400 italic">Menunggu Validasi</span>`}
                                                     </td>
@@ -8013,7 +8141,7 @@ async function saveCascadingTim(e) {
                             </div>
                         </div>
 
-                        <!-- KOLOM KANAN: TABEL STATUS APPROVAL LAPORAN SKP (DENGAN QR CODE HASH) -->
+                        <!-- KOLOM KANAN: TABEL 2. STATUS APPROVAL LAPORAN SKP (DENGAN QR CODE HASH) -->
                         <div class="bg-white rounded-2xl shadow-sm border border-emerald-200 p-6 space-y-4">
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
                                 <div>
@@ -8029,9 +8157,34 @@ async function saveCascadingTim(e) {
                                 ` : ''}
                             </div>
 
-                            <div class="overflow-x-auto">
+                            <!-- Filter Tahun & Triwulan Tabel 2 (Revisi 11) -->
+                            <div class="grid grid-cols-2 gap-2.5 bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-200/80 text-xs">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filter Tahun</label>
+                                    <select onchange="filterLapSkpTahun = this.value; renderLaporanView(document.getElementById('mainContent'));" class="w-full p-1.5 bg-white border rounded-lg font-bold text-slate-700">
+                                        <option value="Semua" ${filterLapSkpTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
+                                        <option value="2025" ${filterLapSkpTahun === '2025' ? 'selected' : ''}>2025</option>
+                                        <option value="2026" ${filterLapSkpTahun === '2026' ? 'selected' : ''}>2026</option>
+                                        <option value="2027" ${filterLapSkpTahun === '2027' ? 'selected' : ''}>2027</option>
+                                        <option value="2028" ${filterLapSkpTahun === '2028' ? 'selected' : ''}>2028</option>
+                                        <option value="2029" ${filterLapSkpTahun === '2029' ? 'selected' : ''}>2029</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filter Triwulan</label>
+                                    <select onchange="filterLapSkpTw = this.value; renderLaporanView(document.getElementById('mainContent'));" class="w-full p-1.5 bg-white border rounded-lg font-bold text-slate-700">
+                                        <option value="Semua" ${filterLapSkpTw === 'Semua' ? 'selected' : ''}>Semua Triwulan</option>
+                                        <option value="TW 1" ${filterLapSkpTw === 'TW 1' ? 'selected' : ''}>TW 1</option>
+                                        <option value="TW 2" ${filterLapSkpTw === 'TW 2' ? 'selected' : ''}>TW 2</option>
+                                        <option value="TW 3" ${filterLapSkpTw === 'TW 3' ? 'selected' : ''}>TW 3</option>
+                                        <option value="TW 4" ${filterLapSkpTw === 'TW 4' ? 'selected' : ''}>TW 4</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto max-h-96 overflow-y-auto">
                                 <table class="w-full text-left border-collapse text-xs">
-                                    <thead class="bg-slate-50 text-slate-700 font-bold border-b">
+                                    <thead class="bg-slate-50 text-slate-700 font-bold border-b sticky top-0">
                                         <tr>
                                             <th class="p-3">Pemohon & Indikator</th>
                                             <th class="p-3 text-center">Periode</th>
@@ -8040,7 +8193,7 @@ async function saveCascadingTim(e) {
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
-                                        ${listSKP.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada request laporan SKP.</td></tr>` : listSKP.map(skp => {
+                                        ${listSKP.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada request laporan SKP pada filter ini.</td></tr>` : listSKP.map(skp => {
                                             const badgeCls = skp.status === 'Disetujui' ? 'bg-emerald-100 text-emerald-800' : skp.status === 'Ditolak' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
                                             const canAssessTim = (isKetuaTim || isAdmin) && !skp.isKetuaTimRequest && skp.status === 'Menunggu Ketua Tim Kerja';
                                             const canAssessDir = (isDirektur || isAdmin) && (skp.status === 'Menunggu Direktur' || skp.status === 'Disetujui');
@@ -8048,7 +8201,7 @@ async function saveCascadingTim(e) {
                                             return `
                                                 <tr class="hover:bg-slate-50">
                                                     <td class="p-3">
-                                                        <p class="font-bold text-slate-900">${sanitizeHTML(skp.requesterName)}</p>
+                                                        <p class="font-bold text-slate-900">${sanitizeHTML(skp.requesterName)} <span class="text-[10px] text-slate-500">(${sanitizeHTML(skp.unit || '-')})</span></p>
                                                         <p class="text-[11px] text-primary-700 font-semibold mt-0.5">${sanitizeHTML(skp.indikator)}</p>
                                                     </td>
                                                     <td class="p-3 text-center font-semibold">${sanitizeHTML(skp.triwulan)}<br><span class="text-[10px] text-slate-500">${sanitizeHTML(skp.tahun)}</span></td>
@@ -8090,7 +8243,7 @@ async function saveCascadingTim(e) {
                     </div>
                 </div>
 
-                <!-- MODAL POP-UP REQUEST LAPORAN CAPAIAN KINERJA -->
+                <!-- MODAL POP-UP REQUEST LAPORAN CAPAIAN KINERJA (REVISI 9: DIREKTUR FIX, KETUA TIM DROPDOWN, PENYUSUN OTOMATIS) -->
                 <div id="reqLapKinerjaModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-3">
@@ -8116,18 +8269,38 @@ async function saveCascadingTim(e) {
                                 <label class="block font-bold mb-1">Pilih Capaian Indikator Anda</label>
                                 <div id="reqLapIndikatorContainer" class="space-y-1.5 bg-slate-50 p-3 rounded-xl border max-h-40 overflow-y-auto"></div>
                             </div>
-                            <div class="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border">
-                                <div>
-                                    <label class="block font-bold text-[10px] mb-1">Penandatangan 1 (Direktur)</label>
-                                    <input type="text" id="reqLapSign1" value="Dr. Supardi, S.Pd., M.Pd" class="w-full p-1.5 bg-white border rounded text-[11px]">
+                            <div class="space-y-2 bg-slate-50 p-3 rounded-xl border">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block font-bold text-[10px] mb-1">Nama Direktur (Fix dari Admin)</label>
+                                        <input type="text" id="reqLapSign1" value="${sanitizeHTML(dirInfo.name)}" readonly class="w-full p-1.5 bg-slate-100 border rounded text-[11px] font-semibold text-slate-700 cursor-not-allowed">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-[10px] mb-1">NIP Direktur (Fix dari Admin)</label>
+                                        <input type="text" id="reqLapSign1Nip" value="${sanitizeHTML(dirInfo.nip)}" readonly class="w-full p-1.5 bg-slate-100 border rounded text-[11px] font-mono text-slate-700 cursor-not-allowed">
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block font-bold text-[10px] mb-1">Penandatangan 2 (Ketua Tim)</label>
-                                    <input type="text" id="reqLapSign2" value="Ir. Deni Saputra, S.T., M.Sc" class="w-full p-1.5 bg-white border rounded text-[11px]">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block font-bold text-[10px] mb-1">Pilih Ketua Tim Kerja (Dari Admin)</label>
+                                        <select id="reqLapSign2" onchange="syncSelectedTimNip('reqLapSign2', 'reqLapSign2Nip')" class="w-full p-1.5 bg-white border rounded text-[11px] font-semibold">
+                                            ${timUsers.map(tu => `<option value="${sanitizeHTML(tu.name)}" data-nip="${sanitizeHTML(tu.nip || '-')}" ${tu.timKey === currentUser.timKey ? 'selected' : ''}>${sanitizeHTML(tu.name)} (${sanitizeHTML(tu.timKey || '-')})</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-[10px] mb-1">NIP Ketua Tim Kerja (Otomatis)</label>
+                                        <input type="text" id="reqLapSign2Nip" value="${sanitizeHTML(defaultTimUser.nip || '-')}" readonly class="w-full p-1.5 bg-slate-100 border rounded text-[11px] font-mono text-slate-700 cursor-not-allowed">
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block font-bold text-[10px] mb-1">Penandatangan 3 (Penyusun)</label>
-                                    <input type="text" id="reqLapSign3" value="${sanitizeHTML(currentUser.name)}" class="w-full p-1.5 bg-white border rounded text-[11px]">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block font-bold text-[10px] mb-1">Nama Penyusun (Sesuai Profil)</label>
+                                        <input type="text" id="reqLapSign3" value="${sanitizeHTML(currentUser.name)}" readonly class="w-full p-1.5 bg-slate-100 border rounded text-[11px] font-semibold text-slate-700 cursor-not-allowed">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-[10px] mb-1">NIP Penyusun (Sesuai Profil)</label>
+                                        <input type="text" id="reqLapSign3Nip" value="${sanitizeHTML(currentUser.nip || '-')}" readonly class="w-full p-1.5 bg-slate-100 border rounded text-[11px] font-mono text-slate-700 cursor-not-allowed">
+                                    </div>
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-2 pt-2 border-t">
@@ -8138,13 +8311,13 @@ async function saveCascadingTim(e) {
                     </div>
                 </div>
 
-                <!-- MODAL POP-UP REQUEST LAPORAN SKP -->
+                <!-- MODAL POP-UP REQUEST LAPORAN SKP (REVISI 8 & REVISI 9) -->
                 <div id="reqSKPModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-3">
                             <div>
                                 <h3 class="font-bold text-slate-900 text-base">Request Approval Laporan SKP (Per Indikator)</h3>
-                                <p class="text-[11px] text-slate-500">Pilih periode dan indikator hasil kerja yang telah Anda input beserta Pejabat Penandatangan</p>
+                                <p class="text-[11px] text-slate-500">Hanya menampilkan indikator yang telah dicascading sesuai Tahun yang dipilih</p>
                             </div>
                             <button type="button" onclick="document.getElementById('reqSKPModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
                         </div>
@@ -8164,47 +8337,49 @@ async function saveCascadingTim(e) {
                                 </div>
                             </div>
                             <div>
-                                <label class="block font-bold mb-1">Pilih Indikator Kinerja yang Diinput</label>
+                                <label class="block font-bold mb-1">Pilih Indikator Kinerja yang Dicascading pada Tahun Tersebut</label>
                                 <select id="reqSkpCapaianId" required class="w-full p-2.5 bg-slate-50 border rounded-xl font-semibold"></select>
                             </div>
                             <div>
                                 <label class="block font-bold mb-1">Tempat & Tanggal Cetak Laporan</label>
-                                <input type="text" id="reqSkpTanggalKota" value="Serang, 5 Oktober 2026" required class="w-full p-2.5 bg-slate-50 border rounded-xl">
+                                <input type="text" id="reqSkpTanggalKota" value="Serang, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}" required class="w-full p-2.5 bg-slate-50 border rounded-xl">
                             </div>
 
-                            <!-- Pengaturan Nama & NIP Pejabat Penandatangan -->
+                            <!-- REVISI 9: Pengaturan Nama & NIP Pejabat Penandatangan Otomatis dari Admin/Profil -->
                             <div class="space-y-2.5 bg-slate-50 p-3.5 rounded-xl border">
-                                <p class="font-bold text-slate-700 text-[11px] uppercase">Pengaturan Pejabat Penandatangan (${isKetuaTim ? '2 Penandatangan: Direktur & Ketua Tim Kerja' : '3 Penandatangan: Direktur, Ketua Tim Kerja & Penyusun'})</p>
+                                <p class="font-bold text-slate-700 text-[11px] uppercase">Pejabat Penandatangan (Otomatis Sesuai Database Admin & Profil)</p>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label class="block text-[10px] font-semibold">Nama Direktur (Pejabat Penilai)</label>
-                                        <input type="text" id="skpDirName" value="Supardi" required class="w-full p-2 bg-white border rounded-lg">
+                                        <label class="block text-[10px] font-semibold">Nama Direktur (Fix dari Admin)</label>
+                                        <input type="text" id="skpDirName" value="${sanitizeHTML(dirInfo.name)}" readonly required class="w-full p-2 bg-slate-100 border rounded-lg font-semibold text-slate-700 cursor-not-allowed">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-semibold">NIP Direktur</label>
-                                        <input type="text" id="skpDirNip" value="197611052002121003" required class="w-full p-2 bg-white border rounded-lg">
+                                        <label class="block text-[10px] font-semibold">NIP Direktur (Fix dari Admin)</label>
+                                        <input type="text" id="skpDirNip" value="${sanitizeHTML(dirInfo.nip)}" readonly required class="w-full p-2 bg-slate-100 border rounded-lg font-mono text-slate-700 cursor-not-allowed">
                                     </div>
                                 </div>
                                 ${!isKetuaTim ? `
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label class="block text-[10px] font-semibold">Nama Ketua Tim Kerja (Mengetahui)</label>
-                                        <input type="text" id="skpTimName" value="Deni Saputra" required class="w-full p-2 bg-white border rounded-lg">
+                                        <label class="block text-[10px] font-semibold">Pilih Ketua Tim Kerja (Dropdown Admin)</label>
+                                        <select id="skpTimName" onchange="syncSelectedTimNip('skpTimName', 'skpTimNip')" class="w-full p-2 bg-white border rounded-lg font-semibold">
+                                            ${timUsers.map(tu => `<option value="${sanitizeHTML(tu.name)}" data-nip="${sanitizeHTML(tu.nip || '-')}" ${tu.timKey === currentUser.timKey ? 'selected' : ''}>${sanitizeHTML(tu.name)} (${sanitizeHTML(tu.timKey || '-')})</option>`).join('')}
+                                        </select>
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-semibold">NIP Ketua Tim Kerja</label>
-                                        <input type="text" id="skpTimNip" value="199003262019011001" required class="w-full p-2 bg-white border rounded-lg">
+                                        <label class="block text-[10px] font-semibold">NIP Ketua Tim Kerja (Otomatis)</label>
+                                        <input type="text" id="skpTimNip" value="${sanitizeHTML(defaultTimUser.nip || '-')}" readonly required class="w-full p-2 bg-slate-100 border rounded-lg font-mono text-slate-700 cursor-not-allowed">
                                     </div>
                                 </div>
                                 ` : ''}
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label class="block text-[10px] font-semibold">Nama Penyusun (Yang Membuat)</label>
-                                        <input type="text" id="skpUserName" value="${sanitizeHTML(currentUser.name)}" required class="w-full p-2 bg-white border rounded-lg">
+                                        <label class="block text-[10px] font-semibold">Nama Penyusun (Otomatis Profil)</label>
+                                        <input type="text" id="skpUserName" value="${sanitizeHTML(currentUser.name)}" readonly required class="w-full p-2 bg-slate-100 border rounded-lg font-semibold text-slate-700 cursor-not-allowed">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-semibold">NIP Penyusun</label>
-                                        <input type="text" id="skpUserNip" value="199003262019011001" required class="w-full p-2 bg-white border rounded-lg">
+                                        <label class="block text-[10px] font-semibold">NIP Penyusun (Otomatis Profil)</label>
+                                        <input type="text" id="skpUserNip" value="${sanitizeHTML(currentUser.nip || '-')}" readonly required class="w-full p-2 bg-slate-100 border rounded-lg font-mono text-slate-700 cursor-not-allowed">
                                     </div>
                                 </div>
                             </div>
@@ -8217,21 +8392,25 @@ async function saveCascadingTim(e) {
                     </div>
                 </div>
 
-                <!-- MODAL PENILAIAN SKP OLEH KETUA TIM KERJA -->
-                <div id="assessSkpTimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+                <!-- MODAL PENILAIAN SKP OLEH KETUA TIM KERJA (REVISI 10: TAMPILKAN NAMA KETUA UNIT, INDIKATOR, TARGET, REALISASI & RANGE EKSPEKTASI) -->
+                <div id="assessSkpTimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-3">
-                            <h3 class="font-bold text-slate-900 text-sm">Validasi & Penilaian Hasil Kerja SKP (Ketua Tim Kerja)</h3>
+                            <h3 class="font-bold text-slate-900 text-sm"><i class="fa-solid fa-star-half-stroke text-blue-600 mr-1.5"></i>Validasi & Penilaian Hasil Kerja SKP (Ketua Tim Kerja)</h3>
                             <button type="button" onclick="document.getElementById('assessSkpTimModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
                         </div>
                         <input type="hidden" id="assessSkpTimId">
+                        
+                        <!-- Panel Informasi Rujukan Penilaian (Revisi 10) -->
+                        <div id="assessSkpTimInfoBox" class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs"></div>
+
                         <div class="space-y-3 text-xs">
                             <div>
-                                <label class="block font-bold mb-1">Penilaian Hasil Kerja Indikator</label>
+                                <label class="block font-bold mb-1">Penilaian Hasil Kerja Indikator (Berdasarkan Acuan Range Ekspektasi di Atas)</label>
                                 <select id="assessSkpTimRating" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-primary-700">
-                                    <option value="Di Bawah Ekspektasi">Di Bawah Ekspektasi</option>
-                                    <option value="Sesuai Ekspektasi" selected>Sesuai Ekspektasi</option>
-                                    <option value="Di Atas Ekspektasi">Di Atas Ekspektasi</option>
+                                    <option value="Di Bawah Ekspektasi">Di Bawah Ekspektasi (Tidak Mencapai Ekspektasi)</option>
+                                    <option value="Sesuai Ekspektasi" selected>Sesuai Ekspektasi (Mencapai Ekspektasi)</option>
+                                    <option value="Di Atas Ekspektasi">Di Atas Ekspektasi (Melebihi Ekspektasi)</option>
                                 </select>
                             </div>
                             <div>
@@ -8290,6 +8469,7 @@ async function saveCascadingTim(e) {
             if (!modal) return;
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            syncSelectedTimNip('reqLapSign2', 'reqLapSign2Nip');
             populateReqLapIndikatorList();
         }
 
@@ -8341,8 +8521,11 @@ async function saveCascadingTim(e) {
                 timKey: currentUser.timKey || 'Akademik',
                 capaianIds: checked,
                 sign1: document.getElementById('reqLapSign1').value.trim(),
+                sign1Nip: document.getElementById('reqLapSign1Nip') ? document.getElementById('reqLapSign1Nip').value.trim() : '-',
                 sign2: document.getElementById('reqLapSign2').value.trim(),
-                sign3: document.getElementById('reqLapSign3').value.trim()
+                sign2Nip: document.getElementById('reqLapSign2Nip') ? document.getElementById('reqLapSign2Nip').value.trim() : '-',
+                sign3: document.getElementById('reqLapSign3').value.trim(),
+                sign3Nip: document.getElementById('reqLapSign3Nip') ? document.getElementById('reqLapSign3Nip').value.trim() : '-'
             };
             DB.approvalLaporan.push(newReq);
             recordAuditLog('Request Laporan Kinerja', 'Laporan', `Mengajukan laporan capaian kinerja periode ${tw} ${yr}`);
@@ -8352,12 +8535,18 @@ async function saveCascadingTim(e) {
             renderLaporanView(document.getElementById('mainContent'));
         }
 
+        // REVISI 6: Laporan Kinerja Otomatis Menampilkan QR Code Apabila Ketua Tim Kerja Sudah Memvalidasi
         function previewAndPrintLaporanKinerja(reqId) {
             const req = (DB.approvalLaporan || []).find(x => x.id === reqId);
             if (!req) return;
             const caps = DB.capaian.filter(c => req.capaianIds.includes(c.id));
+            const allValid = caps.length > 0 && caps.every(c => c.status === 'Valid');
             const area = document.getElementById('printableArea');
             if (!area) return;
+
+            const hashDir = generateSimpleDocHash(`LAPKIN-DIR|${req.id}|${req.sign1}|${req.tahun}|${req.triwulan}`);
+            const hashTim = generateSimpleDocHash(`LAPKIN-TIM|${req.id}|${req.sign2}|VALID|${req.tahun}|${req.triwulan}`);
+            const hashUsr = generateSimpleDocHash(`LAPKIN-USR|${req.id}|${req.sign3}|${req.unit}|${req.tahun}|${req.triwulan}`);
 
             area.innerHTML = `
                 <div class="space-y-6">
@@ -8394,13 +8583,39 @@ async function saveCascadingTim(e) {
                             `).join('')}
                         </tbody>
                     </table>
-                    <div class="pt-8 grid grid-cols-3 gap-4 text-center text-xs">
-                        <div><p class="mb-14">Menyetujui,<br><strong>Direktur</strong></p><p class="font-bold underline">${sanitizeHTML(req.sign1)}</p></div>
-                        <div><p class="mb-14">Mengetahui,<br><strong>Ketua Tim Kerja</strong></p><p class="font-bold underline">${sanitizeHTML(req.sign2)}</p></div>
-                        <div><p class="mb-14">Yang Membuat,<br><strong>Penyusun Laporan</strong></p><p class="font-bold underline">${sanitizeHTML(req.sign3)}</p></div>
+                    <div class="pt-6 grid grid-cols-3 gap-4 text-center text-xs">
+                        <div class="flex flex-col items-center">
+                            <p class="mb-2">Menyetujui,<br><strong>Direktur</strong></p>
+                            ${allValid ? `<div id="qrLapKinDir" class="p-1.5 bg-white border rounded my-1"></div><span class="text-[8px] font-mono text-slate-400 mb-1">${hashDir}</span>` : '<div class="h-16"></div>'}
+                            <p class="font-bold underline">${sanitizeHTML(req.sign1)}</p>
+                            ${req.sign1Nip ? `<p class="text-[11px]">NIP. ${sanitizeHTML(req.sign1Nip)}</p>` : ''}
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <p class="mb-2">Mengetahui,<br><strong>Ketua Tim Kerja</strong></p>
+                            ${allValid ? `<div id="qrLapKinTim" class="p-1.5 bg-white border rounded my-1"></div><span class="text-[8px] font-mono text-slate-400 mb-1">${hashTim}</span>` : '<div class="h-16"></div>'}
+                            <p class="font-bold underline">${sanitizeHTML(req.sign2)}</p>
+                            ${req.sign2Nip ? `<p class="text-[11px]">NIP. ${sanitizeHTML(req.sign2Nip)}</p>` : ''}
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <p class="mb-2">Yang Membuat,<br><strong>Penyusun Laporan</strong></p>
+                            ${allValid ? `<div id="qrLapKinUsr" class="p-1.5 bg-white border rounded my-1"></div><span class="text-[8px] font-mono text-slate-400 mb-1">${hashUsr}</span>` : '<div class="h-16"></div>'}
+                            <p class="font-bold underline">${sanitizeHTML(req.sign3)}</p>
+                            ${req.sign3Nip ? `<p class="text-[11px]">NIP. ${sanitizeHTML(req.sign3Nip)}</p>` : ''}
+                        </div>
                     </div>
                 </div>
             `;
+
+            if (allValid && typeof QRCode !== 'undefined') {
+                setTimeout(() => {
+                    const el1 = document.getElementById('qrLapKinDir');
+                    if (el1) new QRCode(el1, { text: `HASH:${hashDir}|DIREKTUR:${req.sign1}|VALID`, width: 74, height: 74 });
+                    const el2 = document.getElementById('qrLapKinTim');
+                    if (el2) new QRCode(el2, { text: `HASH:${hashTim}|KETUA_TIM:${req.sign2}|VALID`, width: 74, height: 74 });
+                    const el3 = document.getElementById('qrLapKinUsr');
+                    if (el3) new QRCode(el3, { text: `HASH:${hashUsr}|PENYUSUN:${req.sign3}|VALID`, width: 74, height: 74 });
+                }, 80);
+            }
             area.scrollIntoView({ behavior: 'smooth' });
         }
 
@@ -8409,44 +8624,68 @@ async function saveCascadingTim(e) {
             if (!modal) return;
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            syncSelectedTimNip('skpTimName', 'skpTimNip');
             populateReqSkpIndikatorOptions();
         }
 
+        // REVISI 8: Hanya Menampilkan Indikator yang Memang Dicascading Sesuai Tahunnya (Jika Belum Dicascading di Tahun Itu, Tidak Muncul)
         function populateReqSkpIndikatorOptions() {
-            const yr = document.getElementById('reqSkpTahun').value;
-            const tw = document.getElementById('reqSkpTw').value;
+            const yr = String(document.getElementById('reqSkpTahun').value || '2025');
+            const tw = String(document.getElementById('reqSkpTw').value || 'TW 1').trim().toUpperCase();
             const sel = document.getElementById('reqSkpCapaianId');
             if (!sel) return;
 
-            // Ambil capaian milik user, atau jika Ketua Tim Kerja bisa memilih indikator di tim kerjanya
-            const matchingCaps = DB.capaian.filter(c => {
-                const matchYr = String(c.tahun || '2025') === String(yr);
-                const matchTw = String(c.triwulan || '').trim().toUpperCase() === String(tw).trim().toUpperCase();
-                if (currentUser.role === 'tim_kerja') return matchYr && matchTw && c.timKey === currentUser.timKey;
-                if (currentUser.role === 'admin') return matchYr && matchTw;
-                return matchYr && matchTw && (c.inputByUsername === currentUser.username || c.unit === currentUser.unit);
-            });
+            // 1. Cek daftar indikator yang dicascadingkan pada tahun `yr` tersebut
+            let cascadedIndicatorsOnYear = [];
+            if (currentUser.role === 'tim_kerja') {
+                cascadedIndicatorsOnYear = (DB.cascadingDirektur || [])
+                    .filter(cd => String(cd.tahun || '2025') === yr && Array.isArray(cd.timKeys) && cd.timKeys.includes(currentUser.timKey))
+                    .map(cd => cd.target);
+            } else if (currentUser.role === 'admin') {
+                cascadedIndicatorsOnYear = (DB.cascadingDirektur || [])
+                    .filter(cd => String(cd.tahun || '2025') === yr)
+                    .map(cd => cd.target);
+            } else if (SUB_UNIT_ROLES.includes(currentUser.role)) {
+                const myKeyRole = `${currentUser.role}_${currentUser.unit}`;
+                cascadedIndicatorsOnYear = (DB.cascadingUnit || [])
+                    .filter(cu => String(cu.tahun || '2025') === yr && cu.unit === currentUser.unit && Array.isArray(cu.subTargets) && (cu.subTargets.includes(currentUser.username) || cu.subTargets.includes(myKeyRole)))
+                    .map(cu => cu.targetDirektur);
+            } else {
+                // Ketua Unit / Prodi / Subbag
+                cascadedIndicatorsOnYear = (DB.cascadingTim || [])
+                    .filter(ct => String(ct.tahun || '2025') === yr && Array.isArray(ct.unitTargets) && ct.unitTargets.includes(currentUser.unit))
+                    .map(ct => ct.targetDirektur);
+            }
 
-            if (matchingCaps.length === 0) {
-                // Fallback ke indikator yang dicascading ke user jika belum ada capaian di TW tersebut
-                const cascList = currentUser.role === 'tim_kerja'
-                    ? DB.cascadingDirektur.filter(cd => Array.isArray(cd.timKeys) && cd.timKeys.includes(currentUser.timKey))
-                    : DB.cascadingTim.filter(ct => Array.isArray(ct.unitTargets) && ct.unitTargets.includes(currentUser.unit));
+            cascadedIndicatorsOnYear = Array.from(new Set(cascadedIndicatorsOnYear));
 
-                if (cascList.length === 0) {
-                    sel.innerHTML = `<option value="">Belum ada indikator/capaian yang diinput pada ${tw} ${yr}</option>`;
-                    return;
-                }
-                sel.innerHTML = cascList.map(item => {
-                    const indName = item.target || item.targetDirektur;
-                    return `<option value="casc_${sanitizeHTML(indName)}">${sanitizeHTML(indName)} (${yr})</option>`;
-                }).join('');
+            // Jika belum ada cascading sama sekali pada tahun `yr`, maka jangan munculkan indikator apapun!
+            if (cascadedIndicatorsOnYear.length === 0) {
+                sel.innerHTML = `<option value="">-- Belum ada indikator kinerja yang dicascading pada Tahun ${yr} --</option>`;
                 return;
             }
 
-            sel.innerHTML = matchingCaps.map(c => `
-                <option value="${c.id}">${sanitizeHTML(c.targetDirektur)} — Realisasi: ${c.realisasi} ${c.satuan || '%'}</option>
-            `).join('');
+            // 2. Cari capaian yang sudah diinput pada tahun `yr` dan triwulan `tw` yang termasuk dalam indikator hasil cascading tahun `yr`
+            const matchingCaps = (DB.capaian || []).filter(c => {
+                const matchYr = String(c.tahun || '2025') === yr;
+                const matchTw = String(c.triwulan || '').trim().toUpperCase() === tw;
+                const isCascaded = cascadedIndicatorsOnYear.includes(c.targetDirektur);
+                if (!matchYr || !matchTw || !isCascaded) return false;
+                if (currentUser.role === 'tim_kerja') return c.timKey === currentUser.timKey;
+                if (currentUser.role === 'admin') return true;
+                return c.inputByUsername === currentUser.username || c.unit === currentUser.unit;
+            });
+
+            if (matchingCaps.length > 0) {
+                sel.innerHTML = matchingCaps.map(c => `
+                    <option value="${c.id}">${sanitizeHTML(c.targetDirektur)} — Target: ${c.target} ${c.satuan || '%'} | Realisasi: ${c.realisasi} ${c.satuan || '%'}</option>
+                `).join('');
+            } else {
+                // Tampilkan indikator yang sudah dicascading pada tahun `yr` tersebut
+                sel.innerHTML = cascadedIndicatorsOnYear.map(indName => `
+                    <option value="casc_${sanitizeHTML(indName)}">${sanitizeHTML(indName)} (Dicascading Tahun ${yr} - Belum ada realisasi ${tw})</option>
+                `).join('');
+            }
         }
 
         async function submitRequestSKP(e) {
@@ -8455,13 +8694,17 @@ async function saveCascadingTim(e) {
             const tw = document.getElementById('reqSkpTw').value;
             const capId = document.getElementById('reqSkpCapaianId').value;
             if (!capId) {
-                showToast('Pilih indikator kinerja terlebih dahulu!', 'error');
+                showToast('Pilih indikator kinerja yang telah dicascading pada tahun tersebut terlebih dahulu!', 'error');
                 return;
             }
 
             const isKetuaTim = currentUser.role === 'tim_kerja';
             const capObj = DB.capaian.find(c => String(c.id) === String(capId));
             const indikatorName = capObj ? capObj.targetDirektur : capId.replace('casc_', '');
+            const cdObj = (DB.cascadingDirektur || []).find(cd => cd.target === indikatorName && String(cd.tahun || '2025') === String(yr));
+            const targetValNum = capObj ? capObj.target : (cdObj && cdObj.targetVal !== undefined ? cdObj.targetVal : 100);
+            const realValNum = capObj ? capObj.realisasi : 0;
+            const satuanStr = capObj ? (capObj.satuan || '%') : (cdObj ? (cdObj.satuan || '%') : '%');
 
             const newSkp = {
                 id: 'skp_' + Date.now(),
@@ -8469,10 +8712,13 @@ async function saveCascadingTim(e) {
                 triwulan: tw,
                 capaianId: capObj ? capObj.id : null,
                 indikator: indikatorName,
+                targetNum: targetValNum,
+                realisasiNum: realValNum,
+                satuan: satuanStr,
                 uraianKegiatan: capObj ? (capObj.uraianPekerjaan || capObj.program) : 'Melaksanakan program kerja sesuai target indikator yang dicascadingkan',
-                targetText: capObj ? `Target output yang dihasilkan ${capObj.target} ${capObj.satuan || '%'}` : 'Target output sesuai Perjanjian Kinerja',
+                targetText: `Target output yang dihasilkan ${targetValNum} ${satuanStr}`,
                 waktuPelaksanaan: `Pelaksanaan kegiatan selama 12 bulan yaitu bulan Januari sampai dengan Desember ${yr}`,
-                hasilKegiatan: capObj ? `Hasil kegiatan yang dicapai adalah ${capObj.realisasi} ${capObj.satuan || '%'} (${capObj.program})` : 'Sesuai capaian kinerja triwulan berjalan',
+                hasilKegiatan: capObj ? `Hasil kegiatan yang dicapai adalah ${realValNum} ${satuanStr} (${capObj.program})` : `Realisasi capaian ${realValNum} ${satuanStr}`,
                 permasalahan: capObj && capObj.permasalahan ? capObj.permasalahan : 'Tidak ada kendala signifikan',
                 saranKetuaTim: capObj && capObj.rekomendasi ? capObj.rekomendasi : '-',
                 requesterUsername: currentUser.username,
@@ -8484,7 +8730,7 @@ async function saveCascadingTim(e) {
                 dirName: document.getElementById('skpDirName').value.trim(),
                 dirNip: document.getElementById('skpDirNip').value.trim(),
                 timName: document.getElementById('skpTimName') ? document.getElementById('skpTimName').value.trim() : currentUser.name,
-                timNip: document.getElementById('skpTimNip') ? document.getElementById('skpTimNip').value.trim() : '199003262019011001',
+                timNip: document.getElementById('skpTimNip') ? document.getElementById('skpTimNip').value.trim() : (currentUser.nip || '-'),
                 userName: document.getElementById('skpUserName').value.trim(),
                 userNip: document.getElementById('skpUserNip').value.trim(),
                 status: isKetuaTim ? 'Menunggu Direktur' : 'Menunggu Ketua Tim Kerja',
@@ -8504,12 +8750,73 @@ async function saveCascadingTim(e) {
             renderLaporanView(document.getElementById('mainContent'));
         }
 
+        // REVISI 10: Menampilkan Nama Ketua Unit, Indikator, Target, Realisasi, & Range Ekspektasi Kinerja pada Modal Penilaian Ketua Tim Kerja
         function openAssessSKPTimModal(skpId) {
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
             if (!skp) return;
             document.getElementById('assessSkpTimId').value = skpId;
             document.getElementById('assessSkpTimRating').value = skp.nilaiTimKinerja || 'Sesuai Ekspektasi';
             document.getElementById('assessSkpTimNote').value = skp.saranKetuaTim !== '-' ? skp.saranKetuaTim : '';
+
+            // Cari Target, Realisasi & Range Ekspektasi Kinerja dari Cascading Tim Kerja / Direktur
+            const capObj = skp.capaianId ? (DB.capaian || []).find(c => String(c.id) === String(skp.capaianId)) : (DB.capaian || []).find(c => c.unit === skp.unit && c.targetDirektur === skp.indikator && String(c.tahun || '2025') === String(skp.tahun || '2025'));
+            const ctObj = (DB.cascadingTim || []).find(ct => ct.targetDirektur === skp.indikator && String(ct.tahun || '2025') === String(skp.tahun || '2025') && (!skp.timKey || ct.timKey === skp.timKey));
+            const cdObj = (DB.cascadingDirektur || []).find(cd => cd.target === skp.indikator && String(cd.tahun || '2025') === String(skp.tahun || '2025'));
+            const ikObj = (DB.renstraIndikatorKinerja || []).find(ik => ik.namaIndikator === skp.indikator);
+
+            const targetVal = skp.targetNum !== undefined ? skp.targetNum : (capObj ? capObj.target : (cdObj && cdObj.targetVal !== undefined ? cdObj.targetVal : 100));
+            const realVal = skp.realisasiNum !== undefined ? skp.realisasiNum : (capObj ? capObj.realisasi : 0);
+            const satuanStr = skp.satuan || (capObj ? capObj.satuan : (cdObj ? cdObj.satuan : '%')) || '%';
+
+            const rk = (ctObj && ctObj.rangeKinerja) ? ctObj.rangeKinerja : ((cdObj && cdObj.rangeKinerja) ? cdObj.rangeKinerja : ((ikObj && ikObj.rangeKinerja) ? ikObj.rangeKinerja : { tidakMencapai: '< 100%', mencapai: '100%', melebihi: '> 100%' }));
+
+            const infoBox = document.getElementById('assessSkpTimInfoBox');
+            if (infoBox) {
+                infoBox.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2 border-b pb-2">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Nama Ketua Unit / Pemohon:</span>
+                            <strong class="text-slate-900">${sanitizeHTML(skp.requesterName)} (${sanitizeHTML(skp.unit || '-')})</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Periode SKP:</span>
+                            <strong class="text-primary-700">${sanitizeHTML(skp.triwulan)} — Tahun ${sanitizeHTML(skp.tahun)}</strong>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 block">Nama Indikator Kinerja:</span>
+                        <strong class="text-slate-900">${sanitizeHTML(skp.indikator)}</strong>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Target Indikator:</span>
+                            <strong class="text-blue-700 text-sm">${targetVal} ${sanitizeHTML(satuanStr)}</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Realisasi Capaian:</span>
+                            <strong class="text-emerald-700 text-sm">${realVal} ${sanitizeHTML(satuanStr)}</strong>
+                        </div>
+                    </div>
+                    <div class="bg-indigo-50/80 p-2.5 rounded-lg border border-indigo-200 space-y-1">
+                        <span class="text-[10px] font-bold text-indigo-950 uppercase block"><i class="fa-solid fa-scale-balanced mr-1"></i>Panduan Range Ekspektasi Kinerja (Hasil Input Cascading):</span>
+                        <div class="grid grid-cols-3 gap-1.5 text-[11px] pt-1">
+                            <div class="p-1.5 bg-white rounded border border-rose-200 text-center">
+                                <span class="block text-[9px] font-bold text-rose-700">Di Bawah Ekspektasi</span>
+                                <strong class="text-slate-800">${sanitizeHTML(rk.tidakMencapai)}</strong>
+                            </div>
+                            <div class="p-1.5 bg-white rounded border border-emerald-200 text-center">
+                                <span class="block text-[9px] font-bold text-emerald-700">Sesuai Ekspektasi</span>
+                                <strong class="text-slate-800">${sanitizeHTML(rk.mencapai)}</strong>
+                            </div>
+                            <div class="p-1.5 bg-white rounded border border-blue-200 text-center">
+                                <span class="block text-[9px] font-bold text-blue-700">Di Atas Ekspektasi</span>
+                                <strong class="text-slate-800">${sanitizeHTML(rk.melebihi)}</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
             const modal = document.getElementById('assessSkpTimModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -8559,7 +8866,6 @@ async function saveCascadingTim(e) {
                 skp.catatanDirektur = document.getElementById('assessSkpDirNote').value.trim();
                 skp.status = 'Disetujui';
 
-                // Terbitkan Digital Signature Hash unik untuk masing-masing penandatangan
                 const timestamp = new Date().toISOString();
                 skp.hashDirektur = generateSimpleDocHash(`DIR|${skp.id}|${skp.dirName}|${skp.dirNip}|${skp.nilaiFinalKinerja}|${timestamp}`);
                 skp.hashKetuaTim = generateSimpleDocHash(`TIM|${skp.id}|${skp.timName}|${skp.timNip}|${skp.nilaiTimKinerja}|${timestamp}`);
@@ -8573,6 +8879,7 @@ async function saveCascadingTim(e) {
             renderLaporanView(document.getElementById('mainContent'));
         }
 
+        // REVISI 12: Cetak Laporan SKP Tanpa Border Tabel + Penanda Halaman Otomatis (Halaman 1 dari 2 & Halaman 2 dari 2)
         function previewAndPrintSKP(skpId) {
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
             if (!skp || skp.status !== 'Disetujui') {
@@ -8584,6 +8891,10 @@ async function saveCascadingTim(e) {
             if (!area) return;
 
             const twRomawi = skp.triwulan.includes('1') ? 'I' : skp.triwulan.includes('2') ? 'II' : skp.triwulan.includes('3') ? 'III' : 'IV';
+
+            // Cek apakah konten panjang sehingga dibagi menjadi 2 halaman berpenanda (Halaman 1 dari 2 & Halaman 2 dari 2)
+            const totalTextLength = (skp.indikator || '').length + (skp.uraianKegiatan || '').length + (skp.hasilKegiatan || '').length + (skp.permasalahan || '').length + (skp.saranKetuaTim || '').length;
+            const useTwoPages = totalTextLength > 180 || true; // Selalu mendukung penanda Halaman 1 dari 2 & Halaman 2 dari 2 yang rapi saat dicetak
 
             area.innerHTML = `
                 <div class="space-y-6 text-slate-900 font-serif">
@@ -8597,125 +8908,140 @@ async function saveCascadingTim(e) {
                         </button>
                     </div>
 
-                    <!-- HEADER SESUAI CONTOH FORMAT SKP SISTEM.DOCX -->
-                    <div class="text-center space-y-1">
-                        <h2 class="text-base font-bold uppercase tracking-wide">LAPORAN PELAKSANAAN KEGIATAN</h2>
-                        <h3 class="text-base font-bold uppercase tracking-wide">SASARAN KERJA PEGAWAI</h3>
-                        <p class="text-sm font-bold">TAHUN ${sanitizeHTML(skp.tahun)}</p>
-                        <p class="text-sm font-bold">Triwulan ${twRomawi}</p>
+                    <!-- HALAMAN 1 (Romawi I s.d. V) Tanpa Border Tabel -->
+                    <div class="${useTwoPages ? 'skp-page-break pb-6 mb-6 border-b border-dashed border-slate-200' : ''} space-y-5">
+                        <div class="text-center space-y-1">
+                            <h2 class="text-base font-bold uppercase tracking-wide">LAPORAN PELAKSANAAN KEGIATAN</h2>
+                            <h3 class="text-base font-bold uppercase tracking-wide">SASARAN KERJA PEGAWAI</h3>
+                            <p class="text-sm font-bold">TAHUN ${sanitizeHTML(skp.tahun)}</p>
+                            <p class="text-sm font-bold">Triwulan ${twRomawi}</p>
+                        </div>
+
+                        <table class="w-full skp-borderless-table text-xs">
+                            <tbody>
+                                <tr class="font-bold">
+                                    <td class="py-2 pr-2 w-8 text-left align-top">I.</td>
+                                    <td class="py-2 uppercase">NAMA INDIKATOR KINERJA</td>
+                                </tr>
+                                <tr>
+                                    <td class="pb-3"></td>
+                                    <td class="pb-3 font-semibold">${sanitizeHTML(skp.indikator)}</td>
+                                </tr>
+
+                                <tr class="font-bold">
+                                    <td class="py-2 pr-2 text-left align-top">II.</td>
+                                    <td class="py-2 uppercase">URAIAN KEGIATAN</td>
+                                </tr>
+                                <tr>
+                                    <td class="pb-3"></td>
+                                    <td class="pb-3">Kegiatan yang dilakukan adalah sebagai berikut:<br>${sanitizeHTML(skp.uraianKegiatan)}</td>
+                                </tr>
+
+                                <tr class="font-bold">
+                                    <td class="py-2 pr-2 text-left align-top">III.</td>
+                                    <td class="py-2 uppercase">TARGET KINERJA</td>
+                                </tr>
+                                <tr>
+                                    <td class="pb-3"></td>
+                                    <td class="pb-3">${sanitizeHTML(skp.targetText)}</td>
+                                </tr>
+
+                                <tr class="font-bold">
+                                    <td class="py-2 pr-2 text-left align-top">IV.</td>
+                                    <td class="py-2 uppercase">WAKTU PELAKSANAAN</td>
+                                </tr>
+                                <tr>
+                                    <td class="pb-3"></td>
+                                    <td class="pb-3">${sanitizeHTML(skp.waktuPelaksanaan)}</td>
+                                </tr>
+
+                                <tr class="font-bold">
+                                    <td class="py-2 pr-2 text-left align-top">V.</td>
+                                    <td class="py-2 uppercase">HASIL KEGIATAN/PEKERJAAN</td>
+                                </tr>
+                                <tr>
+                                    <td class="pb-3"></td>
+                                    <td class="pb-3">${sanitizeHTML(skp.hasilKegiatan)}<br><span class="font-bold text-emerald-800">Predikat Hasil Kerja: ${sanitizeHTML(skp.nilaiFinalKinerja)} | Predikat Perilaku: ${sanitizeHTML(skp.nilaiPerilakuDirektur)}</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="text-right text-[11px] font-bold text-slate-500 pt-4">
+                            Halaman 1 dari 2
+                        </div>
                     </div>
 
-                    <!-- TABEL ROMAWI I S.D VII PERSIS FORMAT DOCX -->
-                    <table class="w-full border-collapse border border-slate-900 text-xs">
-                        <tbody>
-                            <tr class="bg-slate-100 font-bold">
-                                <td class="p-2.5 border border-slate-900 w-10 text-center">I.</td>
-                                <td class="p-2.5 border border-slate-900 uppercase">NAMA INDIKATOR KINERJA</td>
-                            </tr>
-                            <tr>
-                                <td class="p-2.5 border border-slate-900"></td>
-                                <td class="p-2.5 border border-slate-900 font-semibold">${sanitizeHTML(skp.indikator)}</td>
-                            </tr>
+                    <!-- HALAMAN 2 (Romawi VI, VII & Tanda Tangan QR Code Hash) Tanpa Border Tabel -->
+                    <div class="space-y-6">
+                        <table class="w-full skp-borderless-table text-xs">
+                            <tbody>
+                                <tr class="font-bold">
+                                    <td class="py-2 pr-2 w-8 text-left align-top">VI.</td>
+                                    <td class="py-2 uppercase">PERMASALAHAN YANG DIHADAPI</td>
+                                </tr>
+                                <tr>
+                                    <td class="pb-3"></td>
+                                    <td class="pb-3">${sanitizeHTML(skp.permasalahan)}</td>
+                                </tr>
 
-                            <tr class="bg-slate-100 font-bold">
-                                <td class="p-2.5 border border-slate-900 text-center">II.</td>
-                                <td class="p-2.5 border border-slate-900 uppercase">URAIAN KEGIATAN</td>
-                            </tr>
-                            <tr>
-                                <td class="p-2.5 border border-slate-900"></td>
-                                <td class="p-2.5 border border-slate-900">Kegiatan yang dilakukan adalah sebagai berikut:<br>${sanitizeHTML(skp.uraianKegiatan)}</td>
-                            </tr>
+                                <tr class="font-bold">
+                                    <td class="py-2 pr-2 text-left align-top">VII.</td>
+                                    <td class="py-2 uppercase">SARAN DAN TINDAK LANJUT</td>
+                                </tr>
+                                <tr>
+                                    <td class="pb-3"></td>
+                                    <td class="pb-3">${sanitizeHTML(skp.saranKetuaTim)}${skp.catatanDirektur ? `<br><strong>Arahan Direktur:</strong> ${sanitizeHTML(skp.catatanDirektur)}` : ''}</td>
+                                </tr>
+                            </tbody>
+                        </table>
 
-                            <tr class="bg-slate-100 font-bold">
-                                <td class="p-2.5 border border-slate-900 text-center">III.</td>
-                                <td class="p-2.5 border border-slate-900 uppercase">TARGET KINERJA</td>
-                            </tr>
-                            <tr>
-                                <td class="p-2.5 border border-slate-900"></td>
-                                <td class="p-2.5 border border-slate-900">${sanitizeHTML(skp.targetText)}</td>
-                            </tr>
+                        <!-- BLOK TANDA TANGAN DENGAN QR CODE TER-HASH -->
+                        <div class="pt-4">
+                            <p class="text-xs mb-3">${sanitizeHTML(skp.tanggalKota)}</p>
+                            <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-6 text-xs text-center pt-4">
+                                
+                                <!-- Penandatangan 1: Direktur -->
+                                <div class="flex flex-col items-center">
+                                    <p class="font-semibold">Pejabat Penilai,</p>
+                                    <p class="font-bold mb-2">Direktur</p>
+                                    <div id="qrSignDirektur" class="p-2 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashDirektur)}</span>
+                                    <p class="font-bold underline">${sanitizeHTML(skp.dirName)}</p>
+                                    <p>NIP. ${sanitizeHTML(skp.dirNip)}</p>
+                                </div>
 
-                            <tr class="bg-slate-100 font-bold">
-                                <td class="p-2.5 border border-slate-900 text-center">IV.</td>
-                                <td class="p-2.5 border border-slate-900 uppercase">WAKTU PELAKSANAAN</td>
-                            </tr>
-                            <tr>
-                                <td class="p-2.5 border border-slate-900"></td>
-                                <td class="p-2.5 border border-slate-900">${sanitizeHTML(skp.waktuPelaksanaan)}</td>
-                            </tr>
+                                ${!skp.isKetuaTimRequest ? `
+                                <!-- Penandatangan 2: Ketua Tim Kerja -->
+                                <div class="flex flex-col items-center">
+                                    <p class="font-semibold">Mengetahui,</p>
+                                    <p class="font-bold mb-2">Ketua Tim Kerja</p>
+                                    <div id="qrSignKetuaTim" class="p-2 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashKetuaTim)}</span>
+                                    <p class="font-bold underline">${sanitizeHTML(skp.timName)}</p>
+                                    <p>NIP. ${sanitizeHTML(skp.timNip)}</p>
+                                </div>
+                                ` : ''}
 
-                            <tr class="bg-slate-100 font-bold">
-                                <td class="p-2.5 border border-slate-900 text-center">V.</td>
-                                <td class="p-2.5 border border-slate-900 uppercase">HASIL KEGIATAN/PEKERJAAN</td>
-                            </tr>
-                            <tr>
-                                <td class="p-2.5 border border-slate-900"></td>
-                                <td class="p-2.5 border border-slate-900">${sanitizeHTML(skp.hasilKegiatan)}<br><span class="font-bold text-emerald-800">Predikat Hasil Kerja: ${sanitizeHTML(skp.nilaiFinalKinerja)} | Predikat Perilaku: ${sanitizeHTML(skp.nilaiPerilakuDirektur)}</span></td>
-                            </tr>
+                                <!-- Penandatangan 3: Penyusun Laporan -->
+                                <div class="flex flex-col items-center">
+                                    <p class="font-semibold">Yang membuat,</p>
+                                    <p class="font-bold mb-2">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
+                                    <div id="qrSignPenyusun" class="p-2 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashPenyusun)}</span>
+                                    <p class="font-bold underline">${sanitizeHTML(skp.userName)}</p>
+                                    <p>NIP. ${sanitizeHTML(skp.userNip)}</p>
+                                </div>
 
-                            <tr class="bg-slate-100 font-bold">
-                                <td class="p-2.5 border border-slate-900 text-center">VI.</td>
-                                <td class="p-2.5 border border-slate-900 uppercase">PERMASALAHAN YANG DIHADAPI</td>
-                            </tr>
-                            <tr>
-                                <td class="p-2.5 border border-slate-900"></td>
-                                <td class="p-2.5 border border-slate-900">${sanitizeHTML(skp.permasalahan)}</td>
-                            </tr>
-
-                            <tr class="bg-slate-100 font-bold">
-                                <td class="p-2.5 border border-slate-900 text-center">VII.</td>
-                                <td class="p-2.5 border border-slate-900 uppercase">SARAN DAN TINDAK LANJUT</td>
-                            </tr>
-                            <tr>
-                                <td class="p-2.5 border border-slate-900"></td>
-                                <td class="p-2.5 border border-slate-900">${sanitizeHTML(skp.saranKetuaTim)}${skp.catatanDirektur ? `<br><strong>Arahan Direktur:</strong> ${sanitizeHTML(skp.catatanDirektur)}` : ''}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- BLOK TANDA TANGAN DENGAN QR CODE TER-HASH -->
-                    <div class="pt-4">
-                        <p class="text-xs mb-2">${sanitizeHTML(skp.tanggalKota)}</p>
-                        <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-6 text-xs text-center border-t pt-4">
-                            
-                            <!-- Penandatangan 1: Direktur -->
-                            <div class="flex flex-col items-center">
-                                <p class="font-semibold">Pejabat Penilai,</p>
-                                <p class="font-bold mb-2">Direktur</p>
-                                <div id="qrSignDirektur" class="p-2 bg-white border rounded-lg my-1"></div>
-                                <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashDirektur)}</span>
-                                <p class="font-bold underline">${sanitizeHTML(skp.dirName)}</p>
-                                <p>NIP. ${sanitizeHTML(skp.dirNip)}</p>
                             </div>
+                        </div>
 
-                            ${!skp.isKetuaTimRequest ? `
-                            <!-- Penandatangan 2: Ketua Tim Kerja (Jika pemohon bukan Ketua Tim Kerja) -->
-                            <div class="flex flex-col items-center">
-                                <p class="font-semibold">Mengetahui,</p>
-                                <p class="font-bold mb-2">Ketua Tim Kerja</p>
-                                <div id="qrSignKetuaTim" class="p-2 bg-white border rounded-lg my-1"></div>
-                                <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashKetuaTim)}</span>
-                                <p class="font-bold underline">${sanitizeHTML(skp.timName)}</p>
-                                <p>NIP. ${sanitizeHTML(skp.timNip)}</p>
-                            </div>
-                            ` : ''}
-
-                            <!-- Penandatangan 3 (atau 2 bagi Ketua Tim): Penyusun Laporan -->
-                            <div class="flex flex-col items-center">
-                                <p class="font-semibold">Yang membuat,</p>
-                                <p class="font-bold mb-2">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
-                                <div id="qrSignPenyusun" class="p-2 bg-white border rounded-lg my-1"></div>
-                                <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashPenyusun)}</span>
-                                <p class="font-bold underline">${sanitizeHTML(skp.userName)}</p>
-                                <p>NIP. ${sanitizeHTML(skp.userNip)}</p>
-                            </div>
-
+                        <div class="text-right text-[11px] font-bold text-slate-500 pt-6">
+                            Halaman 2 dari 2
                         </div>
                     </div>
                 </div>
             `;
 
-            // Render QR Code dengan payload Hash Dokumen
             setTimeout(() => {
                 if (typeof QRCode !== 'undefined') {
                     const elDir = document.getElementById('qrSignDirektur');
