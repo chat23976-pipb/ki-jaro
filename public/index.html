@@ -7041,14 +7041,18 @@ async function saveCascadingTim(e) {
             renderRisikoView(document.getElementById('mainContent'));
         }
         function renderTindakLanjutMonitorView(container) {
-            document.getElementById('pageTitle').innerText = 'Monitoring Tindak Lanjut & Scoreboard Pencapaian';
-            const isDirektur = currentUser.role === 'direktur';
-            const isTim = currentUser.role === 'tim_kerja';
+    document.getElementById('pageTitle').innerText = 'Monitoring Tindak Lanjut & Scoreboard Pencapaian';
+    const isDirektur = currentUser.role === 'direktur';
+    const isTim = currentUser.role === 'tim_kerja';
+    const isRestrictedUnit = currentUser.role === 'ketua_unit' || SUB_UNIT_ROLES.includes(currentUser.role);
 
-            let list = DB.capaian;
-            if (isTim) {
-                list = DB.capaian.filter(c => c.timKey === currentUser.timKey);
-            }
+    let list = DB.capaian;
+    if (isTim) {
+        list = DB.capaian.filter(c => c.timKey === currentUser.timKey);
+    } else if (isRestrictedUnit) {
+        // REVISI 4: Ketua Unit / Subbag / Prodi / Staf hanya bisa melihat data milik unitnya sendiri
+        list = DB.capaian.filter(c => c.unit === currentUser.unit);
+    }
 
             if (filterTindakLanjutTahun !== 'Semua') {
                 list = list.filter(c => (c.tahun || '2025') === filterTindakLanjutTahun);
@@ -7446,7 +7450,7 @@ async function saveCascadingTim(e) {
         // FASE 3: MASUKAN ITJEN & TINDAK LANJUT PUDIR 2 (Poin 16 - 19)
         // =========================================================================
         function renderItjenView(container) {
-            document.getElementById('pageTitle').innerText = 'Masukan ITJEN (SPI) & Tindak Lanjut';
+            document.getElementById('pageTitle').innerText = 'Masukan APIP & Tindak Lanjut';
             const canInputItjen = currentUser.role === 'admin' || currentUser.role === 'direktur';
             const canTindakLanjut = currentUser.role === 'program' || currentUser.role === 'admin';
             const canPudir2Validate = currentUser.role === 'pudir2' || currentUser.role === 'admin';
@@ -7458,7 +7462,7 @@ async function saveCascadingTim(e) {
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base">Daftar Temuan & Masukan ITJEN (SPI)</h3>
+                                <h3 class="font-bold text-slate-900 text-base">Daftar Temuan & Masukan APIP (SPI)</h3>
                                 <p class="text-xs text-slate-500">Pencatatan temuan pengawasan, tindak lanjut oleh Tim Program, dan validasi oleh Pudir 2</p>
                             </div>
                             <div class="flex items-center space-x-2">
@@ -7469,7 +7473,7 @@ async function saveCascadingTim(e) {
                                 ${canInputItjen && !isPureViewer() ? `
                                     <button onclick="openItjenModal('add')" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1.5">
                                         <i class="fa-solid fa-plus"></i>
-                                        <span>Input Masukan ITJEN</span>
+                                        <span>Input Masukan APIP</span>
                                     </button>
                                 ` : ''}
                             </div>
@@ -7489,7 +7493,7 @@ async function saveCascadingTim(e) {
                                  </tr>
                              </thead>
                                 <tbody class="divide-y">
-                                 ${DB.masukanItjen.length === 0 ? `<tr><td colspan="7" class="p-8 text-center text-slate-400">Belum ada data masukan ITJEN.</td></tr>` : DB.masukanItjen.map((item, idx) => `
+                                 ${DB.masukanItjen.length === 0 ? `<tr><td colspan="7" class="p-8 text-center text-slate-400">Belum ada data masukan APIP.</td></tr>` : DB.masukanItjen.map((item, idx) => `
                                      <tr class="hover:bg-slate-50">
                                          <td class="p-3 text-center font-semibold text-slate-600">${idx + 1}</td>
                                          <td class="p-3 font-semibold">${sanitizeHTML(item.tanggal)}<br><span class="text-[10px] text-slate-400">Tahun: ${item.tahun}</span></td>
@@ -7635,7 +7639,7 @@ async function saveCascadingTim(e) {
             DB.masukanItjen.push(item);
             await saveToMySQL();
             closeItjenModal();
-            showToast('Masukan ITJEN berhasil disimpan!');
+            showToast('Masukan APIP berhasil disimpan!');
             renderItjenView(document.getElementById('mainContent'));
         }
 
