@@ -3385,120 +3385,131 @@ function renderDokumenUkurLaporView(container) {
             const listStr = matched.map((m, i) => `${i + 1}. [${m.unit}] ${m.pernyataan} (Mitigasi: ${m.uraianPengendalian || '-'})`).join('\n');
             alert(`DAFTAR RISIKO ${mode.toUpperCase()} — Probabilitas ${prob}, Dampak ${damp} (Skor ${skor}):\n\n${listStr}`);
         }
-function renderDashboardView(container) {
+// Helper untuk menghancurkan instance Chart.js lama agar tidak bentrok dengan animasi 1800ms
+        function safeDestroyChart(canvasId) {
+            const canvasEl = document.getElementById(canvasId);
+            if (!canvasEl) return null;
+            const existingChart = Chart.getChart(canvasEl);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+            return canvasEl.getContext('2d');
+        }
+
+        function renderDashboardView(container) {
             document.getElementById('pageTitle').innerText = 'Dashboard Capaian Kinerja & Peta Risiko';
 
-            // HANYA mengambil Capaian yang Valid DAN berstatus UTAMA (Support tidak boleh masuk ke Dashboard Utama)
-             let validCapaian = DB.capaian.filter(c => c.status === 'Valid' && isCapaianUtamaForDashboard(c));
+            // 1. Ambil HANYA Capaian yang berstatus Valid DAN Utama (Support tidak masuk Dashboard Utama)
+            let validCapaian = (DB.capaian || []).filter(c => c && String(c.status || '').trim() === 'Valid' && isCapaianUtamaForDashboard(c));
             if (filterDashboardTahun !== 'Semua') {
-                validCapaian = validCapaian.filter(c => c.tahun === filterDashboardTahun);
+                validCapaian = validCapaian.filter(c => String(c.tahun || '2025') === String(filterDashboardTahun));
             }
             if (filterDashboardTriwulan !== 'Semua') {
-                validCapaian = validCapaian.filter(c => c.triwulan === filterDashboardTriwulan);
+                validCapaian = validCapaian.filter(c => String(c.triwulan || '').trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
             }
             if (filterDashboardTim !== 'Semua') {
-                validCapaian = validCapaian.filter(c => c.timKey === filterDashboardTim);
+                validCapaian = validCapaian.filter(c => String(c.timKey || '') === String(filterDashboardTim));
             }
             if (filterDashboardUnit !== 'Semua') {
-                validCapaian = validCapaian.filter(c => c.unit === filterDashboardUnit);
+                validCapaian = validCapaian.filter(c => String(c.unit || '') === String(filterDashboardUnit));
             }
 
-            let filteredCascading = DB.cascadingDirektur;
+            let filteredCascading = (DB.cascadingDirektur || []).filter(c => c);
             if (filterDashboardTahun !== 'Semua') {
-                filteredCascading = filteredCascading.filter(c => c.tahun === filterDashboardTahun);
+                filteredCascading = filteredCascading.filter(c => String(c.tahun || '2025') === String(filterDashboardTahun));
             }
             if (filterDashboardTim !== 'Semua') {
-                filteredCascading = filteredCascading.filter(c => c.timKeys.includes(filterDashboardTim));
+                filteredCascading = filteredCascading.filter(c => Array.isArray(c.timKeys) && c.timKeys.includes(filterDashboardTim));
             }
 
             let totalValidIndikator = filteredCascading.length;
-let achievedCount = 0;
-filteredCascading.forEach(cd => {
-    let matched = validCapaian.filter(c => {
-        let matchTarget = c.targetDirektur === cd.target;
-        let matchTahun = (c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? (c.tahun || '2025') : filterDashboardTahun);
-        let matchStatus = c.status === 'Valid';
-        return matchTarget && matchTahun && matchStatus;
-    });
+            let achievedCount = 0;
+            filteredCascading.forEach(cd => {
+                let matched = validCapaian.filter(c => {
+                    let matchTarget = String(c.targetDirektur || '').trim() === String(cd.target || '').trim();
+                    let matchTahun = String(c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? String(c.tahun || '2025') : String(filterDashboardTahun));
+                    let matchStatus = String(c.status || '').trim() === 'Valid';
+                    return matchTarget && matchTahun && matchStatus;
+                });
 
-    if (filterDashboardTriwulan !== 'Semua') {
-        matched = matched.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
-    }
+                if (filterDashboardTriwulan !== 'Semua') {
+                    matched = matched.filter(c => c.triwulan && String(c.triwulan).trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
+                }
 
-    if (matched.length > 0) {
-        const avgReal = matched.reduce((a,b)=>a+b.realisasi,0)/matched.length;
-        const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
-        if (avgReal >= targetVal) achievedCount++;
-    }
-});               
-    
+                if (matched.length > 0) {
+                    const avgReal = matched.reduce((a, b) => a + (Number(b.realisasi) || 0), 0) / matched.length;
+                    const targetVal = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
+                    if (avgReal >= targetVal) achievedCount++;
+                }
+            });
+
             let myFilteredCascading = filteredCascading;
             let myValidCapaian = validCapaian;
             if (currentUser.role === 'ketua_unit') {
                 myValidCapaian = validCapaian.filter(c => c.unit === currentUser.unit);
-                const assignedTargets = DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => ct.targetDirektur);
+                const assignedTargets = (DB.cascadingTim || []).filter(ct => Array.isArray(ct.unitTargets) && ct.unitTargets.includes(currentUser.unit)).map(ct => ct.targetDirektur);
                 myFilteredCascading = filteredCascading.filter(cd => assignedTargets.includes(cd.target));
             } else if (currentUser.role === 'tim_kerja') {
                 myValidCapaian = validCapaian.filter(c => c.timKey === currentUser.timKey);
-                myFilteredCascading = filteredCascading.filter(cd => cd.timKeys.includes(currentUser.timKey));
+                myFilteredCascading = filteredCascading.filter(cd => Array.isArray(cd.timKeys) && cd.timKeys.includes(currentUser.timKey));
             }
-            
+
             let roleAchievedCount = 0;
             let roleTotalIndikator = myFilteredCascading.length;
             myFilteredCascading.forEach(cd => {
-                let matched = myValidCapaian.filter(c => c.targetDirektur === cd.target && c.tahun === cd.tahun);
+                let matched = myValidCapaian.filter(c => String(c.targetDirektur || '').trim() === String(cd.target || '').trim() && String(c.tahun || '2025') === String(cd.tahun || '2025'));
                 if (filterDashboardTriwulan !== 'Semua') {
-                    matched = matched.filter(c => c.triwulan === filterDashboardTriwulan);
+                    matched = matched.filter(c => String(c.triwulan || '').trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
                 }
                 if (matched.length > 0) {
-                    const avgReal = matched.reduce((a,b)=>a+b.realisasi,0)/matched.length;
-                    const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
+                    const avgReal = matched.reduce((a, b) => a + (Number(b.realisasi) || 0), 0) / matched.length;
+                    const targetVal = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
                     if (avgReal >= targetVal) roleAchievedCount++;
                 }
             });
 
             let effectiveCount = 0;
             let efficientCount = 0;
-            
+
             // === FILTER REALISASI ANGGARAN BERDASARKAN FILTER TERPADU ===
-            let filteredRealisasiAdmin = DB.realisasiAnggaranAdmin;
+            let filteredRealisasiAdmin = (DB.realisasiAnggaranAdmin || []).filter(ra => ra);
             if (filterDashboardTahun !== 'Semua') {
-                filteredRealisasiAdmin = filteredRealisasiAdmin.filter(ra => ra.tahun === filterDashboardTahun);
+                filteredRealisasiAdmin = filteredRealisasiAdmin.filter(ra => String(ra.tahun || '2025') === String(filterDashboardTahun));
             }
             if (filterDashboardTriwulan !== 'Semua') {
-                filteredRealisasiAdmin = filteredRealisasiAdmin.filter(ra => ra.triwulan === filterDashboardTriwulan);
+                filteredRealisasiAdmin = filteredRealisasiAdmin.filter(ra => String(ra.triwulan || '').trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
             }
 
             filteredRealisasiAdmin.forEach(ra => {
-                const ik = DB.renstraIndikatorKinerja.find(x => x.id === ra.indikatorId);
-                const pagu = ik ? (ik['anggaran' + ra.tahun] || 100000000) : 100000000;
-                const realAnggaran = ra.realisasiAnggaran;
+                const ik = (DB.renstraIndikatorKinerja || []).find(x => x.id === ra.indikatorId);
+                const pagu = ik ? (Number(ik['anggaran' + ra.tahun]) || 100000000) : 100000000;
+                const realAnggaran = Number(ra.realisasiAnggaran) || 0;
                 const pAnggaran = pagu > 0 ? (realAnggaran / pagu) * 100 : 0;
-                const match = DB.capaian.filter(c => ik && c.targetDirektur === ik.namaIndikator && c.tahun === ra.tahun && c.triwulan === ra.triwulan && c.status === 'Valid' && isCapaianUtamaForDashboard(c));
-                const pOutput = match.length > 0 ? (match.reduce((a,b)=>a+b.realisasi,0)/match.length) : 0;
-                
-                const targetVal = ik ? ik['target' + ra.tahun] : 100;
+                const match = (DB.capaian || []).filter(c => c && ik && String(c.targetDirektur || '').trim() === String(ik.namaIndikator || '').trim() && String(c.tahun || '2025') === String(ra.tahun || '2025') && String(c.triwulan || '').trim().toUpperCase() === String(ra.triwulan || '').trim().toUpperCase() && String(c.status || '').trim() === 'Valid' && isCapaianUtamaForDashboard(c));
+                const pOutput = match.length > 0 ? (match.reduce((a, b) => a + (Number(b.realisasi) || 0), 0) / match.length) : 0;
+
+                const targetVal = ik ? (Number(ik['target' + ra.tahun]) || 100) : 100;
                 if (pOutput >= targetVal) effectiveCount++;
                 if (pOutput >= pAnggaran) efficientCount++;
             });
 
             let unitScores = {};
-            DB.unitList.forEach(u => {
+            (DB.unitList || []).forEach(u => {
                 if (filterDashboardUnit !== 'Semua' && u !== filterDashboardUnit) return;
                 const unitCaps = validCapaian.filter(c => c.unit === u);
                 if (unitCaps.length > 0) {
-                    const avg = unitCaps.reduce((a,b)=>a+b.realisasi,0)/unitCaps.length;
+                    const avg = unitCaps.reduce((a, b) => a + (Number(b.realisasi) || 0), 0) / unitCaps.length;
                     unitScores[u] = avg;
                 }
             });
-            let sortedUnits = Object.entries(unitScores).sort((a,b) => b[1] - a[1]);
+            let sortedUnits = Object.entries(unitScores).sort((a, b) => b[1] - a[1]);
             let bestUnit = sortedUnits.length > 0 ? `${sortedUnits[0][0]} (${sortedUnits[0][1].toFixed(1)}%)` : 'Belum ada data';
-            let worstUnit = sortedUnits.length > 0 ? `${sortedUnits[sortedUnits.length-1][0]} (${sortedUnits[sortedUnits.length-1][1].toFixed(1)}%)` : 'Belum ada data';
+            let worstUnit = sortedUnits.length > 0 ? `${sortedUnits[sortedUnits.length - 1][0]} (${sortedUnits[sortedUnits.length - 1][1].toFixed(1)}%)` : 'Belum ada data';
 
             // === FILTER RISIKO BERDASARKAN FILTER TERPADU (Tahun, Tim, Unit) ===
-            let filteredRisiko = DB.risiko;
+            let filteredRisiko = (DB.risiko || []).filter(r => r);
             if (filterDashboardTahun !== 'Semua') {
-                filteredRisiko = filteredRisiko.filter(r => (r.tahun || '2025') === filterDashboardTahun);
+                filteredRisiko = filteredRisiko.filter(r => String(r.tahun || '2025') === String(filterDashboardTahun));
             }
             if (filterDashboardTim !== 'Semua') {
                 filteredRisiko = filteredRisiko.filter(r => r.timKey === filterDashboardTim);
@@ -3619,7 +3630,7 @@ filteredCascading.forEach(cd => {
                             <button onclick="switchTab('cascading')" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md">Buka Menu Cascading</button>
                         </div>
                     ` : `
-<!-- Master KPI Table -->
+                        <!-- Master KPI Table -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
@@ -3644,37 +3655,33 @@ filteredCascading.forEach(cd => {
                                     <tbody class="divide-y divide-slate-100">
                                         ${filteredCascading.filter(cd => filterDashboardTahun === 'Semua' || String(cd.tahun || '2025') === String(filterDashboardTahun)).map((cd, index) => {
                                             const cdTahun = String(cd.tahun || '2025');
-                                            let matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && String(c.tahun || '2025') === cdTahun && c.status === 'Valid');
+                                            let matchedCap = validCapaian.filter(c => String(c.targetDirektur || '').trim() === String(cd.target || '').trim() && String(c.tahun || '2025') === cdTahun && String(c.status || '').trim() === 'Valid');
                                             if (filterDashboardTriwulan !== 'Semua') {
-                                                matchedCap = matchedCap.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                                                matchedCap = matchedCap.filter(c => c.triwulan && String(c.triwulan).trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
                                             }
                                             if (filterDashboardUnit !== 'Semua') {
                                                 matchedCap = matchedCap.filter(c => c.unit === filterDashboardUnit);
                                             }
 
-                                          // Hanya gunakan capaian yang berstatus UTAMA pada indikator ini
-                                         const activeCapList = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
-
-                                            // Urutkan berdasarkan Triwulan (TW 1 -> TW 2 -> TW 3 -> TW 4 -> Tahunan) agar elemen terakhir adalah TW terbaru
+                                            const activeCapList = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
                                             const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
-                                            const sortedCap = [...activeCapList].sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
+                                            const sortedCap = [...activeCapList].sort((a, b) => (twOrder[String(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[String(b.triwulan || '').trim().toUpperCase()] || 0));
 
-                                            // Ambil daftar PIC dari Cascading Tim maupun dari Capaian yang sudah masuk
-                                            const cascadedUnits = DB.cascadingTim
-                                             .filter(ct => ct.targetDirektur === cd.target && String(ct.tahun || '2025') === cdTahun && isTimUtamaInDir(cd, ct.timKey))
-                                             .flatMap(ct => (ct.unitTargets || []).filter(u => isUnitUtamaInTim(ct, u)));
-                                         const picUnits = Array.from(new Set([...activeCapList.map(c => c.unit), ...cascadedUnits]));
-                                         const picNames = picUnits.length > 0 ? picUnits.map(u => `${u} (Utama)`).join(', ') : 'Belum ada realisasi Utama';
+                                            const cascadedUnits = (DB.cascadingTim || [])
+                                                .filter(ct => String(ct.targetDirektur || '').trim() === String(cd.target || '').trim() && String(ct.tahun || '2025') === cdTahun && isTimUtamaInDir(cd, ct.timKey))
+                                                .flatMap(ct => (ct.unitTargets || []).filter(u => isUnitUtamaInTim(ct, u)));
+                                            const picUnits = Array.from(new Set([...activeCapList.map(c => c.unit), ...cascadedUnits]));
+                                            const picNames = picUnits.length > 0 ? picUnits.map(u => `${u} (Utama)`).join(', ') : 'Belum ada realisasi Utama';
 
-                                         const timKeyStr = (cd.timKeys || []).map(t => {
-                                             const isUtama = isTimUtamaInDir(cd, t);
-                                             return isUtama 
-                                                 ? `<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-bold text-[10px] mr-1 mb-1">★ ${t} (Utama)</span>`
-                                                 : `<span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 rounded font-medium text-[10px] mr-1 mb-1">🛡️ ${t} (Support)</span>`;
-                                         }).join('') || '-';
-                                            
+                                            const timKeyStr = (cd.timKeys || []).map(t => {
+                                                const isUtama = isTimUtamaInDir(cd, t);
+                                                return isUtama
+                                                    ? `<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-bold text-[10px] mr-1 mb-1">★ ${t} (Utama)</span>`
+                                                    : `<span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 rounded font-medium text-[10px] mr-1 mb-1">🛡️ ${t} (Support)</span>`;
+                                            }).join('') || '-';
+
                                             let realisasiVal = getAggregatedRealisasiForDashboard(sortedCap, cd.target, cdTahun);
-                                            const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
+                                            const targetVal = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
                                             const isTercapai = sortedCap.length > 0 && realisasiVal >= targetVal;
 
                                             return `
@@ -3685,20 +3692,20 @@ filteredCascading.forEach(cd => {
                                                     <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 rounded text-[11px] font-semibold">${cd.satuan || '%'}</span></td>
                                                     <td class="p-3 font-semibold text-purple-700">${timKeyStr}</td>
                                                     <td class="p-3 font-medium text-slate-700">${picNames}</td>
-                                                 <td class="p-3 text-center min-w-[140px]">
-                                                     <div class="flex items-center justify-between text-[11px] font-bold mb-1">
-                                                         <span class="${isTercapai ? 'text-emerald-700' : 'text-rose-600'}">${realisasiVal} ${cd.satuan || '%'}</span>
-                                                         <span class="text-slate-400 text-[10px]">${targetVal > 0 ? Math.min(100, Math.round((realisasiVal / targetVal) * 100)) : 0}%</span>
-                                                     </div>
-                                                     <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
-                                                         <div class="h-full rounded-full transition-all duration-500 ${isTercapai ? 'bg-emerald-500' : realisasiVal > 0 ? 'bg-amber-500' : 'bg-rose-500'}" style="width: ${targetVal > 0 ? Math.min(100, Math.max(5, Math.round((realisasiVal / targetVal) * 100))) : 0}%"></div>
-                                                     </div>
-                                                 </td>
-                                                 <td class="p-3 text-center">
-                                                     <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${realisasiVal > targetVal ? 'bg-blue-100 text-blue-800' : isTercapai ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-                                                         ${realisasiVal > targetVal ? '★ Melebihi Ekspektasi' : isTercapai ? '✓ Mencapai Ekspektasi' : '✗ Belum Tercapai'}
-                                                     </span>
-                                                 </td>
+                                                    <td class="p-3 text-center min-w-[140px]">
+                                                        <div class="flex items-center justify-between text-[11px] font-bold mb-1">
+                                                            <span class="${isTercapai ? 'text-emerald-700' : 'text-rose-600'}">${realisasiVal} ${cd.satuan || '%'}</span>
+                                                            <span class="text-slate-400 text-[10px]">${targetVal > 0 ? Math.min(100, Math.round((realisasiVal / targetVal) * 100)) : 0}%</span>
+                                                        </div>
+                                                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
+                                                            <div class="h-full rounded-full transition-all duration-500 ${isTercapai ? 'bg-emerald-500' : realisasiVal > 0 ? 'bg-amber-500' : 'bg-rose-500'}" style="width: ${targetVal > 0 ? Math.min(100, Math.max(5, Math.round((realisasiVal / targetVal) * 100))) : 0}%"></div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="p-3 text-center">
+                                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${realisasiVal > targetVal ? 'bg-blue-100 text-blue-800' : isTercapai ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                                                            ${realisasiVal > targetVal ? '★ Melebihi Ekspektasi' : isTercapai ? '✓ Mencapai Ekspektasi' : '✗ Belum Tercapai'}
+                                                        </span>
+                                                    </td>
                                                 </tr>
                                             `;
                                         }).join('')}
@@ -3734,29 +3741,29 @@ filteredCascading.forEach(cd => {
                                     <tbody class="divide-y divide-slate-100">
                                         ${filteredCascading.length === 0 ? `<tr><td colspan="12" class="p-4 text-center text-slate-400">Belum ada data indikator.</td></tr>` : filteredCascading.map((cd, index) => {
                                             const cdTahun = String(cd.tahun || '2025');
-                                            let matchedCap = validCapaian.filter(c => c.targetDirektur === cd.target && String(c.tahun || '2025') === cdTahun && c.status === 'Valid');
+                                            let matchedCap = validCapaian.filter(c => String(c.targetDirektur || '').trim() === String(cd.target || '').trim() && String(c.tahun || '2025') === cdTahun && String(c.status || '').trim() === 'Valid');
                                             if (filterDashboardTriwulan !== 'Semua') {
-                                                matchedCap = matchedCap.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
+                                                matchedCap = matchedCap.filter(c => c.triwulan && String(c.triwulan).trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
                                             }
                                             if (filterDashboardUnit !== 'Semua') {
                                                 matchedCap = matchedCap.filter(c => c.unit === filterDashboardUnit);
                                             }
                                             const activeCapList = matchedCap.filter(c => isCapaianUtamaForDashboard(c, cd));
                                             const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
-                                            const sortedCap = [...activeCapList].sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
+                                            const sortedCap = [...activeCapList].sort((a, b) => (twOrder[String(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[String(b.triwulan || '').trim().toUpperCase()] || 0));
 
                                             const realisasiOutput = getAggregatedRealisasiForDashboard(sortedCap, cd.target, cdTahun);
-                                            const targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
+                                            const targetVal = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
                                             const pRealisasiOutput = targetVal > 0 ? (realisasiOutput / targetVal) * 100 : 0;
 
-                                            const renstratik = DB.renstraIndikatorKinerja.find(x => x.namaIndikator === cd.target);
-                                            const paguVal = renstratik ? (renstratik['anggaran' + cdTahun] || 100000000) : (cd.anggaran || 100000000);
-                                            
-                                            let subRa = DB.realisasiAnggaranAdmin.filter(ra => renstratik && ra.indikatorId === renstratik.id && String(ra.tahun || '2025') === cdTahun);
+                                            const renstratik = (DB.renstraIndikatorKinerja || []).find(x => x.namaIndikator === cd.target);
+                                            const paguVal = renstratik ? (Number(renstratik['anggaran' + cdTahun]) || 100000000) : (Number(cd.anggaran) || 100000000);
+
+                                            let subRa = (DB.realisasiAnggaranAdmin || []).filter(ra => renstratik && ra.indikatorId === renstratik.id && String(ra.tahun || '2025') === cdTahun);
                                             if (filterDashboardTriwulan !== 'Semua') {
-                                                subRa = subRa.filter(ra => ra.triwulan === filterDashboardTriwulan);
+                                                subRa = subRa.filter(ra => String(ra.triwulan || '').trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
                                             }
-                                            const realisasiAnggaranVal = subRa.reduce((a,b)=>a+b.realisasiAnggaran, 0);
+                                            const realisasiAnggaranVal = subRa.reduce((a, b) => a + (Number(b.realisasiAnggaran) || 0), 0);
                                             const pRealisasiAnggaran = paguVal > 0 ? (realisasiAnggaranVal / paguVal) * 100 : 0;
 
                                             const isEfektif = pRealisasiOutput >= 100;
@@ -3787,6 +3794,7 @@ filteredCascading.forEach(cd => {
                                 </table>
                             </div>
                         </div>
+
                         <!-- REVISI 5: Tabel Multi-Tahun 2025-2029 & YoY -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                             <div>
@@ -3818,28 +3826,27 @@ filteredCascading.forEach(cd => {
                                     <tbody class="divide-y divide-slate-100">
                                         ${(DB.renstraIndikatorKinerja || []).length === 0 ? `<tr><td colspan="16" class="p-4 text-center text-slate-400">Belum ada data Indikator Kinerja Renstra.</td></tr>` : DB.renstraIndikatorKinerja.map((ik, idx) => {
                                             const getTarget = (yr) => {
-                                                const cd = DB.cascadingDirektur.find(x => (x.indikatorId === ik.id || x.target === ik.namaIndikator) && String(x.tahun || '2025') === String(yr));
+                                                const cd = (DB.cascadingDirektur || []).find(x => (x.indikatorId === ik.id || x.target === ik.namaIndikator) && String(x.tahun || '2025') === String(yr));
                                                 if (cd && cd.targetVal !== undefined) return Number(cd.targetVal);
                                                 return ik['target' + yr] !== undefined ? Number(ik['target' + yr]) : 100;
                                             };
-                                           const getReal = (yr) => {
-                                             if (filterDashboardTahun !== 'Semua' && String(filterDashboardTahun) !== String(yr)) return null;
-                                             let caps = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === String(yr) && c.status === 'Valid');
-                                             if (filterDashboardTim !== 'Semua') {
-                                                 caps = caps.filter(c => c.timKey === filterDashboardTim);
-                                             }
-                                             if (filterDashboardUnit !== 'Semua') {
-                                                 caps = caps.filter(c => c.unit === filterDashboardUnit);
-                                             }
-                                             if (filterDashboardTriwulan !== 'Semua') {
-                                                 caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
-                                             }
-                                             const finalCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
-                                             if (finalCaps.length === 0) return null;
+                                            const getReal = (yr) => {
+                                                if (filterDashboardTahun !== 'Semua' && String(filterDashboardTahun) !== String(yr)) return null;
+                                                let caps = (DB.capaian || []).filter(c => c && String(c.targetDirektur || '').trim() === String(ik.namaIndikator || '').trim() && String(c.tahun || '2025') === String(yr) && String(c.status || '').trim() === 'Valid');
+                                                if (filterDashboardTim !== 'Semua') {
+                                                    caps = caps.filter(c => c.timKey === filterDashboardTim);
+                                                }
+                                                if (filterDashboardUnit !== 'Semua') {
+                                                    caps = caps.filter(c => c.unit === filterDashboardUnit);
+                                                }
+                                                if (filterDashboardTriwulan !== 'Semua') {
+                                                    caps = caps.filter(c => c.triwulan && String(c.triwulan).trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
+                                                }
+                                                const finalCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
+                                                if (finalCaps.length === 0) return null;
 
-                                             // Urutkan berdasarkan urutan Triwulan agar selalu mengambil Triwulan Terakhir yang sudah Valid di tahun tersebut
-                                             return getAggregatedRealisasiForDashboard(finalCaps, ik.namaIndikator, yr);
-                                         };
+                                                return getAggregatedRealisasiForDashboard(finalCaps, ik.namaIndikator, yr);
+                                            };
                                             const t25 = getTarget('2025'), r25 = getReal('2025');
                                             const t26 = getTarget('2026'), r26 = getReal('2026');
                                             const t27 = getTarget('2027'), r27 = getReal('2027');
@@ -3897,6 +3904,7 @@ filteredCascading.forEach(cd => {
                                 <canvas id="targetVsRealMultiYearChart"></canvas>
                             </div>
                         </div>
+
                         <!-- Charts Grid -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                             <div>
@@ -3949,7 +3957,7 @@ filteredCascading.forEach(cd => {
                                     ${(() => {
                                         const warnings = [];
                                         filteredCascading.forEach(cd => {
-                                            const matched = validCapaian.filter(c => c.targetDirektur === cd.target && String(c.tahun || '2025') === String(cd.tahun || '2025'));
+                                            const matched = validCapaian.filter(c => String(c.targetDirektur || '').trim() === String(cd.target || '').trim() && String(c.tahun || '2025') === String(cd.tahun || '2025'));
                                             const avg = matched.length > 0 ? matched.reduce((a, b) => a + Number(b.realisasi || 0), 0) / matched.length : 0;
                                             const target = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
                                             if (avg < target) {
@@ -4024,11 +4032,11 @@ filteredCascading.forEach(cd => {
                                 <span class="text-xs font-semibold bg-rose-50 text-rose-700 px-3 py-1 rounded-full"><i class="fa-solid fa-star mr-1"></i> Top Prioritas</span>
                             </div>
                             <div class="overflow-y-auto max-h-[380px] divide-y divide-slate-100 text-xs">
-                                ${filteredRisiko.length === 0 ? `<p class="p-6 text-center text-slate-400">Belum ada data risiko pada filter aktif.</p>` : 
-                                    [...filteredRisiko].sort((a,b) => b.skor1 - a.skor1).slice(0, 10).map((r, i) => `
+                                ${filteredRisiko.length === 0 ? `<p class="p-6 text-center text-slate-400">Belum ada data risiko pada filter aktif.</p>` :
+                                    [...filteredRisiko].sort((a, b) => b.skor1 - a.skor1).slice(0, 10).map((r, i) => `
                                         <div class="py-3.5 flex items-start justify-between space-x-3">
                                             <div class="flex items-start space-x-3">
-                                                <span class="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">${i+1}</span>
+                                                <span class="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">${i + 1}</span>
                                                 <div>
                                                     <p class="font-bold text-slate-900 text-sm">${r.pernyataan}</p>
                                                     <p class="text-slate-500 text-xs mt-1">Unit: <strong class="text-slate-700">${r.unit}</strong> | Tahun: <strong class="text-primary-700">${r.tahun || '2025'}</strong> | Dampak: ${r.dampak}</p>
@@ -4049,114 +4057,105 @@ filteredCascading.forEach(cd => {
 
             if (DB.cascadingDirektur.length > 0) {
                 setTimeout(() => {
-                    // Line Chart Capaian
-// Line Chart Capaian - Multi-line untuk setiap Indikator Utama
-                    const ctx1 = document.getElementById('capaianChart').getContext('2d');
-                    let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
-                    let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+                    // 1. Line Chart Capaian
+                    const ctx1 = safeDestroyChart('capaianChart');
+                    if (ctx1) {
+                        let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
+                        let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+                        const colorPalette = [
+                            '#2563eb', '#dc2626', '#10b981', '#f59e0b', '#8b5cf6',
+                            '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
+                            '#14b8a6', '#e11d48', '#a855f7', '#0ea5e9', '#3b82f6', '#10b981', '#f43f5e'
+                        ];
 
-                    // Palet warna otomatis untuk membedakan hingga belasan/puluhan indikator
-                    const colorPalette = [
-                        '#2563eb', '#dc2626', '#10b981', '#f59e0b', '#8b5cf6', 
-                        '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
-                        '#14b8a6', '#e11d48', '#a855f7', '#0ea5e9', '#3b82f6', '#10b981', '#f43f5e'
-                    ];
+                        let multiDatasets = filteredCascading.map((cd, index) => {
+                            let color = colorPalette[index % colorPalette.length];
+                            let dataPoints = twPeriods.map(tw => {
+                                let match = validCapaian.filter(c =>
+                                    c && String(c.targetDirektur || '').trim() === String(cd.target || '').trim() &&
+                                    c.triwulan && String(c.triwulan).trim().toUpperCase() === tw &&
+                                    String(c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? String(c.tahun || '2025') : String(filterDashboardTahun))
+                                );
+                                if (match.length > 0 && match[match.length - 1]) {
+                                    let targetVal = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
+                                    let realVal = Number(match[match.length - 1].realisasi) || 0;
+                                    return targetVal > 0 ? Number(((realVal / targetVal) * 100).toFixed(1)) : 0;
+                                }
+                                return 0; // Gunakan 0 jika kosong/Tidak Valid agar grafik tidak crash
+                            });
 
-                    // Membuat dataset terpisah untuk setiap Indikator Kinerja Utama (Cascading Direktur)
-                    let multiDatasets = filteredCascading.map((cd, index) => {
-                        let color = colorPalette[index % colorPalette.length];
-                        
-                        let dataPoints = twPeriods.map(tw => {
-                            let match = validCapaian.filter(c => 
-                                c.targetDirektur === cd.target && 
-                                c.triwulan && c.triwulan.trim().toUpperCase() === tw &&
-                                (c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? (c.tahun || '2025') : filterDashboardTahun)
-                            );
-                            if (match.length > 0) {
-                                let targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
-                                let realVal = match[match.length - 1].realisasi;
-                                return Number(((realVal / targetVal) * 100).toFixed(1));
-                            }
-                            return null; // Kosong jika belum ada data di triwulan tersebut
+                            let labelName = cd.target.length > 40 ? cd.target.substring(0, 40) + '...' : cd.target;
+
+                            return {
+                                label: labelName,
+                                data: dataPoints,
+                                borderColor: color,
+                                backgroundColor: color,
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.2,
+                                spanGaps: true,
+                                pointBackgroundColor: dataPoints.map(v => v < 100 ? '#ef4444' : color),
+                                pointBorderColor: '#ffffff',
+                                pointRadius: 5,
+                                pointHoverRadius: 7
+                            };
                         });
 
-                        let labelName = cd.target.length > 40 ? cd.target.substring(0, 40) + '...' : cd.target;
-
-                        return {
-                            label: labelName,
-                            data: dataPoints,
-                            borderColor: color,
-                            backgroundColor: color,
+                        multiDatasets.push({
+                            label: 'Standar Target (100%)',
+                            data: [100, 100, 100, 100],
+                            borderColor: '#94a3b8',
                             borderWidth: 2,
+                            borderDash: [6, 6],
                             fill: false,
-                            tension: 0.2,
-                            spanGaps: true, // Menjaga garis tetap terhubung walau ada triwulan yang kosong
-                            pointBackgroundColor: dataPoints.map(v => v !== null && v < 100 ? '#ef4444' : color), // Merah jika < 100%
-                            pointBorderColor: '#ffffff',
-                            pointRadius: 5,
-                            pointHoverRadius: 7
-                        };
-                    });
+                            pointRadius: 0
+                        });
 
-                    // Tambahkan garis standar 100% sebagai acuan batas
-                    multiDatasets.push({
-                        label: 'Standar Target (100%)',
-                        data: [100, 100, 100, 100],
-                        borderColor: '#94a3b8',
-                        borderWidth: 2,
-                        borderDash: [6, 6],
-                        fill: false,
-                        pointRadius: 0
-                    });
-
-                    new Chart(ctx1, {
-                        type: 'line',
-                        data: {
-                            labels: chartLabels,
-                            datasets: multiDatasets
-                        },
-                        plugins: [ChartDataLabels],
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    max: 140,
-                                    title: { display: true, text: 'Persentase Realisasi (%)', font: { weight: 'bold', size: 12 } },
-                                    ticks: { font: { size: 11 }, callback: v => v + '%' }
+                        new Chart(ctx1, {
+                            type: 'line',
+                            data: { labels: chartLabels, datasets: multiDatasets },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        max: 140,
+                                        title: { display: true, text: 'Persentase Realisasi (%)', font: { weight: 'bold', size: 12 } },
+                                        ticks: { font: { size: 11 }, callback: v => v + '%' }
+                                    },
+                                    x: {
+                                        title: { display: true, text: 'Triwulan', font: { weight: 'bold', size: 12 } },
+                                        ticks: { font: { weight: 'bold', size: 12 } }
+                                    }
                                 },
-                                x: {
-                                    title: { display: true, text: 'Triwulan', font: { weight: 'bold', size: 12 } },
-                                    ticks: { font: { weight: 'bold', size: 12 } }
-                                }
-                            },
-                            plugins: {
-                                legend: { 
-                                    position: 'bottom', 
-                                    labels: { boxWidth: 12, font: { size: 11 }, padding: 15 } 
-                                },
-                                datalabels: { 
-                                    display: false // Dimatikan agar tidak bertumpuk memenuhi grafik saat ada banyak indikator
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 }, padding: 15 } },
+                                    datalabels: { display: false }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
+
+                    // 2. Multi-Year Chart
                     renderMultiYearIndikatorChart();
 
-                    // === FASE 5: GRAFIK PERINGKAT & KOMPARASI CAPAIAN UNIT / PRODI ===
-                    const canvasRank = document.getElementById('unitRankingChart');
-                    if (canvasRank) {
+                    // 3. Unit Ranking Chart (Diperbaiki agar aman saat semua data "Tidak Valid" / unitVals kosong)
+                    const ctxRank = safeDestroyChart('unitRankingChart');
+                    if (ctxRank) {
                         const unitNames = Object.keys(unitScores);
                         const unitVals = Object.values(unitScores).map(v => Number(v.toFixed(1)));
-                        new Chart(canvasRank.getContext('2d'), {
+                        const hasRankData = unitVals.length > 0;
+
+                        new Chart(ctxRank, {
                             type: 'bar',
                             data: {
-                                labels: unitNames.length > 0 ? unitNames : ['Belum Ada Data Unit Valid'],
+                                labels: hasRankData ? unitNames : ['Belum Ada Data Unit Valid'],
                                 datasets: [{
                                     label: 'Rata-rata Capaian Unit (%)',
-                                    data: unitVals.length > 0 ? unitVals : [0],
-                                    backgroundColor: unitVals.map(v => v >= 100 ? '#10b981' : v >= 80 ? '#3b82f6' : '#f59e0b'),
+                                    data: hasRankData ? unitVals : [0],
+                                    backgroundColor: hasRankData ? unitVals.map(v => v >= 100 ? '#10b981' : v >= 80 ? '#3b82f6' : '#f59e0b') : ['#cbd5e1'],
                                     borderRadius: 6
                                 }]
                             },
@@ -4181,89 +4180,95 @@ filteredCascading.forEach(cd => {
                         });
                     }
 
-                    // === GRAFIK REALISASI ANGGARAN (IKUT FILTER TERPADU) ===
-                    const ctxAnggaran = document.getElementById('anggaranChart').getContext('2d');
-                    let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
-                    let targetIkList = DB.renstraIndikatorKinerja.filter(ik => activeIndikatorIds.length === 0 || activeIndikatorIds.includes(ik.id));
-                    if (targetIkList.length === 0) targetIkList = DB.renstraIndikatorKinerja;
+                    // 4. Grafik Realisasi Anggaran
+                    const ctxAnggaran = safeDestroyChart('anggaranChart');
+                    if (ctxAnggaran) {
+                        let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
+                        let targetIkList = (DB.renstraIndikatorKinerja || []).filter(ik => activeIndikatorIds.length === 0 || activeIndikatorIds.includes(ik.id));
+                        if (targetIkList.length === 0) targetIkList = DB.renstraIndikatorKinerja || [];
 
-                    const ikLabels = targetIkList.map(ik => ik.namaIndikator.length > 20 ? ik.namaIndikator.substring(0, 20) + '...' : ik.namaIndikator);
-                    const paguData = targetIkList.map(ik => {
-                        let yKey = filterDashboardTahun !== 'Semua' ? 'anggaran' + filterDashboardTahun : 'anggaran2025';
-                        return ik[yKey] || 0;
-                    });
-                    const realData = targetIkList.map(ik => {
-                        let subRa = filteredRealisasiAdmin.filter(ra => ra.indikatorId === ik.id);
-                        return subRa.reduce((a,b)=>a+b.realisasiAnggaran,0);
-                    });
+                        const ikLabels = targetIkList.length > 0 ? targetIkList.map(ik => ik.namaIndikator.length > 20 ? ik.namaIndikator.substring(0, 20) + '...' : ik.namaIndikator) : ['Belum Ada Indikator'];
+                        const paguData = targetIkList.length > 0 ? targetIkList.map(ik => {
+                            let yKey = filterDashboardTahun !== 'Semua' ? 'anggaran' + filterDashboardTahun : 'anggaran2025';
+                            return Number(ik[yKey]) || 0;
+                        }) : [0];
+                        const realData = targetIkList.length > 0 ? targetIkList.map(ik => {
+                            let subRa = filteredRealisasiAdmin.filter(ra => ra.indikatorId === ik.id);
+                            return subRa.reduce((a, b) => a + (Number(b.realisasiAnggaran) || 0), 0);
+                        }) : [0];
 
-                    new Chart(ctxAnggaran, {
-                        type: 'bar',
-                        data: {
-                            labels: ikLabels,
-                            datasets: [
-                                { label: 'Pagu Anggaran (Rp)', data: paguData, backgroundColor: '#3b82f6', borderRadius: 6 },
-                                { label: 'Realisasi Anggaran (Rp)', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
-                            ]
-                        },
-                        plugins: [ChartDataLabels],
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            scales: { y: { beginAtZero: true } },
-                            plugins: {
-                                legend: { position: 'bottom' },
-                                datalabels: {
-                                    anchor: 'end', align: 'top', font: { weight: 'bold', size: 10 },
-                                    formatter: (value) => value > 0 ? 'Rp ' + (value/1000000).toFixed(1) + 'Jt' : '0'
+                        new Chart(ctxAnggaran, {
+                            type: 'bar',
+                            data: {
+                                labels: ikLabels,
+                                datasets: [
+                                    { label: 'Pagu Anggaran (Rp)', data: paguData, backgroundColor: '#3b82f6', borderRadius: 6 },
+                                    { label: 'Realisasi Anggaran (Rp)', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
+                                ]
+                            },
+                            plugins: [ChartDataLabels],
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                scales: { y: { beginAtZero: true } },
+                                plugins: {
+                                    legend: { position: 'bottom' },
+                                    datalabels: {
+                                        anchor: 'end', align: 'top', font: { weight: 'bold', size: 10 },
+                                        formatter: (value) => value > 0 ? 'Rp ' + (value / 1000000).toFixed(1) + 'Jt' : '0'
+                                    }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
 
-                    // === PETA RISIKO INHERENT (IKUT FILTER TERPADU) ===
-                    const ctxPre = document.getElementById('petaRisikoPreChart').getContext('2d');
-                    const preData = filteredRisiko.map(r => ({
-                        x: r.damp1, y: r.prob1, r: Math.max(12, r.skor1 * 1.2), label: r.pernyataan, skor: r.skor1
-                    }));
-                    new Chart(ctxPre, {
-                        type: 'bubble',
-                        data: {
-                            datasets: [{ label: 'Risiko Pre-Control', data: preData, backgroundColor: 'rgba(239, 68, 68, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
-                        },
-                        plugins: [ChartDataLabels],
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            scales: {
-                                x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
-                                y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
+                    // 5. Peta Risiko Inherent
+                    const ctxPre = safeDestroyChart('petaRisikoPreChart');
+                    if (ctxPre) {
+                        const preData = filteredRisiko.map(r => ({
+                            x: r.damp1, y: r.prob1, r: Math.max(12, r.skor1 * 1.2), label: r.pernyataan, skor: r.skor1
+                        }));
+                        new Chart(ctxPre, {
+                            type: 'bubble',
+                            data: {
+                                datasets: [{ label: 'Risiko Pre-Control', data: preData, backgroundColor: 'rgba(239, 68, 68, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
                             },
-                            plugins: { legend: { display: false }, datalabels: { align: 'center', color: '#ffffff', formatter: (value) => `Skor:${value.skor}` } }
-                        }
-                    });
+                            plugins: [ChartDataLabels],
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                scales: {
+                                    x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
+                                    y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
+                                },
+                                plugins: { legend: { display: false }, datalabels: { align: 'center', color: '#ffffff', formatter: (value) => value && value.skor ? `Skor:${value.skor}` : '' } }
+                            }
+                        });
+                    }
 
-                    // === PETA RISIKO RESIDU (IKUT FILTER TERPADU) ===
-                    const ctxResidu = document.getElementById('petaRisikoResiduChart').getContext('2d');
-                    const residuData = filteredRisiko.map(r => ({
-                        x: r.damp2, y: r.prob2, r: Math.max(12, r.skor2 * 1.2), label: r.pernyataan, skor: r.skor2
-                    }));
-                    new Chart(ctxResidu, {
-                        type: 'bubble',
-                        data: {
-                            datasets: [{ label: 'Risiko Residu', data: residuData, backgroundColor: 'rgba(16, 185, 129, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
-                        },
-                        plugins: [ChartDataLabels],
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            scales: {
-                                x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
-                                y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
+                    // 6. Peta Risiko Residu
+                    const ctxResidu = safeDestroyChart('petaRisikoResiduChart');
+                    if (ctxResidu) {
+                        const residuData = filteredRisiko.map(r => ({
+                            x: r.damp2, y: r.prob2, r: Math.max(12, r.skor2 * 1.2), label: r.pernyataan, skor: r.skor2
+                        }));
+                        new Chart(ctxResidu, {
+                            type: 'bubble',
+                            data: {
+                                datasets: [{ label: 'Risiko Residu', data: residuData, backgroundColor: 'rgba(16, 185, 129, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
                             },
-                            plugins: { legend: { display: false }, datalabels: { align: 'center', color: '#ffffff', formatter: (value) => `Skor:${value.skor}` } }
-                        }
-                    });
+                            plugins: [ChartDataLabels],
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                scales: {
+                                    x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
+                                    y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
+                                },
+                                plugins: { legend: { display: false }, datalabels: { align: 'center', color: '#ffffff', formatter: (value) => value && value.skor ? `Skor:${value.skor}` : '' } }
+                            }
+                        });
+                    }
                 }, 100);
             }
-}
+        }
 let multiYearChartInstance = null;
 function renderMultiYearIndikatorChart() {
             const canvas = document.getElementById('targetVsRealMultiYearChart');
@@ -6444,7 +6449,7 @@ async function saveCascadingTim(e) {
         }
         function closeCapaianModal() { document.getElementById('capaianModal').classList.remove('flex'); document.getElementById('capaianModal').classList.add('hidden'); }
         
-        async function saveCapaian(e) {
+async function saveCapaian(e) {
             e.preventDefault();
             if (isPureViewer()) return;
             const editId = document.getElementById('editCapaianId').value;
@@ -6456,6 +6461,27 @@ async function saveCascadingTim(e) {
             const timKeyRef = selectedOpt ? selectedOpt.getAttribute('data-timkey') : 'Akademik';
             const isSubInput = SUB_UNIT_ROLES.includes(currentUser.role);
 
+            // VALIDASI ANTI-DUPLIKASI: Cegah input lebih dari 1 kali untuk Indikator + Triwulan + Tahun yang sama pada Unit/Penginput yang sama
+            const isDuplicate = (DB.capaian || []).some(c => {
+                if (!c) return false;
+                // Jika sedang mode edit, abaikan dirinya sendiri
+                if (editId && String(c.id) === String(editId)) return false;
+
+                const sameIndikator = String(c.targetDirektur || '').trim().toLowerCase() === String(targetDirRef || '').trim().toLowerCase();
+                const sameTriwulan = String(c.triwulan || '').trim().toUpperCase() === String(tw || '').trim().toUpperCase();
+                const sameTahun = String(c.tahun || '2025').trim() === String(tahunRef || '2025').trim();
+                const sameScope = isSubInput
+                    ? (String(c.inputByUsername || '').toLowerCase() === String(currentUser.username || '').toLowerCase())
+                    : (String(c.unit || '').trim().toLowerCase() === String(currentUser.unit || '').trim().toLowerCase() && !c.isSubUnitInput);
+
+                return sameIndikator && sameTriwulan && sameTahun && sameScope;
+            });
+
+            if (isDuplicate) {
+                showToast(`Tidak dapat diinput karena capaian untuk indikator "${targetDirRef}" pada periode ${tw} Tahun ${tahunRef} sudah diinput sebelumnya!`, 'error');
+                return;
+            }
+
             const prog = sanitizeHTML(document.getElementById('inputProgram').value.trim());
             const uraian = sanitizeHTML(document.getElementById('inputUraianPekerjaan').value.trim());
             const satuan = document.getElementById('inputSatuan').value;
@@ -6465,7 +6491,7 @@ async function saveCascadingTim(e) {
             const perm = sanitizeHTML(document.getElementById('inputPermasalahan').value.trim());
 
             if (editId) {
-                const idx = DB.capaian.findIndex(c => c.id === editId);
+                const idx = DB.capaian.findIndex(c => String(c.id) === String(editId));
                 if (idx !== -1) {
                     if (DB.capaian[idx].status === 'Valid') {
                         showToast('Data tervalidasi tidak dapat diubah!', 'error');
