@@ -389,30 +389,47 @@ button { position: relative; z-index: 10; }
             return false;
         }
 
-        // Helper Cek apakah Capaian berhak masuk ke Dashboard Kinerja Utama
+        // Helper Cek apakah Capaian berhak masuk ke Dashboard Kinerja Utama (Wajib Valid + Status Utama)
         function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             if (!capaianItem) return false;
-            if (capaianItem.status !== 'Valid') return false; // Wajib sudah divalidasi Ketua Tim Kerja
+            // 1. Wajib sudah divalidasi 'Valid' oleh Ketua Tim Kerja
+            if (String(capaianItem.status || '').trim() !== 'Valid') return false;
 
             const tahun = String(capaianItem.tahun || '2025');
-            const cd = cdObj || DB.cascadingDirektur.find(x => x.target === capaianItem.targetDirektur && String(x.tahun || '2025') === tahun) || DB.cascadingDirektur.find(x => x.target === capaianItem.targetDirektur);
+            const targetName = String(capaianItem.targetDirektur || '').trim();
+
+            // 2. Cari data Cascading Direktur
+            const cd = cdObj || DB.cascadingDirektur.find(x => String(x.target).trim() === targetName && String(x.tahun || '2025') === tahun) || DB.cascadingDirektur.find(x => String(x.target).trim() === targetName);
             if (!cd) return false;
 
+            // 3. Pastikan Tim Kerja pengusul berstatus 'Utama' di Cascading Direktur
+            const matchedTimKey = capaianItem.timKey;
+            if (matchedTimKey && cd.timRoles && cd.timRoles[matchedTimKey] && cd.timRoles[matchedTimKey] !== 'Utama') {
+                return false;
+            }
+
+            // 4. Cari data Cascading Tim ke Unit
             const ctList = (DB.cascadingTim || []).filter(x => 
-                x.targetDirektur === cd.target && 
-                String(x.tahun || '2025') === String(cd.tahun || tahun) && 
-                Array.isArray(x.unitTargets) && x.unitTargets.includes(capaianItem.unit)
+                String(x.targetDirektur).trim() === targetName && 
+                String(x.tahun || '2025') === tahun && 
+                Array.isArray(x.unitTargets) && 
+                x.unitTargets.some(u => String(u).trim().toLowerCase() === String(capaianItem.unit).trim().toLowerCase())
             );
             if (ctList.length === 0) return false;
 
-            const isUnitUtama = ctList.some(ct => isTimUtamaInDir(cd, ct.timKey) && isUnitUtamaInTim(ct, capaianItem.unit));
+            // 5. Pastikan Unit/Prodi tersebut berstatus 'Utama' di level Tim Kerja
+            const isUnitUtama = ctList.some(ct => {
+                const unitRoleCheck = ct.unitRoles && ct.unitRoles[capaianItem.unit] ? ct.unitRoles[capaianItem.unit] === 'Utama' : (Array.isArray(ct.unitTargets) && ct.unitTargets[0] === capaianItem.unit);
+                return isTimUtamaInDir(cd, ct.timKey) && unitRoleCheck;
+            });
+
             if (!isUnitUtama) return false;
 
-            // Jika capaian diinput oleh level bawah (Sekretaris/Kalab/Koordinator/Dosen/Tendik), wajib berstatus Utama di Cascading Unit
+            // 6. Jika diinput oleh level Staf/Sub-Unit, pastikan berstatus Utama di Cascading Unit
             if (capaianItem.isSubUnitInput) {
                 const cu = (DB.cascadingUnit || []).find(x => 
-                    x.unit === capaianItem.unit && 
-                    x.targetDirektur === cd.target && 
+                    String(x.unit).trim().toLowerCase() === String(capaianItem.unit).trim().toLowerCase() && 
+                    String(x.targetDirektur).trim() === targetName && 
                     String(x.tahun || '2025') === tahun
                 );
                 if (!cu) return false;
