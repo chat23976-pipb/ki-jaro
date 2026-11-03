@@ -6555,9 +6555,9 @@ async function saveCapaian(e) {
                 showToast(isSubInput ? 'Capaian disimpan! Menunggu Validasi Tahap 1 oleh Ketua Prodi/Unit.' : 'Capaian berhasil diinput & diteruskan ke Ketua Tim Kerja!');
             }
 
-            await saveToMySQL();
-            closeCapaianModal();
-            renderCapaianView(document.getElementById('mainContent'));
+           await saveToMySQL();
+closeCapaianModal();
+if (activeTab === 'capaian') renderCapaianView(document.getElementById('mainContent'));
         }
 
         // Validasi Tahap 1 oleh Ketua Prodi/Subbag/Unit (Hanya Valid/Tidak Valid tanpa saran)
@@ -6593,9 +6593,9 @@ async function saveCapaian(e) {
                 }
             }
             await saveToMySQL();
-            closeValidateProdiModal();
-            showToast(choice === 'Valid' ? 'Validasi Tahap 1 (Unit) berhasil! Data kini diteruskan ke Ketua Tim Kerja.' : 'Capaian ditandai Tidak Valid oleh Unit.', choice === 'Valid' ? 'success' : 'info');
-            renderCapaianView(document.getElementById('mainContent'));
+closeValidateProdiModal();
+showToast(choice === 'Valid' ? 'Validasi Tahap 1 (Unit) berhasil! Data kini diteruskan ke Ketua Tim Kerja.' : 'Capaian ditandai Tidak Valid oleh Unit.', choice === 'Valid' ? 'success' : 'info');
+if (activeTab === 'capaian') renderCapaianView(document.getElementById('mainContent'));
         }
 
         // Validasi Tahap 2 oleh Ketua Tim Kerja
@@ -6643,15 +6643,14 @@ async function saveCapaian(e) {
             }
             
             await saveToMySQL();
-            closeValidateModal();
-            showToast(`Status capaian berhasil divalidasi Ketua Tim Kerja menjadi: ${statusVal}`, statusVal === 'Valid' ? 'success' : 'info');
-            
-            // Render ulang tabel capaian dan perbarui dashboard seketika
-            renderCapaianView(document.getElementById('mainContent'));
-            if (activeTab === 'dashboard') {
-                setTimeout(() => renderDashboardView(document.getElementById('mainContent')), 100);
-            }
-        }
+closeValidateModal();
+showToast(`Status capaian berhasil divalidasi Ketua Tim Kerja menjadi: ${statusVal}`, statusVal === 'Valid' ? 'success' : 'info');
+
+if (activeTab === 'capaian') {
+    renderCapaianView(document.getElementById('mainContent'));
+} else if (activeTab === 'dashboard') {
+    renderDashboardView(document.getElementById('mainContent'));
+}        }
 
         // Tindak Lanjut hanya diisi oleh Ketua Prodi/Subbag/Unit (Level bawah hanya membaca)
         function openTindakLanjutModal(id) {
@@ -6716,9 +6715,9 @@ async function saveCapaian(e) {
                 await syncToGoogleSheets('Update Tindak Lanjut Unit', DB.capaian[idx]);
             }
             await saveToMySQL();
-            closeTindakLanjutModal();
-            showToast('Status & bukti tindak lanjut berhasil diperbarui oleh Ketua Unit!');
-            renderCapaianView(document.getElementById('mainContent'));
+closeTindakLanjutModal();
+showToast('Status & bukti tindak lanjut berhasil diperbarui oleh Ketua Unit!');
+if (activeTab === 'capaian') renderCapaianView(document.getElementById('mainContent'));
         }
 
         function renderRisikoView(container) {
@@ -7088,7 +7087,9 @@ async function saveCapaian(e) {
         }
 
         function openRisikoModal() { document.getElementById('risikoModal').classList.remove('hidden'); document.getElementById('risikoModal').classList.add('flex'); }
-        function closeRisikoModal() { document.getElementById('risikoModal').classList.remove('flex'); document.getElementById('risikoModal').classList.add('hidden'); }
+       function closeRisikoModal() { const m = document.getElementById('risikoModal'); 
+    if (m) { m.classList.remove('flex'); m.classList.add('hidden'); } 
+}
         
        async function saveRisiko(e) {
             e.preventDefault();
@@ -8683,12 +8684,13 @@ async function saveCapaian(e) {
                 sign3: document.getElementById('reqLapSign3').value.trim(),
                 sign3Nip: document.getElementById('reqLapSign3Nip') ? document.getElementById('reqLapSign3Nip').value.trim() : '-'
             };
-            DB.approvalLaporan.push(newReq);
-            recordAuditLog('Request Laporan Kinerja', 'Laporan', `Mengajukan laporan capaian kinerja periode ${tw} ${yr}`);
-            await saveToMySQL();
-            document.getElementById('reqLapKinerjaModal').classList.add('hidden');
-            showToast('Request Laporan Capaian Kinerja berhasil ditambahkan!');
-            renderLaporanView(document.getElementById('mainContent'));
+           DB.approvalLaporan.push(newReq);
+recordAuditLog('Request Laporan Kinerja', 'Laporan', `Mengajukan laporan capaian kinerja periode ${tw} ${yr}`);
+await saveToMySQL();
+const _reqLapM = document.getElementById('reqLapKinerjaModal');
+if (_reqLapM) { _reqLapM.classList.remove('flex'); _reqLapM.classList.add('hidden'); }
+showToast('Request Laporan Capaian Kinerja berhasil ditambahkan!');
+if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainContent'));
         }
 
         // REVISI 6: Laporan Kinerja Otomatis Menampilkan QR Code Apabila Ketua Tim Kerja Sudah Memvalidasi
@@ -8899,11 +8901,12 @@ async function saveCapaian(e) {
             };
 
             DB.approvalSKP.push(newSkp);
-            recordAuditLog('Request SKP', 'Laporan SKP', `${currentUser.name} mengajukan SKP indikator "${indikatorName}" (${tw} ${yr})`);
-            await saveToMySQL();
-            document.getElementById('reqSKPModal').classList.add('hidden');
-            showToast('Request Approval SKP berhasil diajukan!');
-            renderLaporanView(document.getElementById('mainContent'));
+recordAuditLog('Request SKP', 'Laporan SKP', `${currentUser.name} mengajukan SKP indikator "${indikatorName}" (${tw} ${yr})`);
+await saveToMySQL();
+const _reqSkpM = document.getElementById('reqSKPModal');
+if (_reqSkpM) { _reqSkpM.classList.remove('flex'); _reqSkpM.classList.add('hidden'); }
+showToast('Request Approval SKP berhasil diajukan!');
+if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainContent'));
         }
 
         // REVISI 10: Menampilkan Nama Ketua Unit, Indikator, Target, Realisasi, & Range Ekspektasi Kinerja pada Modal Penilaian Ketua Tim Kerja
@@ -8978,24 +8981,26 @@ async function saveCapaian(e) {
             modal.classList.add('flex');
         }
 
-        async function submitAssessSKPTim(decision) {
-            const skpId = document.getElementById('assessSkpTimId').value;
-            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
-            if (!skp) return;
+       async function submitAssessSKPTim(decision) {
+    const skpId = document.getElementById('assessSkpTimId').value;
+    const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
+    if (!skp) return;
 
-            if (decision === 'Ditolak') {
-                skp.status = 'Ditolak';
-            } else {
-                skp.nilaiTimKinerja = document.getElementById('assessSkpTimRating').value;
-                skp.saranKetuaTim = document.getElementById('assessSkpTimNote').value.trim() || 'Dilanjutkan dan ditingkatkan pada periode berikutnya';
-                skp.status = 'Menunggu Direktur';
-            }
-            recordAuditLog('Validasi SKP Tahap 1', 'Laporan SKP', `Ketua Tim Kerja menilai SKP ${skp.requesterName}: ${skp.nilaiTimKinerja} (${skp.status})`);
-            await saveToMySQL();
-            document.getElementById('assessSkpTimModal').classList.add('hidden');
-            showToast(`Status SKP diperbarui menjadi: ${skp.status}`);
-            renderLaporanView(document.getElementById('mainContent'));
-        }
+    if (decision === 'Ditolak') {
+        skp.status = 'Ditolak';
+    } else {
+        skp.nilaiTimKinerja = document.getElementById('assessSkpTimRating').value;
+        skp.saranKetuaTim = document.getElementById('assessSkpTimNote').value.trim() || 'Dilanjutkan dan ditingkatkan pada periode berikutnya';
+        skp.status = 'Menunggu Direktur';
+    }
+    recordAuditLog('Validasi SKP Tahap 1', 'Laporan SKP', `Ketua Tim Kerja menilai SKP ${skp.requesterName}: ${skp.nilaiTimKinerja} (${skp.status})`);
+await saveToMySQL();
+const _modalTim = document.getElementById('assessSkpTimModal');
+if (_modalTim) { _modalTim.classList.remove('flex'); _modalTim.classList.add('hidden'); }
+showToast(`Status SKP diperbarui menjadi: ${skp.status}`);
+if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainContent'));
+    }
+}
 
         function openAssessSKPDirModal(skpId) {
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
@@ -9089,10 +9094,11 @@ async function saveCapaian(e) {
             }
 
             recordAuditLog('Persetujuan Final SKP (Direktur)', 'Laporan SKP', `Direktur menyetujui final SKP ${skp.requesterName} (Hasil: ${skp.nilaiFinalKinerja}, Perilaku: ${skp.nilaiPerilakuDirektur})`);
-            await saveToMySQL();
-            document.getElementById('assessSkpDirModal').classList.add('hidden');
-            showToast(`SKP ${skp.status}! QR Code Hash Digital telah diterbitkan.`);
-            renderLaporanView(document.getElementById('mainContent'));
+await saveToMySQL();
+const _modalDir = document.getElementById('assessSkpDirModal');
+if (_modalDir) { _modalDir.classList.remove('flex'); _modalDir.classList.add('hidden'); }
+showToast(`SKP ${skp.status}! QR Code Hash Digital telah diterbitkan.`);
+if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainContent'));
         }
 
         // REVISI 12: Cetak Laporan SKP Tanpa Border Tabel + Penanda Halaman Otomatis (Halaman 1 dari 2 & Halaman 2 dari 2)
@@ -9865,10 +9871,9 @@ async function saveCapaian(e) {
             }
 
             await syncToGoogleSheets('Program Kerja dan Peta Resiko', risikoPayload);
-            await saveToMySQL();
-
-            closeRisikoModal();
-            renderRisikoView(document.getElementById('mainContent'));
+await saveToMySQL();
+closeRisikoModal();
+if (activeTab === 'risiko') renderRisikoView(document.getElementById('mainContent'));
         }
 
         // Fungsi Hapus Risiko oleh Unit/Prodi
