@@ -390,34 +390,30 @@ button { position: relative; z-index: 10; }
         }
 
         // Helper Cek apakah Capaian berhak masuk ke Dashboard Kinerja Utama (Wajib Valid + Status Utama)
-        function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
+function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             if (!capaianItem) return false;
-            // 1. Wajib sudah divalidasi 'Valid' oleh Ketua Tim Kerja
+            // Wajib sudah divalidasi 'Valid' oleh Ketua Tim Kerja
             if (String(capaianItem.status || '').trim() !== 'Valid') return false;
 
             const tahun = String(capaianItem.tahun || '2025');
             const targetName = String(capaianItem.targetDirektur || '').trim();
 
-            // 2. Cari data Cascading Direktur
-            const cd = cdObj || DB.cascadingDirektur.find(x => String(x.target).trim() === targetName && String(x.tahun || '2025') === tahun) || DB.cascadingDirektur.find(x => String(x.target).trim() === targetName);
+            const cd = cdObj || (DB.cascadingDirektur || []).find(x => x && String(x.target).trim() === targetName && String(x.tahun || '2025') === tahun) || (DB.cascadingDirektur || []).find(x => x && String(x.target).trim() === targetName);
             if (!cd) return false;
 
-            // 3. Pastikan Tim Kerja pengusul berstatus 'Utama' di Cascading Direktur
             const matchedTimKey = capaianItem.timKey;
             if (matchedTimKey && cd.timRoles && cd.timRoles[matchedTimKey] && cd.timRoles[matchedTimKey] !== 'Utama') {
                 return false;
             }
 
-            // 4. Cari data Cascading Tim ke Unit
             const ctList = (DB.cascadingTim || []).filter(x => 
-                String(x.targetDirektur).trim() === targetName && 
+                x && String(x.targetDirektur || '').trim() === targetName && 
                 String(x.tahun || '2025') === tahun && 
                 Array.isArray(x.unitTargets) && 
-                x.unitTargets.some(u => String(u).trim().toLowerCase() === String(capaianItem.unit).trim().toLowerCase())
+                x.unitTargets.some(u => String(u || '').trim().toLowerCase() === String(capaianItem.unit || '').trim().toLowerCase())
             );
             if (ctList.length === 0) return false;
 
-            // 5. Pastikan Unit/Prodi tersebut berstatus 'Utama' di level Tim Kerja
             const isUnitUtama = ctList.some(ct => {
                 const unitRoleCheck = ct.unitRoles && ct.unitRoles[capaianItem.unit] ? ct.unitRoles[capaianItem.unit] === 'Utama' : (Array.isArray(ct.unitTargets) && ct.unitTargets[0] === capaianItem.unit);
                 return isTimUtamaInDir(cd, ct.timKey) && unitRoleCheck;
@@ -425,11 +421,10 @@ button { position: relative; z-index: 10; }
 
             if (!isUnitUtama) return false;
 
-            // 6. Jika diinput oleh level Staf/Sub-Unit, pastikan berstatus Utama di Cascading Unit
             if (capaianItem.isSubUnitInput) {
                 const cu = (DB.cascadingUnit || []).find(x => 
-                    String(x.unit).trim().toLowerCase() === String(capaianItem.unit).trim().toLowerCase() && 
-                    String(x.targetDirektur).trim() === targetName && 
+                    x && String(x.unit || '').trim().toLowerCase() === String(capaianItem.unit || '').trim().toLowerCase() && 
+                    String(x.targetDirektur || '').trim() === targetName && 
                     String(x.tahun || '2025') === tahun
                 );
                 if (!cu) return false;
@@ -441,18 +436,19 @@ button { position: relative; z-index: 10; }
 
         // Helper Menghitung Realisasi Gabungan (Akumulatif / Rata-rata) pada Suatu Indikator & Triwulan
         function getAggregatedRealisasiForDashboard(capsList, cdTarget, tahun) {
-            if (!capsList || capsList.length === 0) return 0;
+            if (!Array.isArray(capsList) || capsList.length === 0) return 0;
             const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
             
-            // Cari triwulan tertinggi/terakhir yang ada di daftar capaian valid ini
-            const sortedByTw = [...capsList].sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
-            const latestTw = sortedByTw[sortedByTw.length - 1].triwulan;
-            const latestCaps = sortedByTw.filter(c => (c.triwulan || '').trim().toUpperCase() === (latestTw || '').trim().toUpperCase());
+            const sortedByTw = [...capsList].sort((a, b) => (twOrder[String(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[String(b.triwulan || '').trim().toUpperCase()] || 0));
+            if (sortedByTw.length === 0 || !sortedByTw[sortedByTw.length - 1]) return 0;
 
-            // Cek apakah ada pengaturan mode gabungan (akumulatif / rata-rata) dari Cascading Unit (Level 3)
-            const cu = (DB.cascadingUnit || []).find(x => x.targetDirektur === cdTarget && String(x.tahun || '2025') === String(tahun));
+            const latestTw = sortedByTw[sortedByTw.length - 1].triwulan;
+            const latestCaps = sortedByTw.filter(c => c && String(c.triwulan || '').trim().toUpperCase() === String(latestTw || '').trim().toUpperCase());
+            if (latestCaps.length === 0 || !latestCaps[latestCaps.length - 1]) return 0;
+
+            const cu = (DB.cascadingUnit || []).find(x => x && x.targetDirektur === cdTarget && String(x.tahun || '2025') === String(tahun));
             if (cu && latestCaps.length > 1) {
-                const sum = latestCaps.reduce((acc, c) => acc + (Number(c.realisasi) || 0), 0);
+                const sum = latestCaps.reduce((acc, c) => acc + (Number(c ? c.realisasi : 0) || 0), 0);
                 if (cu.aggregationMode === 'akumulatif') {
                     return Number(sum.toFixed(2));
                 } else {
@@ -1139,17 +1135,17 @@ function triggerGoogleLogin() {
             let datasets = filteredCascading.map((cd, index) => {
                 let color = colorPalette[index % colorPalette.length];
                 let dataPoints = twPeriods.map(tw => {
-                    let match = validCapaian.filter(c => 
-                        c.targetDirektur === cd.target && 
-                        c.triwulan && c.triwulan.trim().toUpperCase() === tw
-                    );
-                    if (match.length > 0) {
-                        let targetVal = cd.targetVal !== undefined ? cd.targetVal : 100;
-                        let realVal = match[match.length - 1].realisasi;
-                        return Number(((realVal / targetVal) * 100).toFixed(1));
-                    }
-                    return 0; // Data riil: 0 jika belum ada realisasi tervalidasi
-                });
+            let match = validCapaian.filter(c => 
+                c && c.targetDirektur === cd.target && 
+                c.triwulan && String(c.triwulan).trim().toUpperCase() === tw
+            );
+            if (match.length > 0 && match[match.length - 1]) {
+                let targetVal = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
+                let realVal = Number(match[match.length - 1].realisasi) || 0;
+                return targetVal > 0 ? Number(((realVal / targetVal) * 100).toFixed(1)) : 0;
+            }
+            return 0;
+        });
 
                 return {
                     label: cd.target.length > 35 ? cd.target.substring(0, 35) + '...' : cd.target,
@@ -4291,28 +4287,28 @@ function renderMultiYearIndikatorChart() {
             });
 
             const realData = years.map(yr => {
-                if (ikList.length === 0) return 0;
-                const sum = ikList.reduce((acc, ik) => {
-                    let caps = DB.capaian.filter(c => c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === yr && c.status === 'Valid');
-                    if (filterDashboardTim !== 'Semua') {
-                        caps = caps.filter(c => c.timKey === filterDashboardTim);
-                    }
-                    if (filterDashboardUnit !== 'Semua') {
-                        caps = caps.filter(c => c.unit === filterDashboardUnit);
-                    }
-                    if (filterDashboardTriwulan !== 'Semua') {
-                        caps = caps.filter(c => c.triwulan && c.triwulan.trim().toUpperCase() === filterDashboardTriwulan.trim().toUpperCase());
-                    }
-                   const finalCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
-                    if (finalCaps.length === 0) return acc;
+            if (ikList.length === 0) return 0;
+            const sum = ikList.reduce((acc, ik) => {
+                let caps = (DB.capaian || []).filter(c => c && c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === String(yr) && String(c.status || '').trim() === 'Valid');
+                if (filterDashboardTim !== 'Semua') {
+                    caps = caps.filter(c => c.timKey === filterDashboardTim);
+                }
+                if (filterDashboardUnit !== 'Semua') {
+                    caps = caps.filter(c => c.unit === filterDashboardUnit);
+                }
+                if (filterDashboardTriwulan !== 'Semua') {
+                    caps = caps.filter(c => c.triwulan && String(c.triwulan).trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
+                }
+                const finalCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
+                if (finalCaps.length === 0) return acc;
 
-                    // Urutkan agar mengambil Triwulan Terakhir yang divalidasi pada tahun tersebut
-                    finalCaps.sort((a, b) => (twOrder[(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[(b.triwulan || '').trim().toUpperCase()] || 0));
-                    const rVal = Number(finalCaps[finalCaps.length - 1].realisasi) || 0;
-                    return acc + rVal;
-                }, 0);
-                return Number((sum / ikList.length).toFixed(2));
-            });
+                finalCaps.sort((a, b) => (twOrder[String(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[String(b.triwulan || '').trim().toUpperCase()] || 0));
+                if (finalCaps.length === 0 || !finalCaps[finalCaps.length - 1]) return acc;
+                const rVal = Number(finalCaps[finalCaps.length - 1].realisasi) || 0;
+                return acc + rVal;
+            }, 0);
+            return Number((sum / ikList.length).toFixed(2));
+        });
 
             if (multiYearChartInstance) multiYearChartInstance.destroy();
             multiYearChartInstance = new Chart(canvas.getContext('2d'), {
@@ -8004,7 +8000,70 @@ async function saveCascadingTim(e) {
                 </div>
             `;
         }
+// =========================================================================
+        // REVISI 4: ENGINE NOTIFIKASI EMAIL OTOMATIS (PENGIRIM: EMAIL ADMIN)
+        // =========================================================================
+        function getAdminSenderEmail() {
+            const adminUser = (DB.users || []).find(u => getUserRoles(u).includes('admin'));
+            return adminUser && adminUser.username ? adminUser.username : 'deni.saputra@poltek-petrokimia.ac.id';
+        }
 
+        function getRecipientEmailByRoleOrUsername(targetType, timKey = null, username = null) {
+            if (targetType === 'direktur') {
+                const dir = (DB.users || []).find(u => getUserRoles(u).includes('direktur'));
+                return dir ? dir.username : 'supardi@poltek-petrokimia.ac.id';
+            }
+            if (targetType === 'tim_kerja') {
+                const tim = (DB.users || []).find(u => getUserRoles(u).includes('tim_kerja') && (!timKey || u.timKey === timKey));
+                return tim ? tim.username : 'deni@poltek-petrokimia.ac.id';
+            }
+            if (targetType === 'user' && username) {
+                const usr = (DB.users || []).find(u => u.username.toLowerCase() === String(username).toLowerCase());
+                return usr ? usr.username : username;
+            }
+            return '';
+        }
+
+        async function sendAutomatedKiJaroEmail({ toEmail, toName, subject, bodyText }) {
+            const fromAdminEmail = getAdminSenderEmail();
+            if (!toEmail) return;
+
+            try {
+                fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from: fromAdminEmail, to: toEmail, subject, text: bodyText })
+                }).catch(() => {});
+            } catch (e) {}
+
+            recordAuditLog('Notifikasi Email Otomatis', 'Email Notification', `Dari Admin (${fromAdminEmail}) ke ${toEmail}: ${subject}`);
+
+            const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText + '\n\n---\nDikirim otomatis oleh Sistem Ki-Jaro (Admin: ' + fromAdminEmail + ')')}`;
+            
+            const container = document.getElementById('toastContainer');
+            if (container) {
+                const toast = document.createElement('div');
+                toast.className = 'px-4 py-3 rounded-2xl bg-slate-900 text-white shadow-2xl border border-blue-500/40 flex flex-col space-y-2 max-w-sm animate-fadeIn';
+                toast.innerHTML = `
+                    <div class="flex items-start space-x-2.5 text-xs">
+                        <i class="fa-solid fa-envelope-circle-check text-emerald-400 text-base mt-0.5"></i>
+                        <div>
+                            <p class="font-bold text-white">Notifikasi Email Diproses</p>
+                            <p class="text-[10px] text-slate-300 mt-0.5">Pengirim (Admin): <span class="text-blue-300 font-mono">${sanitizeHTML(fromAdminEmail)}</span></p>
+                            <p class="text-[10px] text-slate-300">Tujuan: <span class="text-emerald-300 font-mono">${sanitizeHTML(toEmail)}</span></p>
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-2 pt-1 border-t border-slate-700">
+                        <a href="${gmailComposeUrl}" target="_blank" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold flex items-center space-x-1">
+                            <i class="fa-brands fa-google"></i><span>Kirim via Gmail</span>
+                        </a>
+                        <button type="button" onclick="this.closest('div.rounded-2xl').remove()" class="px-2 py-1 text-[10px] text-slate-400 hover:text-white">Tutup</button>
+                    </div>
+                `;
+                container.appendChild(toast);
+                setTimeout(() => { if (toast.parentNode) toast.remove(); }, 8000);
+            }
+        }
         // =========================================================================
         // REVISI 5: LAPORAN CAPAIAN KINERJA & SKP BERJENJANG + QR CODE HASH SHA-256
         // =========================================================================
@@ -8865,6 +8924,66 @@ async function saveCascadingTim(e) {
             document.getElementById('assessSkpDirRating').value = skp.nilaiFinalKinerja || skp.nilaiTimKinerja || 'Sesuai Ekspektasi';
             document.getElementById('assessSkpDirBehavior').value = skp.nilaiPerilakuDirektur || 'Sesuai Ekspektasi';
             document.getElementById('assessSkpDirNote').value = skp.catatanDirektur || '';
+
+            const capObj = skp.capaianId ? (DB.capaian || []).find(c => String(c.id) === String(skp.capaianId)) : (DB.capaian || []).find(c => c.unit === skp.unit && c.targetDirektur === skp.indikator && String(c.tahun || '2025') === String(skp.tahun || '2025'));
+            const cdObj = (DB.cascadingDirektur || []).find(cd => cd.target === skp.indikator && String(cd.tahun || '2025') === String(skp.tahun || '2025')) || (DB.cascadingDirektur || []).find(cd => cd.target === skp.indikator);
+            const ctObj = (DB.cascadingTim || []).find(ct => ct.targetDirektur === skp.indikator && String(ct.tahun || '2025') === String(skp.tahun || '2025') && (!skp.timKey || ct.timKey === skp.timKey));
+            const ikObj = (DB.renstraIndikatorKinerja || []).find(ik => ik.namaIndikator === skp.indikator);
+
+            const targetVal = skp.targetNum !== undefined ? skp.targetNum : (capObj ? capObj.target : (cdObj && cdObj.targetVal !== undefined ? cdObj.targetVal : 100));
+            const realVal = skp.realisasiNum !== undefined ? skp.realisasiNum : (capObj ? capObj.realisasi : 0);
+            const satuanStr = skp.satuan || (capObj ? capObj.satuan : (cdObj ? cdObj.satuan : '%')) || '%';
+
+            const rkDir = (cdObj && cdObj.rangeKinerja) ? cdObj.rangeKinerja : ((ctObj && ctObj.rangeKinerja) ? ctObj.rangeKinerja : ((ikObj && ikObj.rangeKinerja) ? ikObj.rangeKinerja : { tidakMencapai: '< 100%', mencapai: '100%', melebihi: '> 100%' }));
+            const rs360 = (ikObj && ikObj.rangeSikap360) ? ikObj.rangeSikap360 : { tidakSesuai: '< 75', sesuai: '75 - 90', melebihi: '> 90' };
+
+            const infoBox = document.getElementById('assessSkpDirInfoBox');
+            if (infoBox) {
+                infoBox.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2 border-b pb-2">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Nama Pejabat / Unit Pemohon:</span>
+                            <strong class="text-slate-900">${sanitizeHTML(skp.requesterName)} (${sanitizeHTML(skp.unit || '-')})</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Rekomendasi Ketua Tim Kerja:</span>
+                            <strong class="text-blue-700">${sanitizeHTML(skp.nilaiTimKinerja || 'Langsung ke Direktur')}</strong>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 block">Nama Indikator Kinerja (${sanitizeHTML(skp.triwulan)} - ${sanitizeHTML(skp.tahun)}):</span>
+                        <strong class="text-slate-900">${sanitizeHTML(skp.indikator)}</strong>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Target Indikator:</span>
+                            <strong class="text-blue-700 text-sm">${targetVal} ${sanitizeHTML(satuanStr)}</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Realisasi Capaian:</span>
+                            <strong class="text-emerald-700 text-sm">${realVal} ${sanitizeHTML(satuanStr)}</strong>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50/80 p-2.5 rounded-lg border border-blue-200 space-y-1">
+                        <span class="text-[10px] font-bold text-blue-950 uppercase block"><i class="fa-solid fa-gauge-high mr-1"></i>Acuan Range Ekspektasi Kinerja (Inputan Cascading Direktur):</span>
+                        <div class="grid grid-cols-3 gap-1.5 text-[11px] pt-1">
+                            <div class="p-1.5 bg-white rounded border border-rose-200 text-center">
+                                <span class="block text-[9px] font-bold text-rose-700">Di Bawah</span>
+                                <strong class="text-slate-800">${sanitizeHTML(rkDir.tidakMencapai)}</strong>
+                            </div>
+                            <div class="p-1.5 bg-white rounded border border-emerald-200 text-center">
+                                <span class="block text-[9px] font-bold text-emerald-700">Sesuai</span>
+                                <strong class="text-slate-800">${sanitizeHTML(rkDir.mencapai)}</strong>
+                            </div>
+                            <div class="p-1.5 bg-white rounded border border-blue-200 text-center">
+                                <span class="block text-[9px] font-bold text-blue-700">Di Atas</span>
+                                <strong class="text-slate-800">${sanitizeHTML(rkDir.melebihi)}</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
             const modal = document.getElementById('assessSkpDirModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
