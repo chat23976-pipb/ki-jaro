@@ -2562,57 +2562,158 @@ function renderDokumenUkurLaporView(container) {
         // =========================================================================
         let strategyMapZoom = 1;
         let selectedStrategyNode = null;
+        let strategyMapTheme = 'biru'; // Pilihan: 'putih' | 'biru' | 'hijau' | 'merah'
+
+        function setStrategyMapTheme(theme) {
+            strategyMapTheme = theme;
+            renderDokumenView(document.getElementById('mainContent'));
+        }
+
+        function getStrategyThemeStyles() {
+            const themes = {
+                putih: {
+                    outer: 'bg-white text-slate-800 border-slate-200',
+                    canvas: 'bg-slate-50 border-slate-200',
+                    panel: 'bg-white border-slate-200 text-slate-800 shadow-lg',
+                    visiBox: 'from-blue-600 to-indigo-700 text-white border-blue-400',
+                    misiBox: 'bg-white hover:bg-blue-50/60 border-blue-200 text-slate-800 shadow-sm',
+                    tujuanBox: 'bg-white hover:bg-emerald-50/60 border-emerald-200 text-slate-800 shadow-sm',
+                    sasaranBox: 'bg-white hover:bg-amber-50/60 border-amber-200 text-slate-800 shadow-sm',
+                    subText: 'text-slate-600',
+                    titleText: 'text-slate-900',
+                    cardInner: 'bg-slate-50 border-slate-200 text-slate-800'
+                },
+                biru: {
+                    outer: 'bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-950 text-white border-blue-700',
+                    canvas: 'bg-blue-950/60 border-blue-700/80',
+                    panel: 'bg-blue-950/80 border-blue-700 text-white',
+                    visiBox: 'from-cyan-500 to-blue-600 text-white border-cyan-300',
+                    misiBox: 'bg-blue-900/70 hover:bg-blue-800 border-cyan-400/40 text-white',
+                    tujuanBox: 'bg-indigo-900/70 hover:bg-indigo-800 border-indigo-400/40 text-white',
+                    sasaranBox: 'bg-blue-950/90 hover:bg-blue-900 border-blue-500/40 text-white',
+                    subText: 'text-blue-100',
+                    titleText: 'text-white',
+                    cardInner: 'bg-blue-900/60 border-blue-700 text-white'
+                },
+                hijau: {
+                    outer: 'bg-gradient-to-br from-emerald-900 via-teal-800 to-emerald-950 text-white border-emerald-700',
+                    canvas: 'bg-emerald-950/60 border-emerald-700/80',
+                    panel: 'bg-emerald-950/80 border-emerald-700 text-white',
+                    visiBox: 'from-emerald-500 to-teal-600 text-white border-emerald-300',
+                    misiBox: 'bg-emerald-900/70 hover:bg-emerald-800 border-emerald-400/40 text-white',
+                    tujuanBox: 'bg-teal-900/70 hover:bg-teal-800 border-teal-400/40 text-white',
+                    sasaranBox: 'bg-emerald-950/90 hover:bg-emerald-900 border-emerald-500/40 text-white',
+                    subText: 'text-emerald-100',
+                    titleText: 'text-white',
+                    cardInner: 'bg-emerald-900/60 border-emerald-700 text-white'
+                },
+                merah: {
+                    outer: 'bg-gradient-to-br from-rose-900 via-red-800 to-rose-950 text-white border-rose-700',
+                    canvas: 'bg-rose-950/60 border-rose-700/80',
+                    panel: 'bg-rose-950/80 border-rose-700 text-white',
+                    visiBox: 'from-rose-500 to-red-600 text-white border-rose-300',
+                    misiBox: 'bg-rose-900/70 hover:bg-rose-800 border-rose-400/40 text-white',
+                    tujuanBox: 'bg-red-900/70 hover:bg-red-800 border-amber-400/40 text-white',
+                    sasaranBox: 'bg-rose-950/90 hover:bg-rose-900 border-rose-500/40 text-white',
+                    subText: 'text-rose-100',
+                    titleText: 'text-white',
+                    cardInner: 'bg-rose-900/60 border-rose-700 text-white'
+                }
+            };
+            return themes[strategyMapTheme] || themes.biru;
+        }
+
+        // Helper Menghitung % Capaian Riil Berdasarkan Pemetaan Indikator (Bukan Dummy)
+        function calcMappedIndicatorsScore(indikatorIds = []) {
+            if (!Array.isArray(indikatorIds) || indikatorIds.length === 0) return 0;
+            const validCaps = (DB.capaian || []).filter(c => c.status === 'Valid' && isCapaianUtamaForDashboard(c));
+            let totalPct = 0;
+            let counted = 0;
+
+            indikatorIds.forEach(ikId => {
+                const ikObj = (DB.renstraIndikatorKinerja || []).find(x => x.id === ikId || x.namaIndikator === ikId);
+                if (!ikObj) return;
+                const matchedCaps = validCaps.filter(c => c.targetDirektur === ikObj.namaIndikator);
+                if (matchedCaps.length > 0) {
+                    const targetVal = Number(ikObj.target2025) || 100;
+                    const realVal = getAggregatedRealisasiForDashboard(matchedCaps, ikObj.namaIndikator, '2025');
+                    const pct = targetVal > 0 ? Math.min(120, (realVal / targetVal) * 100) : 0;
+                    totalPct += pct;
+                    counted++;
+                } else {
+                    counted++; // Indikator sudah dipetakan tetapi belum ada realisasi valid = 0%
+                }
+            });
+            return counted > 0 ? Number((totalPct / counted).toFixed(1)) : 0;
+        }
 
         function getStrategyMapData() {
-            // Hitung capaian agregat real-time dari data capaian valid
-            const validCaps = (DB.capaian || []).filter(c => c.status === 'Valid');
-            const calcAvg = (caps) => {
-                if (!caps || caps.length === 0) return 87.6; // Default elegan jika belum ada realisasi
-                const sum = caps.reduce((acc, c) => acc + ((Number(c.realisasi) / (Number(c.target) || 100)) * 100), 0);
-                return Number(Math.min(100, sum / caps.length).toFixed(1));
-            };
-            const totalAgregat = calcAvg(validCaps);
+            if (!DB.visiInstitusi) {
+                DB.visiInstitusi = {
+                    kode: 'VISI POLITEKNIK INDUSTRI PETROKIMIA BANTEN 2030',
+                    teks: 'Sebagai penyelenggara pendidikan vokasi industri yang unggul (excellence) dan berdaya saing global di bidang Industri Petrokimia pada tahun 2030',
+                    unit: 'Seluruh Unit Kerja Politeknik'
+                };
+            }
+            if (!Array.isArray(DB.misiInstitusi)) DB.misiInstitusi = [];
+            if (!Array.isArray(DB.tujuanInstitusi)) DB.tujuanInstitusi = [];
 
-            const misiList = [
-                { id: 'M-01', code: 'M-01 • MISI', text: 'Menyelenggarakan Pendidikan Tinggi Vokasi Industri sistem ganda pembelajaran STEM berstandar global.', score: calcAvg(validCaps.filter(c => c.timKey === 'Akademik')) || 89.2, unit: 'Tim Kerja Akademik & Seluruh Prodi' },
-                { id: 'M-02', code: 'M-02 • MISI', text: 'Melaksanakan penelitian terapan untuk pemecahan masalah di sektor industri prioritas.', score: 84.5, unit: 'UPPM & Dosen Peneliti' },
-                { id: 'M-03', code: 'M-03 • MISI', text: 'Melaksanakan pengabdian masyarakat dalam pengembangan ekosistem industri kecil dan menengah.', score: 90.1, unit: 'UPPM & Civitas Akademika' },
-                { id: 'M-04', code: 'M-04 • MISI', text: 'Mengembangkan kompetensi transformasi digital industri 4.0 melalui Digital Capability Centre (DCC) & PIDI 4.0.', score: 86.8, unit: 'Transformasi Digital 4.0 & Teaching Factory' },
-                { id: 'M-05', code: 'M-05 • MISI', text: 'Membangun kelembagaan inkubator bisnis industri, skema uji kompetensi (LSP), dan kelas industri.', score: 88.4, unit: 'Inkubator Bisnis, LSP & CDC' }
-            ];
+            const tujuanList = DB.tujuanInstitusi.map((t, idx) => {
+                const mappedIds = Array.isArray(t.indikatorIds) ? t.indikatorIds : [];
+                return {
+                    id: t.id || `T-0${idx + 1}`,
+                    code: t.kode || `T-0${idx + 1}`,
+                    text: t.teks || '-',
+                    unit: t.unit || 'Unit Terkait',
+                    indikatorIds: mappedIds,
+                    misiId: t.misiId || '',
+                    score: calcMappedIndicatorsScore(mappedIds)
+                };
+            });
 
-            const tujuanList = [
-                { id: 'T-01', code: 'T-01', text: 'Menghasilkan lulusan diploma/sarjana terapan yang kompeten sesuai kebutuhan industri berstandar global.', score: 91.0, unit: 'Prodi TPIP, TMIP, TIIP' },
-                { id: 'T-02', code: 'T-02', text: 'Menghasilkan penelitian terapan & pengabdian masyarakat untuk sektor industri Petrokimia & IKM.', score: 87.4, unit: 'UPPM & Laboratorium' },
-                { id: 'T-03', code: 'T-03', text: 'Mewujudkan layanan transformasi digital industri 4.0 sebagai Satelit PIDI 4.0.', score: 84.5, unit: 'Transformasi Digital 4.0' },
-                { id: 'T-04', code: 'T-04', text: 'Menghasilkan wirausaha industri melalui inkubator bisnis yang terintegrasi dengan pemangku kepentingan.', score: 90.1, unit: 'Inkubator Bisnis & Kerjasama' },
-                { id: 'T-05', code: 'T-05', text: 'Meningkatnya skema uji kompetensi (LSP) & terwujudnya tata kelola SAKIP yang akuntabel.', score: 86.8, unit: 'LSP, SPM & Subbag' }
-            ];
+            const misiList = DB.misiInstitusi.map((m, idx) => {
+                const directIds = Array.isArray(m.indikatorIds) ? m.indikatorIds : [];
+                const childTujuan = tujuanList.filter(t => t.misiId === m.id);
+                const combinedIds = Array.from(new Set([...directIds, ...childTujuan.flatMap(t => t.indikatorIds)]));
+                return {
+                    id: m.id || `M-0${idx + 1}`,
+                    code: m.kode || `M-0${idx + 1}`,
+                    text: m.teks || '-',
+                    unit: m.unit || 'Tim Kerja & Unit Terkait',
+                    indikatorIds: combinedIds,
+                    score: calcMappedIndicatorsScore(combinedIds)
+                };
+            });
 
-            const sasaranList = (DB.renstraSasaranKinerja && DB.renstraSasaranKinerja.length > 0)
-                ? DB.renstraSasaranKinerja.map((sk, i) => ({
-                    id: sk.kode || `SS-0${i+1}`,
-                    code: sk.kode || `SS-0${i+1}`,
+            const sasaranList = (DB.renstraSasaranKinerja || []).map((sk, i) => {
+                const relatedIkIds = (DB.renstraIndikatorKinerja || [])
+                    .filter(ik => ik.sasaranKinerjaId === sk.id)
+                    .map(ik => ik.id);
+                return {
+                    id: sk.id || `SS-0${i + 1}`,
+                    code: sk.kode || `SS-0${i + 1}`,
                     text: sk.sasaranKinerja,
-                    score: Number((85 + ((i * 3.7) % 12)).toFixed(1)),
-                    unit: 'Seluruh Unit Kerja Terkait'
-                }))
-                : [
-                    { id: 'SS-01', code: 'SS-01', text: 'Meningkatnya keterserapan lulusan di dunia kerja kurang dari 6 bulan dan sertifikasi kompetensi.', score: 92.5, unit: 'CDC, LSP & Prodi' },
-                    { id: 'SS-02', code: 'SS-02', text: 'Meningkatnya kualitas pembelajaran berbasis Project-Based Learning (PjBL) & Teaching Factory.', score: 89.0, unit: 'Tim Akademik & TEFA' },
-                    { id: 'SS-03', code: 'SS-03', text: 'Meningkatnya kualifikasi dosen dan tenaga kependidikan tersertifikasi industri.', score: 81.2, unit: 'Subbag Umum & Akademik' },
-                    { id: 'SS-04', code: 'SS-04', text: 'Meningkatnya luaran riset terapan, publikasi ilmiah, dan prototipe industri petrokimia.', score: 84.5, unit: 'UPPM & Prodi' },
-                    { id: 'SS-05', code: 'SS-05', text: 'Meningkatnya realisasi kerjasama industri aktif (MoU/MoA) & wirausaha baru hasil inkubasi.', score: 91.8, unit: 'Inkubator Bisnis, Humas & CDC' },
-                    { id: 'SS-06', code: 'SS-06', text: 'Terwujudnya akuntabilitas kinerja (SAKIP) dan penjaminan mutu prodi Unggul.', score: 87.9, unit: 'SPM & Seluruh Unit' }
-                ];
+                    unit: 'Unit Pelaksana Cascading',
+                    indikatorIds: relatedIkIds,
+                    score: calcMappedIndicatorsScore(relatedIkIds)
+                };
+            });
+
+            const allMappedIkIds = Array.from(new Set([
+                ...misiList.flatMap(m => m.indikatorIds),
+                ...tujuanList.flatMap(t => t.indikatorIds),
+                ...(DB.renstraIndikatorKinerja || []).map(ik => ik.id)
+            ]));
+            const visiScore = calcMappedIndicatorsScore(allMappedIkIds);
 
             return {
                 visi: {
                     id: 'VISI',
-                    code: 'VISI POLITEKNIK INDUSTRI PETROKIMIA BANTEN 2030',
-                    text: 'Sebagai penyelenggara pendidikan vokasi industri yang unggul (excellence) dan berdaya saing global di bidang Industri Petrokimia pada tahun 2030',
-                    score: totalAgregat,
-                    unit: 'Seluruh Unit Kerja Politeknik'
+                    code: DB.visiInstitusi.kode,
+                    text: DB.visiInstitusi.teks,
+                    score: visiScore,
+                    unit: DB.visiInstitusi.unit || 'Seluruh Unit Kerja Politeknik',
+                    indikatorIds: allMappedIkIds
                 },
                 misiList,
                 tujuanList,
@@ -2641,54 +2742,54 @@ function renderDokumenUkurLaporView(container) {
         function updateStrategyMapDetailPanel() {
             const panel = document.getElementById('strategyDetailPanel');
             if (!panel) return;
+            const st = getStrategyThemeStyles();
             const data = getStrategyMapData();
             const node = selectedStrategyNode || { type: 'DETAIL NODE VISI', title: 'VISI', ...data.visi };
 
-            const ikuList = (DB.renstraIndikatorKinerja && DB.renstraIndikatorKinerja.length > 0)
-                ? DB.renstraIndikatorKinerja.map((ik, idx) => {
-                    const caps = (DB.capaian || []).filter(c => c.targetDirektur === ik.namaIndikator && c.status === 'Valid');
-                    const real = caps.length > 0 ? caps[caps.length - 1].realisasi : 0;
+            const nodeIkIds = Array.isArray(node.indikatorIds) ? node.indikatorIds : [];
+            const mappedIkuList = (DB.renstraIndikatorKinerja || [])
+                .filter(ik => nodeIkIds.includes(ik.id) || nodeIkIds.includes(ik.namaIndikator))
+                .map((ik, idx) => {
+                    const caps = (DB.capaian || []).filter(c => c.targetDirektur === ik.namaIndikator && c.status === 'Valid' && isCapaianUtamaForDashboard(c));
+                    const real = getAggregatedRealisasiForDashboard(caps, ik.namaIndikator, '2025');
+                    const target = Number(ik.target2025) || 100;
+                    const pct = target > 0 ? Math.min(120, ((real / target) * 100)).toFixed(1) : 0;
                     return {
-                        code: ik.kodeIndikator || `IKU-0${idx+1}`,
+                        code: ik.kodeIndikator || `IKU-0${idx + 1}`,
                         name: ik.namaIndikator,
-                        owner: 'Direktur / Tim Kerja / Unit',
-                        val: `${real} / ${ik.target2025 || 100} ${ik.satuan || '%'}`
+                        owner: 'Dipetakan dari Renstra & Cascading',
+                        val: `${real} / ${target} ${ik.satuan || '%'} (${pct}%)`
                     };
-                })
-                : [
-                    { code: 'IKU-01', name: 'Persentase lulusan yang terserap kerja <= 6 bulan atau berwirausaha', owner: 'Direktur / Tim Akademik & CDC', val: '88.5 / 90 %' },
-                    { code: 'IKU-02', name: 'Persentase dosen berkualifikasi akademik & sertifikasi kompetensi industri', owner: 'Direktur / Subbag Umum & Prodi', val: '92 / 100 %' },
-                    { code: 'IKU-03', name: 'Jumlah publikasi ilmiah terapan dan produk inovasi/wirausaha inkubator', owner: 'Direktur / UPPM & Inkubator', val: '12 / 10 Judul' }
-                ];
+                });
 
             panel.innerHTML = `
-                <div class="flex items-start justify-between border-b border-slate-700/80 pb-4">
+                <div class="flex items-start justify-between border-b border-current/15 pb-4">
                     <div>
-                        <span class="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded text-[10px] font-extrabold uppercase tracking-wider">${sanitizeHTML(node.type)}</span>
-                        <h4 class="text-white font-black text-lg mt-1.5">${sanitizeHTML(node.title)}</h4>
+                        <span class="px-2.5 py-0.5 bg-blue-500/20 text-blue-400 border border-blue-400/30 rounded text-[10px] font-extrabold uppercase tracking-wider">${sanitizeHTML(node.type || 'NODE')}</span>
+                        <h4 class="${st.titleText} font-black text-lg mt-1.5">${sanitizeHTML(node.code || node.title || '-')}</h4>
                     </div>
                     <div class="text-right">
-                        <span class="text-2xl font-black text-emerald-400">${node.score}%</span>
-                        <span class="block text-[10px] text-slate-400">Capaian Agregat</span>
+                        <span class="text-2xl font-black text-emerald-400">${node.score !== undefined ? node.score : 0}%</span>
+                        <span class="block text-[10px] opacity-75">Capaian Agregat Riil</span>
                     </div>
                 </div>
-                <p class="text-xs text-slate-300 leading-relaxed bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">${sanitizeHTML(node.text)}</p>
+                <p class="text-xs ${st.subText} leading-relaxed ${st.cardInner} p-3.5 rounded-xl border">${sanitizeHTML(node.text || '-')}</p>
                 <div>
-                    <span class="text-[11px] font-bold text-slate-400 block mb-1.5">Unit Kontributor:</span>
-                    <span class="inline-block px-3 py-1 bg-slate-800 text-blue-300 rounded-lg text-xs font-semibold border border-slate-700">${sanitizeHTML(node.unit)}</span>
+                    <span class="text-[11px] font-bold opacity-75 block mb-1.5">Unit Kontributor:</span>
+                    <span class="inline-block px-3 py-1 ${st.cardInner} rounded-lg text-xs font-semibold border">${sanitizeHTML(node.unit || '-')}</span>
                 </div>
                 <div class="space-y-2.5 pt-2">
-                    <span class="text-[11px] font-bold text-slate-400 block">Indikator Terkait (IKU / IKK / Program):</span>
+                    <span class="text-[11px] font-bold opacity-75 block">Indikator Kinerja Terpetakan (${mappedIkuList.length} IKU):</span>
                     <div class="space-y-2 max-h-[320px] overflow-y-auto pr-1">
-                        ${ikuList.map(ik => `
-                            <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 transition-all">
+                        ${mappedIkuList.length === 0 ? `<p class="text-xs opacity-60 italic p-3 rounded-xl border border-dashed">Belum ada indikator kinerja yang dipetakan ke node ini.</p>` : mappedIkuList.map(ik => `
+                            <div class="p-3 rounded-xl ${st.cardInner} border transition-all">
                                 <div class="flex items-center justify-between mb-1">
                                     <span class="text-xs font-extrabold text-emerald-400">${sanitizeHTML(ik.code)}</span>
-                                    <span class="px-2 py-0.5 bg-blue-600 text-white rounded text-[9px] font-bold">MAIN</span>
+                                    <span class="px-2 py-0.5 bg-blue-600 text-white rounded text-[9px] font-bold">MAPPED</span>
                                 </div>
-                                <p class="text-xs font-semibold text-white leading-snug">${sanitizeHTML(ik.name)}</p>
+                                <p class="text-xs font-semibold ${st.titleText} leading-snug">${sanitizeHTML(ik.name)}</p>
                                 <div class="flex items-center justify-between mt-2 text-[11px]">
-                                    <span class="text-slate-400">Pemilik: ${sanitizeHTML(ik.owner)}</span>
+                                    <span class="opacity-70">${sanitizeHTML(ik.owner)}</span>
                                     <span class="font-bold text-emerald-400">${sanitizeHTML(ik.val)}</span>
                                 </div>
                             </div>
@@ -2700,104 +2801,119 @@ function renderDokumenUkurLaporView(container) {
 
         function renderDokumenView(container) {
             document.getElementById('pageTitle').innerText = 'Strategy Map (Visi, Misi, Tujuan) & Dokumen Perencanaan';
-            const isAdmin = currentUser.role === 'admin';
+            const isAdmin = currentUser.role === 'admin' || currentUser.role === 'direktur';
             const smData = getStrategyMapData();
+            const st = getStrategyThemeStyles();
             if (!selectedStrategyNode) {
                 selectedStrategyNode = { type: 'DETAIL NODE VISI', title: 'VISI', ...smData.visi };
             }
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
-                    <!-- REVISI 1: STRATEGY MAP POHON KINERJA INTERAKTIF BERGAYA DARK ELEGAN -->
-                    <div class="bg-[#07111e] text-slate-100 rounded-3xl shadow-2xl border border-slate-800 p-6 lg:p-8 space-y-6">
-                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                    <!-- REVISI 1 & 2: STRATEGY MAP MULTI-TEMA (BIRU/PUTIH/HIJAU/MERAH) & PEMETAAN DINAMIS -->
+                    <div class="${st.outer} rounded-3xl shadow-2xl border p-6 lg:p-8 space-y-6 transition-all duration-300">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-current/15 pb-5">
                             <div>
-                                <h2 class="text-lg sm:text-xl font-black text-white tracking-tight flex items-center gap-2.5">
+                                <h2 class="text-lg sm:text-xl font-black ${st.titleText} tracking-tight flex items-center gap-2.5">
                                     <i class="fa-solid fa-diagram-project text-emerald-400"></i>
                                     <span>Strategy Map — Pohon Kinerja Interaktif (Zoom, Hover & Drill-Down)</span>
                                 </h2>
-                                <p class="text-xs text-slate-400 mt-1">Arahkan kursor (hover) atau klik pada node Visi / Misi / Tujuan / Sasaran Strategis untuk melihat detail kontribusi indikator di panel kanan</p>
+                                <p class="text-xs ${st.subText} mt-1">Nilai % agregat dihitung otomatis dari realisasi capaian Indikator Kinerja yang dipetakan ke Tujuan & Misi.</p>
                             </div>
-                            <div class="flex items-center space-x-2 shrink-0">
-                                <div class="flex items-center bg-slate-900 border border-slate-700 rounded-xl px-2 py-1 space-x-2 text-xs">
-                                    <button type="button" onclick="adjustStrategyZoom(-0.1)" class="px-2 py-1 hover:bg-slate-800 rounded text-slate-300 font-bold">-</button>
-                                    <span id="strategyZoomLabel" class="font-bold text-emerald-400 w-12 text-center">100%</span>
-                                    <button type="button" onclick="adjustStrategyZoom(0.1)" class="px-2 py-1 hover:bg-slate-800 rounded text-slate-300 font-bold">+</button>
-                                    <button type="button" onclick="adjustStrategyZoom(0)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[11px] text-slate-300 font-semibold">Reset View</button>
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <!-- Pilihan Tema Warna (Revisi 1) -->
+                                <div class="flex items-center bg-slate-900/20 backdrop-blur-xs border border-current/20 rounded-xl p-1 space-x-1 text-xs">
+                                    <button type="button" onclick="setStrategyMapTheme('biru')" class="px-2.5 py-1 rounded-lg font-bold transition-all ${strategyMapTheme === 'biru' ? 'bg-blue-600 text-white shadow' : 'hover:bg-white/10'}">Biru</button>
+                                    <button type="button" onclick="setStrategyMapTheme('putih')" class="px-2.5 py-1 rounded-lg font-bold transition-all ${strategyMapTheme === 'putih' ? 'bg-white text-slate-900 shadow' : 'hover:bg-white/10'}">Putih</button>
+                                    <button type="button" onclick="setStrategyMapTheme('hijau')" class="px-2.5 py-1 rounded-lg font-bold transition-all ${strategyMapTheme === 'hijau' ? 'bg-emerald-600 text-white shadow' : 'hover:bg-white/10'}">Hijau</button>
+                                    <button type="button" onclick="setStrategyMapTheme('merah')" class="px-2.5 py-1 rounded-lg font-bold transition-all ${strategyMapTheme === 'merah' ? 'bg-rose-600 text-white shadow' : 'hover:bg-white/10'}">Merah</button>
                                 </div>
-                                <span class="px-3 py-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-xl text-xs font-bold">Orientasi: Vertikal</span>
+                                <div class="flex items-center bg-slate-900/20 border border-current/20 rounded-xl px-2 py-1 space-x-2 text-xs">
+                                    <button type="button" onclick="adjustStrategyZoom(-0.1)" class="px-2 py-1 hover:bg-white/10 rounded font-bold">-</button>
+                                    <span id="strategyZoomLabel" class="font-bold text-emerald-400 w-12 text-center">100%</span>
+                                    <button type="button" onclick="adjustStrategyZoom(0.1)" class="px-2 py-1 hover:bg-white/10 rounded font-bold">+</button>
+                                    <button type="button" onclick="adjustStrategyZoom(0)" class="px-2 py-1 bg-white/10 rounded-lg text-[11px] font-semibold">Reset</button>
+                                </div>
+                                ${isAdmin && !isPureViewer() ? `
+                                    <button type="button" onclick="openVmtsManagerModal()" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg flex items-center space-x-1.5">
+                                        <i class="fa-solid fa-sliders"></i>
+                                        <span>Kelola & Petakan Visi, Misi, Tujuan</span>
+                                    </button>
+                                ` : ''}
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                            <!-- KANVAS KIRI (8 KOLOM): POHON VISI -> MISI -> TUJUAN -> SASARAN -->
-                            <div class="lg:col-span-8 bg-[#0b1727] rounded-2xl border border-slate-800/90 p-5 sm:p-6 overflow-x-auto">
+                            <!-- KANVAS KIRI (8 KOLOM) -->
+                            <div class="lg:col-span-8 ${st.canvas} rounded-2xl border p-5 sm:p-6 overflow-x-auto">
                                 <div id="strategyMapCanvasInner" class="space-y-6 transition-transform duration-300 origin-top">
                                     
                                     <!-- NODE VISI UTAMA -->
                                     <div class="flex flex-col items-center">
                                         <div onclick="selectStrategyMapNode('VISI', 'VISI')" onmouseenter="selectStrategyMapNode('VISI', 'VISI')"
-                                            class="cursor-pointer w-full max-w-2xl p-5 rounded-2xl bg-gradient-to-r from-emerald-600/90 to-teal-600/90 border-2 border-emerald-400/80 shadow-lg shadow-emerald-500/20 hover:scale-[1.02] hover:shadow-emerald-400/30 transition-all">
-                                            <div class="flex items-center justify-between text-xs font-extrabold uppercase tracking-wider text-emerald-100 mb-1.5">
-                                                <span>${smData.visi.code}</span>
-                                                <span class="px-2.5 py-0.5 bg-slate-950/40 rounded-full text-white">AGREGAT: ${smData.visi.score}%</span>
+                                            class="cursor-pointer w-full max-w-2xl p-5 rounded-2xl bg-gradient-to-r ${st.visiBox} border-2 shadow-lg hover:scale-[1.01] transition-all">
+                                            <div class="flex items-center justify-between text-xs font-extrabold uppercase tracking-wider mb-1.5">
+                                                <span>${sanitizeHTML(smData.visi.code)}</span>
+                                                <span class="px-2.5 py-0.5 bg-slate-950/30 rounded-full text-white">AGREGAT RIIL: ${smData.visi.score}%</span>
                                             </div>
-                                            <p class="text-sm sm:text-base font-black text-white leading-snug">"${smData.visi.text}"</p>
+                                            <p class="text-sm sm:text-base font-black text-white leading-snug">"${sanitizeHTML(smData.visi.text)}"</p>
                                         </div>
-                                        <div class="w-0.5 h-6 bg-emerald-500/50"></div>
+                                        <div class="w-0.5 h-6 bg-current opacity-40"></div>
                                         <span class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">${smData.misiList.length} MISI INSTITUSI</span>
                                     </div>
 
                                     <!-- GRID MISI -->
+                                    ${smData.misiList.length === 0 ? `<p class="text-xs text-center opacity-70 italic py-3">Belum ada Misi diinput. Klik tombol "Kelola & Petakan Visi, Misi, Tujuan" di kanan atas.</p>` : `
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                                         ${smData.misiList.map(m => `
                                             <div onclick="selectStrategyMapNode('MISI', '${m.id}')" onmouseenter="selectStrategyMapNode('MISI', '${m.id}')"
-                                                class="cursor-pointer p-4 rounded-2xl bg-[#102036] hover:bg-[#152a47] border border-blue-500/30 hover:border-cyan-400 shadow-md hover:shadow-cyan-500/10 transition-all group">
+                                                class="cursor-pointer p-4 rounded-2xl ${st.misiBox} border transition-all group">
                                                 <div class="flex items-center justify-between mb-1.5">
-                                                    <span class="text-xs font-extrabold text-cyan-400 group-hover:text-cyan-300">${m.code}</span>
+                                                    <span class="text-xs font-extrabold text-cyan-400">${sanitizeHTML(m.code)}</span>
                                                     <span class="text-xs font-black text-emerald-400">${m.score}%</span>
                                                 </div>
-                                                <p class="text-xs text-slate-200 leading-relaxed">${m.text}</p>
+                                                <p class="text-xs ${st.subText} leading-relaxed">${sanitizeHTML(m.text)}</p>
                                             </div>
                                         `).join('')}
-                                    </div>
+                                    </div>`}
 
                                     <!-- GARIS KE TUJUAN -->
                                     <div class="flex flex-col items-center">
-                                        <div class="w-0.5 h-5 bg-purple-500/50"></div>
-                                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-purple-400">${smData.tujuanList.length} TUJUAN RENSTRA</span>
+                                        <div class="w-0.5 h-5 bg-current opacity-40"></div>
+                                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-amber-400">${smData.tujuanList.length} TUJUAN RENSTRA</span>
                                     </div>
 
                                     <!-- GRID TUJUAN -->
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                                    ${smData.tujuanList.length === 0 ? `<p class="text-xs text-center opacity-70 italic py-3">Belum ada Tujuan diinput.</p>` : `
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                         ${smData.tujuanList.map(t => `
                                             <div onclick="selectStrategyMapNode('TUJUAN', '${t.id}')" onmouseenter="selectStrategyMapNode('TUJUAN', '${t.id}')"
-                                                class="cursor-pointer p-3.5 rounded-2xl bg-[#191536] hover:bg-[#241e4d] border border-purple-500/40 hover:border-purple-400 transition-all group">
+                                                class="cursor-pointer p-3.5 rounded-2xl ${st.tujuanBox} border transition-all group">
                                                 <div class="flex items-center justify-between mb-1.5">
-                                                    <span class="text-xs font-black text-purple-300">${t.code}</span>
+                                                    <span class="text-xs font-black text-amber-400">${sanitizeHTML(t.code)}</span>
                                                     <span class="text-xs font-extrabold text-emerald-400">${t.score}%</span>
                                                 </div>
-                                                <p class="text-[11px] text-slate-300 line-clamp-3 leading-relaxed">${t.text}</p>
+                                                <p class="text-[11px] ${st.subText} leading-relaxed">${sanitizeHTML(t.text)}</p>
                                             </div>
                                         `).join('')}
-                                    </div>
+                                    </div>`}
 
                                     <!-- GARIS KE SASARAN STRATEGIS -->
                                     <div class="flex flex-col items-center">
-                                        <div class="w-0.5 h-5 bg-blue-500/50"></div>
-                                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">${smData.sasaranList.length} SASARAN STRATEGIS & INDIKATOR KUNCI</span>
+                                        <div class="w-0.5 h-5 bg-current opacity-40"></div>
+                                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-cyan-400">${smData.sasaranList.length} SASARAN STRATEGIS & INDIKATOR KUNCI</span>
                                     </div>
 
                                     <!-- GRID SASARAN STRATEGIS -->
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                                         ${smData.sasaranList.map(s => `
                                             <div onclick="selectStrategyMapNode('SASARAN', '${s.id}')" onmouseenter="selectStrategyMapNode('SASARAN', '${s.id}')"
-                                                class="cursor-pointer p-3.5 rounded-2xl bg-[#0f1d31] hover:bg-[#162944] border border-slate-700 hover:border-emerald-400 transition-all">
+                                                class="cursor-pointer p-3.5 rounded-2xl ${st.sasaranBox} border transition-all">
                                                 <div class="flex items-center justify-between mb-1">
-                                                    <span class="text-xs font-black text-white">${s.code}</span>
+                                                    <span class="text-xs font-black ${st.titleText}">${sanitizeHTML(s.code)}</span>
                                                     <span class="text-xs font-black text-emerald-400">${s.score}%</span>
                                                 </div>
-                                                <p class="text-[11px] text-slate-300 leading-relaxed">${s.text}</p>
+                                                <p class="text-[11px] ${st.subText} leading-relaxed">${sanitizeHTML(s.text)}</p>
                                             </div>
                                         `).join('')}
                                     </div>
@@ -2806,8 +2922,7 @@ function renderDokumenUkurLaporView(container) {
                             </div>
 
                             <!-- PANEL DETAIL KANAN (4 KOLOM) -->
-                            <div id="strategyDetailPanel" class="lg:col-span-4 bg-[#0b1727] rounded-2xl border border-slate-800 p-5 space-y-4 sticky top-24">
-                            </div>
+                            <div id="strategyDetailPanel" class="lg:col-span-4 ${st.panel} rounded-2xl border p-5 space-y-4 sticky top-24"></div>
                         </div>
                     </div>
 
@@ -2824,7 +2939,7 @@ function renderDokumenUkurLaporView(container) {
                                     <option value="tahun">Urutkan Berdasarkan Tahun</option>
                                     <option value="kategori">Urutkan Berdasarkan Kategori</option>
                                 </select>
-                                ${isAdmin ? `<button onclick="openDokumenModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow">Tambah Dokumen</button>` : ''}
+                                ${currentUser.role === 'admin' ? `<button onclick="openDokumenModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow">Tambah Dokumen</button>` : ''}
                             </div>
                         </div>
 
@@ -2837,19 +2952,19 @@ function renderDokumenUkurLaporView(container) {
                                         <th class="p-3 text-center">Periode / Tahun</th>
                                         <th class="p-3">Link Dokumen</th>
                                         <th class="p-3 text-center">Status Publik</th>
-                                        ${isAdmin ? '<th class="p-3 text-center">Aksi</th>' : ''}
+                                        ${currentUser.role === 'admin' ? '<th class="p-3 text-center">Aksi</th>' : ''}
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y">
-                                    ${getSortedDokumen().length === 0 ? `<tr><td colspan="${isAdmin ? 6 : 5}" class="p-6 text-center text-slate-400">Belum ada dokumen perencanaan terinput.</td></tr>` : getSortedDokumen().map((d) => `
+                                    ${getSortedDokumen().length === 0 ? `<tr><td colspan="${currentUser.role === 'admin' ? 6 : 5}" class="p-6 text-center text-slate-400">Belum ada dokumen perencanaan terinput.</td></tr>` : getSortedDokumen().map((d) => `
                                         <tr class="hover:bg-slate-50">
                                             <td class="p-3 font-semibold text-slate-900">${d.nama}</td>
                                             <td class="p-3"><span class="px-2.5 py-1 bg-blue-50 text-primary-700 rounded-full font-medium text-[10px]">${d.kategori}</span></td>
                                             <td class="p-3 text-center font-bold text-slate-700">${d.tahun}</td>
                                             <td class="p-3"><a href="${d.link}" target="_blank" class="text-blue-600 underline font-medium"><i class="fa-solid fa-link mr-1"></i> Buka Dokumen</a></td>
                                             <td class="p-3 text-center">
-                                                ${isAdmin ? `
-                                                    <button onclick="toggleDokumenPublik(${d.originalIdx})" class="px-3 py-1 rounded-full text-xs font-bold transition-all ${d.isPublic ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}" title="Klik untuk ubah status publik halaman depan">
+                                                ${currentUser.role === 'admin' ? `
+                                                    <button onclick="toggleDokumenPublik(${d.originalIdx})" class="px-3 py-1 rounded-full text-xs font-bold transition-all ${d.isPublic ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}">
                                                         <i class="fa-solid ${d.isPublic ? 'fa-eye' : 'fa-eye-slash'} mr-1"></i> ${d.isPublic ? 'Publik' : 'Privat'}
                                                     </button>
                                                 ` : `
@@ -2858,10 +2973,10 @@ function renderDokumenUkurLaporView(container) {
                                                     </span>
                                                 `}
                                             </td>
-                                            ${isAdmin ? `
+                                            ${currentUser.role === 'admin' ? `
                                                 <td class="p-3 text-center space-x-1">
-                                                    <button onclick="openDokumenModal('edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-primary-700 rounded hover:bg-blue-200" title="Edit Dokumen"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="deleteDokumen(${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus Dokumen"><i class="fa-solid fa-trash"></i></button>
+                                                    <button onclick="openDokumenModal('edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-primary-700 rounded hover:bg-blue-200"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="deleteDokumen(${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -2871,7 +2986,102 @@ function renderDokumenUkurLaporView(container) {
                         </div>
                     </div>
                 </div>
-    
+
+                <!-- MODAL KELOLA & PETAKAN VISI, MISI, TUJUAN (REVISI 2) -->
+                <div id="vmtsManagerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-6 space-y-6 my-8 max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <div>
+                                <h3 class="font-black text-slate-900 text-base">Manajemen & Pemetaan Visi, Misi, dan Tujuan Renstra</h3>
+                                <p class="text-xs text-slate-500">Petakan Indikator Kinerja Utama ke Tujuan dan Misi agar perhitungan % Agregat Strategy Map murni dari capaian riil.</p>
+                            </div>
+                            <button type="button" onclick="closeVmtsManagerModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+
+                        <!-- Form Edit Visi -->
+                        <form onsubmit="saveVisiInstitusi(event)" class="bg-slate-50 p-4 rounded-2xl border space-y-3 text-xs">
+                            <h4 class="font-bold text-blue-800 uppercase">1. Pengaturan Visi Institusi</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div><label class="block font-semibold mb-1">Judul / Kode Visi</label><input type="text" id="vmts_visiKode" required value="${sanitizeHTML(smData.visi.code)}" class="w-full p-2.5 bg-white border rounded-xl"></div>
+                                <div><label class="block font-semibold mb-1">Unit Kontributor</label><input type="text" id="vmts_visiUnit" required value="${sanitizeHTML(smData.visi.unit)}" class="w-full p-2.5 bg-white border rounded-xl"></div>
+                            </div>
+                            <div><label class="block font-semibold mb-1">Uraian Teks Visi</label><textarea id="vmts_visiTeks" rows="2" required class="w-full p-2.5 bg-white border rounded-xl">${sanitizeHTML(smData.visi.text)}</textarea></div>
+                            <div class="text-right"><button type="submit" class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl">Simpan Visi</button></div>
+                        </form>
+
+                        <!-- Form Tambah/Edit Misi -->
+                        <div class="bg-slate-50 p-4 rounded-2xl border space-y-3 text-xs">
+                            <h4 class="font-bold text-emerald-800 uppercase">2. Daftar & Input Misi Institusi</h4>
+                            <form onsubmit="saveMisiInstitusi(event)" class="space-y-3 border-b pb-4">
+                                <input type="hidden" id="vmts_misiEditIdx" value="-1">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div><label class="block font-semibold mb-1">Kode Misi</label><input type="text" id="vmts_misiKode" required placeholder="M-01 • MISI" class="w-full p-2 bg-white border rounded-xl"></div>
+                                    <div class="md:col-span-2"><label class="block font-semibold mb-1">Unit Penanggung Jawab</label><input type="text" id="vmts_misiUnit" required placeholder="Tim Kerja Akademik & Prodi" class="w-full p-2 bg-white border rounded-xl"></div>
+                                </div>
+                                <div><label class="block font-semibold mb-1">Uraian Misi</label><textarea id="vmts_misiTeks" rows="2" required class="w-full p-2 bg-white border rounded-xl" placeholder="Masukkan uraian misi..."></textarea></div>
+                                <div class="text-right"><button type="submit" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl">Simpan Misi</button></div>
+                            </form>
+                            <div class="space-y-2 max-h-40 overflow-y-auto">
+                                ${(DB.misiInstitusi || []).map((m, idx) => `
+                                    <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border">
+                                        <div><strong class="text-emerald-700">${sanitizeHTML(m.kode)}:</strong> ${sanitizeHTML(m.teks)}</div>
+                                        <div class="space-x-1 shrink-0">
+                                            <button type="button" onclick="editMisiInstitusi(${idx})" class="px-2 py-1 bg-blue-100 text-blue-700 rounded"><i class="fa-solid fa-pen"></i></button>
+                                            <button type="button" onclick="deleteMisiInstitusi(${idx})" class="px-2 py-1 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Form Tambah/Edit Tujuan & Pemetaan Indikator -->
+                        <div class="bg-slate-50 p-4 rounded-2xl border space-y-3 text-xs">
+                            <h4 class="font-bold text-purple-800 uppercase">3. Daftar & Input Tujuan + Pemetaan Indikator Kinerja</h4>
+                            <form onsubmit="saveTujuanInstitusi(event)" class="space-y-3 border-b pb-4">
+                                <input type="hidden" id="vmts_tujuanEditIdx" value="-1">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div><label class="block font-semibold mb-1">Kode Tujuan</label><input type="text" id="vmts_tujuanKode" required placeholder="T-01" class="w-full p-2 bg-white border rounded-xl"></div>
+                                    <div>
+                                        <label class="block font-semibold mb-1">Mengintervensi Misi</label>
+                                        <select id="vmts_tujuanMisiId" class="w-full p-2 bg-white border rounded-xl">
+                                            <option value="">-- Pilih Misi --</option>
+                                            ${(DB.misiInstitusi || []).map(m => `<option value="${m.id}">${sanitizeHTML(m.kode)}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div><label class="block font-semibold mb-1">Unit Kontributor</label><input type="text" id="vmts_tujuanUnit" required placeholder="Prodi & UPPM" class="w-full p-2 bg-white border rounded-xl"></div>
+                                </div>
+                                <div><label class="block font-semibold mb-1">Uraian Tujuan</label><textarea id="vmts_tujuanTeks" rows="2" required class="w-full p-2 bg-white border rounded-xl" placeholder="Masukkan uraian tujuan..."></textarea></div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Petakan Indikator Kinerja (Tier 4) ke Tujuan Ini:</label>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-1.5 bg-white p-2.5 rounded-xl border max-h-36 overflow-y-auto">
+                                        ${(DB.renstraIndikatorKinerja || []).map(ik => `
+                                            <label class="flex items-center space-x-2">
+                                                <input type="checkbox" name="vmts_tujuanIkCheck" value="${ik.id}" class="rounded text-purple-600">
+                                                <span>${sanitizeHTML(ik.kodeIndikator)} - ${sanitizeHTML(ik.namaIndikator)}</span>
+                                            </label>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                <div class="text-right"><button type="submit" class="px-4 py-2 bg-purple-600 text-white font-bold rounded-xl">Simpan Tujuan & Pemetaan</button></div>
+                            </form>
+                            <div class="space-y-2 max-h-44 overflow-y-auto">
+                                ${(DB.tujuanInstitusi || []).map((t, idx) => `
+                                    <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border">
+                                        <div>
+                                            <strong class="text-purple-700">${sanitizeHTML(t.kode)}</strong> (Misi: ${sanitizeHTML(t.misiId || '-')}) — ${sanitizeHTML(t.teks)}
+                                            <span class="block text-[10px] text-emerald-700 font-bold">Terpetakan: ${(t.indikatorIds || []).length} Indikator</span>
+                                        </div>
+                                        <div class="space-x-1 shrink-0">
+                                            <button type="button" onclick="editTujuanInstitusi(${idx})" class="px-2 py-1 bg-blue-100 text-blue-700 rounded"><i class="fa-solid fa-pen"></i></button>
+                                            <button type="button" onclick="deleteTujuanInstitusi(${idx})" class="px-2 py-1 bg-rose-100 text-rose-600 rounded"><i class="fa-solid fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Modal Tambah / Edit Dokumen Perencanaan -->
                 <div id="dokumenModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
@@ -2881,28 +3091,15 @@ function renderDokumenUkurLaporView(container) {
                         </div>
                         <form onsubmit="saveDokumen(event)" class="space-y-4 text-sm">
                             <input type="hidden" id="editDokumenIdx" value="-1">
-                            <div>
-                                <label class="block font-semibold mb-1">Nama Dokumen</label>
-                                <input type="text" id="docNama" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: Renstra Politeknik 2025-2029">
-                            </div>
+                            <div><label class="block font-semibold mb-1">Nama Dokumen</label><input type="text" id="docNama" required class="w-full p-3 bg-slate-50 border rounded-xl"></div>
                             <div>
                                 <label class="block font-semibold mb-1">Kategori Dokumen</label>
                                 <select id="docKategori" class="w-full p-3 bg-slate-50 border rounded-xl">
-                                    <option value="Renstra">Renstra</option>
-                                    <option value="RKA-KL">RKA-KL</option>
-                                    <option value="IKU">IKU</option>
-                                    <option value="SOP & Pedoman">SOP & Pedoman</option>
-                                    <option value="Lainnya">Lainnya</option>
+                                    <option value="Renstra">Renstra</option><option value="RKA-KL">RKA-KL</option><option value="IKU">IKU</option><option value="SOP & Pedoman">SOP & Pedoman</option><option value="Lainnya">Lainnya</option>
                                 </select>
                             </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Periode / Tahun</label>
-                                <input type="text" id="docTahun" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 2025-2029 / 2025">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Link Dokumen (URL)</label>
-                                <input type="url" id="docLink" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="https://drive.google.com/...">
-                            </div>
+                            <div><label class="block font-semibold mb-1">Periode / Tahun</label><input type="text" id="docTahun" required class="w-full p-3 bg-slate-50 border rounded-xl"></div>
+                            <div><label class="block font-semibold mb-1">Link Dokumen (URL)</label><input type="url" id="docLink" required class="w-full p-3 bg-slate-50 border rounded-xl"></div>
                             <div class="flex justify-end space-x-2 pt-2">
                                 <button type="button" onclick="closeDokumenModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button>
                                 <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-xl font-semibold">Simpan Dokumen</button>
@@ -2912,6 +3109,95 @@ function renderDokumenUkurLaporView(container) {
                 </div>
             `;
             setTimeout(updateStrategyMapDetailPanel, 50);
+        }
+
+        function openVmtsManagerModal() {
+            const m = document.getElementById('vmtsManagerModal');
+            if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+        }
+        function closeVmtsManagerModal() {
+            const m = document.getElementById('vmtsManagerModal');
+            if (m) { m.classList.remove('flex'); m.classList.add('hidden'); }
+        }
+        async function saveVisiInstitusi(e) {
+            e.preventDefault();
+            DB.visiInstitusi = {
+                kode: document.getElementById('vmts_visiKode').value.trim(),
+                teks: document.getElementById('vmts_visiTeks').value.trim(),
+                unit: document.getElementById('vmts_visiUnit').value.trim()
+            };
+            await saveToMySQL();
+            showToast('Visi Institusi berhasil diperbarui!');
+            renderDokumenView(document.getElementById('mainContent'));
+        }
+        async function saveMisiInstitusi(e) {
+            e.preventDefault();
+            if (!Array.isArray(DB.misiInstitusi)) DB.misiInstitusi = [];
+            const idx = parseInt(document.getElementById('vmts_misiEditIdx').value);
+            const obj = {
+                id: idx !== -1 && DB.misiInstitusi[idx] ? DB.misiInstitusi[idx].id : 'M-0' + (DB.misiInstitusi.length + 1),
+                kode: document.getElementById('vmts_misiKode').value.trim(),
+                teks: document.getElementById('vmts_misiTeks').value.trim(),
+                unit: document.getElementById('vmts_misiUnit').value.trim()
+            };
+            if (idx !== -1) DB.misiInstitusi[idx] = obj;
+            else DB.misiInstitusi.push(obj);
+            await saveToMySQL();
+            showToast('Misi berhasil disimpan!');
+            renderDokumenView(document.getElementById('mainContent'));
+            openVmtsManagerModal();
+        }
+        function editMisiInstitusi(idx) {
+            const m = DB.misiInstitusi[idx];
+            if (!m) return;
+            document.getElementById('vmts_misiEditIdx').value = idx;
+            document.getElementById('vmts_misiKode').value = m.kode;
+            document.getElementById('vmts_misiTeks').value = m.teks;
+            document.getElementById('vmts_misiUnit').value = m.unit;
+        }
+        async function deleteMisiInstitusi(idx) {
+            DB.misiInstitusi.splice(idx, 1);
+            await saveToMySQL();
+            renderDokumenView(document.getElementById('mainContent'));
+            openVmtsManagerModal();
+        }
+        async function saveTujuanInstitusi(e) {
+            e.preventDefault();
+            if (!Array.isArray(DB.tujuanInstitusi)) DB.tujuanInstitusi = [];
+            const idx = parseInt(document.getElementById('vmts_tujuanEditIdx').value);
+            const checkedIks = Array.from(document.querySelectorAll('input[name="vmts_tujuanIkCheck"]:checked')).map(c => c.value);
+            const obj = {
+                id: idx !== -1 && DB.tujuanInstitusi[idx] ? DB.tujuanInstitusi[idx].id : 'T-0' + (DB.tujuanInstitusi.length + 1),
+                kode: document.getElementById('vmts_tujuanKode').value.trim(),
+                misiId: document.getElementById('vmts_tujuanMisiId').value,
+                unit: document.getElementById('vmts_tujuanUnit').value.trim(),
+                teks: document.getElementById('vmts_tujuanTeks').value.trim(),
+                indikatorIds: checkedIks
+            };
+            if (idx !== -1) DB.tujuanInstitusi[idx] = obj;
+            else DB.tujuanInstitusi.push(obj);
+            await saveToMySQL();
+            showToast('Tujuan & pemetaan indikator berhasil disimpan!');
+            renderDokumenView(document.getElementById('mainContent'));
+            openVmtsManagerModal();
+        }
+        function editTujuanInstitusi(idx) {
+            const t = DB.tujuanInstitusi[idx];
+            if (!t) return;
+            document.getElementById('vmts_tujuanEditIdx').value = idx;
+            document.getElementById('vmts_tujuanKode').value = t.kode;
+            document.getElementById('vmts_tujuanMisiId').value = t.misiId || '';
+            document.getElementById('vmts_tujuanUnit').value = t.unit || '';
+            document.getElementById('vmts_tujuanTeks').value = t.teks || '';
+            document.querySelectorAll('input[name="vmts_tujuanIkCheck"]').forEach(chk => {
+                chk.checked = Array.isArray(t.indikatorIds) && t.indikatorIds.includes(chk.value);
+            });
+        }
+        async function deleteTujuanInstitusi(idx) {
+            DB.tujuanInstitusi.splice(idx, 1);
+            await saveToMySQL();
+            renderDokumenView(document.getElementById('mainContent'));
+            openVmtsManagerModal();
         }
         async function toggleDokumenPublik(idx) {
             if (!DB.dokumenPerencanaan[idx]) return;
@@ -4577,24 +4863,23 @@ function renderMultiYearIndikatorChart() {
             let dirList = (DB.cascadingDirektur || []).filter(c => filterCascadingTahun === 'Semua' || String(c.tahun || '2025') === String(yr));
             let timList = (DB.cascadingTim || []).filter(c => filterCascadingTahun === 'Semua' || String(c.tahun || '2025') === String(yr));
 
-            // Jika belum ada data cascading yang diinput, gunakan preview representatif dari struktur kampus
-            const hasLive = dirList.length > 0;
-            const liveItems = hasLive ? dirList.slice(0, 5).map((cd, idx) => {
-                const relatedCt = timList.filter(ct => ct.targetDirektur === cd.target);
+            if (dirList.length === 0) {
+                container.innerHTML = `<div class="bg-[#0b1727] rounded-2xl border border-slate-800 p-10 text-center text-slate-400 text-xs italic">Belum ada data Cascading Direktur & Ketua Tim Kerja pada tahun ${filterCascadingTahun}. Silakan input Cascading terlebih dahulu.</div>`;
+                return;
+            }
+
+            const liveItems = dirList.map((cd, idx) => {
+                const relatedCt = timList.filter(ct => ct.targetDirektur === cd.target && String(ct.tahun || '2025') === String(cd.tahun || '2025'));
                 const units = Array.from(new Set(relatedCt.flatMap(ct => ct.unitTargets || [])));
-                const tims = Array.isArray(cd.timKeys) ? cd.timKeys : ['Akademik'];
+                const tims = Array.isArray(cd.timKeys) ? cd.timKeys : [];
                 return {
                     code: `IKU-0${idx + 1}`,
                     target: cd.target,
                     targetVal: `${cd.targetVal !== undefined ? cd.targetVal : 100} ${cd.satuan || '%'}`,
                     tims: tims,
-                    units: units.length > 0 ? units : ['Prodi TPIP', 'UPPM']
+                    units: units
                 };
-            }) : [
-                { code: 'IKU-01', target: 'Persentase Lulusan Terserap Kerja <= 6 Bulan / Wirausaha', targetVal: '85 %', tims: ['Akademik', 'Kemahasiswaan dan Kerjasama'], units: ['Prodi TPIP', 'Prodi TMIP', 'CDC', 'Inkubator Bisnis'] },
-                { code: 'IKU-02', target: 'Riset Terapan, Publikasi & Hilirisasi Industri Petrokimia', targetVal: '12 Judul', tims: ['Akademik'], units: ['UPPM', 'Prodi TIIP', 'Transformasi Digital 4.0'] },
-                { code: 'IKU-03', target: 'Predikat Akuntabilitas Kinerja (SAKIP) & Mutu Prodi', targetVal: '90 Poin', tims: ['Umum dan Keuangan', 'Akademik'], units: ['SPM', 'Subbag Umum dan Keuangan', 'LSP'] }
-            ];
+            });
 
             if (window.activeCrosscuttingTab === 'sankey') {
                 const colors = ['#0284c7', '#7c3aed', '#d97706', '#059669', '#e11d48'];
@@ -4660,8 +4945,12 @@ function renderMultiYearIndikatorChart() {
                 `;
             } else if (window.activeCrosscuttingTab === 'chord') {
                 // Kumpulkan unit yang berkolaborasi dari Cascading Tim
-                const activeUnits = Array.from(new Set(liveItems.flatMap(x => x.units))).slice(0, 8);
-                const units = activeUnits.length >= 3 ? activeUnits : ['Prodi TPIP', 'Prodi TMIP', 'Prodi TIIP', 'UPPM', 'CDC', 'SPM'];
+                const activeUnits = Array.from(new Set(liveItems.flatMap(x => x.units)));
+                if (activeUnits.length === 0) {
+                    container.innerHTML = `<div class="bg-[#0b1727] rounded-2xl border border-slate-800 p-10 text-center text-slate-400 text-xs italic">Belum ada Unit/Prodi yang dicascadingkan oleh Ketua Tim Kerja pada periode ini.</div>`;
+                    return;
+                }
+                const units = activeUnits;
                 const cx = 190, cy = 190, r = 135;
                 const palette = ['#10b981', '#38bdf8', '#818cf8', '#f59e0b', '#f472b6', '#a855f7', '#34d399', '#fb7185'];
 
