@@ -200,22 +200,14 @@ button { position: relative; z-index: 10; }
 </div>
     <script>
         // =========================================================================
-        // REVISI 14: GLOBAL CHART.JS FUTURISTIC ANIMATION ENGINE
+        // REVISI 14: GLOBAL CHART.JS STABLE ANIMATION ENGINE
         // =========================================================================
         if (typeof Chart !== 'undefined') {
             Chart.defaults.animation = {
-                duration: 1800,
-                easing: 'easeOutElastic',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default') {
-                        delay = context.dataIndex * 120 + context.datasetIndex * 80;
-                    }
-                    return delay;
-                }
+                duration: 600,
+                easing: 'easeOutQuart'
             };
-            Chart.defaults.transitions.active.animation.duration = 400;
-            Chart.defaults.elements.line.tension = 0.35;
+            Chart.defaults.elements.line.tension = 0.3;
         }
 
         // =========================================================================
@@ -4055,284 +4047,306 @@ function renderDokumenUkurLaporView(container) {
                 </div>
             `;
 
-            if (DB.cascadingDirektur.length > 0) {
+if (DB.cascadingDirektur.length > 0) {
                 setTimeout(() => {
-                    // 1. Line Chart Capaian
-                    const ctx1 = safeDestroyChart('capaianChart');
-                    if (ctx1) {
-                        let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
-                        let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
-                        const colorPalette = [
-                            '#2563eb', '#dc2626', '#10b981', '#f59e0b', '#8b5cf6',
-                            '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
-                            '#14b8a6', '#e11d48', '#a855f7', '#0ea5e9', '#3b82f6', '#10b981', '#f43f5e'
-                        ];
+                    // Pastikan semua parent canvas memiliki tinggi eksplisit agar tidak kolaps menjadi 0px
+                    ['targetVsRealMultiYearChart', 'capaianChart', 'anggaranChart', 'unitRankingChart', 'petaRisikoPreChart', 'petaRisikoResiduChart'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el && el.parentElement) {
+                            el.parentElement.style.height = id.includes('Risiko') ? '260px' : '340px';
+                        }
+                    });
 
-                        let multiDatasets = filteredCascading.map((cd, index) => {
-                            let color = colorPalette[index % colorPalette.length];
-                            let dataPoints = twPeriods.map(tw => {
-                                let match = validCapaian.filter(c =>
-                                    c && String(c.targetDirektur || '').trim() === String(cd.target || '').trim() &&
-                                    c.triwulan && String(c.triwulan).trim().toUpperCase() === tw &&
-                                    String(c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? String(c.tahun || '2025') : String(filterDashboardTahun))
-                                );
-                                if (match.length > 0 && match[match.length - 1]) {
-                                    let targetVal = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
-                                    let realVal = Number(match[match.length - 1].realisasi) || 0;
-                                    return targetVal > 0 ? Number(((realVal / targetVal) * 100).toFixed(1)) : 0;
-                                }
-                                return 0; // Gunakan 0 jika kosong/Tidak Valid agar grafik tidak crash
-                            });
+                    // 1. Render Grafik Multi-Tahun (2025-2029)
+                    renderMultiYearIndikatorChart();
 
-                            let labelName = cd.target.length > 40 ? cd.target.substring(0, 40) + '...' : cd.target;
+                    // 2. Render Grafik Line Chart Capaian Indikator Utama
+                    let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
+                    let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+                    const colorPalette = [
+                        '#2563eb', '#dc2626', '#10b981', '#f59e0b', '#8b5cf6',
+                        '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+                    ];
 
-                            return {
+                    // Hanya tampilkan garis untuk indikator yang memiliki capaian Valid & Utama,
+                    // jika semua dijadikan Tidak Valid, tampilkan garis rata-rata 0% agar grafik tetap muncul bersih
+                    let multiDatasets = [];
+                    filteredCascading.forEach((cd, index) => {
+                        let color = colorPalette[index % colorPalette.length];
+                        let hasAnyValidInTw = false;
+
+                        let dataPoints = twPeriods.map(tw => {
+                            let match = validCapaian.filter(c =>
+                                c &&
+                                String(c.targetDirektur || '').trim() === String(cd.target || '').trim() &&
+                                c.triwulan && String(c.triwulan).trim().toUpperCase() === tw &&
+                                String(c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? String(c.tahun || '2025') : String(filterDashboardTahun))
+                            );
+                            if (match.length > 0) {
+                                hasAnyValidInTw = true;
+                                let targetVal = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
+                                let realVal = getAggregatedRealisasiForDashboard(match, cd.target, cd.tahun || '2025');
+                                return targetVal > 0 ? Number(((realVal / targetVal) * 100).toFixed(1)) : 0;
+                            }
+                            return 0;
+                        });
+
+                        // Hanya masukkan ke grafik jika indikator ini punya data Valid (atau tampilkan 0 jika ingin tetap terlihat garisnya)
+                        let labelName = String(cd.target || '').length > 40 ? String(cd.target).substring(0, 40) + '...' : String(cd.target || 'Indikator');
+                        if (hasAnyValidInTw) {
+                            multiDatasets.push({
                                 label: labelName,
                                 data: dataPoints,
                                 borderColor: color,
                                 backgroundColor: color,
-                                borderWidth: 2,
+                                borderWidth: 2.5,
                                 fill: false,
-                                tension: 0.2,
-                                spanGaps: true,
-                                pointBackgroundColor: dataPoints.map(v => v < 100 ? '#ef4444' : color),
-                                pointBorderColor: '#ffffff',
+                                tension: 0.25,
                                 pointRadius: 5,
                                 pointHoverRadius: 7
-                            };
-                        });
+                            });
+                        }
+                    });
 
-                        multiDatasets.push({
-                            label: 'Standar Target (100%)',
-                            data: [100, 100, 100, 100],
-                            borderColor: '#94a3b8',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            fill: false,
-                            pointRadius: 0
-                        });
+                    // Garis Standar Target 100% selalu tampil agar kanvas grafik selalu hidup meskipun semua data Tidak Valid
+                    multiDatasets.push({
+                        label: 'Standar Target (100%)',
+                        data: [100, 100, 100, 100],
+                        borderColor: '#94a3b8',
+                        backgroundColor: '#94a3b8',
+                        borderWidth: 2,
+                        borderDash: [6, 6],
+                        fill: false,
+                        pointRadius: 0
+                    });
 
-                        new Chart(ctx1, {
-                            type: 'line',
-                            data: { labels: chartLabels, datasets: multiDatasets },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        max: 140,
-                                        title: { display: true, text: 'Persentase Realisasi (%)', font: { weight: 'bold', size: 12 } },
-                                        ticks: { font: { size: 11 }, callback: v => v + '%' }
-                                    },
-                                    x: {
-                                        title: { display: true, text: 'Triwulan', font: { weight: 'bold', size: 12 } },
-                                        ticks: { font: { weight: 'bold', size: 12 } }
-                                    }
+                    safeInitChart('capaianChart', {
+                        type: 'line',
+                        data: { labels: chartLabels, datasets: multiDatasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 140,
+                                    title: { display: true, text: 'Persentase Realisasi (%)', font: { weight: 'bold', size: 12 } },
+                                    ticks: { font: { size: 11 }, callback: v => v + '%' }
                                 },
-                                plugins: {
-                                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 }, padding: 15 } },
-                                    datalabels: { display: false }
+                                x: {
+                                    title: { display: true, text: 'Triwulan', font: { weight: 'bold', size: 12 } },
+                                    ticks: { font: { weight: 'bold', size: 12 } }
                                 }
-                            }
-                        });
-                    }
-
-                    // 2. Multi-Year Chart
-                    renderMultiYearIndikatorChart();
-
-                    // 3. Unit Ranking Chart (Diperbaiki agar aman saat semua data "Tidak Valid" / unitVals kosong)
-                    const ctxRank = safeDestroyChart('unitRankingChart');
-                    if (ctxRank) {
-                        const unitNames = Object.keys(unitScores);
-                        const unitVals = Object.values(unitScores).map(v => Number(v.toFixed(1)));
-                        const hasRankData = unitVals.length > 0;
-
-                        new Chart(ctxRank, {
-                            type: 'bar',
-                            data: {
-                                labels: hasRankData ? unitNames : ['Belum Ada Data Unit Valid'],
-                                datasets: [{
-                                    label: 'Rata-rata Capaian Unit (%)',
-                                    data: hasRankData ? unitVals : [0],
-                                    backgroundColor: hasRankData ? unitVals.map(v => v >= 100 ? '#10b981' : v >= 80 ? '#3b82f6' : '#f59e0b') : ['#cbd5e1'],
-                                    borderRadius: 6
-                                }]
                             },
-                            plugins: [ChartDataLabels],
-                            options: {
-                                indexAxis: 'y',
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    x: { beginAtZero: true, max: 120, ticks: { callback: v => v + '%' } }
-                                },
-                                plugins: {
-                                    legend: { display: false },
-                                    datalabels: {
-                                        anchor: 'end',
-                                        align: 'right',
-                                        font: { weight: 'bold', size: 10 },
-                                        formatter: v => v > 0 ? v + '%' : ''
-                                    }
-                                }
+                            plugins: {
+                                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 }, padding: 15 } },
+                                datalabels: { display: false }
                             }
-                        });
-                    }
+                        }
+                    });
 
-                    // 4. Grafik Realisasi Anggaran
-                    const ctxAnggaran = safeDestroyChart('anggaranChart');
-                    if (ctxAnggaran) {
-                        let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
-                        let targetIkList = (DB.renstraIndikatorKinerja || []).filter(ik => activeIndikatorIds.length === 0 || activeIndikatorIds.includes(ik.id));
-                        if (targetIkList.length === 0) targetIkList = DB.renstraIndikatorKinerja || [];
+                    // 3. Render Grafik Peringkat Unit
+                    const unitNames = Object.keys(unitScores);
+                    const unitVals = Object.values(unitScores).map(v => Number(v.toFixed(1)));
+                    const hasRankData = unitVals.length > 0;
 
-                        const ikLabels = targetIkList.length > 0 ? targetIkList.map(ik => ik.namaIndikator.length > 20 ? ik.namaIndikator.substring(0, 20) + '...' : ik.namaIndikator) : ['Belum Ada Indikator'];
-                        const paguData = targetIkList.length > 0 ? targetIkList.map(ik => {
-                            let yKey = filterDashboardTahun !== 'Semua' ? 'anggaran' + filterDashboardTahun : 'anggaran2025';
-                            return Number(ik[yKey]) || 0;
-                        }) : [0];
-                        const realData = targetIkList.length > 0 ? targetIkList.map(ik => {
-                            let subRa = filteredRealisasiAdmin.filter(ra => ra.indikatorId === ik.id);
-                            return subRa.reduce((a, b) => a + (Number(b.realisasiAnggaran) || 0), 0);
-                        }) : [0];
-
-                        new Chart(ctxAnggaran, {
-                            type: 'bar',
-                            data: {
-                                labels: ikLabels,
-                                datasets: [
-                                    { label: 'Pagu Anggaran (Rp)', data: paguData, backgroundColor: '#3b82f6', borderRadius: 6 },
-                                    { label: 'Realisasi Anggaran (Rp)', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
-                                ]
+                    safeInitChart('unitRankingChart', {
+                        type: 'bar',
+                        data: {
+                            labels: hasRankData ? unitNames : ['Belum Ada Capaian Valid'],
+                            datasets: [{
+                                label: 'Rata-rata Capaian Unit (%)',
+                                data: hasRankData ? unitVals : [0],
+                                backgroundColor: hasRankData ? unitVals.map(v => v >= 100 ? '#10b981' : v >= 80 ? '#3b82f6' : '#f59e0b') : ['#cbd5e1'],
+                                borderRadius: 6
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { beginAtZero: true, max: 120, ticks: { callback: v => v + '%' } }
                             },
-                            plugins: [ChartDataLabels],
-                            options: {
-                                responsive: true, maintainAspectRatio: false,
-                                scales: { y: { beginAtZero: true } },
-                                plugins: {
-                                    legend: { position: 'bottom' },
-                                    datalabels: {
-                                        anchor: 'end', align: 'top', font: { weight: 'bold', size: 10 },
-                                        formatter: (value) => value > 0 ? 'Rp ' + (value / 1000000).toFixed(1) + 'Jt' : '0'
-                                    }
-                                }
+                            plugins: {
+                                legend: { display: false },
+                                datalabels: { display: false }
                             }
-                        });
-                    }
+                        }
+                    });
 
-                    // 5. Peta Risiko Inherent
-                    const ctxPre = safeDestroyChart('petaRisikoPreChart');
-                    if (ctxPre) {
-                        const preData = filteredRisiko.map(r => ({
-                            x: r.damp1, y: r.prob1, r: Math.max(12, r.skor1 * 1.2), label: r.pernyataan, skor: r.skor1
-                        }));
-                        new Chart(ctxPre, {
-                            type: 'bubble',
-                            data: {
-                                datasets: [{ label: 'Risiko Pre-Control', data: preData, backgroundColor: 'rgba(239, 68, 68, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
-                            },
-                            plugins: [ChartDataLabels],
-                            options: {
-                                responsive: true, maintainAspectRatio: false,
-                                scales: {
-                                    x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
-                                    y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
-                                },
-                                plugins: { legend: { display: false }, datalabels: { align: 'center', color: '#ffffff', formatter: (value) => value && value.skor ? `Skor:${value.skor}` : '' } }
-                            }
-                        });
-                    }
+                    // 4. Render Grafik Realisasi Anggaran
+                    let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
+                    let targetIkList = (DB.renstraIndikatorKinerja || []).filter(ik => activeIndikatorIds.length === 0 || activeIndikatorIds.includes(ik.id));
+                    if (targetIkList.length === 0) targetIkList = DB.renstraIndikatorKinerja || [];
 
-                    // 6. Peta Risiko Residu
-                    const ctxResidu = safeDestroyChart('petaRisikoResiduChart');
-                    if (ctxResidu) {
-                        const residuData = filteredRisiko.map(r => ({
-                            x: r.damp2, y: r.prob2, r: Math.max(12, r.skor2 * 1.2), label: r.pernyataan, skor: r.skor2
-                        }));
-                        new Chart(ctxResidu, {
-                            type: 'bubble',
-                            data: {
-                                datasets: [{ label: 'Risiko Residu', data: residuData, backgroundColor: 'rgba(16, 185, 129, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
-                            },
-                            plugins: [ChartDataLabels],
-                            options: {
-                                responsive: true, maintainAspectRatio: false,
-                                scales: {
-                                    x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
-                                    y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
-                                },
-                                plugins: { legend: { display: false }, datalabels: { align: 'center', color: '#ffffff', formatter: (value) => value && value.skor ? `Skor:${value.skor}` : '' } }
+                    const ikLabels = targetIkList.length > 0 ? targetIkList.map(ik => ik.namaIndikator.length > 20 ? ik.namaIndikator.substring(0, 20) + '...' : ik.namaIndikator) : ['Belum Ada Indikator'];
+                    const paguData = targetIkList.length > 0 ? targetIkList.map(ik => {
+                        let yKey = filterDashboardTahun !== 'Semua' ? 'anggaran' + filterDashboardTahun : 'anggaran2025';
+                        return Number(ik[yKey]) || 0;
+                    }) : [0];
+                    const realAngData = targetIkList.length > 0 ? targetIkList.map(ik => {
+                        let subRa = filteredRealisasiAdmin.filter(ra => ra.indikatorId === ik.id);
+                        return subRa.reduce((a, b) => a + (Number(b.realisasiAnggaran) || 0), 0);
+                    }) : [0];
+
+                    safeInitChart('anggaranChart', {
+                        type: 'bar',
+                        data: {
+                            labels: ikLabels,
+                            datasets: [
+                                { label: 'Pagu Anggaran (Rp)', data: paguData, backgroundColor: '#3b82f6', borderRadius: 6 },
+                                { label: 'Realisasi Anggaran (Rp)', data: realAngData, backgroundColor: '#10b981', borderRadius: 6 }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: { y: { beginAtZero: true } },
+                            plugins: {
+                                legend: { position: 'bottom' },
+                                datalabels: { display: false }
                             }
-                        });
-                    }
-                }, 100);
+                        }
+                    });
+
+                    // 5. Render Peta Risiko Inherent
+                    const preData = filteredRisiko.map(r => ({
+                        x: Number(r.damp1) || 1, y: Number(r.prob1) || 1, r: Math.max(10, (Number(r.skor1) || 1) * 1.1), label: r.pernyataan, skor: r.skor1
+                    }));
+                    safeInitChart('petaRisikoPreChart', {
+                        type: 'bubble',
+                        data: {
+                            datasets: [{ label: 'Risiko Pre-Control', data: preData, backgroundColor: 'rgba(239, 68, 68, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
+                                y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
+                            },
+                            plugins: { legend: { display: false }, datalabels: { display: false } }
+                        }
+                    });
+
+                    // 6. Render Peta Risiko Residu
+                    const residuData = filteredRisiko.map(r => ({
+                        x: Number(r.damp2) || 1, y: Number(r.prob2) || 1, r: Math.max(10, (Number(r.skor2) || 1) * 1.1), label: r.pernyataan, skor: r.skor2
+                    }));
+                    safeInitChart('petaRisikoResiduChart', {
+                        type: 'bubble',
+                        data: {
+                            datasets: [{ label: 'Risiko Residu', data: residuData, backgroundColor: 'rgba(16, 185, 129, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
+                                y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
+                            },
+                            plugins: { legend: { display: false }, datalabels: { display: false } }
+                        }
+                    });
+                }, 120);
             }
         }
-let multiYearChartInstance = null;
-function renderMultiYearIndikatorChart() {
+let dashboardChartInstances = {};
+
+        function safeInitChart(canvasId, config) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return null;
+            try {
+                if (dashboardChartInstances[canvasId]) {
+                    dashboardChartInstances[canvasId].destroy();
+                    delete dashboardChartInstances[canvasId];
+                }
+                const existing = typeof Chart.getChart === 'function' ? Chart.getChart(canvas) : null;
+                if (existing) existing.destroy();
+            } catch (e) {
+                console.warn('Cleanup chart warning:', e);
+            }
+            try {
+                const ctx = canvas.getContext('2d');
+                const instance = new Chart(ctx, config);
+                dashboardChartInstances[canvasId] = instance;
+                return instance;
+            } catch (err) {
+                console.error('Gagal merender grafik ' + canvasId + ':', err);
+                return null;
+            }
+        }
+
+        function renderMultiYearIndikatorChart() {
             const canvas = document.getElementById('targetVsRealMultiYearChart');
             if (!canvas) return;
             const selEl = document.getElementById('selectIndikatorMultiYearChart');
             const selectedInd = selEl ? selEl.value : 'Semua';
-            
+
             const allYears = ['2025', '2026', '2027', '2028', '2029'];
             const years = filterDashboardTahun !== 'Semua' ? [String(filterDashboardTahun)] : allYears;
             const ikList = (DB.renstraIndikatorKinerja || []).filter(ik => selectedInd === 'Semua' || ik.namaIndikator === selectedInd);
-            const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
 
             const targetData = years.map(yr => {
                 if (ikList.length === 0) return 0;
                 const sum = ikList.reduce((acc, ik) => {
-                    const cd = DB.cascadingDirektur.find(x => (x.indikatorId === ik.id || x.target === ik.namaIndikator) && String(x.tahun || '2025') === yr);
+                    const cd = (DB.cascadingDirektur || []).find(x => x && (x.indikatorId === ik.id || String(x.target || '').trim() === String(ik.namaIndikator || '').trim()) && String(x.tahun || '2025') === String(yr));
                     const tVal = (cd && cd.targetVal !== undefined) ? Number(cd.targetVal) : (ik['target' + yr] !== undefined ? Number(ik['target' + yr]) : 100);
-                    return acc + tVal;
+                    return acc + (isNaN(tVal) ? 100 : tVal);
                 }, 0);
-                return Number((sum / ikList.length).toFixed(2));
+                return Number((sum / ikList.length).toFixed(2)) || 0;
             });
 
             const realData = years.map(yr => {
-            if (ikList.length === 0) return 0;
-            const sum = ikList.reduce((acc, ik) => {
-                let caps = (DB.capaian || []).filter(c => c && c.targetDirektur === ik.namaIndikator && String(c.tahun || '2025') === String(yr) && String(c.status || '').trim() === 'Valid');
-                if (filterDashboardTim !== 'Semua') {
-                    caps = caps.filter(c => c.timKey === filterDashboardTim);
-                }
-                if (filterDashboardUnit !== 'Semua') {
-                    caps = caps.filter(c => c.unit === filterDashboardUnit);
-                }
-                if (filterDashboardTriwulan !== 'Semua') {
-                    caps = caps.filter(c => c.triwulan && String(c.triwulan).trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
-                }
-                const finalCaps = caps.filter(c => isCapaianUtamaForDashboard(c));
-                if (finalCaps.length === 0) return acc;
+                if (ikList.length === 0) return 0;
+                const sum = ikList.reduce((acc, ik) => {
+                    let caps = (DB.capaian || []).filter(c =>
+                        c &&
+                        String(c.targetDirektur || '').trim() === String(ik.namaIndikator || '').trim() &&
+                        String(c.tahun || '2025') === String(yr) &&
+                        String(c.status || '').trim() === 'Valid' &&
+                        isCapaianUtamaForDashboard(c)
+                    );
+                    if (filterDashboardTim !== 'Semua') {
+                        caps = caps.filter(c => c.timKey === filterDashboardTim);
+                    }
+                    if (filterDashboardUnit !== 'Semua') {
+                        caps = caps.filter(c => c.unit === filterDashboardUnit);
+                    }
+                    if (filterDashboardTriwulan !== 'Semua') {
+                        caps = caps.filter(c => c.triwulan && String(c.triwulan).trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
+                    }
+                    if (caps.length === 0) return acc;
 
-                finalCaps.sort((a, b) => (twOrder[String(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[String(b.triwulan || '').trim().toUpperCase()] || 0));
-                if (finalCaps.length === 0 || !finalCaps[finalCaps.length - 1]) return acc;
-                const rVal = Number(finalCaps[finalCaps.length - 1].realisasi) || 0;
-                return acc + rVal;
-            }, 0);
-            return Number((sum / ikList.length).toFixed(2));
-        });
+                    const rVal = getAggregatedRealisasiForDashboard(caps, ik.namaIndikator, yr);
+                    return acc + (Number(rVal) || 0);
+                }, 0);
+                return Number((sum / ikList.length).toFixed(2)) || 0;
+            });
 
-            if (multiYearChartInstance) multiYearChartInstance.destroy();
-            multiYearChartInstance = new Chart(canvas.getContext('2d'), {
+            safeInitChart('targetVsRealMultiYearChart', {
                 type: 'bar',
                 data: {
                     labels: years.map(y => 'Tahun ' + y),
                     datasets: [
                         { label: 'Target', data: targetData, backgroundColor: '#3b82f6', borderRadius: 6 },
-                        { label: 'Realisasi (TW Terakhir Valid)', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
+                        { label: 'Realisasi (Valid & Utama)', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
                     ]
                 },
-                plugins: [ChartDataLabels],
+                plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: { y: { beginAtZero: true } },
                     plugins: {
                         legend: { position: 'bottom' },
-                        datalabels: { anchor: 'end', align: 'top', font: { weight: 'bold', size: 10 } }
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: v => (v !== null && v !== undefined) ? v : 0
+                        }
                     }
                 }
             });
