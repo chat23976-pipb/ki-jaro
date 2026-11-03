@@ -19,8 +19,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- QRCode.js untuk Tanda Tangan Digital Ter-Hash -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Google Identity Services (SSO Login) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Google Fonts -->
@@ -55,27 +53,11 @@
         body { font-family: 'Inter', sans-serif; }
         .transition-all { transition: all 0.3s ease; }
         @media print {
-         @page {
-             size: A4 portrait;
-             margin: 18mm 15mm 20mm 15mm;
-         }
-         body * { visibility: hidden; }
-         #printableArea, #printableArea * { visibility: visible; }
-         #printableArea { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; border: none !important; padding: 0 !important; }
-         .no-print { display: none !important; }
-         .skp-page-break { page-break-inside: avoid; }
-         .skp-print-footer {
-             position: fixed;
-             bottom: 0;
-             right: 0;
-             font-size: 10px;
-             color: #475569;
-             font-family: sans-serif;
-         }
-     }
-     .skp-borderless-table, .skp-borderless-table tr, .skp-borderless-table td, .skp-borderless-table th {
-         border: none !important;
-     }
+            body * { visibility: hidden; }
+            #printableArea, #printableArea * { visibility: visible; }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: none; padding: 20px; }
+            .no-print { display: none !important; }
+        }
         /* Style tambahan untuk bagan organisasi / pohon cascading */
 .tree-box {
     background: #ffffff;
@@ -126,16 +108,11 @@ button { position: relative; z-index: 10; }
                 </label>
                 <input type="hidden" id="selfAvatarBase64" value="">
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-             <div>
-                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar</label>
-                 <input type="text" id="selfProfileName" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
-             </div>
-             <div>
-                 <label class="block font-semibold text-slate-700 mb-1 text-xs">NIP Pegawai</label>
-                 <input type="text" id="selfProfileNip" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold" placeholder="Contoh: 19900326...">
-             </div>
-         </div>
+
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar</label>
+                <input type="text" id="selfProfileName" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+            </div>
             <div>
                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Unit / Prodi / Subbag</label>
                 <input type="text" id="selfProfileUnit" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
@@ -403,14 +380,14 @@ button { position: relative; z-index: 10; }
             return Number(latestCaps[latestCaps.length - 1].realisasi) || 0;
         }
         let DB = {
-         users: [
-             { id: 'u1', username: 'deni.saputra@poltek-petrokimia.ac.id', password: '123', name: 'Administrator Sistem', nip: '199003262019011001', role: 'admin', unit: 'Pusat Data & Sistem' },
-             { id: 'u2', username: 'supardi@poltek-petrokimia.ac.id', password: '123', name: 'Dr. Supardi S.Pd., M.Pd', nip: '197611052002121003', role: 'direktur', unit: 'Pimpinan Tertinggi' },
-
-             // 3 Tim Kerja
-             { id: 'u3', username: 'asadian@poltek-petrokimia.ac.id', password: '123', name: 'Asadian Puja Enggita S.Si., M.MT', nip: '198804122018011002', role: 'tim_kerja', timKey: 'Akademik', unit: 'Tim Kerja Akademik' },
-             { id: 'u4', username: 'deni@poltek-petrokimia.ac.id', password: '123', name: 'Ir. Deni Saputra S.T., M.Sc', nip: '199003262019011001', role: 'tim_kerja', timKey: 'Umum dan Keuangan', unit: 'Tim Kerja Umum dan Keuangan' },
-             { id: 'u5', username: 'wirandi@poltek-petrokimia.ac.id', password: '123', name: 'Budi Kemahasiswaan, M.Pd.', nip: '198507192015021003', role: 'tim_kerja', timKey: 'Kemahasiswaan dan Kerjasama', unit: 'Tim Kerja Kemahasiswaan dan Kerjasama' },
+            users: [
+                { id: 'u1', username: 'deni.saputra@poltek-petrokimia.ac.id', password: '123', name: 'Administrator Sistem', role: 'admin', unit: 'Pusat Data & Sistem' },
+                { id: 'u2', username: 'supardi@poltek-petrokimia.ac.id', password: '123', name: 'Dr. Supardi S.Pd., M.Pd', role: 'direktur', unit: 'Pimpinan Tertinggi' },
+                
+                // 3 Tim Kerja
+                { id: 'u3', username: 'asadian@poltek-petrokimia.ac.id', password: '123', name: 'Asadian Puja Enggita S.Si., M.MT', role: 'tim_kerja', timKey: 'Akademik', unit: 'Tim Kerja Akademik' },
+                { id: 'u4', username: 'deni@poltek-petrokimia.ac.id', password: '123', name: 'Ir. Deni Saputra S.T., M.Sc', role: 'tim_kerja', timKey: 'Umum dan Keuangan', unit: 'Tim Kerja Umum dan Keuangan' },
+                { id: 'u5', username: 'wirandi@poltek-petrokimia.ac.id', password: '123', name: 'Budi Kemahasiswaan, M.Pd.', role: 'tim_kerja', timKey: 'Kemahasiswaan dan Kerjasama', unit: 'Tim Kerja Kemahasiswaan dan Kerjasama' },
 
                 // 12 Ketua Unit / Prodi / Subbag
                 { id: 'u6', username: 'prodi_tmip@poltek-petrokimia.ac.id', password: '123', name: 'Ketua Prodi TMIP', role: 'ketua_unit', unit: 'Prodi TMIP', timKey: 'Akademik' },
@@ -433,23 +410,10 @@ button { position: relative; z-index: 10; }
                 'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'
             ],
             
-            vmtsVisi: 'Sebagai penyelenggara pendidikan vokasi industri yang unggul (excellence) dan berdaya saing global di bidang Industri Petrokimia pada tahun 2030',
-         vmtsMisi: [
-             { id: 'm1', kode: 'M-01', uraian: 'Menyelenggarakan Pendidikan Tinggi Vokasi Industri sistem ganda pembelajaran Science, Technology, Engineering, and Mathematics (STEM) berstandar global.' },
-             { id: 'm2', kode: 'M-02', uraian: 'Melaksanakan penelitian terapan untuk pemecahan masalah di sektor industri prioritas & pengabdian masyarakat.' },
-             { id: 'm3', kode: 'M-03', uraian: 'Mengembangkan kompetensi transformasi digital industri 4.0 melalui Digital Capability Centre (DCC) & PIDI 4.0.' },
-             { id: 'm4', kode: 'M-04', uraian: 'Membangun kelembagaan inkubator bisnis industri, skema kompetensi (LSP), dan kelas industri (tailor made).' }
-         ],
-         vmtsTujuan: [
-             { id: 't1', misiId: 'm1', kode: 'T-01', uraian: 'Menghasilkan lulusan diploma/sarjana terapan yang kompeten sesuai kebutuhan industri dengan pembelajaran STEM berstandar global.' },
-             { id: 't2', misiId: 'm2', kode: 'T-02', uraian: 'Menghasilkan penelitian terapan di sektor industri Petrokimia dan pengabdian masyarakat IKM.' },
-             { id: 't3', misiId: 'm3', kode: 'T-03', uraian: 'Mewujudkan layanan transformasi digital industri 4.0 sebagai Satelit PIDI 4.0.' },
-             { id: 't4', misiId: 'm4', kode: 'T-04', uraian: 'Menghasilkan wirausaha industri melalui inkubator bisnis, peningkatan uji kompetensi, dan kelas industri.' }
-         ],
-         renstraTujuanKemenperin: [], 
-         renstraBPSDMI: [],           
-         renstraSasaranKinerja: [],   
-         renstraIndikatorKinerja: [],
+            renstraTujuanKemenperin: [], 
+            renstraBPSDMI: [],           
+            renstraSasaranKinerja: [],   
+            renstraIndikatorKinerja: [], 
 
             cascadingDirektur: [],       
             cascadingTim: [],            
@@ -460,10 +424,7 @@ button { position: relative; z-index: 10; }
             monevLakip: [],              // Fase 3 Poin 13
             monevSakip: [],              // Fase 3 Poin 14
             monevRenstra: [],            // Fase 3 Poin 15
-            masukanItjen: [],            // Fase 3 Poin 16 & 17
-            approvalLaporan: [],         // Revisi 5: Tabel Status Approval Laporan Kinerja
-            approvalSKP: [],             // Revisi 5: Tabel Status Approval Laporan SKP Berjenjang + QR Hash
-            auditLogs: [],               // Revisi 6: Audit Log Rekam Jejak Aktivitas (Khusus Admin)  
+            masukanItjen: [],            // Fase 3 Poin 16 & 17  
             dokumenPerencanaan: [
                 { nama: 'Renstra Politeknik Industri Petrokimia Banten 2025-2029', kategori: 'Renstra', tahun: '2025-2029', link: '#' },
                 { nama: 'RKA-KL Politeknik Industri Petrokimia Banten', kategori: 'RKA-KL', tahun: '2025', link: '#' },
@@ -1258,7 +1219,6 @@ function triggerGoogleLogin() {
          if (!modal) return;
 
          document.getElementById('selfProfileName').value = currentUser.name || '';
-      if (document.getElementById('selfProfileNip')) document.getElementById('selfProfileNip').value = currentUser.nip || '';
          document.getElementById('selfProfileUnit').value = currentUser.unit || '';
          document.getElementById('selfOldPass').value = '';
          document.getElementById('selfNewPass').value = '';
@@ -1318,9 +1278,6 @@ function triggerGoogleLogin() {
          if (!currentUser) return;
 
          const newName = sanitizeHTML(document.getElementById('selfProfileName').value.trim());
-      const newNip = document.getElementById('selfProfileNip') ? sanitizeHTML(document.getElementById('selfProfileNip').value.trim()) : (currentUser.nip || '');
-      currentUser.nip = newNip;
-      if (userIdx !== -1) DB.users[userIdx].nip = newNip;
          const newUnit = sanitizeHTML(document.getElementById('selfProfileUnit').value.trim());
          const newAvatar = document.getElementById('selfAvatarBase64').value;
 
@@ -1454,20 +1411,16 @@ function renderDashboardLayout() {
                             </a>
 
                             <a href="javascript:void(0)" onclick="switchTab('itjen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'itjen' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                             <i class="fa-solid fa-shield-halved w-5 text-center"></i>
-                             <span class="sidebar-text">Laporan Hasil Evaluasi Penilaian SAKIP</span>
-                             </a>
+                                <i class="fa-solid fa-shield-halved w-5 text-center"></i>
+                                <span class="sidebar-text">Masukan ITJEN & Tindak Lanjut</span>
+                            </a>
                             
                             ${currentUser.role === 'admin' ? `
-                             <a href="javascript:void(0)" onclick="switchTab('admin')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                 <i class="fa-solid fa-users-gear w-5 text-center"></i>
-                                 <span class="sidebar-text">Manajemen Pejabat & User</span>
-                             </a>
-                             <a href="javascript:void(0)" onclick="switchTab('auditlog')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'auditlog' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                 <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i>
-                                 <span class="sidebar-text">Audit Log Aktivitas</span>
-                             </a>
-                         ` : ''}
+                                <a href="javascript:void(0)" onclick="switchTab('admin')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                    <i class="fa-solid fa-users-gear w-5 text-center"></i>
+                                    <span class="sidebar-text">Manajemen Pejabat & User</span>
+                                </a>
+                            ` : ''}
 
                             <a href="javascript:void(0)" onclick="switchTab('laporan')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'laporan' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-file-pdf w-5 text-center"></i>
@@ -1638,7 +1591,6 @@ function renderDashboardLayout() {
             else if (tab === 'monev') renderMonevView(content);
             else if (tab === 'itjen') renderItjenView(content);
             else if (tab === 'admin') renderAdminView(content);
-            else if (tab === 'auditlog') renderAuditLogView(content);
             else if (tab === 'laporan') renderLaporanView(content);
             else if (tab === 'dokumen_ukur_lapor') renderDokumenUkurLaporView(content);
         }
@@ -2305,10 +2257,7 @@ function renderDokumenUkurLaporView(container) {
 
                 titleEl.innerText = isEdit ? 'Edit Indikator Kinerja, Range Ekspektasi & Anggaran' : 'Input Indikator Kinerja, Range Ekspektasi & Target 5 Tahun (Tier 4)';
                 formEl.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                     <div><label class="block font-semibold mb-1 text-xs">Pilih Sasaran Kinerja Renstra (Tier 3)</label><select id="r_parent" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs">${DB.renstraSasaranKinerja.map(x => `<option value="${x.id}" ${item.sasaranKinerjaId === x.id ? 'selected' : ''}>${x.kode} - ${x.sasaranKinerja}</option>`).join('')}</select></div>
-                     <div><label class="block font-semibold mb-1 text-xs text-emerald-800">Petakan ke Tujuan VMTS (Untuk % Strategy Map)</label><select id="r_tujuanVmtsId" class="w-full p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold">${(DB.vmtsTujuan || []).map(t => `<option value="${t.id}" ${item.tujuanVmtsId === t.id ? 'selected' : ''}>${t.kode} - ${t.uraian.substring(0, 45)}...</option>`).join('')}</select></div>
-                 </div>
+                    <div><label class="block font-semibold mb-1">Pilih Sasaran Kinerja (Intervensi)</label><select id="r_parent" required class="w-full p-3 bg-slate-50 border rounded-xl">${DB.renstraSasaranKinerja.map(x => `<option value="${x.id}" ${item.sasaranKinerjaId === x.id ? 'selected' : ''}>${x.kode} - ${x.sasaranKinerja}</option>`).join('')}</select></div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block font-semibold mb-1">Kode Indikator</label><input type="text" id="r_kodeIndikator" required value="${item.kodeIndikator}" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: IK-01"></div>
                         <div><label class="block font-semibold mb-1">Satuan</label><input type="text" id="r_satuan" required value="${item.satuan}" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="%, Dokumen, Orang"></div>
@@ -2441,7 +2390,6 @@ function renderDokumenUkurLaporView(container) {
              const data = {
                  id: isEdit ? DB.renstraIndikatorKinerja[editingRenstraIndex].id : 'ik_' + Date.now(),
                  sasaranKinerjaId: document.getElementById('r_parent').value,
-              tujuanVmtsId: document.getElementById('r_tujuanVmtsId') ? document.getElementById('r_tujuanVmtsId').value : ((DB.vmtsTujuan && DB.vmtsTujuan[0]) ? DB.vmtsTujuan[0].id : ''),
                  kodeIndikator: document.getElementById('r_kodeIndikator').value,
                  namaIndikator: document.getElementById('r_namaIndikator').value,
                  satuan: document.getElementById('r_satuan').value,
@@ -2524,271 +2472,49 @@ function renderDokumenUkurLaporView(container) {
             }
         }
 
-        // =========================================================================
-        // REVISI 1: STRATEGY MAP INTERAKTIF (VISI, MISI, TUJUAN & SASARAN) DI MENU DOKUMEN
-        // =========================================================================
-        let strategyMapZoom = 1;
-        let selectedStrategyNode = null;
-
-        // =========================================================================
-        // REVISI 1 & 2: STRATEGY MAP TEMA TERANG (PUTIH/BIRU/HIJAU/MERAH) + CRUD VMTS + % RIIL
-        // =========================================================================
-        let strategyMapZoom = 1;
-        let selectedStrategyNode = null;
-
-        function calcRealPercentageForIndikatorList(ikList) {
-            if (!ikList || ikList.length === 0) return 0;
-            const validCaps = (DB.capaian || []).filter(c => c.status === 'Valid');
-            let totalPct = 0;
-            let countWithTarget = 0;
-
-            ikList.forEach(ik => {
-                const matched = validCaps.filter(c => c.targetDirektur === ik.namaIndikator);
-                const targetVal = Number(ik.target2025) || 100;
-                countWithTarget++;
-                if (matched.length > 0) {
-                    const latestReal = Number(matched[matched.length - 1].realisasi) || 0;
-                    const pct = targetVal > 0 ? Math.min(120, (latestReal / targetVal) * 100) : 0;
-                    totalPct += pct;
-                }
-            });
-            return countWithTarget > 0 ? Number((totalPct / countWithTarget).toFixed(1)) : 0;
-        }
-
-        function getStrategyMapData() {
-            if (!Array.isArray(DB.vmtsMisi)) DB.vmtsMisi = [];
-            if (!Array.isArray(DB.vmtsTujuan)) DB.vmtsTujuan = [];
-            const allIk = DB.renstraIndikatorKinerja || [];
-
-            const tujuanList = DB.vmtsTujuan.map((t, idx) => {
-                const mappedIk = allIk.filter(ik => ik.tujuanVmtsId === t.id || (!ik.tujuanVmtsId && idx === 0));
-                return {
-                    id: t.id,
-                    misiId: t.misiId,
-                    code: t.kode || `T-0${idx + 1}`,
-                    text: t.uraian,
-                    score: calcRealPercentageForIndikatorList(mappedIk),
-                    ikList: mappedIk
-                };
-            });
-
-            const misiList = DB.vmtsMisi.map((m, idx) => {
-                const childTujuan = tujuanList.filter(t => t.misiId === m.id);
-                const mappedIk = childTujuan.flatMap(t => t.ikList);
-                return {
-                    id: m.id,
-                    code: `${m.kode || 'M-0' + (idx + 1)} • MISI`,
-                    rawKode: m.kode || `M-0${idx + 1}`,
-                    text: m.uraian,
-                    score: calcRealPercentageForIndikatorList(mappedIk),
-                    ikList: mappedIk
-                };
-            });
-
-            const sasaranList = (DB.renstraSasaranKinerja || []).map((sk, idx) => {
-                const mappedIk = allIk.filter(ik => ik.sasaranKinerjaId === sk.id);
-                return {
-                    id: sk.id,
-                    code: sk.kode || `SS-0${idx + 1}`,
-                    text: sk.sasaranKinerja,
-                    score: calcRealPercentageForIndikatorList(mappedIk),
-                    ikList: mappedIk
-                };
-            });
-
-            const visiScore = calcRealPercentageForIndikatorList(allIk);
-
-            return {
-                visi: {
-                    id: 'VISI',
-                    code: 'VISI POLITEKNIK INDUSTRI PETROKIMIA BANTEN 2030',
-                    text: DB.vmtsVisi || 'Sebagai penyelenggara pendidikan vokasi industri yang unggul (excellence) dan berdaya saing global di bidang Industri Petrokimia pada tahun 2030',
-                    score: visiScore,
-                    ikList: allIk
-                },
-                misiList,
-                tujuanList,
-                sasaranList
-            };
-        }
-
-        function selectStrategyMapNode(type, id) {
-            const data = getStrategyMapData();
-            if (type === 'VISI') selectedStrategyNode = { type: 'DETAIL NODE VISI', title: 'VISI INSTITUSI', ...data.visi };
-            else if (type === 'MISI') selectedStrategyNode = { type: 'DETAIL NODE MISI', title: id, ...(data.misiList.find(x => x.id === id) || data.misiList[0]) };
-            else if (type === 'TUJUAN') selectedStrategyNode = { type: 'DETAIL NODE TUJUAN', title: id, ...(data.tujuanList.find(x => x.id === id) || data.tujuanList[0]) };
-            else if (type === 'SASARAN') selectedStrategyNode = { type: 'DETAIL SASARAN STRATEGIS', title: id, ...(data.sasaranList.find(x => x.id === id) || data.sasaranList[0]) };
-            updateStrategyMapDetailPanel();
-        }
-
-        function adjustStrategyZoom(delta) {
-            if (delta === 0) strategyMapZoom = 1;
-            else strategyMapZoom = Math.min(1.25, Math.max(0.75, Number((strategyMapZoom + delta).toFixed(2))));
-            const canvas = document.getElementById('strategyMapCanvasInner');
-            const lbl = document.getElementById('strategyZoomLabel');
-            if (canvas) canvas.style.transform = `scale(${strategyMapZoom})`;
-            if (lbl) lbl.innerText = `${Math.round(strategyMapZoom * 100)}%`;
-        }
-
-        function updateStrategyMapDetailPanel() {
-            const panel = document.getElementById('strategyDetailPanel');
-            if (!panel) return;
-            const data = getStrategyMapData();
-            const node = selectedStrategyNode || { type: 'DETAIL NODE VISI', title: 'VISI', ...data.visi };
-            const validCaps = (DB.capaian || []).filter(c => c.status === 'Valid');
-            const relatedIk = node && Array.isArray(node.ikList) ? node.ikList : [];
-
-            panel.innerHTML = `
-                <div class="flex items-start justify-between border-b border-slate-200 pb-4">
-                    <div>
-                        <span class="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-[10px] font-extrabold uppercase tracking-wider">${sanitizeHTML(node ? node.type : 'DETAIL')}</span>
-                        <h4 class="text-slate-900 font-black text-base mt-1.5">${sanitizeHTML(node ? (node.code || node.title) : 'VISI')}</h4>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-2xl font-black ${(node && node.score >= 80) ? 'text-emerald-600' : (node && node.score > 0) ? 'text-blue-600' : 'text-rose-600'}">${node ? node.score : 0}%</span>
-                        <span class="block text-[10px] text-slate-500 font-semibold">Capaian Riil</span>
-                    </div>
-                </div>
-                <p class="text-xs text-slate-700 leading-relaxed bg-blue-50/60 p-3.5 rounded-xl border border-blue-100 font-medium">${sanitizeHTML(node ? node.text : '-')}</p>
-                <div class="space-y-2.5 pt-1">
-                    <span class="text-[11px] font-bold text-slate-700 block">Indikator Kinerja Terpetakan (${relatedIk.length} Indikator):</span>
-                    <div class="space-y-2 max-h-[340px] overflow-y-auto pr-1">
-                        ${relatedIk.length === 0 ? `<p class="text-xs text-slate-400 italic p-4 text-center bg-slate-50 rounded-xl border">Belum ada Indikator Kinerja Renstra yang dipetakan ke node ini.</p>` : relatedIk.map(ik => {
-                            const caps = validCaps.filter(c => c.targetDirektur === ik.namaIndikator);
-                            const real = caps.length > 0 ? caps[caps.length - 1].realisasi : 0;
-                            const target = ik.target2025 !== undefined ? ik.target2025 : 100;
-                            const achieved = real >= target && caps.length > 0;
-                            return `
-                                <div class="p-3 rounded-xl bg-white border ${achieved ? 'border-emerald-200' : 'border-slate-200'} hover:border-blue-400 shadow-2xs transition-all">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-xs font-extrabold text-blue-700">${sanitizeHTML(ik.kodeIndikator || 'IKU')}</span>
-                                        <span class="px-2 py-0.5 ${achieved ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'} rounded text-[9px] font-bold">${achieved ? 'TERCAPAI' : 'BELUM TERCAPAI'}</span>
-                                    </div>
-                                    <p class="text-xs font-semibold text-slate-800 leading-snug">${sanitizeHTML(ik.namaIndikator)}</p>
-                                    <div class="flex items-center justify-between mt-2 text-[11px]">
-                                        <span class="text-slate-500">Realisasi Valid:</span>
-                                        <span class="font-bold ${achieved ? 'text-emerald-600' : 'text-rose-600'}">${real} / ${target} ${sanitizeHTML(ik.satuan || '%')}</span>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
         function renderDokumenView(container) {
-            document.getElementById('pageTitle').innerText = 'Strategy Map (Visi, Misi, Tujuan) & Dokumen Perencanaan';
+            document.getElementById('pageTitle').innerText = 'Visi, Misi, Tujuan, Strategi & Dokumen Utama';
             const isAdmin = currentUser.role === 'admin';
-            const smData = getStrategyMapData();
-            selectedStrategyNode = { type: 'DETAIL NODE VISI', title: 'VISI', ...smData.visi };
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
-                    <!-- REVISI 1 & 2: STRATEGY MAP TEMA PUTIH / BIRU / HIJAU / MERAH ELEGAN + TOMBOL KELOLA VMTS -->
-                    <div class="bg-white text-slate-800 rounded-3xl shadow-md border border-blue-100 p-6 lg:p-8 space-y-6">
-                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-5">
-                            <div>
-                                <span class="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">Politeknik Industri Petrokimia Banten</span>
-                                <h2 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2.5 mt-1">
-                                    <i class="fa-solid fa-diagram-project text-blue-600"></i>
-                                    <span>Strategy Map — Pohon Kinerja Interaktif (Zoom, Hover & Drill-Down)</span>
-                                </h2>
-                                <p class="text-xs text-slate-500 mt-0.5">Nilai agregat (%) dihitung otomatis dari realisasi capaian indikator yang telah divalidasi</p>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-2 shrink-0">
-                                ${isAdmin ? `
-                                    <button type="button" onclick="openVmtsManageModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center space-x-1.5">
-                                        <i class="fa-solid fa-pen-to-square"></i><span>Kelola Visi, Misi & Tujuan</span>
-                                    </button>
-                                ` : ''}
-                                <div class="flex items-center bg-slate-100 border border-slate-200 rounded-xl px-2 py-1 space-x-2 text-xs">
-                                    <button type="button" onclick="adjustStrategyZoom(-0.1)" class="px-2 py-1 hover:bg-white rounded text-slate-700 font-bold">-</button>
-                                    <span id="strategyZoomLabel" class="font-bold text-blue-700 w-12 text-center">100%</span>
-                                    <button type="button" onclick="adjustStrategyZoom(0.1)" class="px-2 py-1 hover:bg-white rounded text-slate-700 font-bold">+</button>
-                                    <button type="button" onclick="adjustStrategyZoom(0)" class="px-2.5 py-1 bg-white hover:bg-slate-50 rounded-lg text-[11px] text-slate-700 font-semibold border">Reset</button>
-                                </div>
-                            </div>
+                    <!-- Visi Misi Tujuan Section -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-6">
+                        <div class="border-b pb-4">
+                            <h2 class="text-xl font-bold text-slate-900">VISI, MISI & TUJUAN</h2>
+                            <p class="text-xs text-primary-700 font-semibold uppercase tracking-wider mt-0.5">Politeknik Industri Petrokimia Banten</p>
                         </div>
 
-                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                            <!-- KANVAS KIRI (8 KOLOM): TEMA TERANG PUTIH/BIRU/HIJAU/MERAH -->
-                            <div class="lg:col-span-8 bg-gradient-to-b from-blue-50/50 via-white to-emerald-50/30 rounded-2xl border border-blue-100 p-5 sm:p-6 overflow-x-auto">
-                                <div id="strategyMapCanvasInner" class="space-y-6 transition-transform duration-300 origin-top">
-                                    
-                                    <!-- NODE VISI (BIRU-HIJAU ELEGAN) -->
-                                    <div class="flex flex-col items-center">
-                                        <div onclick="selectStrategyMapNode('VISI', 'VISI')" onmouseenter="selectStrategyMapNode('VISI', 'VISI')"
-                                            class="cursor-pointer w-full max-w-2xl p-5 rounded-2xl bg-gradient-to-r from-blue-700 via-blue-600 to-emerald-600 text-white border-2 border-blue-300 shadow-lg hover:scale-[1.01] transition-all">
-                                            <div class="flex items-center justify-between text-xs font-extrabold uppercase tracking-wider text-blue-100 mb-1.5">
-                                                <span>${sanitizeHTML(smData.visi.code)}</span>
-                                                <span class="px-3 py-0.5 bg-white text-blue-900 rounded-full font-black shadow-2xs">AGREGAT: ${smData.visi.score}%</span>
-                                            </div>
-                                            <p class="text-sm sm:text-base font-bold text-white leading-snug">"${sanitizeHTML(smData.visi.text)}"</p>
-                                        </div>
-                                        <div class="w-0.5 h-6 bg-blue-400"></div>
-                                        <span class="px-3 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-extrabold uppercase tracking-widest">${smData.misiList.length} MISI INSTITUSI</span>
-                                    </div>
-
-                                    <!-- GRID MISI (KARTU PUTIH BORDER BIRU) -->
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                                        ${smData.misiList.map(m => `
-                                            <div onclick="selectStrategyMapNode('MISI', '${m.id}')" onmouseenter="selectStrategyMapNode('MISI', '${m.id}')"
-                                                class="cursor-pointer p-4 rounded-2xl bg-white hover:bg-blue-50/60 border-2 border-blue-200 hover:border-blue-500 shadow-xs transition-all group">
-                                                <div class="flex items-center justify-between mb-1.5">
-                                                    <span class="px-2.5 py-0.5 bg-blue-600 text-white rounded-lg text-[11px] font-extrabold">${sanitizeHTML(m.code)}</span>
-                                                    <span class="text-xs font-black px-2 py-0.5 rounded-full ${m.score >= 80 ? 'bg-emerald-100 text-emerald-700' : m.score > 0 ? 'bg-blue-100 text-blue-700' : 'bg-rose-100 text-rose-700'}">${m.score}%</span>
-                                                </div>
-                                                <p class="text-xs text-slate-700 font-medium leading-relaxed">${sanitizeHTML(m.text)}</p>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-
-                                    <!-- GARIS KE TUJUAN (HIJAU) -->
-                                    <div class="flex flex-col items-center">
-                                        <div class="w-0.5 h-5 bg-emerald-400"></div>
-                                        <span class="px-3 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-extrabold uppercase tracking-widest">${smData.tujuanList.length} TUJUAN RENSTRA</span>
-                                    </div>
-
-                                    <!-- GRID TUJUAN (KARTU PUTIH BORDER HIJAU EMERALD) -->
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                        ${smData.tujuanList.map(t => `
-                                            <div onclick="selectStrategyMapNode('TUJUAN', '${t.id}')" onmouseenter="selectStrategyMapNode('TUJUAN', '${t.id}')"
-                                                class="cursor-pointer p-3.5 rounded-2xl bg-white hover:bg-emerald-50/60 border-2 border-emerald-200 hover:border-emerald-500 shadow-xs transition-all">
-                                                <div class="flex items-center justify-between mb-1.5">
-                                                    <span class="px-2 py-0.5 bg-emerald-600 text-white rounded text-[11px] font-black">${sanitizeHTML(t.code)}</span>
-                                                    <span class="text-xs font-extrabold ${t.score >= 80 ? 'text-emerald-700' : t.score > 0 ? 'text-blue-700' : 'text-rose-600'}">${t.score}%</span>
-                                                </div>
-                                                <p class="text-[11px] text-slate-700 font-medium leading-relaxed">${sanitizeHTML(t.text)}</p>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-
-                                    <!-- GARIS KE SASARAN STRATEGIS (MERAH) -->
-                                    <div class="flex flex-col items-center">
-                                        <div class="w-0.5 h-5 bg-rose-400"></div>
-                                        <span class="px-3 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[10px] font-extrabold uppercase tracking-widest">${smData.sasaranList.length} SASARAN STRATEGIS</span>
-                                    </div>
-
-                                    <!-- GRID SASARAN STRATEGIS (KARTU PUTIH BORDER MERAH ROSE) -->
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        ${smData.sasaranList.length === 0 ? `<div class="col-span-3 text-center text-xs text-slate-400 py-3 italic">Sasaran Kinerja dapat ditambahkan melalui menu Input & Manajemen Renstra.</div>` : smData.sasaranList.map(s => `
-                                            <div onclick="selectStrategyMapNode('SASARAN', '${s.id}')" onmouseenter="selectStrategyMapNode('SASARAN', '${s.id}')"
-                                                class="cursor-pointer p-3.5 rounded-2xl bg-white hover:bg-rose-50/50 border-2 border-rose-200 hover:border-rose-500 shadow-xs transition-all">
-                                                <div class="flex items-center justify-between mb-1">
-                                                    <span class="px-2 py-0.5 bg-rose-600 text-white rounded text-[11px] font-black">${sanitizeHTML(s.code)}</span>
-                                                    <span class="text-xs font-black ${s.score >= 80 ? 'text-emerald-700' : s.score > 0 ? 'text-blue-700' : 'text-rose-600'}">${s.score}%</span>
-                                                </div>
-                                                <p class="text-[11px] text-slate-700 font-medium leading-relaxed">${sanitizeHTML(s.text)}</p>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-
-                                </div>
+                        <div class="space-y-4 text-sm text-slate-700">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base text-primary-800">VISI</h3>
+                                <p class="mt-1 bg-slate-50 p-4 rounded-xl border italic">"Sebagai penyelenggara pendidikan vokasi industri yang unggul (excellence) dan berdaya saing global di bidang Industri Petrokimia pada tahun 2030"</p>
                             </div>
 
-                            <!-- PANEL DETAIL KANAN (4 KOLOM - PUTIH BERSIH) -->
-                            <div id="strategyDetailPanel" class="lg:col-span-4 bg-slate-50/70 rounded-2xl border border-slate-200 p-5 space-y-4 sticky top-24">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base text-primary-800">MISI</h3>
+                                <ol class="list-decimal list-inside space-y-1.5 mt-2 bg-slate-50 p-4 rounded-xl border">
+                                    <li>Menyelenggarakan Pendidikan Tinggi Vokasi Industri sistem ganda pembelajaran Science, Technology, Engineering, and Mathematics (STEM) berstandar global.</li>
+                                    <li>Melaksanakan penelitian terapan untuk pemecahan masalah di sektor industri prioritas.</li>
+                                    <li>Melaksanakan pengabdian masyarakat dalam pengembangan ekosistem industri kecil dan menengah.</li>
+                                    <li>Mengembangankan kompetensi transformasi digital "industri 4.0" melalui pembangunan Digital Capability Centre (DCC) sebagai Satelit Pusat Inovasi Industri Digital Industri (PIDI) 4.0.</li>
+                                    <li>Membangun dan mengembangkan kelembagaan inkubator bisnis industri yang terintegrasi dengan pemangku kepentingan terkait.</li>
+                                    <li>Mengembangkan skema kompetensi dan uji kompetensi.</li>
+                                    <li>Mengembangkan kelas industri untuk memenuhi kebutuhan tenaga kerja industri (tailor made).</li>
+                                </ol>
+                            </div>
+
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base text-primary-800">TUJUAN</h3>
+                                <ul class="space-y-2 mt-2 bg-slate-50 p-4 rounded-xl border">
+                                    <li><strong>a.</strong> Menghasilkan lulusan diploma, sarjana terapan, magister terapan dan/atau doctor terapan yang kompeten sesuai kebutuhan industri dengan menerapkan pembelajaran Science, Technology, Engineering, and Mathematics (STEM) berstandar global dan pendidikan sistem ganda.</li>
+                                    <li><strong>b.</strong> Menghasilkan penelitian terapan untuk pemecahan permasalahan di sektor industri Petrokimia.</li>
+                                    <li><strong>c.</strong> Menghasilkan kegiatan pengabdian masyarakat dalam pengembangan ekosistem Industri Kecil dan Menengah.</li>
+                                    <li><strong>d.</strong> Mewujudkan layanan transformasi digital industri 4.0 melalui pembangunan unit pengembangan (Capability Centre) 4.0 (empat titik nol) sebagai Satelit Pusat Inovasi Digital Industri 4.0 (PIDI 4.0).</li>
+                                    <li><strong>e.</strong> Menghasilkan wirausaha industri melalui inkubator bisnis industri yang terintegrasi dengan pemangku kepentingan terkait.</li>
+                                    <li><strong>f.</strong> Meningkatnya skema kompetensi dan uji kompetensi di Politeknik Industri Petrokimia Banten.</li>
+                                    <li><strong>g.</strong> Mewujudkan kelas industri untuk memenuhi kebutuhan tenaga kerja industri (tailor made).</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -2831,7 +2557,7 @@ function renderDokumenUkurLaporView(container) {
                                             <td class="p-3"><a href="${d.link}" target="_blank" class="text-blue-600 underline font-medium"><i class="fa-solid fa-link mr-1"></i> Buka Dokumen</a></td>
                                             <td class="p-3 text-center">
                                                 ${isAdmin ? `
-                                                    <button onclick="toggleDokumenPublik(${d.originalIdx})" class="px-3 py-1 rounded-full text-xs font-bold transition-all ${d.isPublic ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}">
+                                                    <button onclick="toggleDokumenPublik(${d.originalIdx})" class="px-3 py-1 rounded-full text-xs font-bold transition-all ${d.isPublic ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}" title="Klik untuk ubah status publik halaman depan">
                                                         <i class="fa-solid ${d.isPublic ? 'fa-eye' : 'fa-eye-slash'} mr-1"></i> ${d.isPublic ? 'Publik' : 'Privat'}
                                                     </button>
                                                 ` : `
@@ -2842,81 +2568,14 @@ function renderDokumenUkurLaporView(container) {
                                             </td>
                                             ${isAdmin ? `
                                                 <td class="p-3 text-center space-x-1">
-                                                    <button onclick="openDokumenModal('edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-primary-700 rounded hover:bg-blue-200"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="deleteDokumen(${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200"><i class="fa-solid fa-trash"></i></button>
+                                                    <button onclick="openDokumenModal('edit', ${d.originalIdx})" class="p-1.5 bg-blue-100 text-primary-700 rounded hover:bg-blue-200" title="Edit Dokumen"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="deleteDokumen(${d.originalIdx})" class="p-1.5 bg-rose-100 text-rose-600 rounded hover:bg-rose-200" title="Hapus Dokumen"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
                                     `).join('')}
                                 </tbody>
                             </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- MODAL KELOLA VISI, MISI & TUJUAN (REVISI 2) -->
-                <div id="vmtsManageModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
-                        <div class="flex justify-between items-center border-b pb-3">
-                            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sliders text-blue-600 mr-2"></i>Kelola Visi, Misi & Tujuan Institusi</h3>
-                            <button type="button" onclick="document.getElementById('vmtsManageModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-                        </div>
-
-                        <!-- Edit Visi -->
-                        <div class="space-y-2 bg-blue-50/50 p-4 rounded-xl border border-blue-200">
-                            <label class="block text-xs font-bold text-blue-900">Uraian Visi Institusi</label>
-                            <div class="flex gap-2">
-                                <input type="text" id="inputVmtsVisi" value="${sanitizeHTML(DB.vmtsVisi || '')}" class="flex-1 p-2.5 bg-white border rounded-xl text-xs font-semibold">
-                                <button type="button" onclick="saveVmtsVisi()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shrink-0">Simpan Visi</button>
-                            </div>
-                        </div>
-
-                        <!-- Kelola Misi -->
-                        <div class="space-y-3 border-t pt-4">
-                            <h4 class="font-bold text-xs text-slate-800 uppercase">Daftar Misi Institusi</h4>
-                            <div class="flex gap-2">
-                                <input type="text" id="newMisiKode" placeholder="Kode (M-05)" class="w-28 p-2 bg-slate-50 border rounded-xl text-xs font-bold">
-                                <input type="text" id="newMisiUraian" placeholder="Ketik uraian misi baru..." class="flex-1 p-2 bg-slate-50 border rounded-xl text-xs">
-                                <button type="button" onclick="addVmtsMisi()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shrink-0">+ Tambah Misi</button>
-                            </div>
-                            <div class="space-y-2 max-h-44 overflow-y-auto">
-                                ${(DB.vmtsMisi || []).map((m, i) => `
-                                    <div class="flex items-center justify-between gap-2 p-2.5 bg-slate-50 rounded-xl border text-xs">
-                                        <input type="text" id="editMisiKode_${i}" value="${sanitizeHTML(m.kode)}" class="w-20 p-1.5 bg-white border rounded font-bold">
-                                        <input type="text" id="editMisiText_${i}" value="${sanitizeHTML(m.uraian)}" class="flex-1 p-1.5 bg-white border rounded">
-                                        <button type="button" onclick="updateVmtsMisi(${i})" class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded font-bold">Simpan</button>
-                                        <button type="button" onclick="deleteVmtsMisi(${i})" class="px-2.5 py-1 bg-rose-100 text-rose-600 rounded font-bold"><i class="fa-solid fa-trash"></i></button>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-
-                        <!-- Kelola Tujuan -->
-                        <div class="space-y-3 border-t pt-4">
-                            <h4 class="font-bold text-xs text-slate-800 uppercase">Daftar Tujuan Renstra (Dipetakan ke Misi)</h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                                <select id="newTujuanMisiId" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold">
-                                    ${(DB.vmtsMisi || []).map(m => `<option value="${m.id}">${sanitizeHTML(m.kode)}</option>`).join('')}
-                                </select>
-                                <input type="text" id="newTujuanKode" placeholder="Kode (T-05)" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold">
-                                <input type="text" id="newTujuanUraian" placeholder="Uraian tujuan..." class="sm:col-span-2 p-2 bg-slate-50 border rounded-xl text-xs">
-                            </div>
-                            <div class="flex justify-end">
-                                <button type="button" onclick="addVmtsTujuan()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">+ Tambah Tujuan</button>
-                            </div>
-                            <div class="space-y-2 max-h-48 overflow-y-auto">
-                                ${(DB.vmtsTujuan || []).map((t, i) => `
-                                    <div class="flex items-center justify-between gap-2 p-2.5 bg-slate-50 rounded-xl border text-xs">
-                                        <select id="editTujuanMisi_${i}" class="p-1.5 bg-white border rounded font-bold">
-                                            ${(DB.vmtsMisi || []).map(m => `<option value="${m.id}" ${t.misiId === m.id ? 'selected' : ''}>${sanitizeHTML(m.kode)}</option>`).join('')}
-                                        </select>
-                                        <input type="text" id="editTujuanKode_${i}" value="${sanitizeHTML(t.kode)}" class="w-20 p-1.5 bg-white border rounded font-bold">
-                                        <input type="text" id="editTujuanText_${i}" value="${sanitizeHTML(t.uraian)}" class="flex-1 p-1.5 bg-white border rounded">
-                                        <button type="button" onclick="updateVmtsTujuan(${i})" class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded font-bold">Simpan</button>
-                                        <button type="button" onclick="deleteVmtsTujuan(${i})" class="px-2.5 py-1 bg-rose-100 text-rose-600 rounded font-bold"><i class="fa-solid fa-trash"></i></button>
-                                    </div>
-                                `).join('')}
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -2932,7 +2591,7 @@ function renderDokumenUkurLaporView(container) {
                             <input type="hidden" id="editDokumenIdx" value="-1">
                             <div>
                                 <label class="block font-semibold mb-1">Nama Dokumen</label>
-                                <input type="text" id="docNama" required class="w-full p-3 bg-slate-50 border rounded-xl">
+                                <input type="text" id="docNama" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: Renstra Politeknik 2025-2029">
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1">Kategori Dokumen</label>
@@ -2946,11 +2605,11 @@ function renderDokumenUkurLaporView(container) {
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1">Periode / Tahun</label>
-                                <input type="text" id="docTahun" required class="w-full p-3 bg-slate-50 border rounded-xl">
+                                <input type="text" id="docTahun" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 2025-2029 / 2025">
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1">Link Dokumen (URL)</label>
-                                <input type="url" id="docLink" required class="w-full p-3 bg-slate-50 border rounded-xl">
+                                <input type="url" id="docLink" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="https://drive.google.com/...">
                             </div>
                             <div class="flex justify-end space-x-2 pt-2">
                                 <button type="button" onclick="closeDokumenModal()" class="px-4 py-2 bg-slate-200 rounded-xl">Batal</button>
@@ -2960,71 +2619,8 @@ function renderDokumenUkurLaporView(container) {
                     </div>
                 </div>
             `;
-            setTimeout(updateStrategyMapDetailPanel, 50);
         }
-
-        function openVmtsManageModal() {
-            const m = document.getElementById('vmtsManageModal');
-            if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
-        }
-        async function saveVmtsVisi() {
-            DB.vmtsVisi = document.getElementById('inputVmtsVisi').value.trim();
-            await saveToMySQL();
-            showToast('Visi berhasil diperbarui!');
-            renderDokumenView(document.getElementById('mainContent'));
-        }
-        async function addVmtsMisi() {
-            const kode = document.getElementById('newMisiKode').value.trim() || `M-0${(DB.vmtsMisi || []).length + 1}`;
-            const uraian = document.getElementById('newMisiUraian').value.trim();
-            if (!uraian) return showToast('Uraian misi wajib diisi!', 'error');
-            DB.vmtsMisi.push({ id: 'm_' + Date.now(), kode, uraian });
-            await saveToMySQL();
-            showToast('Misi ditambahkan!');
-            renderDokumenView(document.getElementById('mainContent'));
-            openVmtsManageModal();
-        }
-        async function updateVmtsMisi(idx) {
-            DB.vmtsMisi[idx].kode = document.getElementById(`editMisiKode_${idx}`).value.trim();
-            DB.vmtsMisi[idx].uraian = document.getElementById(`editMisiText_${idx}`).value.trim();
-            await saveToMySQL();
-            showToast('Misi diperbarui!');
-            renderDokumenView(document.getElementById('mainContent'));
-            openVmtsManageModal();
-        }
-        async function deleteVmtsMisi(idx) {
-            if (!confirm('Hapus misi ini?')) return;
-            DB.vmtsMisi.splice(idx, 1);
-            await saveToMySQL();
-            renderDokumenView(document.getElementById('mainContent'));
-            openVmtsManageModal();
-        }
-        async function addVmtsTujuan() {
-            const misiId = document.getElementById('newTujuanMisiId').value;
-            const kode = document.getElementById('newTujuanKode').value.trim() || `T-0${(DB.vmtsTujuan || []).length + 1}`;
-            const uraian = document.getElementById('newTujuanUraian').value.trim();
-            if (!uraian) return showToast('Uraian tujuan wajib diisi!', 'error');
-            DB.vmtsTujuan.push({ id: 't_' + Date.now(), misiId, kode, uraian });
-            await saveToMySQL();
-            showToast('Tujuan ditambahkan!');
-            renderDokumenView(document.getElementById('mainContent'));
-            openVmtsManageModal();
-        }
-        async function updateVmtsTujuan(idx) {
-            DB.vmtsTujuan[idx].misiId = document.getElementById(`editTujuanMisi_${idx}`).value;
-            DB.vmtsTujuan[idx].kode = document.getElementById(`editTujuanKode_${idx}`).value.trim();
-            DB.vmtsTujuan[idx].uraian = document.getElementById(`editTujuanText_${idx}`).value.trim();
-            await saveToMySQL();
-            showToast('Tujuan diperbarui!');
-            renderDokumenView(document.getElementById('mainContent'));
-            openVmtsManageModal();
-        }
-        async function deleteVmtsTujuan(idx) {
-            if (!confirm('Hapus tujuan ini?')) return;
-            DB.vmtsTujuan.splice(idx, 1);
-            await saveToMySQL();
-            renderDokumenView(document.getElementById('mainContent'));
-            openVmtsManageModal();
-        }        async function toggleDokumenPublik(idx) {
+        async function toggleDokumenPublik(idx) {
             if (!DB.dokumenPerencanaan[idx]) return;
             DB.dokumenPerencanaan[idx].isPublic = !DB.dokumenPerencanaan[idx].isPublic;
             await saveToMySQL();
@@ -4302,21 +3898,6 @@ function renderMultiYearIndikatorChart() {
                     </div>
 
                     <!-- Bagian 1: Cascading Direktur ke Ketua Tim Kerja (Level 1) -->
-                    <!-- REVISI 2, 3, 4: CROSSCUTTING EXPLORER (SANKEY, CHORD KOLABORASI, MATRIKS BOBOT) -->
-                 <div class="bg-[#07111e] text-white rounded-3xl shadow-2xl border border-slate-800 p-6 lg:p-8 space-y-6">
-                     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-                         <div>
-                             <h3 class="text-lg font-black text-white tracking-tight">Crosscutting Explorer — Keterkaitan Lintas Unit & Indikator</h3>
-                             <p class="text-xs text-slate-400">Visualisasi aliran kontribusi Program/Unit &rarr; IKK Tim Kerja &rarr; IKU Direktur (Otomatis dari inputan Cascading)</p>
-                         </div>
-                         <div class="flex flex-wrap items-center gap-2">
-                             <button type="button" id="btnTabCC_sankey" onclick="switchCrosscuttingTab('sankey')" class="px-4 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-slate-950 shadow-md transition-all">1. Sankey Flow Diagram</button>
-                             <button type="button" id="btnTabCC_chord" onclick="switchCrosscuttingTab('chord')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">2. Chord Kolaborasi Unit</button>
-                             <button type="button" id="btnTabCC_matrix" onclick="switchCrosscuttingTab('matrix')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">3. Heatmap Matriks Bobot</button>
-                         </div>
-                     </div>
-                     <div id="crosscuttingExplorerBody" class="min-h-[380px]"></div>
-                 </div>
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -4495,17 +4076,9 @@ function renderMultiYearIndikatorChart() {
                                 <select id="dirIndikatorRenstra" required class="w-full p-3 bg-slate-50 border rounded-xl" onchange="updateDirAnggaranPreview()"></select>
                             </div>
                             <div class="bg-slate-50 p-3 rounded-xl border flex justify-between items-center text-xs">
-                           <div><span class="text-slate-500 block">Target (Renstra):</span><strong id="previewTargetVal" class="text-primary-700 text-sm">100</strong></div>
-                           <div class="text-right"><span class="text-slate-500 block">Pagu Anggaran:</span><strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong></div>
-                       </div>
-                       <div class="bg-blue-50/70 p-3.5 rounded-xl border border-blue-200 space-y-2 text-xs">
-                           <label class="block font-bold text-blue-900"><i class="fa-solid fa-scale-balanced mr-1"></i>Range Ekspektasi Kinerja (Direktur &rarr; Ketua Tim Kerja)</label>
-                           <div class="grid grid-cols-3 gap-2">
-                               <div><span class="text-[10px] font-bold text-rose-700 block">Di Bawah Ekspektasi</span><input type="text" id="dirRangeBawah" value="< 100%" required class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                               <div><span class="text-[10px] font-bold text-emerald-700 block">Sesuai Ekspektasi</span><input type="text" id="dirRangeSesuai" value="100%" required class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                               <div><span class="text-[10px] font-bold text-blue-700 block">Di Atas Ekspektasi</span><input type="text" id="dirRangeAtas" value="> 100%" required class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                           </div>
-                       </div>
+                                <div><span class="text-slate-500 block">Target (Renstra):</span><strong id="previewTargetVal" class="text-primary-700 text-sm">100</strong></div>
+                                <div class="text-right"><span class="text-slate-500 block">Pagu Anggaran:</span><strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong></div>
+                            </div>
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <label class="block font-semibold text-slate-700">Pilih Ketua Tim Kerja (Bisa Lebih Dari 1) & Status Peran</label>
@@ -4552,17 +4125,9 @@ function renderMultiYearIndikatorChart() {
                                 </select>
                             </div>
                             <div>
-                           <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator dari Direktur</label>
-                           <select id="timDirRef" required class="w-full p-3 bg-slate-50 border rounded-xl"></select>
-                       </div>
-                       <div class="bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200 space-y-2 text-xs">
-                           <label class="block font-bold text-emerald-900"><i class="fa-solid fa-scale-balanced mr-1"></i>Range Ekspektasi Kinerja Unit (Acuan Penilaian SKP)</label>
-                           <div class="grid grid-cols-3 gap-2">
-                               <div><span class="text-[10px] font-bold text-rose-700 block">Di Bawah Ekspektasi</span><input type="text" id="timRangeBawah" value="< 100%" required class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                               <div><span class="text-[10px] font-bold text-emerald-700 block">Sesuai Ekspektasi</span><input type="text" id="timRangeSesuai" value="100%" required class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                               <div><span class="text-[10px] font-bold text-blue-700 block">Di Atas Ekspektasi</span><input type="text" id="timRangeAtas" value="> 100%" required class="w-full p-2 bg-white border rounded-lg text-xs"></div>
-                           </div>
-                       </div>
+                                <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator dari Direktur</label>
+                                <select id="timDirRef" required class="w-full p-3 bg-slate-50 border rounded-xl"></select>
+                            </div>
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <label class="block font-semibold text-slate-700">Pilih Unit / Prodi / Subbag Tujuan (Bisa Lebih Dari 1)</label>
@@ -4674,209 +4239,7 @@ function renderMultiYearIndikatorChart() {
                 if (yrEl) updateTimDirRefOptions(yrEl.value);
 
                 renderTimUnitCheckboxes(currentUser.timKey);
-                switchCrosscuttingTab(window.activeCrosscuttingTab || 'sankey');
             }, 100);
-        }
-
-        // =========================================================================
-        // REVISI 2, 3, 4: ENGINE VISUALISASI SANKEY, CHORD & MATRIKS BOBOT DINAMIS
-        // =========================================================================
-        window.activeCrosscuttingTab = 'sankey';
-
-        function switchCrosscuttingTab(tabName) {
-            window.activeCrosscuttingTab = tabName;
-            ['sankey', 'chord', 'matrix'].forEach(t => {
-                const btn = document.getElementById('btnTabCC_' + t);
-                if (btn) {
-                    btn.className = (t === tabName)
-                        ? 'px-4 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-slate-950 shadow-md transition-all'
-                        : 'px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all';
-                }
-            });
-            renderCrosscuttingExplorerContent();
-        }
-
-        function renderCrosscuttingExplorerContent() {
-            const container = document.getElementById('crosscuttingExplorerBody');
-            if (!container) return;
-
-            const yr = (typeof filterCascadingTahun !== 'undefined' && filterCascadingTahun !== 'Semua') ? filterCascadingTahun : 'Semua';
-            let dirList = (DB.cascadingDirektur || []).filter(c => yr === 'Semua' || String(c.tahun || '2025') === String(yr));
-            let timList = (DB.cascadingTim || []).filter(c => yr === 'Semua' || String(c.tahun || '2025') === String(yr));
-
-            // Murni dari inputan Cascading Direktur & Ketua Tim Kerja (Jika dihapus/kosong, tampilkan kosong)
-            if (dirList.length === 0) {
-                container.innerHTML = `
-                    <div class="bg-[#0b1727] rounded-2xl border border-slate-800 p-10 text-center space-y-2">
-                        <i class="fa-solid fa-diagram-project text-slate-600 text-3xl"></i>
-                        <p class="text-sm font-bold text-slate-300">Belum Ada Data Cascading & Crosscutting pada Tahun ${yr}</p>
-                        <p class="text-xs text-slate-500">Silakan input Cascading melalui Direktur dan Ketua Tim Kerja di bawah. Sankey Flow, Chord Kolaborasi Unit, dan Matriks Bobot akan otomatis terbentuk sesuai inputan Anda.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const liveItems = dirList.map((cd, idx) => {
-                const relatedCt = timList.filter(ct => ct.targetDirektur === cd.target && String(ct.tahun || '2025') === String(cd.tahun || '2025'));
-                const units = Array.from(new Set(relatedCt.flatMap(ct => ct.unitTargets || [])));
-                const tims = Array.isArray(cd.timKeys) ? cd.timKeys : [];
-                return {
-                    code: `IKU-0${idx + 1}`,
-                    tahun: cd.tahun || '2025',
-                    target: cd.target,
-                    targetVal: `${cd.targetVal !== undefined ? cd.targetVal : 100} ${cd.satuan || '%'}`,
-                    tims: tims,
-                    units: units
-                };
-            });
-
-            if (window.activeCrosscuttingTab === 'sankey') {
-                const colors = ['#0284c7', '#7c3aed', '#d97706', '#059669', '#e11d48'];
-                const height = Math.max(320, liveItems.length * 115);
-                let svgPaths = '', leftNodes = '', midNodes = '', rightNodes = '';
-
-                liveItems.forEach((item, i) => {
-                    const y = 25 + i * 105;
-                    const col = colors[i % colors.length];
-                    const unitLabel = item.units.length > 0 ? item.units.join(', ') : 'Belum dicascading ke Unit';
-                    const timLabel = item.tims.length > 0 ? item.tims.join(' & ') : '-';
-
-                    if (item.units.length > 0) {
-                        svgPaths += `<path d="M 280 ${y + 38} C 340 ${y + 38}, 340 ${y + 38}, 400 ${y + 38}" stroke="${col}" stroke-width="16" fill="none" stroke-opacity="0.5"><title>${unitLabel} -> ${timLabel}</title></path>`;
-                    }
-                    if (item.tims.length > 0) {
-                        svgPaths += `<path d="M 640 ${y + 38} C 700 ${y + 38}, 700 ${y + 38}, 760 ${y + 38}" stroke="#10b981" stroke-width="18" fill="none" stroke-opacity="0.5"><title>${timLabel} -> ${item.target}</title></path>`;
-                    }
-
-                    leftNodes += `
-                        <div style="top:${y}px; left:10px; width:270px;" class="absolute">
-                            <div class="p-3.5 rounded-2xl border border-white/20 shadow-md" style="background-color:${col}">
-                                <p class="text-xs font-black text-white truncate">${sanitizeHTML(item.code)} (${item.tahun})</p>
-                                <p class="text-[11px] text-white/90 mt-1 truncate">Unit: ${sanitizeHTML(unitLabel)}</p>
-                            </div>
-                        </div>`;
-
-                    midNodes += `
-                        <div style="top:${y}px; left:400px; width:240px;" class="absolute">
-                            <div class="bg-teal-700/90 p-3.5 rounded-2xl border border-teal-400/30 shadow-md">
-                                <p class="text-xs font-black text-white truncate">Tim: ${sanitizeHTML(timLabel)}</p>
-                                <p class="text-[11px] text-teal-100 mt-1 truncate">${item.units.length} Unit Pelaksana</p>
-                            </div>
-                        </div>`;
-
-                    rightNodes += `
-                        <div style="top:${y}px; left:760px; width:290px;" class="absolute">
-                            <div class="bg-emerald-600/90 p-3.5 rounded-2xl border border-emerald-300/40 shadow-md">
-                                <p class="text-xs font-black text-white truncate">${sanitizeHTML(item.target)}</p>
-                                <p class="text-[11px] text-emerald-100 mt-1">Target: ${sanitizeHTML(item.targetVal)}</p>
-                            </div>
-                        </div>`;
-                });
-
-                container.innerHTML = `
-                    <div class="bg-[#0b1727] rounded-2xl border border-slate-800 p-5 overflow-x-auto">
-                        <div class="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider mb-3 min-w-[1060px] px-2">
-                            <span class="text-sky-400">UNIT / PRODI PELAKSANA (HASIL CASCADING TIM)</span>
-                            <span class="text-fuchsia-400">TIM KERJA KOORDINATOR</span>
-                            <span class="text-emerald-400">INDIKATOR KINERJA DIREKTUR</span>
-                        </div>
-                        <div class="relative min-w-[1060px]" style="height:${height}px;">
-                            <svg class="inset-0 w-full h-full" width="1060" height="${height}">${svgPaths}</svg>
-                            ${leftNodes}${midNodes}${rightNodes}
-                        </div>
-                    </div>
-                `;
-            } else if (window.activeCrosscuttingTab === 'chord') {
-                const activeUnits = Array.from(new Set(liveItems.flatMap(x => x.units)));
-                if (activeUnits.length === 0) {
-                    container.innerHTML = `<div class="bg-[#0b1727] rounded-2xl border border-slate-800 p-8 text-center text-xs text-slate-400">Belum ada Unit/Prodi yang dicascadingkan oleh Ketua Tim Kerja pada tahun ini.</div>`;
-                    return;
-                }
-                const cx = 190, cy = 190, r = 135;
-                const palette = ['#10b981', '#38bdf8', '#818cf8', '#f59e0b', '#f472b6', '#a855f7', '#34d399', '#fb7185'];
-                const coords = activeUnits.map((u, idx) => {
-                    const angle = (idx / activeUnits.length) * 2 * Math.PI - Math.PI / 2;
-                    return {
-                        name: u,
-                        short: u.replace('Prodi ', '').replace('Subbag ', '').substring(0, 10),
-                        x: cx + r * Math.cos(angle),
-                        y: cy + r * Math.sin(angle),
-                        color: palette[idx % palette.length]
-                    };
-                });
-
-                // Buat garis penghubung HANYA antar unit yang mengintervensi indikator yang sama
-                let chordsSvg = '';
-                liveItems.forEach(item => {
-                    for (let i = 0; i < item.units.length; i++) {
-                        for (let j = i + 1; j < item.units.length; j++) {
-                            const c1 = coords.find(c => c.name === item.units[i]);
-                            const c2 = coords.find(c => c.name === item.units[j]);
-                            if (c1 && c2) {
-                                chordsSvg += `<path d="M ${c1.x} ${c1.y} Q ${cx} ${cy} ${c2.x} ${c2.y}" stroke="${c1.color}" stroke-width="5" stroke-opacity="0.65" fill="none"><title>Kolaborasi ${c1.name} ↔ ${c2.name} pada ${item.target}</title></path>`;
-                            }
-                        }
-                    }
-                });
-
-                const nodesSvg = coords.map(c => `
-                    <g><circle cx="${c.x}" cy="${c.y}" r="24" fill="${c.color}" stroke="#0b1727" stroke-width="3"></circle>
-                    <text x="${c.x}" y="${c.y + 4}" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="bold">${sanitizeHTML(c.short)}</text></g>
-                `).join('');
-
-                container.innerHTML = `
-                    <div class="bg-[#0b1727] rounded-2xl border border-slate-800 p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                        <div class="lg:col-span-5 flex justify-center">
-                            <svg width="380" height="380" viewBox="0 0 380 380">
-                                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1e293b" stroke-width="14"></circle>
-                                ${chordsSvg}${nodesSvg}
-                            </svg>
-                        </div>
-                        <div class="lg:col-span-7 space-y-3">
-                            <h4 class="text-base font-black text-white">Sinergi Crosscutting Antar-Unit Kerja (Real-Time)</h4>
-                            ${liveItems.map(item => `
-                                <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-emerald-500/30 text-xs">
-                                    <span class="font-bold text-emerald-400">${sanitizeHTML(item.target)} (${item.tahun}):</span>
-                                    <p class="text-slate-300 mt-1">Dikerjakan bersama oleh: <strong>${item.units.length > 0 ? sanitizeHTML(item.units.join(' ↔ ')) : 'Belum ada unit'}</strong></p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            } else {
-                const cols = DB.timKerjaList || ['Akademik', 'Umum dan Keuangan', 'Kemahasiswaan dan Kerjasama'];
-                container.innerHTML = `
-                    <div class="bg-[#0b1727] rounded-2xl border border-slate-800 p-6 space-y-4 overflow-x-auto">
-                        <h4 class="text-sm font-black text-white">Matriks Bobot Kontribusi Indikator Crosscutting (%) — Berdasarkan Input Cascading</h4>
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="border-b border-slate-800 text-slate-400">
-                                    <th class="p-3">Indikator Kinerja (Direktur)</th>
-                                    ${cols.map(c => `<th class="p-3 text-center">Tim ${sanitizeHTML(c)}</th>`).join('')}
-                                    <th class="p-3">Unit / Prodi Terkait</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-800/80">
-                                ${liveItems.map((item) => {
-                                    const share = item.tims.length > 0 ? Math.round(100 / item.tims.length) : 0;
-                                    return `
-                                        <tr class="hover:bg-slate-900/60">
-                                            <td class="p-3.5 font-bold text-white">${sanitizeHTML(item.target)} (${item.tahun})</td>
-                                            ${cols.map(colTim => {
-                                                const active = item.tims.includes(colTim);
-                                                const pct = active ? share : 0;
-                                                const badgeCls = pct >= 50 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : pct > 0 ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'text-slate-600';
-                                                return `<td class="p-3.5 text-center"><span class="inline-block px-3 py-1 rounded-lg font-extrabold ${badgeCls}">${pct}%</span></td>`;
-                                            }).join('')}
-                                            <td class="p-3.5 text-slate-300">${item.units.length > 0 ? sanitizeHTML(item.units.join(', ')) : '-'}</td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            }
         }
         
         function updateDirAnggaranPreview() {
@@ -5099,12 +4462,7 @@ function updateDirRenstraOptions(tahun) {
                         satuan: satuan,
                         anggaran: anggaran,
                         timKeys: chosenTims,
-                        timRoles: timRoles,
-                   rangeEkspektasi: {
-                       bawah: document.getElementById('dirRangeBawah') ? document.getElementById('dirRangeBawah').value.trim() : '< 100%',
-                       sesuai: document.getElementById('dirRangeSesuai') ? document.getElementById('dirRangeSesuai').value.trim() : '100%',
-                       atas: document.getElementById('dirRangeAtas') ? document.getElementById('dirRangeAtas').value.trim() : '> 100%'
-                   }
+                        timRoles: timRoles
                     };
                 }
                 showToast('Cascading Direktur (Utama & Support) berhasil diperbarui!');
@@ -5119,11 +4477,6 @@ function updateDirRenstraOptions(tahun) {
                     anggaran: anggaran,
                     timKeys: chosenTims,
                     timRoles: timRoles,
-                   rangeEkspektasi: {
-                       bawah: document.getElementById('dirRangeBawah') ? document.getElementById('dirRangeBawah').value.trim() : '< 100%',
-                       sesuai: document.getElementById('dirRangeSesuai') ? document.getElementById('dirRangeSesuai').value.trim() : '100%',
-                       atas: document.getElementById('dirRangeAtas') ? document.getElementById('dirRangeAtas').value.trim() : '> 100%'
-                   }
                     status: 'Aktif'
                 });
                 showToast('Cascading Direktur berhasil disimpan!');
@@ -5365,12 +4718,7 @@ async function saveCascadingTim(e) {
                         targetDirektur: targetDir,
                         timKey: editTimKey || currentUser.timKey || 'Akademik',
                         unitTargets: chosenUnits,
-                        unitRoles: unitRoles,
-                   rangeEkspektasi: {
-                       bawah: document.getElementById('timRangeBawah') ? document.getElementById('timRangeBawah').value.trim() : '< 100%',
-                       sesuai: document.getElementById('timRangeSesuai') ? document.getElementById('timRangeSesuai').value.trim() : '100%',
-                       atas: document.getElementById('timRangeAtas') ? document.getElementById('timRangeAtas').value.trim() : '> 100%'
-                   }
+                        unitRoles: unitRoles
                     };
                 }
                 showToast('Cascading Unit berhasil diperbarui!');
@@ -5381,12 +4729,7 @@ async function saveCascadingTim(e) {
                     targetDirektur: targetDir,
                     timKey: currentUser.timKey || 'Akademik',
                     unitTargets: chosenUnits,
-                    unitRoles: unitRoles,
-                   rangeEkspektasi: {
-                       bawah: document.getElementById('timRangeBawah') ? document.getElementById('timRangeBawah').value.trim() : '< 100%',
-                       sesuai: document.getElementById('timRangeSesuai') ? document.getElementById('timRangeSesuai').value.trim() : '100%',
-                       atas: document.getElementById('timRangeAtas') ? document.getElementById('timRangeAtas').value.trim() : '> 100%'
-                   }
+                    unitRoles: unitRoles
                 });
                 showToast('Cascading ke Unit/Prodi berhasil disimpan!');
             }
@@ -6850,17 +6193,18 @@ async function saveCascadingTim(e) {
             renderRisikoView(document.getElementById('mainContent'));
         }
         function renderTindakLanjutMonitorView(container) {
-         document.getElementById('pageTitle').innerText = 'Monitoring Tindak Lanjut & Scoreboard Pencapaian';
-         const isDirektur = currentUser.role === 'direktur';
-         const isTim = currentUser.role === 'tim_kerja';
-         const isKaUnitOrStaf = currentUser.role === 'ketua_unit' || SUB_UNIT_ROLES.includes(currentUser.role);
+            document.getElementById('pageTitle').innerText = 'Monitoring Tindak Lanjut & Scoreboard Pencapaian';
+            const isDirektur = currentUser.role === 'direktur';
+            const isTim = currentUser.role === 'tim_kerja';
 
-         let list = DB.capaian;
-         if (isKaUnitOrStaf) {
-             list = DB.capaian.filter(c => String(c.unit || '').toLowerCase() === String(currentUser.unit || '').toLowerCase());
-         } else if (isTim) {
-             list = DB.capaian.filter(c => c.timKey === currentUser.timKey);
-         }
+            let list = DB.capaian;
+            if (isTim) {
+                list = DB.capaian.filter(c => c.timKey === currentUser.timKey);
+            }
+
+            if (filterTindakLanjutTahun !== 'Semua') {
+                list = list.filter(c => (c.tahun || '2025') === filterTindakLanjutTahun);
+            }
 
             let totalCapaianList = list.length;
             let tindakLanjutDone = list.filter(c => c.statusTindakLanjut === 'Sudah Ditindaklanjuti').length;
@@ -7015,16 +6359,10 @@ async function saveCascadingTim(e) {
                         </div>
                         <form onsubmit="saveUser(event)" class="space-y-4 text-sm">
                             <input type="hidden" id="editUserIndex" value="-1">
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                             <div>
-                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar</label>
-                                 <input type="text" id="uName" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Nama Pejabat / Staf / Dosen">
-                             </div>
-                             <div>
-                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">NIP Pejabat / Pegawai</label>
-                                 <input type="text" id="uNip" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Contoh: 197611052002121003">
-                             </div>
-                         </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar</label>
+                                <input type="text" id="uName" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Nama Pejabat / Dosen / Tendik">
+                            </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block font-semibold text-slate-700 mb-1 text-xs">Email Institusi (Username)</label>
@@ -7610,8 +6948,6 @@ async function saveCascadingTim(e) {
                 roles: selectedRoles,
                 timKey: document.getElementById('uTimKey').value,
                 unit: sanitizeHTML(document.getElementById('uUnit').value.trim())
-                name: document.getElementById('uName').value.trim(),
-                nip: document.getElementById('uNip') ? document.getElementById('uNip').value.trim() : '',
             };
 
             if (idx !== -1) {
@@ -7658,1128 +6994,169 @@ async function saveCascadingTim(e) {
             showToast(`Password untuk ${DB.users[idx].name} direset menjadi: 123456`);
         }
 
-// =========================================================================
-        // REVISI 6: AUDIT LOG — REKAM JEJAK AKTIVITAS & PERUBAHAN DATA (KHUSUS ADMIN)
-        // =========================================================================
-        function recordAuditLog(aksi, modul, detail) {
-            if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
-            DB.auditLogs.unshift({
-                id: 'log_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-                waktu: new Date().toLocaleString('id-ID'),
-                user: currentUser ? currentUser.name : 'Sistem',
-                username: currentUser ? currentUser.username : '-',
-                role: currentUser ? (ROLE_LABELS[currentUser.role] || currentUser.role) : '-',
-                unit: currentUser ? currentUser.unit : '-',
-                aksi: aksi,
-                modul: modul,
-                detail: detail
-            });
-            if (DB.auditLogs.length > 500) DB.auditLogs = DB.auditLogs.slice(0, 500);
-        }
+function renderLaporanView(container) {
+            document.getElementById('pageTitle').innerText = 'Pusat Laporan Kinerja & SKP (Digital Signature & QR Code)';
+            const isKaUnit = currentUser.role === 'ketua_unit';
+            const isTim = currentUser.role === 'tim_kerja';
 
-        // =========================================================================
-        // REVISI 13: AUDIT LOG DENGAN FILTER RENTANG TANGGAL & EKSPOR CSV / PDF
-        // =========================================================================
-        let filterAuditStartDate = '';
-        let filterAuditEndDate = '';
-
-        function recordAuditLog(aksi, modul, detail) {
-            if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
-            const now = new Date();
-            DB.auditLogs.unshift({
-                id: 'log_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-                isoDate: now.toISOString().split('T')[0],
-                waktu: now.toLocaleString('id-ID'),
-                user: currentUser ? currentUser.name : 'Sistem',
-                username: currentUser ? currentUser.username : '-',
-                role: currentUser ? (ROLE_LABELS[currentUser.role] || currentUser.role) : '-',
-                unit: currentUser ? currentUser.unit : '-',
-                aksi: aksi,
-                modul: modul,
-                detail: detail
-            });
-            if (DB.auditLogs.length > 500) DB.auditLogs = DB.auditLogs.slice(0, 500);
-        }
-
-        function getFilteredAuditLogs() {
-            if (!Array.isArray(DB.auditLogs)) return [];
-            return DB.auditLogs.filter(log => {
-                const logDate = log.isoDate || '';
-                if (filterAuditStartDate && logDate && logDate < filterAuditStartDate) return false;
-                if (filterAuditEndDate && logDate && logDate > filterAuditEndDate) return false;
-                return true;
-            });
-        }
-
-        function exportAuditLogCSV() {
-            const list = getFilteredAuditLogs();
-            if (list.length === 0) return showToast('Tidak ada data Audit Log pada rentang tanggal ini!', 'error');
-            const headers = ['Waktu', 'Tanggal ISO', 'Nama Pengguna', 'Role', 'Unit Kerja', 'Modul', 'Aksi', 'Rincian Perubahan'];
-            const rows = list.map(l => [
-                `"${(l.waktu || '').replace(/"/g, '""')}"`,
-                `"${(l.isoDate || '')}"`,
-                `"${(l.user || '').replace(/"/g, '""')}"`,
-                `"${(l.role || '').replace(/"/g, '""')}"`,
-                `"${(l.unit || '').replace(/"/g, '""')}"`,
-                `"${(l.modul || '').replace(/"/g, '""')}"`,
-                `"${(l.aksi || '').replace(/"/g, '""')}"`,
-                `"${(l.detail || '').replace(/"/g, '""')}"`
-            ].join(','));
-            const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement('a');
-            link.setAttribute('href', encodedUri);
-            link.setAttribute('download', `Audit_Log_KiJaro_${filterAuditStartDate || 'All'}_sd_${filterAuditEndDate || 'All'}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        }
-
-        function renderAuditLogView(container) {
-            document.getElementById('pageTitle').innerText = 'Audit Log — Rekam Jejak Aktivitas & Perubahan Data';
-            if (currentUser.role !== 'admin') {
-                container.innerHTML = `<div class="p-8 bg-white rounded-2xl border text-center text-rose-600 font-bold">Akses Ditolak: Menu Audit Log hanya untuk Administrator Sistem.</div>`;
-                return;
-            }
-            const filteredLogs = getFilteredAuditLogs();
+            if (!Array.isArray(DB.capaian)) DB.capaian = [];
 
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row lg:items-end justify-between gap-4 no-print">
-                        <div>
-                            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-clock-rotate-left text-primary-600 mr-2"></i>Rekam Jejak Aktivitas Pengguna & Perubahan Data</h3>
-                            <p class="text-xs text-slate-500">Saring aktivitas berdasarkan rentang tanggal dan ekspor ke CSV atau PDF</p>
-                        </div>
-                        <div class="flex flex-wrap items-end gap-3">
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Dari Tanggal</label>
-                                <input type="date" value="${filterAuditStartDate}" onchange="filterAuditStartDate = this.value; renderAuditLogView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
+                    <!-- Tombol Pilihan Menu Laporan -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between hover:border-blue-400 transition-all">
+                            <div class="space-y-1">
+                                <span class="px-2.5 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full">Format SAKIP</span>
+                                <h3 class="text-base font-bold text-slate-900">Laporan Capaian Kinerja</h3>
+                                <p class="text-xs text-slate-500">Rekapitulasi realisasi indikator kinerja, efektivitas & efisiensi</p>
                             </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Sampai Tanggal</label>
-                                <input type="date" value="${filterAuditEndDate}" onchange="filterAuditEndDate = this.value; renderAuditLogView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                            </div>
-                            <button onclick="filterAuditStartDate=''; filterAuditEndDate=''; renderAuditLogView(document.getElementById('mainContent'));" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">Reset</button>
-                            <button onclick="exportAuditLogCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow flex items-center space-x-1.5">
-                                <i class="fa-solid fa-file-csv"></i><span>Export CSV</span>
-                            </button>
-                            <button onclick="window.print()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold shadow flex items-center space-x-1.5">
-                                <i class="fa-solid fa-file-pdf"></i><span>Export PDF</span>
+                            <button onclick="openLaporanModal('kinerja')" class="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-xs shadow-md flex items-center space-x-2 shrink-0">
+                                <i class="fa-solid fa-file-pdf"></i>
+                                <span>Buka Laporan</span>
                             </button>
                         </div>
-                    </div>
 
-                    <div id="printableArea" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-4">
-                        <div class="mb-3 flex justify-between items-center border-b pb-2">
-                            <h4 class="font-bold text-sm text-slate-900">Daftar Rekam Jejak Aktivitas (Audit Log)</h4>
-                            <span class="text-xs font-bold text-blue-700">${filteredLogs.length} Data Ditampilkan</span>
+                        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between hover:border-emerald-400 transition-all">
+                            <div class="space-y-1">
+                                <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">Format Resmi ASN</span>
+                                <h3 class="text-base font-bold text-slate-900">Laporan SKP Pegawai</h3>
+                                <p class="text-xs text-slate-500">Sasaran Kinerja Pegawai (Aktif jika Tim Kerja telah Valid)</p>
+                            </div>
+                            <button onclick="openLaporanModal('skp')" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs shadow-md flex items-center space-x-2 shrink-0">
+                                <i class="fa-solid fa-award"></i>
+                                <span>Buka SKP</span>
+                            </button>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-xs">
-                                <thead class="bg-slate-50 text-slate-700 font-bold border-b">
-                                    <tr>
-                                        <th class="p-3">Waktu</th>
-                                        <th class="p-3">Nama Pengguna & Role</th>
-                                        <th class="p-3">Unit Kerja</th>
-                                        <th class="p-3">Modul</th>
-                                        <th class="p-3">Aksi</th>
-                                        <th class="p-3">Rincian Perubahan Data</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">
-                                    ${filteredLogs.length === 0 ? `<tr><td colspan="6" class="p-8 text-center text-slate-400">Tidak ada rekam jejak aktivitas pada rentang tanggal tersebut.</td></tr>` : filteredLogs.map(log => `
-                                        <tr class="hover:bg-slate-50">
-                                            <td class="p-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">${sanitizeHTML(log.waktu)}</td>
-                                            <td class="p-3 font-bold text-slate-900">${sanitizeHTML(log.user)}<span class="block text-[10px] text-blue-600 font-semibold">${sanitizeHTML(log.role)}</span></td>
-                                            <td class="p-3 text-slate-600">${sanitizeHTML(log.unit)}</td>
-                                            <td class="p-3"><span class="px-2.5 py-1 bg-slate-100 rounded-full font-bold text-[10px]">${sanitizeHTML(log.modul)}</span></td>
-                                            <td class="p-3 font-bold text-emerald-700">${sanitizeHTML(log.aksi)}</td>
-                                            <td class="p-3 text-slate-700">${sanitizeHTML(log.detail)}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                    </div>
+                </div>
+
+                <!-- Modal Pop-up Laporan dengan Live Filter, QR Code & Digital Signature (Fase 4 Poin 20, 21) -->
+                <div id="laporanPopupModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs hidden items-center justify-center z-[100] p-4 overflow-y-auto">
+                    <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-8 space-y-6 my-8 relative animate-fadeIn">
+                        <!-- Toolbar Atas Modal (Filter Live & Tombol Cetak PDF/CSV) -->
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4 no-print">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                                    <i class="fa-solid fa-print"></i>
+                                </div>
+                                <div>
+                                    <h3 id="modalLaporanHeaderTitle" class="font-bold text-slate-900 text-base">Pratinjau Laporan Kinerja</h3>
+                                    <p class="text-xs text-slate-500">Filter live di bawah langsung memperbarui isi dokumen</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <select id="liveFilterPeriode" onchange="refreshLiveLaporanContent()" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-slate-700 outline-none">
+                                    <option value="Semua">Semua Periode / TW</option>
+                                    <option value="TW 1">Triwulan 1</option>
+                                    <option value="TW 2">Triwulan 2</option>
+                                    <option value="TW 3">Triwulan 3</option>
+                                    <option value="TW 4">Triwulan 4</option>
+                                </select>
+                                <select id="liveFilterTahun" onchange="refreshLiveLaporanContent()" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-slate-700 outline-none">
+                                    <option value="2025" selected>2025</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                    <option value="2028">2028</option>
+                                    <option value="2029">2029</option>
+                                </select>
+                                <button onclick="window.print()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-file-pdf"></i><span>Cetak PDF</span>
+                                </button>
+                                <button type="button" onclick="closeLaporanModal()" class="p-2 text-slate-400 hover:text-slate-600 text-lg">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Area Cetak / Pratinjau Dokumen Resmi -->
+                        <div id="printableArea" class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 space-y-6 text-slate-800">
+                            <!-- Kop Surat Instansi -->
+                            <div class="flex items-center justify-between border-b-2 border-slate-900 pb-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-14 h-14 rounded-xl bg-blue-700 text-white flex items-center justify-center font-bold text-xl shadow">
+                                        <img src="logo_poltek-removebg-preview.png" alt="Logo" class="w-10 h-10 object-contain" onerror="this.src='https://placehold.co/40x40/2563eb/ffffff?text=KIM'">
+                                    </div>
+                                    <div>
+                                        <h4 class="font-black text-slate-900 text-base sm:text-lg uppercase tracking-tight">Kementerian Perindustrian Republik Indonesia</h4>
+                                        <h2 class="font-black text-blue-700 text-lg sm:text-xl uppercase tracking-tight">Politeknik Industri Petrokimia Banten</h2>
+                                        <p class="text-[10px] text-slate-500 font-medium">Jl. Jenderal Sudirman, Cilegon, Banten &bull; Laporan Resmi Kinerja & SKP Institusi</p>
+                                    </div>
+                                </div>
+                                <!-- QR Code Digital Signature Verification -->
+                                <div class="hidden sm:flex flex-col items-center shrink-0 border p-2 rounded-xl bg-slate-50">
+                                    <div class="w-16 h-16 bg-white border border-slate-300 flex items-center justify-center p-1 rounded">
+                                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://ki-jaro.poltek-petrokimia.ac.id/verify" alt="QR Code" class="w-full h-full object-contain">
+                                    </div>
+                                    <span class="text-[8px] font-bold text-slate-600 mt-1 uppercase">Scan Validasi</span>
+                                </div>
+                            </div>
+
+                            <!-- Judul Dokumen -->
+                            <div class="text-center space-y-1 pt-2">
+                                <h2 id="docHeadingTitle" class="text-base sm:text-lg font-black text-slate-900 uppercase">LAPORAN CAPAIAN KINERJA INSTITUSI</h2>
+                                <p id="docSubHeadingMeta" class="text-xs text-slate-600 font-semibold">Periode: Semua Periode | Tahun: 2025 | Unit: ${sanitizeHTML(currentUser.unit)}</p>
+                            </div>
+
+                            <!-- Konten Tabel Dinamis -->
+                            <div id="liveLaporanTableContainer" class="overflow-x-auto pt-2"></div>
+
+                            <!-- Tanda Tangan Digital & Barcode (3 Pejabat) -->
+                            <div class="pt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center text-xs page-break-inside-avoid">
+                                <div class="space-y-16">
+                                    <div>
+                                        <p class="font-semibold text-slate-700">Menyetujui,</p>
+                                        <p class="font-bold text-slate-900">Direktur</p>
+                                    </div>
+                                    <div class="relative">
+                                        <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-75 pointer-events-none">
+                                            <div class="w-24 h-12 border-2 border-dashed border-blue-600 rounded-full flex items-center justify-center text-[9px] font-bold text-blue-700 rotate-[-10deg]">
+                                                TTD DIGITAL
+                                            </div>
+                                        </div>
+                                        <strong class="block text-slate-900 underline">Dr. Supardi S.Pd., M.Pd</strong>
+                                        <span class="text-[10px] text-slate-500">NIP. 197001011995031001</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-16">
+                                    <div>
+                                        <p class="font-semibold text-slate-700">Mengetahui,</p>
+                                        <p class="font-bold text-slate-900">Ketua Tim Kerja</p>
+                                    </div>
+                                    <div class="relative">
+                                        <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-75 pointer-events-none">
+                                            <div class="w-24 h-12 border-2 border-dashed border-purple-600 rounded-full flex items-center justify-center text-[9px] font-bold text-purple-700 rotate-[8deg]">
+                                                VERIFIED TIM
+                                            </div>
+                                        </div>
+                                        <strong class="block text-slate-900 underline">${sanitizeHTML(currentUser.timKey ? 'Ketua Tim Kerja ' + currentUser.timKey : 'Tim Kerja Utama')}</strong>
+                                        <span class="text-[10px] text-slate-500">NIP. Terdaftar</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-16">
+                                    <div>
+                                        <p class="font-semibold text-slate-700">Disusun Oleh,</p>
+                                        <p class="font-bold text-slate-900">Pembuat Laporan</p>
+                                    </div>
+                                    <div class="relative">
+                                        <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-75 pointer-events-none">
+                                            <div class="w-24 h-12 border-2 border-dashed border-emerald-600 rounded-full flex items-center justify-center text-[9px] font-bold text-emerald-700 rotate-[-5deg]">
+                                                DIGITAL SIGN
+                                            </div>
+                                        </div>
+                                        <strong class="block text-slate-900 underline">${sanitizeHTML(currentUser.name)}</strong>
+                                        <span class="text-[10px] text-slate-500">${sanitizeHTML(currentUser.unit)}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        // =========================================================================
-        // REVISI 6, 7, 8, 9, 10, 11, 12: APPROVAL LAPORAN KINERJA & SKP BERJENJANG
-        // =========================================================================
-        let filterApprovalLapTahun = 'Semua';
-        let filterApprovalLapTw = 'Semua';
-        let filterApprovalSkpTahun = 'Semua';
-        let filterApprovalSkpTw = 'Semua';
-
-        function generateSimpleDocHash(str) {
-            let h1 = 0xdeadbeef ^ str.length, h2 = 0x41c6ce57 ^ str.length;
-            for (let i = 0, ch; i < str.length; i++) {
-                ch = str.charCodeAt(i);
-                h1 = Math.imul(h1 ^ ch, 2654435761);
-                h2 = Math.imul(h2 ^ ch, 1597334677);
-            }
-            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-            return 'KIJARO-SHA256-' + (h2 >>> 0).toString(16).padStart(8, '0').toUpperCase() + (h1 >>> 0).toString(16).padStart(8, '0').toUpperCase();
-        }
-
-        function getDirekturUserObj() {
-            return DB.users.find(u => u.role === 'direktur' || (Array.isArray(u.roles) && u.roles.includes('direktur'))) || { name: 'Dr. Supardi S.Pd., M.Pd', nip: '197611052002121003' };
-        }
-
-        function getKetuaTimUsersList() {
-            const list = DB.users.filter(u => u.role === 'tim_kerja' || (Array.isArray(u.roles) && u.roles.includes('tim_kerja')));
-            return list.length > 0 ? list : [{ name: 'Ir. Deni Saputra S.T., M.Sc', nip: '199003262019011001', timKey: 'Umum dan Keuangan' }];
-        }
-
-        function renderLaporanView(container) {
-            document.getElementById('pageTitle').innerText = 'Approval & Cetak Laporan Capaian Kinerja & SKP (QR Hash)';
-            if (!Array.isArray(DB.approvalLaporan)) DB.approvalLaporan = [];
-            if (!Array.isArray(DB.approvalSKP)) DB.approvalSKP = [];
-
-            const isDirektur = currentUser.role === 'direktur';
-            const isKetuaTim = currentUser.role === 'tim_kerja';
-            const isAdmin = currentUser.role === 'admin';
-
-            const dirUser = getDirekturUserObj();
-            const timUsers = getKetuaTimUsersList();
-
-            // Filter Tabel 1 (Laporan Kinerja) berdasarkan hak akses + Filter Tahun & Triwulan (Revisi 11)
-            let listLapKinerja = DB.approvalLaporan.filter(r => {
-                if (isAdmin || isDirektur) return true;
-                if (isKetuaTim) return r.timKey === currentUser.timKey || r.requesterUsername === currentUser.username;
-                return r.requesterUsername === currentUser.username || r.unit === currentUser.unit;
-            });
-            if (filterApprovalLapTahun !== 'Semua') listLapKinerja = listLapKinerja.filter(r => String(r.tahun) === String(filterApprovalLapTahun));
-            if (filterApprovalLapTw !== 'Semua') listLapKinerja = listLapKinerja.filter(r => String(r.triwulan) === String(filterApprovalLapTw));
-
-            // Filter Tabel 2 (SKP) berdasarkan hak akses + Filter Tahun & Triwulan (Revisi 11)
-            let listSKP = DB.approvalSKP.filter(r => {
-                if (isAdmin || isDirektur) return true;
-                if (isKetuaTim) return r.timKey === currentUser.timKey || r.requesterUsername === currentUser.username;
-                return r.requesterUsername === currentUser.username;
-            });
-            if (filterApprovalSkpTahun !== 'Semua') listSKP = listSKP.filter(r => String(r.tahun) === String(filterApprovalSkpTahun));
-            if (filterApprovalSkpTw !== 'Semua') listSKP = listSKP.filter(r => String(r.triwulan) === String(filterApprovalSkpTw));
-
-            container.innerHTML = `
-                <div class="space-y-8 animate-fadeIn">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start relative no-print">
-                        
-                        <!-- KOLOM KIRI: 1. STATUS APPROVAL LAPORAN CAPAIAN KINERJA -->
-                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
-                                <div>
-                                    <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-                                        <i class="fa-solid fa-file-circle-check text-blue-600"></i> 1. Status Approval Laporan Capaian Kinerja
-                                    </h3>
-                                    <p class="text-xs text-slate-500">Otomatis menerbitkan QR Code Hash apabila telah divalidasi Ketua Tim Kerja</p>
-                                </div>
-                                ${!isPureViewer() ? `
-                                    <button onclick="openRequestLaporanKinerjaModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
-                                        <i class="fa-solid fa-plus"></i><span>Request Laporan Kinerja</span>
-                                    </button>
-                                ` : ''}
-                            </div>
-
-                            <!-- Filter Tahun & Triwulan Tabel 1 (Revisi 11) -->
-                            <div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border text-xs">
-                                <span class="font-bold text-slate-600">Filter:</span>
-                                <select onchange="filterApprovalLapTahun = this.value; renderLaporanView(document.getElementById('mainContent'));" class="p-1.5 bg-white border rounded-lg font-bold">
-                                    <option value="Semua" ${filterApprovalLapTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                    <option value="2025" ${filterApprovalLapTahun === '2025' ? 'selected' : ''}>2025</option>
-                                    <option value="2026" ${filterApprovalLapTahun === '2026' ? 'selected' : ''}>2026</option>
-                                    <option value="2027" ${filterApprovalLapTahun === '2027' ? 'selected' : ''}>2027</option>
-                                    <option value="2028" ${filterApprovalLapTahun === '2028' ? 'selected' : ''}>2028</option>
-                                    <option value="2029" ${filterApprovalLapTahun === '2029' ? 'selected' : ''}>2029</option>
-                                </select>
-                                <select onchange="filterApprovalLapTw = this.value; renderLaporanView(document.getElementById('mainContent'));" class="p-1.5 bg-white border rounded-lg font-bold">
-                                    <option value="Semua" ${filterApprovalLapTw === 'Semua' ? 'selected' : ''}>Semua TW</option>
-                                    <option value="TW 1" ${filterApprovalLapTw === 'TW 1' ? 'selected' : ''}>TW 1</option>
-                                    <option value="TW 2" ${filterApprovalLapTw === 'TW 2' ? 'selected' : ''}>TW 2</option>
-                                    <option value="TW 3" ${filterApprovalLapTw === 'TW 3' ? 'selected' : ''}>TW 3</option>
-                                    <option value="TW 4" ${filterApprovalLapTw === 'TW 4' ? 'selected' : ''}>TW 4</option>
-                                </select>
-                            </div>
-
-                            <div class="overflow-x-auto max-h-96">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead class="bg-slate-50 text-slate-700 font-bold border-b sticky top-0">
-                                        <tr>
-                                            <th class="p-3">Pemohon / Unit</th>
-                                            <th class="p-3 text-center">Periode</th>
-                                            <th class="p-3 text-center">Status Validasi Tim Kerja</th>
-                                            <th class="p-3 text-center">Aksi / Cetak</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y">
-                                        ${listLapKinerja.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada request laporan capaian kinerja pada filter ini.</td></tr>` : listLapKinerja.map(req => {
-                                            const caps = DB.capaian.filter(c => req.capaianIds.includes(c.id));
-                                            const allValid = caps.length > 0 && caps.every(c => c.status === 'Valid');
-                                            const statusText = allValid ? 'Disetujui (QR Hash Aktif)' : 'Menunggu Validasi Ketua Tim Kerja';
-                                            return `
-                                                <tr class="hover:bg-slate-50">
-                                                    <td class="p-3 font-bold text-slate-900">${sanitizeHTML(req.requesterName)}<span class="block text-[10px] text-slate-500">${sanitizeHTML(req.unit)}</span></td>
-                                                    <td class="p-3 text-center font-semibold">${sanitizeHTML(req.triwulan)} - ${sanitizeHTML(req.tahun)}</td>
-                                                    <td class="p-3 text-center">
-                                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${allValid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
-                                                            ${statusText}
-                                                        </span>
-                                                    </td>
-                                                    <td class="p-3 text-center">
-                                                        ${allValid ? `
-                                                            <button onclick="previewAndPrintLaporanKinerja('${req.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-xs">
-                                                                <i class="fa-solid fa-qrcode mr-1"></i>Cetak PDF (QR Hash)
-                                                            </button>
-                                                        ` : `<span class="text-[10px] text-slate-400 italic">Menunggu Validasi</span>`}
-                                                    </td>
-                                                </tr>
-                                            `;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- KOLOM KANAN: 2. STATUS APPROVAL LAPORAN SKP (QR CODE HASH) -->
-                        <div class="bg-white rounded-2xl shadow-sm border border-emerald-200 p-6 space-y-4">
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
-                                <div>
-                                    <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-                                        <i class="fa-solid fa-qrcode text-emerald-600"></i> 2. Status Approval Laporan SKP (QR Code Hash)
-                                    </h3>
-                                    <p class="text-xs text-slate-500">Alur: Request User &rarr; Penilaian Ketua Tim Kerja &rarr; Finalisasi Direktur &rarr; Cetak SKP</p>
-                                </div>
-                                ${!isPureViewer() && !isDirektur ? `
-                                    <button onclick="openRequestSKPModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow flex items-center space-x-1.5 shrink-0">
-                                        <i class="fa-solid fa-plus"></i><span>Request Laporan SKP</span>
-                                    </button>
-                                ` : ''}
-                            </div>
-
-                            <!-- Filter Tahun & Triwulan Tabel 2 (Revisi 11) -->
-                            <div class="flex items-center gap-2 bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-100 text-xs">
-                                <span class="font-bold text-emerald-900">Filter:</span>
-                                <select onchange="filterApprovalSkpTahun = this.value; renderLaporanView(document.getElementById('mainContent'));" class="p-1.5 bg-white border rounded-lg font-bold">
-                                    <option value="Semua" ${filterApprovalSkpTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                    <option value="2025" ${filterApprovalSkpTahun === '2025' ? 'selected' : ''}>2025</option>
-                                    <option value="2026" ${filterApprovalSkpTahun === '2026' ? 'selected' : ''}>2026</option>
-                                    <option value="2027" ${filterApprovalSkpTahun === '2027' ? 'selected' : ''}>2027</option>
-                                    <option value="2028" ${filterApprovalSkpTahun === '2028' ? 'selected' : ''}>2028</option>
-                                    <option value="2029" ${filterApprovalSkpTahun === '2029' ? 'selected' : ''}>2029</option>
-                                </select>
-                                <select onchange="filterApprovalSkpTw = this.value; renderLaporanView(document.getElementById('mainContent'));" class="p-1.5 bg-white border rounded-lg font-bold">
-                                    <option value="Semua" ${filterApprovalSkpTw === 'Semua' ? 'selected' : ''}>Semua TW</option>
-                                    <option value="TW 1" ${filterApprovalSkpTw === 'TW 1' ? 'selected' : ''}>TW 1</option>
-                                    <option value="TW 2" ${filterApprovalSkpTw === 'TW 2' ? 'selected' : ''}>TW 2</option>
-                                    <option value="TW 3" ${filterApprovalSkpTw === 'TW 3' ? 'selected' : ''}>TW 3</option>
-                                    <option value="TW 4" ${filterApprovalSkpTw === 'TW 4' ? 'selected' : ''}>TW 4</option>
-                                </select>
-                            </div>
-
-                            <div class="overflow-x-auto max-h-96">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead class="bg-slate-50 text-slate-700 font-bold border-b sticky top-0">
-                                        <tr>
-                                            <th class="p-3">Pemohon & Indikator</th>
-                                            <th class="p-3 text-center">Periode</th>
-                                            <th class="p-3 text-center">Penilaian & Status</th>
-                                            <th class="p-3 text-center">Aksi / Cetak SKP</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y">
-                                        ${listSKP.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada request laporan SKP pada filter ini.</td></tr>` : listSKP.map(skp => {
-                                            const badgeCls = skp.status === 'Disetujui' ? 'bg-emerald-100 text-emerald-800' : skp.status === 'Ditolak' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
-                                            const canAssessTim = (isKetuaTim || isAdmin) && !skp.isKetuaTimRequest && skp.status === 'Menunggu Ketua Tim Kerja';
-                                            const canAssessDir = (isDirektur || isAdmin) && (skp.status === 'Menunggu Direktur' || skp.status === 'Disetujui');
-
-                                            return `
-                                                <tr class="hover:bg-slate-50">
-                                                    <td class="p-3">
-                                                        <p class="font-bold text-slate-900">${sanitizeHTML(skp.requesterName)} <span class="text-[10px] text-slate-500">(${sanitizeHTML(skp.unit)})</span></p>
-                                                        <p class="text-[11px] text-primary-700 font-semibold mt-0.5">${sanitizeHTML(skp.indikator)}</p>
-                                                    </td>
-                                                    <td class="p-3 text-center font-semibold">${sanitizeHTML(skp.triwulan)}<br><span class="text-[10px] text-slate-500">${sanitizeHTML(skp.tahun)}</span></td>
-                                                    <td class="p-3 text-center space-y-1">
-                                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badgeCls}">${sanitizeHTML(skp.status)}</span>
-                                                        ${skp.nilaiFinalKinerja ? `<span class="block text-[10px] text-emerald-700 font-bold">Kinerja: ${sanitizeHTML(skp.nilaiFinalKinerja)}</span>` : (skp.nilaiTimKinerja ? `<span class="block text-[10px] text-blue-700 font-semibold">Tim: ${sanitizeHTML(skp.nilaiTimKinerja)}</span>` : '')}
-                                                        ${skp.nilaiPerilakuDirektur ? `<span class="block text-[10px] text-purple-700 font-bold">Perilaku: ${sanitizeHTML(skp.nilaiPerilakuDirektur)}</span>` : ''}
-                                                    </td>
-                                                    <td class="p-3 text-center space-y-1">
-                                                        ${canAssessTim ? `
-                                                            <button onclick="openAssessSKPTimModal('${skp.id}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[10px] block w-full">
-                                                                <i class="fa-solid fa-star-half-stroke mr-1"></i>Nilai & Validasi Tim
-                                                            </button>
-                                                        ` : ''}
-                                                        ${canAssessDir ? `
-                                                            <button onclick="openAssessSKPDirModal('${skp.id}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-[10px] block w-full">
-                                                                <i class="fa-solid fa-gavel mr-1"></i>Keputusan Direktur
-                                                            </button>
-                                                        ` : ''}
-                                                        ${skp.status === 'Disetujui' ? `
-                                                            <button onclick="previewAndPrintSKP('${skp.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-xs block w-full">
-                                                                <i class="fa-solid fa-qrcode mr-1"></i>Cetak SKP (QR Hash)
-                                                            </button>
-                                                        ` : ''}
-                                                    </td>
-                                                </tr>
-                                            `;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <!-- AREA PREVIEW CETAK DOKUMEN -->
-                    <div id="printableArea" class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto">
-                        <p class="text-center text-xs text-slate-400 py-12 italic no-print">Pilih salah satu dokumen yang telah <strong>Disetujui</strong> pada tabel di atas untuk menampilkan pratinjau cetak & QR Code Hash.</p>
-                    </div>
-                </div>
-
-                <!-- MODAL POP-UP REQUEST LAPORAN CAPAIAN KINERJA (REVISI 9) -->
-                <div id="reqLapKinerjaModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
-                        <div class="flex justify-between items-center border-b pb-3">
-                            <h3 class="font-bold text-slate-900 text-base">Request Laporan Capaian Kinerja</h3>
-                            <button type="button" onclick="document.getElementById('reqLapKinerjaModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-                        </div>
-                        <form onsubmit="submitRequestLaporanKinerja(event)" class="space-y-3.5 text-xs">
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block font-bold mb-1">Tahun</label>
-                                    <select id="reqLapTahun" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold" onchange="populateReqLapIndikatorList()">
-                                        <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block font-bold mb-1">Triwulan</label>
-                                    <select id="reqLapTw" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold" onchange="populateReqLapIndikatorList()">
-                                        <option value="TW 1">TW 1</option><option value="TW 2">TW 2</option><option value="TW 3">TW 3</option><option value="TW 4">TW 4</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block font-bold mb-1">Pilih Capaian Indikator Anda</label>
-                                <div id="reqLapIndikatorContainer" class="space-y-1.5 bg-slate-50 p-3 rounded-xl border max-h-40 overflow-y-auto"></div>
-                            </div>
-                            <div class="space-y-2 bg-slate-50 p-3 rounded-xl border">
-                                <div>
-                                    <label class="block font-bold text-[10px] text-slate-500">1. Direktur (Otomatis dari Data Admin)</label>
-                                    <input type="text" id="reqLapSign1" value="${sanitizeHTML(dirUser.name)} (NIP. ${sanitizeHTML(dirUser.nip || '-')})" readonly class="w-full p-2 bg-slate-100 border rounded text-[11px] font-bold text-slate-700">
-                                </div>
-                                <div>
-                                    <label class="block font-bold text-[10px] text-slate-500">2. Pilih Ketua Tim Kerja</label>
-                                    <select id="reqLapSign2" class="w-full p-2 bg-white border rounded text-[11px] font-bold">
-                                        ${timUsers.map(tu => `<option value="${sanitizeHTML(tu.name)} (NIP. ${sanitizeHTML(tu.nip || '-')})">${sanitizeHTML(tu.name)} — NIP. ${sanitizeHTML(tu.nip || '-')} (${sanitizeHTML(tu.timKey || '')})</option>`).join('')}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block font-bold text-[10px] text-slate-500">3. Penyusun Laporan (Otomatis dari Profil Anda)</label>
-                                    <input type="text" id="reqLapSign3" value="${sanitizeHTML(currentUser.name)} (NIP. ${sanitizeHTML(currentUser.nip || '-')})" readonly class="w-full p-2 bg-slate-100 border rounded text-[11px] font-bold text-slate-700">
-                                </div>
-                            </div>
-                            <div class="flex justify-end space-x-2 pt-2 border-t">
-                                <button type="button" onclick="document.getElementById('reqLapKinerjaModal').classList.add('hidden')" class="px-4 py-2 bg-slate-200 rounded-xl font-semibold">Batal</button>
-                                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold shadow">Ajukan Laporan Kinerja</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- MODAL POP-UP REQUEST LAPORAN SKP (REVISI 8 & 9) -->
-                <div id="reqSKPModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
-                        <div class="flex justify-between items-center border-b pb-3">
-                            <div>
-                                <h3 class="font-bold text-slate-900 text-base">Request Approval Laporan SKP (Per Indikator)</h3>
-                                <p class="text-[11px] text-slate-500">Hanya menampilkan indikator yang memang telah dicascadingkan pada tahun terpilih</p>
-                            </div>
-                            <button type="button" onclick="document.getElementById('reqSKPModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-                        </div>
-                        <form onsubmit="submitRequestSKP(event)" class="space-y-3.5 text-xs">
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block font-bold mb-1">Tahun SKP</label>
-                                    <select id="reqSkpTahun" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold" onchange="populateReqSkpIndikatorOptions()">
-                                        <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block font-bold mb-1">Triwulan</label>
-                                    <select id="reqSkpTw" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold" onchange="populateReqSkpIndikatorOptions()">
-                                        <option value="TW 1">Triwulan I (TW 1)</option><option value="TW 2">Triwulan II (TW 2)</option><option value="TW 3" selected>Triwulan III (TW 3)</option><option value="TW 4">Triwulan IV (TW 4)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block font-bold mb-1">Pilih Indikator Kinerja yang Dicascadingkan pada Tahun Tersebut</label>
-                                <select id="reqSkpCapaianId" required class="w-full p-2.5 bg-slate-50 border rounded-xl font-semibold"></select>
-                            </div>
-                            <div>
-                                <label class="block font-bold mb-1">Tempat & Tanggal Cetak Laporan</label>
-                                <input type="text" id="reqSkpTanggalKota" value="Serang, 5 Oktober 2026" required class="w-full p-2.5 bg-slate-50 border rounded-xl">
-                            </div>
-
-                            <!-- REVISI 9: Pejabat Penandatangan Otomatis / Dropdown dari Database Admin -->
-                            <div class="space-y-2.5 bg-slate-50 p-3.5 rounded-xl border">
-                                <p class="font-bold text-slate-700 text-[11px] uppercase">Pejabat Penandatangan (Sesuai Database Admin)</p>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label class="block text-[10px] font-semibold text-slate-500">Nama Direktur (Fix dari Admin)</label>
-                                        <input type="text" id="skpDirName" value="${sanitizeHTML(dirUser.name)}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-bold text-slate-700">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] font-semibold text-slate-500">NIP Direktur (Fix dari Admin)</label>
-                                        <input type="text" id="skpDirNip" value="${sanitizeHTML(dirUser.nip || '197611052002121003')}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-bold text-slate-700">
-                                    </div>
-                                </div>
-                                ${!isKetuaTim ? `
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label class="block text-[10px] font-semibold text-slate-700">Pilih Ketua Tim Kerja (Dropdown Admin)</label>
-                                        <select id="skpTimSelect" onchange="document.getElementById('skpTimNip').value = this.options[this.selectedIndex].getAttribute('data-nip');" class="w-full p-2 bg-white border rounded-lg font-bold">
-                                            ${timUsers.map(tu => `<option value="${sanitizeHTML(tu.name)}" data-nip="${sanitizeHTML(tu.nip || '199003262019011001')}" ${tu.timKey === currentUser.timKey ? 'selected' : ''}>${sanitizeHTML(tu.name)} (${sanitizeHTML(tu.timKey || '')})</option>`).join('')}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] font-semibold text-slate-500">NIP Ketua Tim Kerja (Otomatis)</label>
-                                        <input type="text" id="skpTimNip" value="${sanitizeHTML((timUsers.find(t => t.timKey === currentUser.timKey) || timUsers[0]).nip || '199003262019011001')}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-bold text-slate-700">
-                                    </div>
-                                </div>
-                                ` : ''}
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label class="block text-[10px] font-semibold text-slate-500">Nama Penyusun (Otomatis dari Profil)</label>
-                                        <input type="text" id="skpUserName" value="${sanitizeHTML(currentUser.name)}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-bold text-slate-700">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] font-semibold text-slate-500">NIP Penyusun (Ubah di Edit Profil)</label>
-                                        <input type="text" id="skpUserNip" value="${sanitizeHTML(currentUser.nip || '199003262019011001')}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-bold text-slate-700">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="flex justify-end space-x-2 pt-2 border-t">
-                                <button type="button" onclick="document.getElementById('reqSKPModal').classList.add('hidden')" class="px-4 py-2 bg-slate-200 rounded-xl font-semibold">Batal</button>
-                                <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold shadow">Kirim Request Approval SKP</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- MODAL PENILAIAN SKP OLEH KETUA TIM KERJA (REVISI 10: TAMPILKAN DETAIL & RANGE EKSPEKTASI) -->
-                <div id="assessSkpTimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
-                        <div class="flex justify-between items-center border-b pb-3">
-                            <h3 class="font-bold text-slate-900 text-sm">Validasi & Penilaian Hasil Kerja SKP (Ketua Tim Kerja)</h3>
-                            <button type="button" onclick="document.getElementById('assessSkpTimModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-                        </div>
-                        <input type="hidden" id="assessSkpTimId">
-                        
-                        <!-- Info Ringkasan Pemohon, Target, Realisasi & Acuan Range Ekspektasi (Revisi 10) -->
-                        <div id="assessSkpTimInfoBox" class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs"></div>
-
-                        <div class="space-y-3 text-xs">
-                            <div>
-                                <label class="block font-bold mb-1">Penilaian Hasil Kerja Indikator</label>
-                                <select id="assessSkpTimRating" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-primary-700">
-                                    <option value="Di Bawah Ekspektasi">Di Bawah Ekspektasi</option>
-                                    <option value="Sesuai Ekspektasi" selected>Sesuai Ekspektasi</option>
-                                    <option value="Di Atas Ekspektasi">Di Atas Ekspektasi</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block font-bold mb-1">Saran dan Tindak Lanjut / Catatan Tambahan Ketua Tim Kerja</label>
-                                <textarea id="assessSkpTimNote" rows="3" class="w-full p-2.5 bg-slate-50 border rounded-xl" placeholder="Masukkan saran/tindak lanjut untuk Romawi VII SKP..."></textarea>
-                            </div>
-                        </div>
-                        <div class="flex justify-end space-x-2 pt-2 border-t">
-                            <button type="button" onclick="submitAssessSKPTim('Ditolak')" class="px-4 py-2 bg-rose-100 text-rose-700 rounded-xl font-bold text-xs">Tolak</button>
-                            <button type="button" onclick="submitAssessSKPTim('Teruskan')" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold text-xs shadow">Setujui & Teruskan ke Direktur</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- MODAL PENILAIAN FINAL SKP OLEH DIREKTUR -->
-                <div id="assessSkpDirModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-                        <div class="flex justify-between items-center border-b pb-3">
-                            <h3 class="font-bold text-slate-900 text-sm">Keputusan Final & Penilaian Perilaku SKP (Direktur)</h3>
-                            <button type="button" onclick="document.getElementById('assessSkpDirModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-                        </div>
-                        <input type="hidden" id="assessSkpDirId">
-                        <div class="space-y-3 text-xs">
-                            <div>
-                                <label class="block font-bold mb-1">Penilaian Final Hasil Kerja (Bisa Tetap atau Diubah Direktur)</label>
-                                <select id="assessSkpDirRating" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-emerald-700">
-                                    <option value="Di Bawah Ekspektasi">Di Bawah Ekspektasi</option>
-                                    <option value="Sesuai Ekspektasi">Sesuai Ekspektasi</option>
-                                    <option value="Di Atas Ekspektasi">Di Atas Ekspektasi</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block font-bold mb-1">Penilaian Perilaku Kerja Pegawai (Oleh Direktur)</label>
-                                <select id="assessSkpDirBehavior" class="w-full p-2.5 bg-purple-50 border border-purple-200 rounded-xl font-bold text-purple-800">
-                                    <option value="Di Bawah Ekspektasi">Di Bawah Ekspektasi</option>
-                                    <option value="Sesuai Ekspektasi" selected>Sesuai Ekspektasi</option>
-                                    <option value="Di Atas Ekspektasi">Di Atas Ekspektasi</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block font-bold mb-1">Catatan / Evaluasi Final Direktur</label>
-                                <textarea id="assessSkpDirNote" rows="2" class="w-full p-2.5 bg-slate-50 border rounded-xl" placeholder="Catatan persetujuan final..."></textarea>
-                            </div>
-                        </div>
-                        <div class="flex justify-end space-x-2 pt-2 border-t">
-                            <button type="button" onclick="submitAssessSKPDir('Ditolak')" class="px-4 py-2 bg-rose-100 text-rose-700 rounded-xl font-bold text-xs">Tolak SKP</button>
-                            <button type="button" onclick="submitAssessSKPDir('Disetujui')" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs shadow">Setujui Final & Terbitkan QR Hash</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function openRequestLaporanKinerjaModal() {
-            const modal = document.getElementById('reqLapKinerjaModal');
-            if (!modal) return;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            populateReqLapIndikatorList();
-        }
-
-        function populateReqLapIndikatorList() {
-            const yr = document.getElementById('reqLapTahun').value;
-            const tw = document.getElementById('reqLapTw').value;
-            const cont = document.getElementById('reqLapIndikatorContainer');
-            if (!cont) return;
-
-            const myCaps = DB.capaian.filter(c => {
-                const matchYr = String(c.tahun || '2025') === String(yr);
-                const matchTw = String(c.triwulan || '').trim().toUpperCase() === String(tw).trim().toUpperCase();
-                if (currentUser.role === 'admin' || currentUser.role === 'direktur') return matchYr && matchTw;
-                if (currentUser.role === 'tim_kerja') return matchYr && matchTw && c.timKey === currentUser.timKey;
-                return matchYr && matchTw && (c.unit === currentUser.unit || c.inputByUsername === currentUser.username);
-            });
-
-            if (myCaps.length === 0) {
-                cont.innerHTML = `<p class="text-slate-400 italic text-center py-2">Belum ada capaian terinput pada ${tw} Tahun ${yr}.</p>`;
-                return;
-            }
-            cont.innerHTML = myCaps.map(c => `
-                <label class="flex items-center justify-between p-2 bg-white rounded-lg border">
-                    <span class="flex items-center space-x-2">
-                        <input type="checkbox" name="reqLapCapCheck" value="${c.id}" checked class="rounded text-blue-600">
-                        <span class="font-semibold text-slate-800">${sanitizeHTML(c.targetDirektur)}</span>
-                    </span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.status === 'Valid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${c.status}</span>
-                </label>
-            `).join('');
-        }
-
-        async function submitRequestLaporanKinerja(e) {
-            e.preventDefault();
-            const checked = Array.from(document.querySelectorAll('input[name="reqLapCapCheck"]:checked')).map(x => x.value);
-            if (checked.length === 0) {
-                showToast('Pilih minimal 1 capaian indikator!', 'error');
-                return;
-            }
-            const yr = document.getElementById('reqLapTahun').value;
-            const tw = document.getElementById('reqLapTw').value;
-            const newReq = {
-                id: 'reqlap_' + Date.now(),
-                tahun: yr,
-                triwulan: tw,
-                requesterUsername: currentUser.username,
-                requesterName: currentUser.name,
-                unit: currentUser.unit,
-                timKey: currentUser.timKey || 'Akademik',
-                capaianIds: checked,
-                sign1: document.getElementById('reqLapSign1').value.trim(),
-                sign2: document.getElementById('reqLapSign2').value.trim(),
-                sign3: document.getElementById('reqLapSign3').value.trim()
-            };
-            DB.approvalLaporan.push(newReq);
-            recordAuditLog('Request Laporan Kinerja', 'Laporan', `Mengajukan laporan capaian kinerja periode ${tw} ${yr}`);
-            await saveToMySQL();
-            document.getElementById('reqLapKinerjaModal').classList.add('hidden');
-            showToast('Request Laporan Capaian Kinerja berhasil ditambahkan!');
-            renderLaporanView(document.getElementById('mainContent'));
-        }
-
-        // REVISI 6: Laporan Capaian Kinerja Otomatis Menampilkan QR Code Hash Saat Sudah Divalidasi Ketua Tim Kerja
-        function previewAndPrintLaporanKinerja(reqId) {
-            const req = (DB.approvalLaporan || []).find(x => x.id === reqId);
-            if (!req) return;
-            const caps = DB.capaian.filter(c => req.capaianIds.includes(c.id));
-            const area = document.getElementById('printableArea');
-            if (!area) return;
-
-            const hashDir = generateSimpleDocHash(`LAP-DIR|${req.id}|${req.sign1}|${req.tahun}|${req.triwulan}`);
-            const hashTim = generateSimpleDocHash(`LAP-TIM|${req.id}|${req.sign2}|VALIDATED`);
-            const hashUsr = generateSimpleDocHash(`LAP-USR|${req.id}|${req.sign3}|CREATED`);
-
-            area.innerHTML = `
-                <div class="space-y-6">
-                    <div class="flex justify-end no-print">
-                        <button onclick="window.print()" class="px-4 py-2 bg-primary-600 text-white rounded-xl text-xs font-bold shadow"><i class="fa-solid fa-print mr-1"></i>Cetak / Simpan PDF</button>
-                    </div>
-                    <div class="text-center border-b pb-4">
-                        <h2 class="text-lg font-black uppercase text-slate-900">LAPORAN CAPAIAN KINERJA</h2>
-                        <p class="text-xs font-bold text-slate-600">Politeknik Industri Petrokimia Banten — Tahun ${sanitizeHTML(req.tahun)} (${sanitizeHTML(req.triwulan)})</p>
-                    </div>
-                    <table class="w-full text-left border-collapse text-xs border">
-                        <thead class="bg-slate-100">
-                            <tr>
-                                <th class="p-2 border text-center">No</th>
-                                <th class="p-2 border">Unit</th>
-                                <th class="p-2 border">Indikator Kinerja</th>
-                                <th class="p-2 border">Program & Uraian Pekerjaan</th>
-                                <th class="p-2 border text-center">Target</th>
-                                <th class="p-2 border text-center">Realisasi</th>
-                                <th class="p-2 border text-center">Status Validasi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${caps.map((c, i) => `
-                                <tr>
-                                    <td class="p-2 border text-center">${i + 1}</td>
-                                    <td class="p-2 border">${sanitizeHTML(c.unit)}</td>
-                                    <td class="p-2 border font-bold">${sanitizeHTML(c.targetDirektur)}</td>
-                                    <td class="p-2 border">${sanitizeHTML(c.program)}${c.uraianPekerjaan ? `<br><span class="text-[10px] text-slate-500">${sanitizeHTML(c.uraianPekerjaan)}</span>` : ''}</td>
-                                    <td class="p-2 border text-center">${c.target} ${c.satuan || '%'}</td>
-                                    <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi} ${c.satuan || '%'}</td>
-                                    <td class="p-2 border text-center font-bold text-emerald-700">${c.status}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                    <div class="pt-6 grid grid-cols-3 gap-4 text-center text-xs">
-                        <div class="flex flex-col items-center">
-                            <p class="font-bold mb-1">Menyetujui,<br>Direktur</p>
-                            <div id="qrLapSign1" class="p-1.5 bg-white border rounded my-1"></div>
-                            <span class="text-[8px] font-mono text-slate-500 mb-1">${hashDir}</span>
-                            <p class="font-bold underline">${sanitizeHTML(req.sign1)}</p>
-                        </div>
-                        <div class="flex flex-col items-center">
-                            <p class="font-bold mb-1">Mengetahui,<br>Ketua Tim Kerja</p>
-                            <div id="qrLapSign2" class="p-1.5 bg-white border rounded my-1"></div>
-                            <span class="text-[8px] font-mono text-slate-500 mb-1">${hashTim}</span>
-                            <p class="font-bold underline">${sanitizeHTML(req.sign2)}</p>
-                        </div>
-                        <div class="flex flex-col items-center">
-                            <p class="font-bold mb-1">Yang Membuat,<br>Penyusun Laporan</p>
-                            <div id="qrLapSign3" class="p-1.5 bg-white border rounded my-1"></div>
-                            <span class="text-[8px] font-mono text-slate-500 mb-1">${hashUsr}</span>
-                            <p class="font-bold underline">${sanitizeHTML(req.sign3)}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            setTimeout(() => {
-                if (typeof QRCode !== 'undefined') {
-                    new QRCode(document.getElementById('qrLapSign1'), { text: `HASH:${hashDir}|DIREKTUR:${req.sign1}`, width: 72, height: 72 });
-                    new QRCode(document.getElementById('qrLapSign2'), { text: `HASH:${hashTim}|KETUA_TIM:${req.sign2}|STATUS:VALID`, width: 72, height: 72 });
-                    new QRCode(document.getElementById('qrLapSign3'), { text: `HASH:${hashUsr}|PENYUSUN:${req.sign3}`, width: 72, height: 72 });
-                }
-            }, 80);
-            area.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function openRequestSKPModal() {
-            const modal = document.getElementById('reqSKPModal');
-            if (!modal) return;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            populateReqSkpIndikatorOptions();
-        }
-
-        // REVISI 8: Hanya Menampilkan Indikator yang Memang Telah Dicascadingkan Sesuai Tahunnya
-        function populateReqSkpIndikatorOptions() {
-            const yr = document.getElementById('reqSkpTahun').value;
-            const tw = document.getElementById('reqSkpTw').value;
-            const sel = document.getElementById('reqSkpCapaianId');
-            if (!sel) return;
-
-            // 1. Cek daftar indikator yang dicascadingkan ke user/unit ini pada tahun yr
-            let cascadedIndikators = [];
-            if (currentUser.role === 'tim_kerja') {
-                cascadedIndikators = (DB.cascadingDirektur || [])
-                    .filter(cd => String(cd.tahun || '2025') === String(yr) && Array.isArray(cd.timKeys) && cd.timKeys.includes(currentUser.timKey))
-                    .map(cd => cd.target);
-            } else if (currentUser.role === 'ketua_unit') {
-                cascadedIndikators = (DB.cascadingTim || [])
-                    .filter(ct => String(ct.tahun || '2025') === String(yr) && Array.isArray(ct.unitTargets) && ct.unitTargets.includes(currentUser.unit))
-                    .map(ct => ct.targetDirektur);
-            } else if (SUB_UNIT_ROLES.includes(currentUser.role)) {
-                const myKeyRole = `${currentUser.role}_${currentUser.unit}`;
-                cascadedIndikators = (DB.cascadingUnit || [])
-                    .filter(cu => String(cu.tahun || '2025') === String(yr) && cu.unit === currentUser.unit && Array.isArray(cu.subTargets) && (cu.subTargets.includes(currentUser.username) || cu.subTargets.includes(myKeyRole) || cu.subTargets.includes(currentUser.subPosition)))
-                    .map(cu => cu.targetDirektur);
-            } else if (currentUser.role === 'admin') {
-                cascadedIndikators = (DB.cascadingDirektur || [])
-                    .filter(cd => String(cd.tahun || '2025') === String(yr))
-                    .map(cd => cd.target);
-            }
-
-            if (cascadedIndikators.length === 0) {
-                sel.innerHTML = `<option value="">Tidak ada indikator yang dicascadingkan ke Anda pada tahun ${yr}</option>`;
-                return;
-            }
-
-            // 2. Cari capaian yang sudah diinput pada tahun & triwulan tersebut yang termasuk dalam indikator hasil cascading
-            const matchingCaps = (DB.capaian || []).filter(c => {
-                const matchYr = String(c.tahun || '2025') === String(yr);
-                const matchTw = String(c.triwulan || '').trim().toUpperCase() === String(tw).trim().toUpperCase();
-                const inCascading = cascadedIndikators.includes(c.targetDirektur);
-                if (!matchYr || !matchTw || !inCascading) return false;
-                if (currentUser.role === 'tim_kerja') return c.timKey === currentUser.timKey;
-                if (currentUser.role === 'admin') return true;
-                return c.unit === currentUser.unit || c.inputByUsername === currentUser.username;
-            });
-
-            if (matchingCaps.length === 0) {
-                sel.innerHTML = `<option value="">Indikator sudah dicascading di ${yr}, namun belum ada input capaian pada ${tw}</option>`;
-                return;
-            }
-
-            sel.innerHTML = matchingCaps.map(c => `
-                <option value="${c.id}">${sanitizeHTML(c.targetDirektur)} — Realisasi: ${c.realisasi} / ${c.target} ${c.satuan || '%'}</option>
-            `).join('');
-        }
-
-        async function submitRequestSKP(e) {
-            e.preventDefault();
-            const yr = document.getElementById('reqSkpTahun').value;
-            const tw = document.getElementById('reqSkpTw').value;
-            const capId = document.getElementById('reqSkpCapaianId').value;
-            if (!capId) {
-                showToast('Pilih indikator kinerja yang telah dicascading dan diinput capaiannya terlebih dahulu!', 'error');
-                return;
-            }
-
-            const isKetuaTim = currentUser.role === 'tim_kerja';
-            const capObj = DB.capaian.find(c => String(c.id) === String(capId));
-            if (!capObj) {
-                showToast('Data capaian tidak ditemukan!', 'error');
-                return;
-            }
-
-            const timSelectEl = document.getElementById('skpTimSelect');
-            const selectedTimName = timSelectEl ? timSelectEl.value : currentUser.name;
-
-            const newSkp = {
-                id: 'skp_' + Date.now(),
-                tahun: yr,
-                triwulan: tw,
-                capaianId: capObj.id,
-                indikator: capObj.targetDirektur,
-                targetVal: capObj.target,
-                realisasiVal: capObj.realisasi,
-                satuan: capObj.satuan || '%',
-                uraianKegiatan: capObj.uraianPekerjaan || capObj.program,
-                targetText: `Target output yang dihasilkan ${capObj.target} ${capObj.satuan || '%'}`,
-                waktuPelaksanaan: `Pelaksanaan kegiatan selama 12 bulan yaitu bulan Januari sampai dengan Desember ${yr}`,
-                hasilKegiatan: `Hasil kegiatan yang dicapai adalah ${capObj.realisasi} ${capObj.satuan || '%'} (${capObj.program})`,
-                permasalahan: capObj.permasalahan ? capObj.permasalahan : 'Tidak ada kendala signifikan',
-                saranKetuaTim: capObj.rekomendasi ? capObj.rekomendasi : '-',
-                requesterUsername: currentUser.username,
-                requesterName: currentUser.name,
-                unit: currentUser.unit,
-                timKey: capObj.timKey || currentUser.timKey || 'Akademik',
-                isKetuaTimRequest: isKetuaTim,
-                tanggalKota: document.getElementById('reqSkpTanggalKota').value.trim(),
-                dirName: document.getElementById('skpDirName').value.trim(),
-                dirNip: document.getElementById('skpDirNip').value.trim(),
-                timName: selectedTimName,
-                timNip: document.getElementById('skpTimNip') ? document.getElementById('skpTimNip').value.trim() : (currentUser.nip || '199003262019011001'),
-                userName: document.getElementById('skpUserName').value.trim(),
-                userNip: document.getElementById('skpUserNip').value.trim(),
-                status: isKetuaTim ? 'Menunggu Direktur' : 'Menunggu Ketua Tim Kerja',
-                nilaiTimKinerja: isKetuaTim ? 'Sesuai Ekspektasi' : '',
-                nilaiFinalKinerja: '',
-                nilaiPerilakuDirektur: '',
-                hashDirektur: '',
-                hashKetuaTim: '',
-                hashPenyusun: ''
-            };
-
-            DB.approvalSKP.push(newSkp);
-            recordAuditLog('Request SKP', 'Laporan SKP', `${currentUser.name} mengajukan SKP indikator "${capObj.targetDirektur}" (${tw} ${yr})`);
-            await saveToMySQL();
-            document.getElementById('reqSKPModal').classList.add('hidden');
-            showToast('Request Approval SKP berhasil diajukan!');
-            renderLaporanView(document.getElementById('mainContent'));
-        }
-
-        // REVISI 10: Tampilkan Nama Ketua Unit, Indikator, Target, Realisasi, dan Range Ekspektasi pada Modal Penilaian Ketua Tim Kerja
-        function openAssessSKPTimModal(skpId) {
-            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
-            if (!skp) return;
-            document.getElementById('assessSkpTimId').value = skpId;
-            document.getElementById('assessSkpTimRating').value = skp.nilaiTimKinerja || 'Sesuai Ekspektasi';
-            document.getElementById('assessSkpTimNote').value = skp.saranKetuaTim !== '-' ? skp.saranKetuaTim : '';
-
-            // Cari Range Ekspektasi dari Cascading Tim Kerja -> Unit, atau fallback ke Cascading Direktur -> Tim Kerja
-            const ctObj = (DB.cascadingTim || []).find(ct => ct.targetDirektur === skp.indikator && String(ct.tahun || '2025') === String(skp.tahun));
-            const cdObj = (DB.cascadingDirektur || []).find(cd => cd.target === skp.indikator && String(cd.tahun || '2025') === String(skp.tahun));
-            const rangeObj = (ctObj && ctObj.rangeEkspektasi) ? ctObj.rangeEkspektasi : ((cdObj && cdObj.rangeEkspektasi) ? cdObj.rangeEkspektasi : { bawah: '< 100%', sesuai: '100%', atas: '> 100%' });
-
-            const infoBox = document.getElementById('assessSkpTimInfoBox');
-            if (infoBox) {
-                infoBox.innerHTML = `
-                    <div class="grid grid-cols-2 gap-2 border-b pb-2">
-                        <div><span class="text-[10px] text-slate-500 block">Nama Ketua Unit / Pemohon:</span><strong class="text-slate-900">${sanitizeHTML(skp.requesterName)} (${sanitizeHTML(skp.unit)})</strong></div>
-                        <div><span class="text-[10px] text-slate-500 block">Periode SKP:</span><strong class="text-primary-700">${sanitizeHTML(skp.triwulan)} — Tahun ${sanitizeHTML(skp.tahun)}</strong></div>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 block">Nama Indikator Kinerja:</span>
-                        <strong class="text-slate-900">${sanitizeHTML(skp.indikator)}</strong>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border">
-                        <div><span class="text-[10px] text-slate-500 block">Target Indikator:</span><strong class="text-primary-700 text-sm">${skp.targetVal !== undefined ? skp.targetVal : '-'} ${sanitizeHTML(skp.satuan || '%')}</strong></div>
-                        <div><span class="text-[10px] text-slate-500 block">Realisasi Capaian:</span><strong class="text-emerald-700 text-sm">${skp.realisasiVal !== undefined ? skp.realisasiVal : '-'} ${sanitizeHTML(skp.satuan || '%')}</strong></div>
-                    </div>
-                    <div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
-                        <span class="text-[10px] font-extrabold text-emerald-900 uppercase block mb-1"><i class="fa-solid fa-Compass mr-1"></i>Panduan Range Ekspektasi Kinerja (Hasil Input Cascading):</span>
-                        <div class="grid grid-cols-3 gap-1.5 text-[10px] text-center">
-                            <div class="bg-white p-1.5 rounded border border-rose-200"><span class="text-rose-700 font-bold block">Di Bawah Ekspektasi</span><strong>${sanitizeHTML(rangeObj.bawah)}</strong></div>
-                            <div class="bg-white p-1.5 rounded border border-emerald-300"><span class="text-emerald-700 font-bold block">Sesuai Ekspektasi</span><strong>${sanitizeHTML(rangeObj.sesuai)}</strong></div>
-                            <div class="bg-white p-1.5 rounded border border-blue-200"><span class="text-blue-700 font-bold block">Di Atas Ekspektasi</span><strong>${sanitizeHTML(rangeObj.atas)}</strong></div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            const modal = document.getElementById('assessSkpTimModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        async function submitAssessSKPTim(decision) {
-            const skpId = document.getElementById('assessSkpTimId').value;
-            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
-            if (!skp) return;
-
-            if (decision === 'Ditolak') {
-                skp.status = 'Ditolak';
-            } else {
-                skp.nilaiTimKinerja = document.getElementById('assessSkpTimRating').value;
-                skp.saranKetuaTim = document.getElementById('assessSkpTimNote').value.trim() || 'Dilanjutkan dan ditingkatkan pada periode berikutnya';
-                skp.status = 'Menunggu Direktur';
-            }
-            recordAuditLog('Validasi SKP Tahap 1', 'Laporan SKP', `Ketua Tim Kerja menilai SKP ${skp.requesterName}: ${skp.nilaiTimKinerja} (${skp.status})`);
-            await saveToMySQL();
-            document.getElementById('assessSkpTimModal').classList.add('hidden');
-            showToast(`Status SKP diperbarui menjadi: ${skp.status}`);
-            renderLaporanView(document.getElementById('mainContent'));
-        }
-
-        function openAssessSKPDirModal(skpId) {
-            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
-            if (!skp) return;
-            document.getElementById('assessSkpDirId').value = skpId;
-            document.getElementById('assessSkpDirRating').value = skp.nilaiFinalKinerja || skp.nilaiTimKinerja || 'Sesuai Ekspektasi';
-            document.getElementById('assessSkpDirBehavior').value = skp.nilaiPerilakuDirektur || 'Sesuai Ekspektasi';
-            document.getElementById('assessSkpDirNote').value = skp.catatanDirektur || '';
-            const modal = document.getElementById('assessSkpDirModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        async function submitAssessSKPDir(decision) {
-            const skpId = document.getElementById('assessSkpDirId').value;
-            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
-            if (!skp) return;
-
-            if (decision === 'Ditolak') {
-                skp.status = 'Ditolak';
-            } else {
-                skp.nilaiFinalKinerja = document.getElementById('assessSkpDirRating').value;
-                skp.nilaiPerilakuDirektur = document.getElementById('assessSkpDirBehavior').value;
-                skp.catatanDirektur = document.getElementById('assessSkpDirNote').value.trim();
-                skp.status = 'Disetujui';
-
-                const timestamp = new Date().toISOString();
-                skp.hashDirektur = generateSimpleDocHash(`DIR|${skp.id}|${skp.dirName}|${skp.dirNip}|${skp.nilaiFinalKinerja}|${timestamp}`);
-                skp.hashKetuaTim = generateSimpleDocHash(`TIM|${skp.id}|${skp.timName}|${skp.timNip}|${skp.nilaiTimKinerja}|${timestamp}`);
-                skp.hashPenyusun = generateSimpleDocHash(`USR|${skp.id}|${skp.userName}|${skp.userNip}|${skp.indikator}|${timestamp}`);
-            }
-
-            recordAuditLog('Persetujuan Final SKP (Direktur)', 'Laporan SKP', `Direktur menyetujui final SKP ${skp.requesterName} (Hasil: ${skp.nilaiFinalKinerja}, Perilaku: ${skp.nilaiPerilakuDirektur})`);
-            await saveToMySQL();
-            document.getElementById('assessSkpDirModal').classList.add('hidden');
-            showToast(`SKP ${skp.status}! QR Code Hash Digital telah diterbitkan.`);
-            renderLaporanView(document.getElementById('mainContent'));
-        }
-
-        // REVISI 12: Cetak SKP Tanpa Border Tabel + Penanda Halaman Otomatis (Halaman 1 dari 2, dst.)
-        function previewAndPrintSKP(skpId) {
-            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
-            if (!skp || skp.status !== 'Disetujui') {
-                showToast('SKP belum disetujui final oleh Direktur!', 'error');
-                return;
-            }
-
-            const area = document.getElementById('printableArea');
-            if (!area) return;
-
-            const twRomawi = skp.triwulan.includes('1') ? 'I' : skp.triwulan.includes('2') ? 'II' : skp.triwulan.includes('3') ? 'III' : 'IV';
-            const totalChars = (skp.uraianKegiatan || '').length + (skp.hasilKegiatan || '').length + (skp.permasalahan || '').length + (skp.saranKetuaTim || '').length;
-            const isTwoPages = totalChars > 450;
-
-            area.innerHTML = `
-                <div class="space-y-6 text-slate-900 font-serif relative">
-                    <div class="flex items-center justify-between border-b pb-4 no-print font-sans">
-                        <div class="flex items-center space-x-2">
-                            <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold"><i class="fa-solid fa-shield-check mr-1"></i>Terverifikasi & Disetujui Final</span>
-                            <span class="text-xs text-slate-500">Hasil Kerja: <strong>${sanitizeHTML(skp.nilaiFinalKinerja)}</strong> | Perilaku: <strong>${sanitizeHTML(skp.nilaiPerilakuDirektur)}</strong></span>
-                        </div>
-                        <button onclick="window.print()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow flex items-center space-x-2">
-                            <i class="fa-solid fa-print"></i><span>Cetak / Download SKP (PDF)</span>
-                        </button>
-                    </div>
-
-                    <div class="text-center space-y-1">
-                        <h2 class="text-base font-bold uppercase tracking-wide">LAPORAN PELAKSANAAN KEGIATAN</h2>
-                        <h3 class="text-base font-bold uppercase tracking-wide">SASARAN KERJA PEGAWAI</h3>
-                        <p class="text-sm font-bold">TAHUN ${sanitizeHTML(skp.tahun)}</p>
-                        <p class="text-sm font-bold">Triwulan ${twRomawi}</p>
-                    </div>
-
-                    <!-- TABEL ROMAWI I S.D VII TANPA BORDER (REVISI 12) -->
-                    <table class="w-full skp-borderless-table text-xs leading-relaxed">
-                        <tbody>
-                            <tr class="font-bold">
-                                <td class="py-1.5 pr-3 w-8 align-top">I.</td>
-                                <td class="py-1.5 uppercase">NAMA INDIKATOR KINERJA</td>
-                            </tr>
-                            <tr>
-                                <td class="pb-3"></td>
-                                <td class="pb-3 font-semibold">${sanitizeHTML(skp.indikator)}</td>
-                            </tr>
-
-                            <tr class="font-bold">
-                                <td class="py-1.5 pr-3 align-top">II.</td>
-                                <td class="py-1.5 uppercase">URAIAN KEGIATAN</td>
-                            </tr>
-                            <tr>
-                                <td class="pb-3"></td>
-                                <td class="pb-3">Kegiatan yang dilakukan adalah sebagai berikut:<br>${sanitizeHTML(skp.uraianKegiatan)}</td>
-                            </tr>
-
-                            <tr class="font-bold">
-                                <td class="py-1.5 pr-3 align-top">III.</td>
-                                <td class="py-1.5 uppercase">TARGET KINERJA</td>
-                            </tr>
-                            <tr>
-                                <td class="pb-3"></td>
-                                <td class="pb-3">${sanitizeHTML(skp.targetText)}</td>
-                            </tr>
-
-                            <tr class="font-bold">
-                                <td class="py-1.5 pr-3 align-top">IV.</td>
-                                <td class="py-1.5 uppercase">WAKTU PELAKSANAAN</td>
-                            </tr>
-                            <tr>
-                                <td class="pb-3"></td>
-                                <td class="pb-3">${sanitizeHTML(skp.waktuPelaksanaan)}</td>
-                            </tr>
-
-                            <tr class="font-bold">
-                                <td class="py-1.5 pr-3 align-top">V.</td>
-                                <td class="py-1.5 uppercase">HASIL KEGIATAN/PEKERJAAN</td>
-                            </tr>
-                            <tr>
-                                <td class="pb-3"></td>
-                                <td class="pb-3">${sanitizeHTML(skp.hasilKegiatan)}<br><span class="font-bold text-slate-800">Predikat Hasil Kerja: ${sanitizeHTML(skp.nilaiFinalKinerja)} | Predikat Perilaku: ${sanitizeHTML(skp.nilaiPerilakuDirektur)}</span></td>
-                            </tr>
-
-                            ${isTwoPages ? `
-                            <tr>
-                                <td colspan="2" class="py-2 text-right text-[10px] text-slate-400 italic font-sans">Halaman 1 dari 2</td>
-                            </tr>
-                            ` : ''}
-
-                            <tr class="font-bold" ${isTwoPages ? 'style="page-break-before: always;"' : ''}>
-                                <td class="py-1.5 pr-3 align-top">VI.</td>
-                                <td class="py-1.5 uppercase">PERMASALAHAN YANG DIHADAPI</td>
-                            </tr>
-                            <tr>
-                                <td class="pb-3"></td>
-                                <td class="pb-3">${sanitizeHTML(skp.permasalahan)}</td>
-                            </tr>
-
-                            <tr class="font-bold">
-                                <td class="py-1.5 pr-3 align-top">VII.</td>
-                                <td class="py-1.5 uppercase">SARAN DAN TINDAK LANJUT</td>
-                            </tr>
-                            <tr>
-                                <td class="pb-3"></td>
-                                <td class="pb-3">${sanitizeHTML(skp.saranKetuaTim)}${skp.catatanDirektur ? `<br><strong>Arahan Direktur:</strong> ${sanitizeHTML(skp.catatanDirektur)}` : ''}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- BLOK TANDA TANGAN DENGAN QR CODE TER-HASH -->
-                    <div class="pt-4 skp-page-break">
-                        <p class="text-xs mb-3">${sanitizeHTML(skp.tanggalKota)}</p>
-                        <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-6 text-xs text-center pt-2">
-                            
-                            <div class="flex flex-col items-center">
-                                <p class="font-semibold">Pejabat Penilai,</p>
-                                <p class="font-bold mb-2">Direktur</p>
-                                <div id="qrSignDirektur" class="p-1.5 bg-white my-1"></div>
-                                <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashDirektur)}</span>
-                                <p class="font-bold underline">${sanitizeHTML(skp.dirName)}</p>
-                                <p>NIP. ${sanitizeHTML(skp.dirNip)}</p>
-                            </div>
-
-                            ${!skp.isKetuaTimRequest ? `
-                            <div class="flex flex-col items-center">
-                                <p class="font-semibold">Mengetahui,</p>
-                                <p class="font-bold mb-2">Ketua Tim Kerja</p>
-                                <div id="qrSignKetuaTim" class="p-1.5 bg-white my-1"></div>
-                                <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashKetuaTim)}</span>
-                                <p class="font-bold underline">${sanitizeHTML(skp.timName)}</p>
-                                <p>NIP. ${sanitizeHTML(skp.timNip)}</p>
-                            </div>
-                            ` : ''}
-
-                            <div class="flex flex-col items-center">
-                                <p class="font-semibold">Yang membuat,</p>
-                                <p class="font-bold mb-2">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
-                                <div id="qrSignPenyusun" class="p-1.5 bg-white my-1"></div>
-                                <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashPenyusun)}</span>
-                                <p class="font-bold underline">${sanitizeHTML(skp.userName)}</p>
-                                <p>NIP. ${sanitizeHTML(skp.userNip)}</p>
-                            </div>
-
-                        </div>
-                        <div class="text-right text-[10px] text-slate-400 italic font-sans mt-6">
-                            ${isTwoPages ? 'Halaman 2 dari 2' : 'Halaman 1 dari 1'}
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            setTimeout(() => {
-                if (typeof QRCode !== 'undefined') {
-                    const elDir = document.getElementById('qrSignDirektur');
-                    if (elDir) new QRCode(elDir, { text: `HASH:${skp.hashDirektur}|PENANDATANGAN:${skp.dirName}|NIP:${skp.dirNip}|HASIL:${skp.nilaiFinalKinerja}`, width: 78, height: 78 });
-
-                    const elTim = document.getElementById('qrSignKetuaTim');
-                    if (elTim) new QRCode(elTim, { text: `HASH:${skp.hashKetuaTim}|PENANDATANGAN:${skp.timName}|NIP:${skp.timNip}|VALIDASI:VALID`, width: 78, height: 78 });
-
-                    const elUsr = document.getElementById('qrSignPenyusun');
-                    if (elUsr) new QRCode(elUsr, { text: `HASH:${skp.hashPenyusun}|PEMBUAT:${skp.userName}|NIP:${skp.userNip}|INDIKATOR:${skp.indikator}`, width: 78, height: 78 });
-                }
-            }, 80);
-            area.scrollIntoView({ behavior: 'smooth' });
-        }
         let currentActiveLaporanType = 'kinerja';
 
         function openLaporanModal(type) {
