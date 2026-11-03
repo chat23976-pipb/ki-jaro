@@ -3407,7 +3407,6 @@ function destroyAndCreateChart(canvasId, chartConfig) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return null;
 
-            // Pastikan kontainer induk memiliki ukuran minimal sebelum Chart.js membaca dimensi
             if (canvas.parentElement) {
                 canvas.parentElement.style.position = 'relative';
                 canvas.parentElement.style.width = '100%';
@@ -3421,15 +3420,17 @@ function destroyAndCreateChart(canvasId, chartConfig) {
                     activeDashboardCharts[canvasId].destroy();
                     delete activeDashboardCharts[canvasId];
                 }
-                if (typeof Chart !== 'undefined' && typeof Chart.getChart === 'function') {
-                    const prev = Chart.getChart(canvas);
-                    if (prev) prev.destroy();
+                const prev = Chart.getChart(canvas);
+                if (prev) {
+                    prev.destroy();
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn('Warning destroying chart:', e);
+            }
 
             try {
                 if (!chartConfig.options) chartConfig.options = {};
-                chartConfig.options.animation = { duration: 200 };
+                chartConfig.options.animation = { duration: 150 };
                 chartConfig.options.responsive = true;
                 chartConfig.options.maintainAspectRatio = false;
 
@@ -3490,6 +3491,12 @@ function destroyAndCreateChart(canvasId, chartConfig) {
                 return Number((sum / ikList.length).toFixed(2)) || 0;
             });
 
+            // Pastikan kontainer memiliki ukuran sebelum render
+            if (canvas.parentElement) {
+                canvas.parentElement.style.height = '340px';
+                canvas.parentElement.style.position = 'relative';
+            }
+
             destroyAndCreateChart('targetVsRealMultiYearChart', {
                 type: 'bar',
                 data: {
@@ -3500,6 +3507,8 @@ function destroyAndCreateChart(canvasId, chartConfig) {
                     ]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     scales: { y: { beginAtZero: true } },
                     plugins: {
                         legend: { display: true, position: 'bottom' },
@@ -6567,7 +6576,7 @@ async function saveCapaian(e) {
             }
         }
 
-        async function submitValidationProdi() {
+       async function submitValidationProdi() {
             if (!requireWriteAccess(['ketua_unit', 'admin'])) return;
             const id = document.getElementById('validateProdiCapaianId').value;
             const choice = document.getElementById('validateProdiChoice').value;
@@ -6612,27 +6621,6 @@ async function saveCapaian(e) {
         }
 
         async function submitValidation() {
-            if (!requireWriteAccess(['tim_kerja', 'admin'])) return;
-            const id = document.getElementById('validateCapaianId').value;
-            const rawStatusVal = document.getElementById('validateStatusChoice').value;
-            const statusVal = rawStatusVal.toLowerCase().includes('tidak') ? 'Tidak Valid' : 'Valid';
-            
-            const comment = sanitizeHTML(document.getElementById('validateComment').value.trim());
-            const checkedPenyesuaian = Array.from(document.querySelectorAll('input[name="penyesuaianCheck"]:checked')).map(el => el.value);
-
-            const targetItem = (DB.capaian || []).find(c => c && String(c.id) === String(id));
-            if (targetItem) {
-                targetItem.status = statusVal;
-                targetItem.rekomendasi = comment;
-                targetItem.penyesuaian = checkedPenyesuaian;
-                await syncToGoogleSheets('Validasi Kinerja', targetItem);
-            }
-            
-            await saveToMySQL();
-            closeValidateModal();
-            showToast(`Status capaian berhasil divalidasi Ketua Tim Kerja menjadi: ${statusVal}`, statusVal === 'Valid' ? 'success' : 'info');
-            renderCapaianView(document.getElementById('mainContent'));
-        }
 
         // Tindak Lanjut hanya diisi oleh Ketua Prodi/Subbag/Unit (Level bawah hanya membaca)
         function openTindakLanjutModal(id) {
