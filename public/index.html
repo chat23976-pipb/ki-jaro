@@ -4673,6 +4673,15 @@ function renderMultiYearIndikatorChart() {
                                 <div><span class="text-slate-500 block">Target (Renstra):</span><strong id="previewTargetVal" class="text-primary-700 text-sm">100</strong></div>
                                 <div class="text-right"><span class="text-slate-500 block">Pagu Anggaran:</span><strong id="previewAnggaranVal" class="text-emerald-700 text-sm">Rp 0</strong></div>
                             </div>
+                            <!-- REVISI 7: Range Ekspektasi Kinerja pada Cascading Direktur -->
+                            <div class="bg-blue-50/70 p-3.5 rounded-xl border border-blue-200 space-y-2 text-xs">
+                                <label class="block font-bold text-blue-900"><i class="fa-solid fa-gauge-high mr-1"></i> Range Ekspektasi Kinerja (Acuan Penilaian SKP)</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div><span class="text-[10px] font-bold text-rose-700 block">Tidak Mencapai</span><input type="text" id="dirRangeTidak" required value="< 100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
+                                    <div><span class="text-[10px] font-bold text-emerald-700 block">Mencapai Ekspektasi</span><input type="text" id="dirRangeMencapai" required value="100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
+                                    <div><span class="text-[10px] font-bold text-blue-700 block">Melebihi Ekspektasi</span><input type="text" id="dirRangeMelebihi" required value="> 100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
+                                </div>
+                            </div>
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <label class="block font-semibold text-slate-700">Pilih Ketua Tim Kerja (Bisa Lebih Dari 1) & Status Peran</label>
@@ -4721,6 +4730,15 @@ function renderMultiYearIndikatorChart() {
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator dari Direktur</label>
                                 <select id="timDirRef" required class="w-full p-3 bg-slate-50 border rounded-xl"></select>
+                            </div>
+                            <!-- REVISI 7: Range Ekspektasi Kinerja dari Direktur yang diteruskan Ketua Tim Kerja ke Unit -->
+                            <div class="bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-200 space-y-2 text-xs">
+                                <label class="block font-bold text-indigo-900"><i class="fa-solid fa-scale-balanced mr-1"></i> Range Ekspektasi Kinerja untuk Ketua Prodi/Subbag/Unit (Acuan SKP)</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div><span class="text-[10px] font-bold text-rose-700 block">Tidak Mencapai</span><input type="text" id="timRangeTidak" required value="< 100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
+                                    <div><span class="text-[10px] font-bold text-emerald-700 block">Mencapai Ekspektasi</span><input type="text" id="timRangeMencapai" required value="100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
+                                    <div><span class="text-[10px] font-bold text-blue-700 block">Melebihi Ekspektasi</span><input type="text" id="timRangeMelebihi" required value="> 100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
+                                </div>
                             </div>
                             <div>
                                 <div class="flex items-center justify-between mb-2">
@@ -5096,6 +5114,16 @@ function isCurrentTimUtamaSelected() {
 
         function syncUnitRolesWithTimStatus() {
             const timIsUtama = isCurrentTimUtamaSelected();
+            const tahunEl = document.getElementById('timTahunTarget');
+            const indEl = document.getElementById('timDirRef');
+            if (tahunEl && indEl && indEl.value) {
+                const cd = (DB.cascadingDirektur || []).find(c => c.target === indEl.value && String(c.tahun || '2025') === String(tahunEl.value));
+                if (cd && cd.rangeKinerja) {
+                    if (document.getElementById('timRangeTidak')) document.getElementById('timRangeTidak').value = cd.rangeKinerja.tidakMencapai || '< 100%';
+                    if (document.getElementById('timRangeMencapai')) document.getElementById('timRangeMencapai').value = cd.rangeKinerja.mencapai || '100%';
+                    if (document.getElementById('timRangeMelebihi')) document.getElementById('timRangeMelebihi').value = cd.rangeKinerja.melebihi || '> 100%';
+                }
+            }
             document.querySelectorAll('select[id^="unitRole_"]').forEach((sel, idx) => {
                 const chk = document.querySelectorAll('input[name="unitCheck"]')[idx];
                 const isChecked = chk ? chk.checked : false;
@@ -5262,7 +5290,12 @@ function updateDirRenstraOptions(tahun) {
                         satuan: satuan,
                         anggaran: anggaran,
                         timKeys: chosenTims,
-                        timRoles: timRoles
+                        timRoles: timRoles,
+                        rangeKinerja: {
+                            tidakMencapai: document.getElementById('dirRangeTidak') ? document.getElementById('dirRangeTidak').value.trim() : '< 100%',
+                            mencapai: document.getElementById('dirRangeMencapai') ? document.getElementById('dirRangeMencapai').value.trim() : '100%',
+                            melebihi: document.getElementById('dirRangeMelebihi') ? document.getElementById('dirRangeMelebihi').value.trim() : '> 100%'
+                        }
                     };
                 }
                 showToast('Cascading Direktur (Utama & Support) berhasil diperbarui!');
@@ -5277,6 +5310,11 @@ function updateDirRenstraOptions(tahun) {
                     anggaran: anggaran,
                     timKeys: chosenTims,
                     timRoles: timRoles,
+                    rangeKinerja: {
+                        tidakMencapai: document.getElementById('dirRangeTidak') ? document.getElementById('dirRangeTidak').value.trim() : '< 100%',
+                        mencapai: document.getElementById('dirRangeMencapai') ? document.getElementById('dirRangeMencapai').value.trim() : '100%',
+                        melebihi: document.getElementById('dirRangeMelebihi') ? document.getElementById('dirRangeMelebihi').value.trim() : '> 100%'
+                    },
                     status: 'Aktif'
                 });
                 showToast('Cascading Direktur berhasil disimpan!');
@@ -5518,7 +5556,12 @@ async function saveCascadingTim(e) {
                         targetDirektur: targetDir,
                         timKey: editTimKey || currentUser.timKey || 'Akademik',
                         unitTargets: chosenUnits,
-                        unitRoles: unitRoles
+                        unitRoles: unitRoles,
+                        rangeKinerja: {
+                            tidakMencapai: document.getElementById('timRangeTidak') ? document.getElementById('timRangeTidak').value.trim() : '< 100%',
+                            mencapai: document.getElementById('timRangeMencapai') ? document.getElementById('timRangeMencapai').value.trim() : '100%',
+                            melebihi: document.getElementById('timRangeMelebihi') ? document.getElementById('timRangeMelebihi').value.trim() : '> 100%'
+                        }
                     };
                 }
                 showToast('Cascading Unit berhasil diperbarui!');
@@ -5529,7 +5572,12 @@ async function saveCascadingTim(e) {
                     targetDirektur: targetDir,
                     timKey: currentUser.timKey || 'Akademik',
                     unitTargets: chosenUnits,
-                    unitRoles: unitRoles
+                    unitRoles: unitRoles,
+                    rangeKinerja: {
+                        tidakMencapai: document.getElementById('timRangeTidak') ? document.getElementById('timRangeTidak').value.trim() : '< 100%',
+                        mencapai: document.getElementById('timRangeMencapai') ? document.getElementById('timRangeMencapai').value.trim() : '100%',
+                        melebihi: document.getElementById('timRangeMelebihi') ? document.getElementById('timRangeMelebihi').value.trim() : '> 100%'
+                    }
                 });
                 showToast('Cascading ke Unit/Prodi berhasil disimpan!');
             }
