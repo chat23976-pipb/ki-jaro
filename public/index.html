@@ -384,40 +384,53 @@ button { position: relative; z-index: 10; }
         // Helper Cek apakah Capaian berhak masuk ke Dashboard Kinerja Utama (Wajib Valid + Status Utama)
 function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             if (!capaianItem) return false;
-            // Wajib sudah divalidasi 'Valid' oleh Ketua Tim Kerja
+            // 1. Wajib berstatus 'Valid' (Jika diubah ke 'Tidak Valid', otomatis return false / dihapus dari dashboard)
             if (String(capaianItem.status || '').trim() !== 'Valid') return false;
 
-            const tahun = String(capaianItem.tahun || '2025');
-            const targetName = String(capaianItem.targetDirektur || '').trim();
+            const tahun = String(capaianItem.tahun || '2025').trim();
+            const targetName = String(capaianItem.targetDirektur || '').trim().toLowerCase();
+            const unitName = String(capaianItem.unit || '').trim();
 
-            const cd = cdObj || (DB.cascadingDirektur || []).find(x => x && String(x.target).trim() === targetName && String(x.tahun || '2025') === tahun) || (DB.cascadingDirektur || []).find(x => x && String(x.target).trim() === targetName);
+            // 2. Jika pada saat disimpan/import sudah memiliki penanda eksplisit kategori
+            const cd = cdObj || (DB.cascadingDirektur || []).find(x => x && String(x.target || '').trim().toLowerCase() === targetName && String(x.tahun || '2025').trim() === tahun) || (DB.cascadingDirektur || []).find(x => x && String(x.target || '').trim().toLowerCase() === targetName);
             if (!cd) return false;
 
-            const matchedTimKey = capaianItem.timKey;
-            if (matchedTimKey && cd.timRoles && cd.timRoles[matchedTimKey] && cd.timRoles[matchedTimKey] !== 'Utama') {
-                return false;
-            }
-
-            const ctList = (DB.cascadingTim || []).filter(x => 
-                x && String(x.targetDirektur || '').trim() === targetName && 
-                String(x.tahun || '2025') === tahun && 
-                Array.isArray(x.unitTargets) && 
-                x.unitTargets.some(u => String(u || '').trim().toLowerCase() === String(capaianItem.unit || '').trim().toLowerCase())
+            // 3. Cek di Cascading Tim Kerja apakah Unit ini benar-benar berstatus 'Utama'
+            const ctList = (DB.cascadingTim || []).filter(x =>
+                x &&
+                String(x.targetDirektur || '').trim().toLowerCase() === targetName &&
+                Array.isArray(x.unitTargets) &&
+                x.unitTargets.some(u => String(u || '').trim().toLowerCase() === unitName.toLowerCase())
             );
-            if (ctList.length === 0) return false;
 
-            const isUnitUtama = ctList.some(ct => {
-                const unitRoleCheck = ct.unitRoles && ct.unitRoles[capaianItem.unit] ? ct.unitRoles[capaianItem.unit] === 'Utama' : (Array.isArray(ct.unitTargets) && ct.unitTargets[0] === capaianItem.unit);
-                return isTimUtamaInDir(cd, ct.timKey) && unitRoleCheck;
+            // Filter berdasarkan tahun jika ada yang cocok di tahun tersebut
+            const ctYearMatched = ctList.filter(x => String(x.tahun || '2025').trim() === tahun);
+            const activeCtList = ctYearMatched.length > 0 ? ctYearMatched : ctList;
+            if (activeCtList.length === 0) return false;
+
+            const isUnitUtama = activeCtList.some(ct => {
+                const timUtama = isTimUtamaInDir(cd, ct.timKey);
+                if (!timUtama) return false;
+
+                // Cek role unit secara case-insensitive
+                if (ct.unitRoles && typeof ct.unitRoles === 'object') {
+                    const matchedKey = Object.keys(ct.unitRoles).find(k => String(k).trim().toLowerCase() === unitName.toLowerCase());
+                    if (matchedKey) {
+                        return ct.unitRoles[matchedKey] === 'Utama';
+                    }
+                }
+                return Array.isArray(ct.unitTargets) && String(ct.unitTargets[0] || '').trim().toLowerCase() === unitName.toLowerCase();
             });
 
             if (!isUnitUtama) return false;
 
+            // 4. Jika diinput oleh staf sub-unit, cek status Utama di Cascading Unit
             if (capaianItem.isSubUnitInput) {
-                const cu = (DB.cascadingUnit || []).find(x => 
-                    x && String(x.unit || '').trim().toLowerCase() === String(capaianItem.unit || '').trim().toLowerCase() && 
-                    String(x.targetDirektur || '').trim() === targetName && 
-                    String(x.tahun || '2025') === tahun
+                const cu = (DB.cascadingUnit || []).find(x =>
+                    x &&
+                    String(x.unit || '').trim().toLowerCase() === unitName.toLowerCase() &&
+                    String(x.targetDirektur || '').trim().toLowerCase() === targetName &&
+                    String(x.tahun || '2025').trim() === tahun
                 );
                 if (!cu) return false;
                 return isSubRoleUtamaInUnit(cu, capaianItem.inputByUsername);
@@ -6635,7 +6648,7 @@ async function saveCapaian(e) {
             const comment = sanitizeHTML(document.getElementById('validateComment').value.trim());
             const checkedPenyesuaian = Array.from(document.querySelectorAll('input[name="penyesuaianCheck"]:checked')).map(el => el.value);
 
-            const targetItem = DB.capaian.find(c => String(c.id) === String(id));
+            const targetItem = (DB.capaian || []).find(c => c && String(c.id) === String(id));
             if (targetItem) {
                 targetItem.status = statusVal;
                 targetItem.rekomendasi = comment;
@@ -6645,7 +6658,7 @@ async function saveCapaian(e) {
             
             await saveToMySQL();
             closeValidateModal();
-            showToast(`Status capaian berhasil divalidasi Ketua Tim Kerja menjadi: ${statusVal}`);
+            showToast(`Status capaian berhasil divalidasi Ketua Tim Kerja menjadi: ${statusVal}`, statusVal === 'Valid' ? 'success' : 'info');
             renderCapaianView(document.getElementById('mainContent'));
         }
 
