@@ -1314,21 +1314,21 @@ function triggerGoogleLogin() {
      }
 
      async function handleSelfEditProfile(e) {
-      e.preventDefault();
-      if (!currentUser) return;
+         e.preventDefault();
+         if (!currentUser) return;
 
-      const userIdx = DB.users.findIndex(u => String(u.id) === String(currentUser.id) || u.username === currentUser.username);
-      const newName = sanitizeHTML(document.getElementById('selfProfileName').value.trim());
+         const newName = sanitizeHTML(document.getElementById('selfProfileName').value.trim());
       const newNip = document.getElementById('selfProfileNip') ? sanitizeHTML(document.getElementById('selfProfileNip').value.trim()) : (currentUser.nip || '');
       currentUser.nip = newNip;
       if (userIdx !== -1) DB.users[userIdx].nip = newNip;
+         const newUnit = sanitizeHTML(document.getElementById('selfProfileUnit').value.trim());
+         const newAvatar = document.getElementById('selfAvatarBase64').value;
 
-      const newUnit = sanitizeHTML(document.getElementById('selfProfileUnit').value.trim());
-      const newAvatar = document.getElementById('selfAvatarBase64').value;
+         const oldPass = document.getElementById('selfOldPass').value;
+         const newPass = document.getElementById('selfNewPass').value;
+         const confirmPass = document.getElementById('selfConfirmPass').value;
 
-      const oldPass = document.getElementById('selfOldPass').value;
-      const newPass = document.getElementById('selfNewPass').value;
-      const confirmPass = document.getElementById('selfConfirmPass').value;
+         const userIdx = DB.users.findIndex(u => String(u.id) === String(currentUser.id) || u.username === currentUser.username);
 
          if (newPass || confirmPass) {
              if (oldPass !== currentUser.password) {
@@ -2523,6 +2523,12 @@ function renderDokumenUkurLaporView(container) {
                 renderRenstraView(document.getElementById('mainContent'));
             }
         }
+
+        // =========================================================================
+        // REVISI 1: STRATEGY MAP INTERAKTIF (VISI, MISI, TUJUAN & SASARAN) DI MENU DOKUMEN
+        // =========================================================================
+        let strategyMapZoom = 1;
+        let selectedStrategyNode = null;
 
         // =========================================================================
         // REVISI 1 & 2: STRATEGY MAP TEMA TERANG (PUTIH/BIRU/HIJAU/MERAH) + CRUD VMTS + % RIIL
@@ -5094,12 +5100,11 @@ function updateDirRenstraOptions(tahun) {
                         anggaran: anggaran,
                         timKeys: chosenTims,
                         timRoles: timRoles,
-                 rangeEkspektasi: {
-                     bawah: document.getElementById('dirRangeBawah') ? document.getElementById('dirRangeBawah').value.trim() : '< 100%',
-                     sesuai: document.getElementById('dirRangeSesuai') ? document.getElementById('dirRangeSesuai').value.trim() : '100%',
-                     atas: document.getElementById('dirRangeAtas') ? document.getElementById('dirRangeAtas').value.trim() : '> 100%'
-                 },
-                 status: 'Aktif'
+                   rangeEkspektasi: {
+                       bawah: document.getElementById('dirRangeBawah') ? document.getElementById('dirRangeBawah').value.trim() : '< 100%',
+                       sesuai: document.getElementById('dirRangeSesuai') ? document.getElementById('dirRangeSesuai').value.trim() : '100%',
+                       atas: document.getElementById('dirRangeAtas') ? document.getElementById('dirRangeAtas').value.trim() : '> 100%'
+                   }
                     };
                 }
                 showToast('Cascading Direktur (Utama & Support) berhasil diperbarui!');
@@ -5114,12 +5119,11 @@ function updateDirRenstraOptions(tahun) {
                     anggaran: anggaran,
                     timKeys: chosenTims,
                     timRoles: timRoles,
-                 rangeEkspektasi: {
-                     bawah: document.getElementById('dirRangeBawah') ? document.getElementById('dirRangeBawah').value.trim() : '< 100%',
-                     sesuai: document.getElementById('dirRangeSesuai') ? document.getElementById('dirRangeSesuai').value.trim() : '100%',
-                     atas: document.getElementById('dirRangeAtas') ? document.getElementById('dirRangeAtas').value.trim() : '> 100%'
-                 },
-                 status: 'Aktif'
+                   rangeEkspektasi: {
+                       bawah: document.getElementById('dirRangeBawah') ? document.getElementById('dirRangeBawah').value.trim() : '< 100%',
+                       sesuai: document.getElementById('dirRangeSesuai') ? document.getElementById('dirRangeSesuai').value.trim() : '100%',
+                       atas: document.getElementById('dirRangeAtas') ? document.getElementById('dirRangeAtas').value.trim() : '> 100%'
+                   }
                     status: 'Aktif'
                 });
                 showToast('Cascading Direktur berhasil disimpan!');
