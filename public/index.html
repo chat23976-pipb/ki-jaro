@@ -3403,11 +3403,19 @@ function renderDokumenUkurLaporView(container) {
 
         let activeDashboardCharts = {};
 
-        function destroyAndCreateChart(canvasId, chartConfig) {
+function destroyAndCreateChart(canvasId, chartConfig) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return null;
 
-            // 1. Hancurkan instance lama jika ada
+            // Pastikan kontainer induk memiliki ukuran minimal sebelum Chart.js membaca dimensi
+            if (canvas.parentElement) {
+                canvas.parentElement.style.position = 'relative';
+                canvas.parentElement.style.width = '100%';
+                if (!canvas.parentElement.style.height || canvas.parentElement.style.height === '0px' || canvas.parentElement.clientHeight === 0) {
+                    canvas.parentElement.style.height = '340px';
+                }
+            }
+
             try {
                 if (activeDashboardCharts[canvasId]) {
                     activeDashboardCharts[canvasId].destroy();
@@ -3419,23 +3427,14 @@ function renderDokumenUkurLaporView(container) {
                 }
             } catch (e) {}
 
-            // 2. Paksa ukuran kontainer induk agar tidak pernah 0px (penyebab blank putih)
-            if (canvas.parentElement) {
-                canvas.parentElement.style.position = 'relative';
-                canvas.parentElement.style.width = '100%';
-                if (!canvas.parentElement.style.height || canvas.parentElement.style.height === '0px') {
-                    canvas.parentElement.style.height = '340px';
-                }
-            }
-
-            // 3. Buat grafik baru tanpa animasi elastis yang bikin crash
             try {
                 if (!chartConfig.options) chartConfig.options = {};
-                chartConfig.options.animation = { duration: 300 };
+                chartConfig.options.animation = { duration: 200 };
                 chartConfig.options.responsive = true;
                 chartConfig.options.maintainAspectRatio = false;
 
-                const newInstance = new Chart(canvas.getContext('2d'), chartConfig);
+                const ctx = canvas.getContext('2d');
+                const newInstance = new Chart(ctx, chartConfig);
                 activeDashboardCharts[canvasId] = newInstance;
                 return newInstance;
             } catch (err) {
@@ -8791,66 +8790,56 @@ async function saveCapaian(e) {
         }
 
         async function submitRequestSKP(e) {
-            e.preventDefault();
-            const yr = document.getElementById('reqSkpTahun').value;
-            const tw = document.getElementById('reqSkpTw').value;
-            const capId = document.getElementById('reqSkpCapaianId').value;
-            if (!capId) {
-                showToast('Pilih indikator kinerja yang telah dicascading pada tahun tersebut terlebih dahulu!', 'error');
-                return;
-            }
+    e.preventDefault();
 
-            const isKetuaTim = currentUser.role === 'tim_kerja';
-            const capObj = DB.capaian.find(c => String(c.id) === String(capId));
-            const indikatorName = capObj ? capObj.targetDirektur : capId.replace('casc_', '');
-            const cdObj = (DB.cascadingDirektur || []).find(cd => cd.target === indikatorName && String(cd.tahun || '2025') === String(yr));
-            const targetValNum = capObj ? capObj.target : (cdObj && cdObj.targetVal !== undefined ? cdObj.targetVal : 100);
-            const realValNum = capObj ? capObj.realisasi : 0;
-            const satuanStr = capObj ? (capObj.satuan || '%') : (cdObj ? (cdObj.satuan || '%') : '%');
+    // Tutup modal terlebih dahulu agar DOM dashboard/laporan kembali normal
+    const modal = document.getElementById('reqSKPModal');
+    if (modal) {
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    }
 
-            const newSkp = {
-                id: 'skp_' + Date.now(),
-                tahun: yr,
-                triwulan: tw,
-                capaianId: capObj ? capObj.id : null,
-                indikator: indikatorName,
-                targetNum: targetValNum,
-                realisasiNum: realValNum,
-                satuan: satuanStr,
-                uraianKegiatan: capObj ? (capObj.uraianPekerjaan || capObj.program) : 'Melaksanakan program kerja sesuai target indikator yang dicascadingkan',
-                targetText: `Target output yang dihasilkan ${targetValNum} ${satuanStr}`,
-                waktuPelaksanaan: `Pelaksanaan kegiatan selama 12 bulan yaitu bulan Januari sampai dengan Desember ${yr}`,
-                hasilKegiatan: capObj ? `Hasil kegiatan yang dicapai adalah ${realValNum} ${satuanStr} (${capObj.program})` : `Realisasi capaian ${realValNum} ${satuanStr}`,
-                permasalahan: capObj && capObj.permasalahan ? capObj.permasalahan : 'Tidak ada kendala signifikan',
-                saranKetuaTim: capObj && capObj.rekomendasi ? capObj.rekomendasi : '-',
-                requesterUsername: currentUser.username,
-                requesterName: currentUser.name,
-                unit: currentUser.unit,
-                timKey: currentUser.timKey || 'Akademik',
-                isKetuaTimRequest: isKetuaTim,
-                tanggalKota: document.getElementById('reqSkpTanggalKota').value.trim(),
-                dirName: document.getElementById('skpDirName').value.trim(),
-                dirNip: document.getElementById('skpDirNip').value.trim(),
-                timName: document.getElementById('skpTimName') ? document.getElementById('skpTimName').value.trim() : currentUser.name,
-                timNip: document.getElementById('skpTimNip') ? document.getElementById('skpTimNip').value.trim() : (currentUser.nip || '-'),
-                userName: document.getElementById('skpUserName').value.trim(),
-                userNip: document.getElementById('skpUserNip').value.trim(),
-                status: isKetuaTim ? 'Menunggu Direktur' : 'Menunggu Ketua Tim Kerja',
-                nilaiTimKinerja: isKetuaTim ? 'Sesuai Ekspektasi' : '',
-                nilaiFinalKinerja: '',
-                nilaiPerilakuDirektur: '',
-                hashDirektur: '',
-                hashKetuaTim: '',
-                hashPenyusun: ''
-            };
+    const checked = Array.from(document.querySelectorAll('input[name="reqLapCapCheck"]:checked')).map(x => x.value);
+    if (checked.length === 0) {
+        showToast('Pilih minimal 1 capaian indikator!', 'error');
+        return;
+    }
+    const yr = document.getElementById('reqSkpTahun').value;
+    const tw = document.getElementById('reqSkpTw').value;
+    const newSkp = {
+        id: 'skp_' + Date.now(),
+        tahun: yr,
+        triwulan: tw,
+        capaianId: checked[0],
+        indikator: document.getElementById('reqSkpCapaianId').options[document.getElementById('reqSkpCapaianId').selectedIndex]?.text || '-',
+        requesterUsername: currentUser.username,
+        requesterName: currentUser.name,
+        unit: currentUser.unit,
+        timKey: currentUser.timKey || 'Akademik',
+        isKetuaTimRequest: currentUser.role === 'tim_kerja',
+        tanggalKota: document.getElementById('reqSkpTanggalKota').value.trim(),
+        dirName: document.getElementById('skpDirName').value.trim(),
+        dirNip: document.getElementById('skpDirNip').value.trim(),
+        timName: document.getElementById('skpTimName') ? document.getElementById('skpTimName').value.trim() : currentUser.name,
+        timNip: document.getElementById('skpTimNip') ? document.getElementById('skpTimNip').value.trim() : (currentUser.nip || '-'),
+        userName: document.getElementById('skpUserName').value.trim(),
+        userNip: document.getElementById('skpUserNip').value.trim(),
+        status: currentUser.role === 'tim_kerja' ? 'Menunggu Direktur' : 'Menunggu Ketua Tim Kerja',
+        nilaiTimKinerja: currentUser.role === 'tim_kerja' ? 'Sesuai Ekspektasi' : '',
+        nilaiFinalKinerja: '',
+        nilaiPerilakuDirektur: '',
+        hashDirektur: '',
+        hashKetuaTim: '',
+        hashPenyusun: ''
+    };
 
-            DB.approvalSKP.push(newSkp);
-            recordAuditLog('Request SKP', 'Laporan SKP', `${currentUser.name} mengajukan SKP indikator "${indikatorName}" (${tw} ${yr})`);
-            await saveToMySQL();
-            document.getElementById('reqSKPModal').classList.add('hidden');
-            showToast('Request Approval SKP berhasil diajukan!');
-            renderLaporanView(document.getElementById('mainContent'));
-        }
+    DB.approvalSKP.push(newSkp);
+    recordAuditLog('Request SKP', 'Laporan SKP', `${currentUser.name} mengajukan SKP (${tw} ${yr})`);
+    await saveToMySQL();
+
+    showToast('Request Approval SKP berhasil diajukan!');
+    renderLaporanView(document.getElementById('mainContent'));
+}
 
         // REVISI 10: Menampilkan Nama Ketua Unit, Indikator, Target, Realisasi, & Range Ekspektasi Kinerja pada Modal Penilaian Ketua Tim Kerja
         function openAssessSKPTimModal(skpId) {
@@ -9016,30 +9005,35 @@ async function saveCapaian(e) {
         }
 
         async function submitAssessSKPDir(decision) {
-            const skpId = document.getElementById('assessSkpDirId').value;
-            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
-            if (!skp) return;
+    const modal = document.getElementById('assessSkpDirModal');
+    if (modal) {
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    }
 
-            if (decision === 'Ditolak') {
-                skp.status = 'Ditolak';
-            } else {
-                skp.nilaiFinalKinerja = document.getElementById('assessSkpDirRating').value;
-                skp.nilaiPerilakuDirektur = document.getElementById('assessSkpDirBehavior').value;
-                skp.catatanDirektur = document.getElementById('assessSkpDirNote').value.trim();
-                skp.status = 'Disetujui';
+    const skpId = document.getElementById('assessSkpDirId').value;
+    const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
+    if (!skp) return;
 
-                const timestamp = new Date().toISOString();
-                skp.hashDirektur = generateSimpleDocHash(`DIR|${skp.id}|${skp.dirName}|${skp.dirNip}|${skp.nilaiFinalKinerja}|${timestamp}`);
-                skp.hashKetuaTim = generateSimpleDocHash(`TIM|${skp.id}|${skp.timName}|${skp.timNip}|${skp.nilaiTimKinerja}|${timestamp}`);
-                skp.hashPenyusun = generateSimpleDocHash(`USR|${skp.id}|${skp.userName}|${skp.userNip}|${skp.indikator}|${timestamp}`);
-            }
+    if (decision === 'Ditolak') {
+        skp.status = 'Ditolak';
+    } else {
+        skp.nilaiFinalKinerja = document.getElementById('assessSkpDirRating').value;
+        skp.nilaiPerilakuDirektur = document.getElementById('assessSkpDirBehavior').value;
+        skp.catatanDirektur = document.getElementById('assessSkpDirNote').value.trim();
+        skp.status = 'Disetujui';
 
-            recordAuditLog('Persetujuan Final SKP (Direktur)', 'Laporan SKP', `Direktur menyetujui final SKP ${skp.requesterName} (Hasil: ${skp.nilaiFinalKinerja}, Perilaku: ${skp.nilaiPerilakuDirektur})`);
-            await saveToMySQL();
-            document.getElementById('assessSkpDirModal').classList.add('hidden');
-            showToast(`SKP ${skp.status}! QR Code Hash Digital telah diterbitkan.`);
-            renderLaporanView(document.getElementById('mainContent'));
-        }
+        const timestamp = new Date().toISOString();
+        skp.hashDirektur = generateSimpleDocHash(`DIR|${skp.id}|${skp.dirName}|${skp.dirNip}|${skp.nilaiFinalKinerja}|${timestamp}`);
+        skp.hashKetuaTim = generateSimpleDocHash(`TIM|${skp.id}|${skp.timName}|${skp.timNip}|${skp.nilaiTimKinerja}|${timestamp}`);
+        skp.hashPenyusun = generateSimpleDocHash(`USR|${skp.id}|${skp.userName}|${skp.userNip}|${skp.indikator}|${timestamp}`);
+    }
+
+    recordAuditLog('Persetujuan Final SKP (Direktur)', 'Laporan SKP', `Direktur menyetujui final SKP ${skp.requesterName}`);
+    await saveToMySQL();
+    showToast(`SKP ${skp.status}! QR Code Hash Digital telah diterbitkan.`);
+    renderLaporanView(document.getElementById('mainContent'));
+}
 
         // REVISI 12: Cetak Laporan SKP Tanpa Border Tabel + Penanda Halaman Otomatis (Halaman 1 dari 2 & Halaman 2 dari 2)
         function previewAndPrintSKP(skpId) {
@@ -9611,6 +9605,14 @@ async function saveCapaian(e) {
              renderLogin();
          }
      };
+    window.addEventListener('resize', () => {
+    Object.values(activeDashboardCharts).forEach(chartInstance => {
+        if (chartInstance && typeof chartInstance.resize === 'function') {
+            chartInstance.resize();
+        }
+    });
+});
+    
         function openExportRisikoCsvModal() {
             const modal = document.getElementById('exportRisikoCsvModal');
             if (modal) {
