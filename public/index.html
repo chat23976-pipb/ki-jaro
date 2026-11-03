@@ -79,7 +79,47 @@
 }
 /* Memastikan tombol tidak terhalang elemen lain */
 button { position: relative; z-index: 10; }
-        
+
+/* Animasi Futuristik & Print Page Counter (Revisi 12 & 14) */
+@keyframes floatGlow {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-3px); }
+}
+.futuristic-card {
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.futuristic-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 28px -8px rgba(37, 99, 235, 0.18);
+}
+
+/* Revisi 12: Menghilangkan Border Tabel SKP & Penanda Halaman Otomatis */
+.skp-borderless-table, 
+.skp-borderless-table th, 
+.skp-borderless-table td {
+    border: none !important;
+}
+.skp-borderless-table tr {
+    border-bottom: 1px solid #f1f5f9;
+}
+@media print {
+    .skp-print-container {
+        counter-reset: page;
+    }
+    .skp-page-break {
+        page-break-after: always;
+        break-after: page;
+    }
+    .skp-page-footer {
+        display: block !important;
+        position: fixed;
+        bottom: 10px;
+        right: 20px;
+        font-size: 10px;
+        font-weight: bold;
+        color: #475569;
+    }
+}
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
@@ -112,8 +152,12 @@ button { position: relative; z-index: 10; }
             </div>
 
             <div>
-                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar</label>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar (Otomatis jadi Nama Penyusun)</label>
                 <input type="text" id="selfProfileName" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+            </div>
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">NIP / NIK Resmi</label>
+                <input type="text" id="selfProfileNip" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold" placeholder="Contoh: 198501012015041001">
             </div>
             <div>
                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Unit / Prodi / Subbag</label>
@@ -155,6 +199,25 @@ button { position: relative; z-index: 10; }
     </div>
 </div>
     <script>
+        // =========================================================================
+        // REVISI 14: GLOBAL CHART.JS FUTURISTIC ANIMATION ENGINE
+        // =========================================================================
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.animation = {
+                duration: 1800,
+                easing: 'easeOutElastic',
+                delay: (context) => {
+                    let delay = 0;
+                    if (context.type === 'data' && context.mode === 'default') {
+                        delay = context.dataIndex * 120 + context.datasetIndex * 80;
+                    }
+                    return delay;
+                }
+            };
+            Chart.defaults.transitions.active.animation.duration = 400;
+            Chart.defaults.elements.line.tension = 0.35;
+        }
+
         // =========================================================================
         // FASE 1: FONDASI KEAMANAN (XSS, CSRF, RATE LIMIT, SESSION, IDLE TIMEOUT)
         // =========================================================================
@@ -383,13 +446,13 @@ button { position: relative; z-index: 10; }
         }
         let DB = {
             users: [
-                { id: 'u1', username: 'deni.saputra@poltek-petrokimia.ac.id', password: '123', name: 'Administrator Sistem', role: 'admin', unit: 'Pusat Data & Sistem' },
-                { id: 'u2', username: 'supardi@poltek-petrokimia.ac.id', password: '123', name: 'Dr. Supardi S.Pd., M.Pd', role: 'direktur', unit: 'Pimpinan Tertinggi' },
+                { id: 'u1', username: 'deni.saputra@poltek-petrokimia.ac.id', password: '123', name: 'Administrator Sistem', nip: '199001012020121001', role: 'admin', unit: 'Pusat Data & Sistem' },
+                { id: 'u2', username: 'supardi@poltek-petrokimia.ac.id', password: '123', name: 'Dr. Supardi S.Pd., M.Pd', nip: '197504122001121002', role: 'direktur', unit: 'Pimpinan Tertinggi' },
                 
                 // 3 Tim Kerja
-                { id: 'u3', username: 'asadian@poltek-petrokimia.ac.id', password: '123', name: 'Asadian Puja Enggita S.Si., M.MT', role: 'tim_kerja', timKey: 'Akademik', unit: 'Tim Kerja Akademik' },
-                { id: 'u4', username: 'deni@poltek-petrokimia.ac.id', password: '123', name: 'Ir. Deni Saputra S.T., M.Sc', role: 'tim_kerja', timKey: 'Umum dan Keuangan', unit: 'Tim Kerja Umum dan Keuangan' },
-                { id: 'u5', username: 'wirandi@poltek-petrokimia.ac.id', password: '123', name: 'Budi Kemahasiswaan, M.Pd.', role: 'tim_kerja', timKey: 'Kemahasiswaan dan Kerjasama', unit: 'Tim Kerja Kemahasiswaan dan Kerjasama' },
+                { id: 'u3', username: 'asadian@poltek-petrokimia.ac.id', password: '123', name: 'Asadian Puja Enggita S.Si., M.MT', nip: '198807152018031001', role: 'tim_kerja', timKey: 'Akademik', unit: 'Tim Kerja Akademik' },
+                { id: 'u4', username: 'deni@poltek-petrokimia.ac.id', password: '123', name: 'Ir. Deni Saputra S.T., M.Sc', nip: '198605202015041003', role: 'tim_kerja', timKey: 'Umum dan Keuangan', unit: 'Tim Kerja Umum dan Keuangan' },
+                { id: 'u5', username: 'wirandi@poltek-petrokimia.ac.id', password: '123', name: 'Budi Kemahasiswaan, M.Pd.', nip: '198911102019031005', role: 'tim_kerja', timKey: 'Kemahasiswaan dan Kerjasama', unit: 'Tim Kerja Kemahasiswaan dan Kerjasama' },
 
                 // 12 Ketua Unit / Prodi / Subbag
                 { id: 'u6', username: 'prodi_tmip@poltek-petrokimia.ac.id', password: '123', name: 'Ketua Prodi TMIP', role: 'ketua_unit', unit: 'Prodi TMIP', timKey: 'Akademik' },
@@ -416,6 +479,14 @@ button { position: relative; z-index: 10; }
             renstraBPSDMI: [],           
             renstraSasaranKinerja: [],   
             renstraIndikatorKinerja: [], 
+            // Revisi 2: Database Dinamis Visi, Misi & Tujuan beserta Pemetaan Indikator
+            visiInstitusi: {
+                kode: 'VISI POLITEKNIK INDUSTRI PETROKIMIA BANTEN 2030',
+                teks: 'Sebagai penyelenggara pendidikan vokasi industri yang unggul (excellence) dan berdaya saing global di bidang Industri Petrokimia pada tahun 2030',
+                unit: 'Seluruh Unit Kerja Politeknik'
+            },
+            misiInstitusi: [],
+            tujuanInstitusi: [],
 
             cascadingDirektur: [],       
             cascadingTim: [],            
@@ -1224,6 +1295,7 @@ function triggerGoogleLogin() {
          if (!modal) return;
 
          document.getElementById('selfProfileName').value = currentUser.name || '';
+         if (document.getElementById('selfProfileNip')) document.getElementById('selfProfileNip').value = currentUser.nip || '';
          document.getElementById('selfProfileUnit').value = currentUser.unit || '';
          document.getElementById('selfOldPass').value = '';
          document.getElementById('selfNewPass').value = '';
@@ -1283,7 +1355,10 @@ function triggerGoogleLogin() {
          if (!currentUser) return;
 
          const newName = sanitizeHTML(document.getElementById('selfProfileName').value.trim());
+         const newNip = document.getElementById('selfProfileNip') ? sanitizeHTML(document.getElementById('selfProfileNip').value.trim()) : (currentUser.nip || '');
          const newUnit = sanitizeHTML(document.getElementById('selfProfileUnit').value.trim());
+         currentUser.nip = newNip;
+         if (userIdx !== -1) DB.users[userIdx].nip = newNip;
          const newAvatar = document.getElementById('selfAvatarBase64').value;
 
          const oldPass = document.getElementById('selfOldPass').value;
@@ -1417,7 +1492,7 @@ function renderDashboardLayout() {
 
                             <a href="javascript:void(0)" onclick="switchTab('itjen')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'itjen' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-shield-halved w-5 text-center"></i>
-                                <span class="sidebar-text">Masukan ITJEN & Tindak Lanjut</span>
+                                <span class="sidebar-text">Laporan Hasil Evaluasi Penilaian SAKIP</span>
                             </a>
                             
                             ${currentUser.role === 'admin' ? `
