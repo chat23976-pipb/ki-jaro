@@ -6659,6 +6659,47 @@ async function saveCapaian(e) {
             await saveToMySQL();
             closeValidateModal();
             showToast(`Status capaian berhasil divalidasi Ketua Tim Kerja menjadi: ${statusVal}`, statusVal === 'Valid' ? 'success' : 'info');
+            
+            // Render ulang tabel capaian dan perbarui dashboard seketika
+            renderCapaianView(document.getElementById('mainContent'));
+            if (activeTab === 'dashboard') {
+                setTimeout(() => renderDashboardView(document.getElementById('mainContent')), 100);
+            }
+        }
+
+        // Tindak Lanjut hanya diisi oleh Ketua Prodi/Subbag/Unit (Level bawah hanya membaca)
+        function openTindakLanjutModal(id) {
+            if (!requireWriteAccess(['ketua_unit', 'admin'])) {
+                showToast('Tindak lanjut hanya dapat diisi oleh Ketua Prodi / Subbag / Unit!', 'error');
+                return;
+            }
+            document.getElementById('tindakLanjutCapaianId').value = id;
+            const found = DB.capaian.find(c => c.id === id);
+            if (found) {
+                document.getElementById('statusTindakLanjutChoice').value = found.statusTindakLanjut || 'Belum Ditindaklanjuti';
+                document.getElementById('inputLinkBuktiTindakLanjut').value = found.linkBuktiTindakLanjut || '';
+            }
+            document.getElementById('tindakLanjutModal').classList.remove('hidden');
+            document.getElementById('tindakLanjutModal').classList.add('flex');
+        }
+
+        function closeTindakLanjutModal() { 
+            document.getElementById('tindakLanjutModal').classList.remove('flex'); 
+            document.getElementById('tindakLanjutModal').classList.add('hidden'); 
+        }
+
+        async function submitTindakLanjut() {
+            if (!requireWriteAccess(['ketua_unit', 'admin'])) return;
+            const id = document.getElementById('tindakLanjutCapaianId').value;
+            const idx = DB.capaian.findIndex(c => c.id === id);
+            if (idx !== -1) {
+                DB.capaian[idx].statusTindakLanjut = document.getElementById('statusTindakLanjutChoice').value;
+                DB.capaian[idx].linkBuktiTindakLanjut = document.getElementById('inputLinkBuktiTindakLanjut').value;
+                await syncToGoogleSheets('Update Tindak Lanjut Unit', DB.capaian[idx]);
+            }
+            await saveToMySQL();
+            closeTindakLanjutModal();
+            showToast('Status & bukti tindak lanjut berhasil diperbarui oleh Ketua Unit!');
             renderCapaianView(document.getElementById('mainContent'));
         }
 
