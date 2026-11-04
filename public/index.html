@@ -1709,7 +1709,14 @@ function renderDashboardLayout() {
                 if (backdrop) backdrop.classList.add('hidden');
             }
 
-            if (tab === 'dashboard') renderDashboardView(content);
+            if (tab === 'dashboard') {
+                try {
+                    renderDashboardView(content);
+                } catch (err) {
+                    console.error("Error merender Dashboard:", err);
+                    content.innerHTML = `<div class="p-8 text-center bg-white rounded-2xl shadow-sm border"><p class="text-rose-500 font-bold">Gagal memuat Dashboard Kinerja Utama.</p></div>`;
+                }
+            }
             else if (tab === 'renstra') renderRenstraView(content);
             else if (tab === 'dokumen') renderDokumenView(content);
             else if (tab === 'cascading') {
@@ -1729,7 +1736,6 @@ function renderDashboardLayout() {
             else if (tab === 'laporan') renderLaporanView(content);
             else if (tab === 'dokumen_ukur_lapor') renderDokumenUkurLaporView(content);
         }
-
 // State Sort Header Kolom untuk Dokumen Pengukuran & Pelaporan
         let sortPengukuranCol = 'nama';
         let sortPengukuranAsc = true;
