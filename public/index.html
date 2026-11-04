@@ -200,13 +200,12 @@ button { position: relative; z-index: 10; }
 </div>
     <script>
         // =========================================================================
-        // REVISI 14: GLOBAL CHART.JS STABLE ANIMATION ENGINE
+        // REVISI 2: MATIKAN ANIMASI CHART.JS AGAR GRAFIK INSTAN & TIDAK HILANG
         // =========================================================================
         if (typeof Chart !== 'undefined') {
-            Chart.defaults.animation = {
-                duration: 600,
-                easing: 'easeOutQuart'
-            };
+            Chart.defaults.animation = false;
+            Chart.defaults.animations = { colors: false, x: false, y: false };
+            Chart.defaults.transitions = { active: { animation: { duration: 0 } } };
             Chart.defaults.elements.line.tension = 0.3;
         }
 
@@ -440,27 +439,27 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
         }
 
         // Helper Menghitung Realisasi Gabungan (Akumulatif / Rata-rata) pada Suatu Indikator & Triwulan
-        function getAggregatedRealisasiForDashboard(capsList, cdTarget, tahun) {
-            if (!Array.isArray(capsList) || capsList.length === 0) return 0;
-            const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
+        async function submitValidation() {
+            if (!requireWriteAccess(['tim_kerja', 'admin'])) return;
+            const id = document.getElementById('validateCapaianId').value;
+            const rawStatusVal = document.getElementById('validateStatusChoice').value;
+            const statusVal = rawStatusVal.toLowerCase().includes('tidak') ? 'Tidak Valid' : 'Valid';
             
-            const sortedByTw = [...capsList].sort((a, b) => (twOrder[String(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[String(b.triwulan || '').trim().toUpperCase()] || 0));
-            if (sortedByTw.length === 0 || !sortedByTw[sortedByTw.length - 1]) return 0;
+            const comment = sanitizeHTML(document.getElementById('validateComment').value.trim());
+            const checkedPenyesuaian = Array.from(document.querySelectorAll('input[name="penyesuaianCheck"]:checked')).map(el => el.value);
 
-            const latestTw = sortedByTw[sortedByTw.length - 1].triwulan;
-            const latestCaps = sortedByTw.filter(c => c && String(c.triwulan || '').trim().toUpperCase() === String(latestTw || '').trim().toUpperCase());
-            if (latestCaps.length === 0 || !latestCaps[latestCaps.length - 1]) return 0;
-
-            const cu = (DB.cascadingUnit || []).find(x => x && x.targetDirektur === cdTarget && String(x.tahun || '2025') === String(tahun));
-            if (cu && latestCaps.length > 1) {
-                const sum = latestCaps.reduce((acc, c) => acc + (Number(c ? c.realisasi : 0) || 0), 0);
-                if (cu.aggregationMode === 'akumulatif') {
-                    return Number(sum.toFixed(2));
-                } else {
-                    return Number((sum / latestCaps.length).toFixed(2));
-                }
+            const targetIdx = (DB.capaian || []).findIndex(c => c && String(c.id) === String(id));
+            if (targetIdx !== -1) {
+                DB.capaian[targetIdx].status = statusVal;
+                DB.capaian[targetIdx].rekomendasi = comment;
+                DB.capaian[targetIdx].penyesuaian = checkedPenyesuaian;
+                await syncToGoogleSheets('Validasi Kinerja', DB.capaian[targetIdx]);
             }
-            return Number(latestCaps[latestCaps.length - 1].realisasi) || 0;
+            
+            await saveToMySQL();
+            closeValidateModal();
+            showToast(`Status capaian berhasil divalidasi Ketua Tim Kerja menjadi: ${statusVal}`, statusVal === 'Valid' ? 'success' : 'info');
+            renderCapaianView(document.getElementById('mainContent'));
         }
         let DB = {
             users: [
@@ -544,6 +543,32 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
         let filterChartIndikator = 'Semua';
 
         let filterCapaianTahun = '2025';
+        // =========================================================================
+        // TAMBAHAN STATE & FUNGSI UNTUK REVISI 4 (TABEL CAPAIAN KINERJA)
+        // =========================================================================
+        let filterCapaianTriwulan = 'Semua';
+        let limitCapaianRows = 5;       // Default menampilkan 5 baris sesuai permintaan
+        let sortCapaianCol = 'unit';    // Kolom default awal untuk pengurutan
+        let sortCapaianAsc = true;      // Arah sorting ascending (True = A-Z / Kecil ke Besar)
+
+        // Fungsi yang menangkap klik pada header kolom tabel Capaian
+        function toggleSortCapaian(col) {
+            if (sortCapaianCol === col) {
+                sortCapaianAsc = !sortCapaianAsc; // Balik arah jika diklik ulang
+            } else {
+                sortCapaianCol = col;
+                sortCapaianAsc = true;
+            }
+            renderCapaianView(document.getElementById('mainContent'));
+        }
+
+        // Helper untuk menampilkan ikon panah sorting di header kolom
+        function getSortCapaianIcon(col) {
+            if (sortCapaianCol !== col) return '<i class="fa-solid fa-sort text-slate-300 ml-1"></i>';
+            return sortCapaianAsc 
+                ? '<i class="fa-solid fa-sort-up text-blue-600 ml-1"></i>' 
+                : '<i class="fa-solid fa-sort-down text-blue-600 ml-1"></i>';
+        }
         let filterRisikoTahun = '2025';
         let filterTindakLanjutTahun = '2025';
 
@@ -3707,8 +3732,8 @@ function renderDokumenUkurLaporView(container) {
                                                         </div>
                                                     </td>
                                                     <td class="p-3 text-center">
-                                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${realisasiVal > targetVal ? 'bg-blue-100 text-blue-800' : isTercapai ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-                                                            ${realisasiVal > targetVal ? '★ Melebihi Ekspektasi' : isTercapai ? '✓ Mencapai Ekspektasi' : '✗ Belum Tercapai'}
+                                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isTercapai ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                                                            ${isTercapai ? '✓ Tercapai' : '✗ Tidak Tercapai'}
                                                         </span>
                                                     </td>
                                                 </tr>
@@ -4270,6 +4295,9 @@ let dashboardChartInstances = {};
         function safeInitChart(canvasId, config) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return null;
+            if (canvas.parentElement) {
+                canvas.parentElement.style.height = canvasId.includes('Risiko') ? '260px' : (canvasId === 'unitRankingChart' ? '280px' : '340px');
+            }
             try {
                 if (dashboardChartInstances[canvasId]) {
                     dashboardChartInstances[canvasId].destroy();
@@ -4277,10 +4305,12 @@ let dashboardChartInstances = {};
                 }
                 const existing = typeof Chart.getChart === 'function' ? Chart.getChart(canvas) : null;
                 if (existing) existing.destroy();
-            } catch (e) {
-                console.warn('Cleanup chart warning:', e);
-            }
+            } catch (e) {}
             try {
+                if (!config.options) config.options = {};
+                config.options.animation = false;
+                config.options.responsive = true;
+                config.options.maintainAspectRatio = false;
                 const ctx = canvas.getContext('2d');
                 const instance = new Chart(ctx, config);
                 dashboardChartInstances[canvasId] = instance;
@@ -5995,18 +6025,14 @@ async function saveCascadingTim(e) {
             const isKetuaTim = currentUser.role === 'tim_kerja';
             const isAdmin = currentUser.role === 'admin';
 
-            let displayCapaian = DB.capaian;
+            let displayCapaian = [...(DB.capaian || [])];
             if (isSubUnit) {
-                // Level bawah melihat capaian unitnya (termasuk arahan Ketua Tim Kerja)
-                displayCapaian = DB.capaian.filter(c => c.unit === currentUser.unit);
+                displayCapaian = displayCapaian.filter(c => c.unit === currentUser.unit);
             } else if (isKaUnit) {
-                displayCapaian = DB.capaian.filter(c => c.unit === currentUser.unit);
+                displayCapaian = displayCapaian.filter(c => c.unit === currentUser.unit);
             } else if (isKetuaTim) {
-                const validUnits = DB.cascadingTim.filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets);
-                // Ketua Tim Kerja HANYA melihat capaian yang:
-                // 1) Diinput langsung oleh Ketua Unit, ATAU
-                // 2) Diinput oleh level bawah (Sekretaris/Kalab/Dosen/Tendik) DAN SUDAH divalidasi Tahap 1 (Valid) oleh Ketua Unit/Prodi
-                displayCapaian = DB.capaian.filter(c => {
+                const validUnits = (DB.cascadingTim || []).filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets);
+                displayCapaian = displayCapaian.filter(c => {
                     const matchScope = validUnits.includes(c.unit) && c.timKey === currentUser.timKey;
                     if (!matchScope) return false;
                     if (c.isSubUnitInput && c.statusProdi !== 'Valid') return false;
@@ -6014,11 +6040,36 @@ async function saveCascadingTim(e) {
                 });
             }
 
+            // 1. Terapkan Filter Tahun
             if (filterCapaianTahun !== 'Semua') {
                 displayCapaian = displayCapaian.filter(c => String(c.tahun || '2025') === String(filterCapaianTahun));
             }
+            
+            // 2. Terapkan Filter Triwulan (Revisi 4)
+            if (filterCapaianTriwulan !== 'Semua') {
+                displayCapaian = displayCapaian.filter(c => String(c.triwulan || '').trim().toUpperCase() === String(filterCapaianTriwulan).trim().toUpperCase());
+            }
 
-            // Daftar indikator yang bisa diinput oleh user saat ini
+            // 3. Terapkan Sorting Berdasarkan Header yang Diklik
+            displayCapaian.sort((a, b) => {
+                let valA = '', valB = '';
+                if (sortCapaianCol === 'unit') { valA = a.unit || ''; valB = b.unit || ''; }
+                else if (sortCapaianCol === 'indikator') { valA = a.targetDirektur || ''; valB = b.targetDirektur || ''; }
+                else if (sortCapaianCol === 'program') { valA = a.program || ''; valB = b.program || ''; }
+                else if (sortCapaianCol === 'periode') { valA = `${a.tahun || ''}_${a.triwulan || ''}`; valB = `${b.tahun || ''}_${b.triwulan || ''}`; }
+                else if (sortCapaianCol === 'realisasi') { 
+                    return sortCapaianAsc ? (Number(a.realisasi || 0) - Number(b.realisasi || 0)) : (Number(b.realisasi || 0) - Number(a.realisasi || 0)); 
+                }
+                else if (sortCapaianCol === 'permasalahan') { valA = a.permasalahan || ''; valB = b.permasalahan || ''; }
+                else if (sortCapaianCol === 'status') { valA = a.status || ''; valB = b.status || ''; }
+                
+                return sortCapaianAsc ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+            });
+
+            const totalRows = displayCapaian.length;
+            // 4. Batasi Baris Sesuai Pilihan (Default 5 Baris)
+            const paginatedCapaian = displayCapaian.slice(0, Number(limitCapaianRows));
+
             let availableCascadingForInput = [];
             if (isKaUnit) {
                 availableCascadingForInput = (DB.cascadingTim || []).filter(ct => Array.isArray(ct.unitTargets) && ct.unitTargets.includes(currentUser.unit)).map(ct => {
@@ -6047,65 +6098,85 @@ async function saveCascadingTim(e) {
 
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
-                    <div class="flex flex-wrap items-center gap-3">
-                        <div>
-                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Tahun</label>
-                            <select onchange="filterCapaianTahun = this.value; renderCapaianView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                <option value="Semua" ${filterCapaianTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                <option value="2025" ${filterCapaianTahun === '2025' ? 'selected' : ''}>2025</option>
-                                <option value="2026" ${filterCapaianTahun === '2026' ? 'selected' : ''}>2026</option>
-                                <option value="2027" ${filterCapaianTahun === '2027' ? 'selected' : ''}>2027</option>
-                                <option value="2028" ${filterCapaianTahun === '2028' ? 'selected' : ''}>2028</option>
-                                <option value="2029" ${filterCapaianTahun === '2029' ? 'selected' : ''}>2029</option>
-                            </select>
+                    <!-- Baris Filter & Limit Baris -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-end justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Tahun</label>
+                                <select onchange="filterCapaianTahun = this.value; renderCapaianView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                    <option value="Semua" ${filterCapaianTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
+                                    <option value="2025" ${filterCapaianTahun === '2025' ? 'selected' : ''}>2025</option>
+                                    <option value="2026" ${filterCapaianTahun === '2026' ? 'selected' : ''}>2026</option>
+                                    <option value="2027" ${filterCapaianTahun === '2027' ? 'selected' : ''}>2027</option>
+                                    <option value="2028" ${filterCapaianTahun === '2028' ? 'selected' : ''}>2028</option>
+                                    <option value="2029" ${filterCapaianTahun === '2029' ? 'selected' : ''}>2029</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Periode Triwulan</label>
+                                <select onchange="filterCapaianTriwulan = this.value; renderCapaianView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                    <option value="Semua" ${filterCapaianTriwulan === 'Semua' ? 'selected' : ''}>Semua Triwulan</option>
+                                    <option value="TW 1" ${filterCapaianTriwulan === 'TW 1' ? 'selected' : ''}>TW 1</option>
+                                    <option value="TW 2" ${filterCapaianTriwulan === 'TW 2' ? 'selected' : ''}>TW 2</option>
+                                    <option value="TW 3" ${filterCapaianTriwulan === 'TW 3' ? 'selected' : ''}>TW 3</option>
+                                    <option value="TW 4" ${filterCapaianTriwulan === 'TW 4' ? 'selected' : ''}>TW 4</option>
+                                    <option value="Tahunan" ${filterCapaianTriwulan === 'Tahunan' ? 'selected' : ''}>Tahunan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tampilkan Baris</label>
+                                <select onchange="limitCapaianRows = Number(this.value); renderCapaianView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700">
+                                    <option value="5" ${limitCapaianRows === 5 ? 'selected' : ''}>5 Baris</option>
+                                    <option value="10" ${limitCapaianRows === 10 ? 'selected' : ''}>10 Baris</option>
+                                    <option value="25" ${limitCapaianRows === 25 ? 'selected' : ''}>25 Baris</option>
+                                    <option value="100" ${limitCapaianRows === 100 ? 'selected' : ''}>100 Baris</option>
+                                </select>
+                            </div>
                         </div>
 
-                        ${!isPureViewer() ? `
-                            <button onclick="downloadTemplateCapaian()" class="mt-5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                                <i class="fa-solid fa-download"></i>
-                                <span>Template Capaian</span>
-                            </button>
-
-                            <label class="mt-5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow cursor-pointer">
-                                <i class="fa-solid fa-file-excel"></i>
-                                <span>Import Capaian</span>
-                                <input type="file" id="importCapaianFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportCapaian(event)">
-                            </label>
-
-                            <button id="btnDownloadLogCapaian" onclick="downloadLogCapaianError()" class="mt-5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow hidden">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                <span>Log Error Capaian</span>
-                            </button>
-                        ` : ''}
-
-                        ${(isKaUnit || isSubUnit) && !isPureViewer() ? `
-                            <button onclick="openCapaianModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                <i class="fa-solid fa-plus"></i>
-                                <span>Input Program & Capaian Baru</span>
-                            </button>
-                        ` : ''}
+                        <div class="flex flex-wrap items-center gap-2">
+                            ${!isPureViewer() ? `
+                                <button onclick="downloadTemplateCapaian()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs flex items-center space-x-1.5 shadow">
+                                    <i class="fa-solid fa-download"></i><span>Template</span>
+                                </button>
+                                <label class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs flex items-center space-x-1.5 shadow cursor-pointer">
+                                    <i class="fa-solid fa-file-excel"></i><span>Import</span>
+                                    <input type="file" id="importCapaianFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportCapaian(event)">
+                                </label>
+                            ` : ''}
+                            ${(isKaUnit || isSubUnit) && !isPureViewer() ? `
+                                <button onclick="openCapaianModal('add')" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow-md flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-plus"></i><span>Input Program & Capaian Baru</span>
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
 
+                    <!-- Tabel dengan Sorting Header -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="px-4 py-2.5 bg-slate-50 border-b text-xs text-slate-500 flex justify-between items-center">
+                            <span>Menampilkan <strong>${paginatedCapaian.length}</strong> dari total <strong>${totalRows}</strong> data capaian</span>
+                            <span class="text-[11px] italic"><i class="fa-solid fa-sort mr-1"></i>Klik header kolom untuk mengurutkan data</span>
+                        </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
                                 <thead>
-                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                        <th class="p-4">Unit / Penginput</th>
-                                        <th class="p-4">Indikator Utama (Direktur)</th>
+                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 select-none">
+                                        <th onclick="toggleSortCapaian('unit')" class="p-4 cursor-pointer hover:bg-slate-100">Unit / Penginput ${getSortCapaianIcon('unit')}</th>
+                                        <th onclick="toggleSortCapaian('indikator')" class="p-4 cursor-pointer hover:bg-slate-100">Indikator Utama (Direktur) ${getSortCapaianIcon('indikator')}</th>
                                         <th class="p-4 text-center">Kategori</th>
-                                        <th class="p-4">Program Kerja & Uraian Pekerjaan</th>
-                                        <th class="p-4">Tahun & Periode</th>
-                                        <th class="p-4">Target / Realisasi</th>
+                                        <th onclick="toggleSortCapaian('program')" class="p-4 cursor-pointer hover:bg-slate-100">Program Kerja & Uraian Pekerjaan ${getSortCapaianIcon('program')}</th>
+                                        <th onclick="toggleSortCapaian('periode')" class="p-4 cursor-pointer hover:bg-slate-100">Tahun & Periode ${getSortCapaianIcon('periode')}</th>
+                                        <th onclick="toggleSortCapaian('realisasi')" class="p-4 cursor-pointer hover:bg-slate-100">Target / Realisasi ${getSortCapaianIcon('realisasi')}</th>
                                         <th class="p-4">Link Bukti</th>
-                                        <th class="p-4">Permasalahan</th>
-                                        <th class="p-4">Status Validasi & Tindak Lanjut</th>
+                                        <th onclick="toggleSortCapaian('permasalahan')" class="p-4 cursor-pointer hover:bg-slate-100">Permasalahan ${getSortCapaianIcon('permasalahan')}</th>
+                                        <th onclick="toggleSortCapaian('status')" class="p-4 cursor-pointer hover:bg-slate-100">Status Validasi & Tindak Lanjut ${getSortCapaianIcon('status')}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${displayCapaian.length === 0 ? `
-                                        <tr><td colspan="9" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada tahun ${filterCapaianTahun}.</td></tr>
-                                    ` : displayCapaian.map((c) => {
+                                    ${paginatedCapaian.length === 0 ? `
+                                        <tr><td colspan="9" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada filter ini.</td></tr>
+                                    ` : paginatedCapaian.map((c) => {
                                         const tahunCap = String(c.tahun || '2025');
                                         const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahunCap) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
                                         const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahunCap && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && x.unitTargets.includes(c.unit));
@@ -6146,7 +6217,6 @@ async function saveCascadingTim(e) {
                                             </td>
                                             <td class="p-4 text-xs text-slate-600 font-medium">${sanitizeHTML(c.permasalahan || '-')}</td>
                                             <td class="p-4 space-y-2">
-                                                <!-- Tampilan Status Validasi Tahap 1 (Prodi/Unit) — DISEMBUNYIKAN dari Ketua Tim Kerja sesuai Poin 8 -->
                                                 ${!isKetuaTim && c.isSubUnitInput ? `
                                                     <div class="flex items-center space-x-1.5 text-[11px]">
                                                         <span class="text-slate-500 font-semibold">Validasi Tahap 1 (Unit):</span>
@@ -6154,14 +6224,13 @@ async function saveCascadingTim(e) {
                                                             ${c.statusProdi || 'Menunggu Validasi Unit'}
                                                         </span>
                                                         ${isKaUnit && !isPureViewer() ? `
-                                                            <button onclick="openValidateProdiModal('${c.id}')" class="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold shadow-2xs" title="Validasi Tahap 1 (Ketua Unit)">
+                                                            <button onclick="openValidateProdiModal('${c.id}')" class="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold shadow-2xs">
                                                                 <i class="fa-solid fa-check"></i> Validasi Unit
                                                             </button>
                                                         ` : ''}
                                                     </div>
                                                 ` : ''}
 
-                                                <!-- Status Validasi Akhir (Ketua Tim Kerja) -->
                                                 <div class="flex items-center space-x-2">
                                                     <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${
                                                         c.status === 'Valid' ? 'bg-emerald-50 text-emerald-700' : c.status === 'Tidak Valid' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
@@ -6181,7 +6250,6 @@ async function saveCascadingTim(e) {
                                                     ` : ''}
                                                 </div>
 
-                                                <!-- Arahan / Komentar Ketua Tim Kerja & Tindak Lanjut (Tindak lanjut hanya diisi Ketua Prodi/Unit; level bawah hanya membaca) -->
                                                 ${c.rekomendasi ? `
                                                     <div class="bg-primary-50 p-2.5 rounded-xl text-xs space-y-1 border border-primary-100">
                                                         <p class="text-primary-800"><strong class="font-semibold"><i class="fa-solid fa-comment-dots mr-1"></i>Arahan Ketua Tim Kerja:</strong> ${sanitizeHTML(c.rekomendasi)}</p>
@@ -6207,7 +6275,7 @@ async function saveCascadingTim(e) {
                     </div>
                 </div>
 
-                <!-- Modal Input / Edit Capaian (Dilengkapi Field "Uraian Pekerjaan" - Fase 2 Poin 10) -->
+                <!-- Modal Input / Edit Capaian -->
                 <div id="capaianModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-4">
@@ -6232,7 +6300,6 @@ async function saveCascadingTim(e) {
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Program Kerja</label>
                                 <input type="text" id="inputProgram" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Contoh: Optimalisasi Laboratorium...">
                             </div>
-                            <!-- FASE 2 POIN 10: Field Uraian Pekerjaan -->
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Uraian Pekerjaan</label>
                                 <textarea id="inputUraianPekerjaan" rows="2" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Tuliskan rincian / uraian pekerjaan yang dilaksanakan..."></textarea>
@@ -6278,108 +6345,11 @@ async function saveCascadingTim(e) {
                         </form>
                     </div>
                 </div>
-
-                <!-- Modal Validasi Tahap 1 oleh Ketua Prodi/Subbag/Unit (Hanya Valid/Tidak Valid tanpa saran - Fase 2 Poin 8) -->
-                <div id="validateProdiModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
-                        <div class="flex justify-between items-center border-b pb-3">
-                            <h3 class="font-bold text-slate-900 text-sm">Validasi Tahap 1 (Ketua Prodi/Subbag/Unit)</h3>
-                            <button type="button" onclick="closeValidateProdiModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-                        </div>
-                        <input type="hidden" id="validateProdiCapaianId">
-                        <div class="space-y-3 text-xs">
-                            <p class="text-slate-500">Capaian yang dinyatakan <strong>Valid</strong> pada Tahap 1 akan diteruskan ke Ketua Tim Kerja untuk divalidasi ulang.</p>
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Keputusan Validasi Tahap 1</label>
-                                <select id="validateProdiChoice" class="w-full p-3 bg-slate-50 border rounded-xl font-bold">
-                                    <option value="Valid" class="text-emerald-700">Valid</option>
-                                    <option value="Tidak Valid" class="text-rose-700">Tidak Valid</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="flex justify-end space-x-2 pt-2 border-t">
-                            <button type="button" onclick="closeValidateProdiModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">Batal</button>
-                            <button type="button" onclick="submitValidationProdi()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow">Simpan Validasi Tahap 1</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modal Validasi Tahap 2 (Ketua Tim Kerja) -->
-                <div id="validateModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-                        <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">Validasi Capaian Kinerja (Ketua Tim Kerja)</h3>
-                            <button type="button" onclick="closeValidateModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-                        </div>
-                        <input type="hidden" id="validateCapaianId">
-                        <div class="space-y-4 text-sm">
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Status Validasi</label>
-                                <select id="validateStatusChoice" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold">
-                                    <option value="Valid" class="text-emerald-700">Valid</option>
-                                    <option value="Tidak Valid" class="text-rose-700">Tidak Valid</option>
-                                </select>
-                            </div>
-                            <div class="bg-slate-50 p-3 rounded-xl border text-xs mb-3">
-                                <span class="font-bold text-slate-700 block mb-1"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> Keterangan Permasalahan:</span>
-                                <p id="validatePermasalahanText" class="text-slate-600 italic">-</p>
-                            </div>
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-2">Penyesuaian (Checklist)</label>
-                                <div class="space-y-2 bg-slate-50 p-3 rounded-xl border">
-                                    <label class="flex items-center space-x-2"><input type="checkbox" name="penyesuaianCheck" value="Strategi" class="rounded text-primary-600"><span>Strategi</span></label>
-                                    <label class="flex items-center space-x-2"><input type="checkbox" name="penyesuaianCheck" value="Anggaran" class="rounded text-primary-600"><span>Anggaran</span></label>
-                                    <label class="flex items-center space-x-2"><input type="checkbox" name="penyesuaianCheck" value="Kebijakan" class="rounded text-primary-600"><span>Kebijakan</span></label>
-                                    <label class="flex items-center space-x-2"><input type="checkbox" name="penyesuaianCheck" value="Aktivitas" class="rounded text-primary-600"><span>Aktivitas</span></label>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Catatan / Arahan Tindak Lanjut</label>
-                                <textarea id="validateComment" rows="3" class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Catatan validasi atau instruksi perbaikan..."></textarea>
-                            </div>
-                        </div>
-                        <div class="flex justify-end space-x-3 pt-2">
-                            <button type="button" onclick="closeValidateModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-sm">Batal</button>
-                            <button type="button" onclick="submitValidation()" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium text-sm">Simpan Validasi</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modal Update Bukti Tindak Lanjut (Hanya Ketua Prodi/Subbag/Unit) -->
-                <div id="tindakLanjutModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-                        <div class="flex justify-between items-center border-b pb-4">
-                            <h3 class="font-bold text-slate-900 text-base">Update Status & Bukti Tindak Lanjut</h3>
-                            <button type="button" onclick="closeTindakLanjutModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-                        </div>
-                        <input type="hidden" id="tindakLanjutCapaianId">
-                        <div class="space-y-4 text-sm">
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Status Tindak Lanjut</label>
-                                <select id="statusTindakLanjutChoice" class="w-full p-3 bg-slate-50 border rounded-xl font-semibold">
-                                    <option value="Belum Ditindaklanjuti">Belum Ditindaklanjuti</option>
-                                    <option value="Sudah Ditindaklanjuti">Sudah Ditindaklanjuti</option>
-                                    <option value="Tidak Bisa Ditindaklanjuti">Tidak Bisa Ditindaklanjuti</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Link Bukti Tindak Lanjut</label>
-                                <input type="url" id="inputLinkBuktiTindakLanjut" placeholder="https://drive.google.com/..." class="w-full p-3 bg-slate-50 border rounded-xl">
-                            </div>
-                        </div>
-                        <div class="flex justify-end space-x-3 pt-2">
-                            <button type="button" onclick="closeTindakLanjutModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-sm">Batal</button>
-                            <button type="button" onclick="submitTindakLanjut()" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium text-sm">Simpan Tindak Lanjut</button>
-                        </div>
-                    </div>
-                </div>
             `;
             setTimeout(() => {
                 const sel = document.getElementById('inputIndikatorRef');
-                if (sel && sel.options.length > 0) {
-                    updateSatuanAndTargetRef(sel);
-                }
-            }, 100);
+                if (sel && sel.options.length > 0) updateSatuanAndTargetRef(sel);
+            }, 50);
         }
 
         async function confirmDeleteCapaian(id) {
@@ -7106,22 +7076,26 @@ async function saveCapaian(e) {
             showToast('Data risiko berhasil diinput & disinkronkan ke Google Sheets!');
             renderRisikoView(document.getElementById('mainContent'));
         }
-        function renderTindakLanjutMonitorView(container) {
-    document.getElementById('pageTitle').innerText = 'Monitoring Tindak Lanjut & Scoreboard Pencapaian';
-    const isDirektur = currentUser.role === 'direktur';
-    const isTim = currentUser.role === 'tim_kerja';
-    const isRestrictedUnit = currentUser.role === 'ketua_unit' || SUB_UNIT_ROLES.includes(currentUser.role);
+       let filterTindakLanjutTriwulan = 'Semua';
+        let limitTindakLanjutRows = 5;
 
-    let list = DB.capaian;
-    if (isTim) {
-        list = DB.capaian.filter(c => c.timKey === currentUser.timKey);
-    } else if (isRestrictedUnit) {
-        // REVISI 4: Ketua Unit / Subbag / Prodi / Staf hanya bisa melihat data milik unitnya sendiri
-        list = DB.capaian.filter(c => c.unit === currentUser.unit);
-    }
+        function renderTindakLanjutMonitorView(container) {
+            document.getElementById('pageTitle').innerText = 'Monitoring Tindak Lanjut & Scoreboard Pencapaian';
+            const isTim = currentUser.role === 'tim_kerja';
+            const isRestrictedUnit = currentUser.role === 'ketua_unit' || SUB_UNIT_ROLES.includes(currentUser.role);
+
+            let list = [...(DB.capaian || [])];
+            if (isTim) {
+                list = list.filter(c => c.timKey === currentUser.timKey);
+            } else if (isRestrictedUnit) {
+                list = list.filter(c => c.unit === currentUser.unit);
+            }
 
             if (filterTindakLanjutTahun !== 'Semua') {
-                list = list.filter(c => (c.tahun || '2025') === filterTindakLanjutTahun);
+                list = list.filter(c => String(c.tahun || '2025') === String(filterTindakLanjutTahun));
+            }
+            if (filterTindakLanjutTriwulan !== 'Semua') {
+                list = list.filter(c => String(c.triwulan || '').trim().toUpperCase() === String(filterTindakLanjutTriwulan).trim().toUpperCase());
             }
 
             let totalCapaianList = list.length;
@@ -7131,21 +7105,47 @@ async function saveCapaian(e) {
             let validCount = list.filter(c => c.status === 'Valid').length;
             let percentValid = totalCapaianList > 0 ? Math.round((validCount / totalCapaianList) * 100) : 0;
 
+            const paginatedList = list.slice(0, Number(limitTindakLanjutRows));
+
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
                         <div>
-                            <h3 class="font-bold text-slate-900 text-base">Filter Tahun Monitoring Tindak Lanjut</h3>
+                            <h3 class="font-bold text-slate-900 text-base">Filter Monitoring Tindak Lanjut</h3>
+                            <p class="text-xs text-slate-500">Menampilkan ${paginatedList.length} dari ${totalCapaianList} data</p>
                         </div>
-                        <div>
-                            <select onchange="filterTindakLanjutTahun = this.value; renderTindakLanjutMonitorView(document.getElementById('mainContent'));" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                <option value="Semua" ${filterTindakLanjutTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                <option value="2025" ${filterTindakLanjutTahun === '2025' ? 'selected' : ''}>2025</option>
-                                <option value="2026" ${filterTindakLanjutTahun === '2026' ? 'selected' : ''}>2026</option>
-                                <option value="2027" ${filterTindakLanjutTahun === '2027' ? 'selected' : ''}>2027</option>
-                                <option value="2028" ${filterTindakLanjutTahun === '2028' ? 'selected' : ''}>2028</option>
-                                <option value="2029" ${filterTindakLanjutTahun === '2029' ? 'selected' : ''}>2029</option>
-                            </select>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tahun</label>
+                                <select onchange="filterTindakLanjutTahun = this.value; renderTindakLanjutMonitorView(document.getElementById('mainContent'));" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                    <option value="Semua" ${filterTindakLanjutTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
+                                    <option value="2025" ${filterTindakLanjutTahun === '2025' ? 'selected' : ''}>2025</option>
+                                    <option value="2026" ${filterTindakLanjutTahun === '2026' ? 'selected' : ''}>2026</option>
+                                    <option value="2027" ${filterTindakLanjutTahun === '2027' ? 'selected' : ''}>2027</option>
+                                    <option value="2028" ${filterTindakLanjutTahun === '2028' ? 'selected' : ''}>2028</option>
+                                    <option value="2029" ${filterTindakLanjutTahun === '2029' ? 'selected' : ''}>2029</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Triwulan</label>
+                                <select onchange="filterTindakLanjutTriwulan = this.value; renderTindakLanjutMonitorView(document.getElementById('mainContent'));" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                    <option value="Semua" ${filterTindakLanjutTriwulan === 'Semua' ? 'selected' : ''}>Semua Triwulan</option>
+                                    <option value="TW 1" ${filterTindakLanjutTriwulan === 'TW 1' ? 'selected' : ''}>TW 1</option>
+                                    <option value="TW 2" ${filterTindakLanjutTriwulan === 'TW 2' ? 'selected' : ''}>TW 2</option>
+                                    <option value="TW 3" ${filterTindakLanjutTriwulan === 'TW 3' ? 'selected' : ''}>TW 3</option>
+                                    <option value="TW 4" ${filterTindakLanjutTriwulan === 'TW 4' ? 'selected' : ''}>TW 4</option>
+                                    <option value="Tahunan" ${filterTindakLanjutTriwulan === 'Tahunan' ? 'selected' : ''}>Tahunan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tampilkan Baris</label>
+                                <select onchange="limitTindakLanjutRows = Number(this.value); renderTindakLanjutMonitorView(document.getElementById('mainContent'));" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700">
+                                    <option value="5" ${limitTindakLanjutRows === 5 ? 'selected' : ''}>5 Baris</option>
+                                    <option value="10" ${limitTindakLanjutRows === 10 ? 'selected' : ''}>10 Baris</option>
+                                    <option value="25" ${limitTindakLanjutRows === 25 ? 'selected' : ''}>25 Baris</option>
+                                    <option value="100" ${limitTindakLanjutRows === 100 ? 'selected' : ''}>100 Baris</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -7178,6 +7178,7 @@ async function saveCapaian(e) {
                             <thead>
                                 <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                                     <th class="p-4">Unit / Prodi</th>
+                                    <th class="p-4 text-center">Triwulan</th>
                                     <th class="p-4">Indikator / Program</th>
                                     <th class="p-4">Arahan / Rekomendasi Pimpinan</th>
                                     <th class="p-4">Status Tindak Lanjut Unit</th>
@@ -7185,11 +7186,15 @@ async function saveCapaian(e) {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
-                                ${list.length === 0 ? `
-                                    <tr><td colspan="5" class="p-8 text-center text-slate-400">Belum ada data capaian pada tahun ${filterTindakLanjutTahun}.</td></tr>
-                                ` : list.map(c => `
+                                ${paginatedList.length === 0 ? `
+                                    <tr><td colspan="6" class="p-8 text-center text-slate-400">Belum ada data capaian pada filter ini.</td></tr>
+                                ` : paginatedList.map(c => `
                                     <tr class="hover:bg-slate-50 transition-all">
                                         <td class="p-4 font-semibold text-slate-800">${c.unit}</td>
+                                        <td class="p-4 text-center">
+                                            <span class="px-2.5 py-1 bg-blue-50 text-primary-700 rounded-lg text-xs font-bold">${c.triwulan || '-'}</span>
+                                            <span class="block text-[10px] text-slate-400 mt-0.5">${c.tahun || '2025'}</span>
+                                        </td>
                                         <td class="p-4">
                                             <p class="font-bold text-slate-900 text-xs">${c.targetDirektur}</p>
                                             <p class="text-xs text-slate-500">${c.program}</p>
