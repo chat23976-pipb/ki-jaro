@@ -1541,6 +1541,10 @@ function renderDashboardLayout() {
                                     <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i>
                                     <span class="sidebar-text">Audit Log Aktivitas</span>
                                 </a>
+                                <a href="javascript:void(0)" onclick="switchTab('setting')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'setting' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                        <i class="fa-solid fa-sliders w-5 text-center"></i>
+                                        <span class="sidebar-text">Setting Halaman & Logo</span>
+                                    </a>
                             ` : ''}
                             <a href="javascript:void(0)" onclick="switchTab('laporan')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'laporan' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-file-pdf w-5 text-center"></i>
@@ -1577,7 +1581,57 @@ function renderDashboardLayout() {
                                      </div>
                                      <i class="fa-solid fa-chevron-down text-xs text-slate-400 ml-1 transition-transform duration-200" id="profileChevron"></i>
                                  </button>
+                                <!-- TOMBOL PENGATURAN TAMPILAN / TEMA (REVISI 3) -->
+                                <button type="button" onclick="toggleThemeSettingsDrawer()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 transition-all relative" title="Pengaturan Tampilan & Tema">
+                                    <i class="fa-solid fa-gear text-sm"></i>
+                                    <span class="w-2 h-2 rounded-full bg-amber-500 absolute top-1.5 right-1.5"></span>
+                                </button>
 
+                                <!-- LONCENG NOTIFIKASI KHUSUS DIREKTUR, KETUA TIM KERJA, & KETUA UNIT (REVISI 1) -->
+                                ${['direktur', 'tim_kerja', 'ketua_unit'].includes(currentUser.role) ? (() => {
+                                    const notifs = getActiveRoleNotifications();
+                                    return `
+                                    <div class="relative" id="notifBellContainer">
+                                        <button type="button" id="notifBellBtn" onclick="toggleNotifDropdown()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 transition-all relative focus:outline-none" title="Notifikasi Tugas & Validasi">
+                                            <i class="fa-solid fa-bell text-sm ${notifs.length > 0 ? ' text-blue-600 animate-bounce' : ''}"></i>
+                                            ${notifs.length > 0 ? `
+                                                <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-600 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center shadow">
+                                                    ${notifs.length}
+                                                </span>
+                                            ` : ''}
+                                        </button>
+
+                                        <!-- Dropdown Daftar Notifikasi Aktif -->
+                                        <div id="notifDropdownMenu" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-fadeIn">
+                                            <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                                <span class="text-xs font-extrabold text-slate-800"><i class="fa-solid fa-bell text-blue-600 mr-1.5"></i>Notifikasi Tugas Menunggu</span>
+                                                <span class="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full text-[10px] font-bold">${notifs.length} Tugas</span>
+                                            </div>
+                                            <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                                                ${notifs.length === 0 ? `
+                                                    <div class="p-6 text-center text-xs text-slate-400">
+                                                        <i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-1.5 block"></i>
+                                                        Semua validasi & tindak lanjut telah diselesaikan!
+                                                    </div>
+                                                ` : notifs.map(n => `
+                                                    <a href="javascript:void(0)" onclick="handleNotifClick('${n.targetTab}')" class="block p-3.5 hover:bg-blue-50/60 transition-all text-left">
+                                                        <div class="flex items-start space-x-2.5">
+                                                            <div class="w-7 h-7 rounded-lg ${n.badgeClass} flex items-center justify-center shrink-0 mt-0.5 text-xs">
+                                                                <i class="fa-solid ${n.icon}"></i>
+                                                            </div>
+                                                            <div class="flex-1 min-w-0">
+                                                                <p class="text-xs font-bold text-slate-900 leading-snug">${sanitizeHTML(n.title)}</p>
+                                                                <p class="text-[11px] text-slate-600 mt-0.5 line-clamp-2">${sanitizeHTML(n.desc)}</p>
+                                                                <span class="inline-block mt-1 text-[10px] font-bold text-blue-600">${sanitizeHTML(n.actionLabel)} &rarr;</span>
+                                                            </div>
+                                                        </div>
+                                                    </a>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    `;
+                                })() : ''}
                                  <div id="profileDropdownMenu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 animate-fadeIn">
                                      <div class="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50 flex items-center space-x-3">
                                          ${renderUserAvatarHtml(currentUser, 'w-10 h-10 text-sm', 'border border-blue-300')}
@@ -1728,6 +1782,7 @@ function renderDashboardLayout() {
             else if (tab === 'auditlog') renderAuditLogView(content);
             else if (tab === 'laporan') renderLaporanView(content);
             else if (tab === 'dokumen_ukur_lapor') renderDokumenUkurLaporView(content);
+            else if (tab === 'setting') renderSettingAdminView(content);
         }
 // State Sort Header Kolom untuk Dokumen Pengukuran & Pelaporan
         let sortPengukuranCol = 'nama';
