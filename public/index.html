@@ -6664,12 +6664,14 @@ async function saveCapaian(e) {
             renderCapaianView(document.getElementById('mainContent'));
         }
 
+let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
+
         function renderRisikoView(container) {
             document.getElementById('pageTitle').innerText = 'Peta Risiko & Program Kerja (Sheet Realtime)';
             const isKaUnit = currentUser.role === 'ketua_unit';
             const isKetuaTim = currentUser.role === 'tim_kerja';
 
-            let displayRisiko = DB.risiko;
+            let displayRisiko = [...(DB.risiko || [])];
             if (isKaUnit) {
                 displayRisiko = DB.risiko.filter(r => r.unit === currentUser.unit);
             } else if (isKetuaTim) {
@@ -6677,8 +6679,12 @@ async function saveCapaian(e) {
             }
 
             if (filterRisikoTahun !== 'Semua') {
-    displayRisiko = displayRisiko.filter(r => (r.tahun || '2025') === filterRisikoTahun);
-}
+                displayRisiko = displayRisiko.filter(r => String(r.tahun || '2025') === String(filterRisikoTahun));
+            }
+
+            const totalRisikoRows = displayRisiko.length;
+            const paginatedRisiko = displayRisiko.slice(0, Number(limitRisikoRows));
+
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
                     <!-- TOMBOL & PANEL DROPDOWN PANDUAN PENGISIAN RISIKO -->
@@ -6827,7 +6833,9 @@ async function saveCapaian(e) {
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-3">
+                    <!-- Baris Filter Tahun, Tampilkan Baris, & Tombol Aksi -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-end justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
                             <div>
                                 <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Tahun</label>
                                 <select onchange="filterRisikoTahun = this.value; renderRisikoView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
@@ -6839,39 +6847,42 @@ async function saveCapaian(e) {
                                     <option value="2029" ${filterRisikoTahun === '2029' ? 'selected' : ''}>2029</option>
                                 </select>
                             </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tampilkan Baris</label>
+                                <select onchange="limitRisikoRows = Number(this.value); renderRisikoView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700">
+                                    <option value="5" ${limitRisikoRows === 5 ? 'selected' : ''}>5 Baris</option>
+                                    <option value="10" ${limitRisikoRows === 10 ? 'selected' : ''}>10 Baris</option>
+                                    <option value="25" ${limitRisikoRows === 25 ? 'selected' : ''}>25 Baris</option>
+                                    <option value="100" ${limitRisikoRows === 100 ? 'selected' : ''}>100 Baris</option>
+                                </select>
+                            </div>
+                        </div>
 
+                        <div class="flex flex-wrap items-center gap-2">
                             ${!isPureViewer() ? `
-                             <button onclick="downloadTemplateRisiko()" class="mt-5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                                 <i class="fa-solid fa-download"></i>
-                                 <span>Template Risiko</span>
-                             </button>
-
-                             <label class="mt-5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow cursor-pointer">
-                                 <i class="fa-solid fa-file-excel"></i>
-                                 <span>Import Risiko</span>
-                                 <input type="file" id="importRisikoFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportRisiko(event)">
-                             </label>
-
-                             <button id="btnDownloadLogRisiko" onclick="downloadLogRisikoError()" class="mt-5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow hidden">
-                                 <i class="fa-solid fa-triangle-exclamation"></i>
-                                 <span>Log Error Risiko</span>
-                             </button>
-                         ` : ''}
-                         <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                             <i class="fa-solid fa-file-excel"></i>
-                             <span>Ekspor CSV Risiko</span>
-                         </button>
-                         ${isKaUnit && !isPureViewer() ? `
-                             <button onclick="openRisikoModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                 <i class="fa-solid fa-plus"></i>
-                                 <span>Input Risiko Baru</span>
-                             </button>
-                         ` : ''}
-                     </div>
-                     
+                                <button onclick="downloadTemplateRisiko()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs flex items-center space-x-1.5 shadow">
+                                    <i class="fa-solid fa-download"></i><span>Template</span>
+                                </button>
+                                <label class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs flex items-center space-x-1.5 shadow cursor-pointer">
+                                    <i class="fa-solid fa-file-excel"></i><span>Import</span>
+                                    <input type="file" id="importRisikoFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportRisiko(event)">
+                                </label>
+                            ` : ''}
+                            <button onclick="openExportRisikoCsvModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs flex items-center space-x-1.5 shadow">
+                                <i class="fa-solid fa-file-excel"></i><span>Ekspor CSV</span>
+                            </button>
+                            ${isKaUnit && !isPureViewer() ? `
+                                <button onclick="openRisikoModal('add')" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow-md flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-plus"></i><span>Input Risiko Baru</span>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Tabel Peta Risiko -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-4 bg-slate-50 border-b flex justify-between items-center text-xs font-semibold text-slate-700">
-                            <span><i class="fa-solid fa-table text-primary-600 mr-1"></i> Header Google Sheets: [Unit, Tim Kerja, Indikator Kinerja, Pernyataan Risiko, Sebab Internal, Sebab Eksternal, Dampak, Skor Awal, Pengendalian, Skor Residu, Kuadran]</span>
+                            <span>Menampilkan <strong>${paginatedRisiko.length}</strong> dari total <strong>${totalRisikoRows}</strong> data risiko</span>
                             <span class="text-emerald-700 font-bold"><i class="fa-solid fa-circle-check mr-1"></i> Realtime Sync Active</span>
                         </div>
                         <div class="overflow-x-auto">
@@ -6892,36 +6903,36 @@ async function saveCapaian(e) {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${displayRisiko.length === 0 ? `
+                                    ${paginatedRisiko.length === 0 ? `
                                         <tr><td colspan="11" class="p-8 text-center text-slate-400">Belum ada data risiko pada tahun ${filterRisikoTahun}.</td></tr>
-                                    ` : displayRisiko.map((r, index) => {
+                                    ` : paginatedRisiko.map((r, index) => {
                                         const realIdx = DB.risiko.findIndex(item => item.id === r.id);
                                         return `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-3 text-center font-semibold text-slate-600">${index + 1}</td>
-                                            <td class="p-3 font-medium text-slate-800">${r.unit}</td>
-                                            <td class="p-3 font-semibold text-primary-700 text-xs">${r.targetDirektur || '-'}</td>
-                                            <td class="p-3 font-semibold text-slate-900">${r.pernyataan}</td>
+                                            <td class="p-3 font-medium text-slate-800">${sanitizeHTML(r.unit)}</td>
+                                            <td class="p-3 font-semibold text-primary-700 text-xs">${sanitizeHTML(r.targetDirektur || '-')}</td>
+                                            <td class="p-3 font-semibold text-slate-900">${sanitizeHTML(r.pernyataan)}</td>
                                             <td class="p-3 text-slate-600">
-                                                <span class="block"><strong>Int:</strong> ${r.sebabInternal}</span>
-                                                <span class="block text-slate-400"><strong>Eks:</strong> ${r.sebabEksternal}</span>
+                                                <span class="block"><strong>Int:</strong> ${sanitizeHTML(r.sebabInternal)}</span>
+                                                <span class="block text-slate-400"><strong>Eks:</strong> ${sanitizeHTML(r.sebabEksternal)}</span>
                                             </td>
-                                            <td class="p-3 text-slate-600">${r.dampak}</td>
+                                            <td class="p-3 text-slate-600">${sanitizeHTML(r.dampak)}</td>
                                             <td class="p-3 text-center font-bold text-rose-600">${r.skor1}</td>
                                             <td class="p-3 text-slate-600">
-                                                <span class="block"><strong>${r.adaPengendalian}:</strong> ${r.uraianPengendalian}</span>
+                                                <span class="block"><strong>${r.adaPengendalian}:</strong> ${sanitizeHTML(r.uraianPengendalian)}</span>
                                                 <span class="text-[10px] text-emerald-600 font-semibold">Memadai: ${r.memadai}</span>
                                             </td>
                                             <td class="p-3 text-center font-bold text-emerald-600">${r.skor2}</td>
                                             <td class="p-3 text-center">
                                                 <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold ${r.warnaResidu}">
-                                                    ${r.kuadran2}
+                                                    ${sanitizeHTML(r.kuadran2)}
                                                 </span>
                                             </td>
                                             ${isKaUnit ? `
                                                 <td class="p-3 text-center space-x-1">
-                                                    <button onclick="openRisikoModal('edit', '${r.id}',${realIdx})" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="confirmDeleteRisiko('${r.id}',${realIdx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                    <button onclick="openRisikoModal('edit', '${r.id}', ${realIdx})" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="confirmDeleteRisiko('${r.id}', ${realIdx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -6932,8 +6943,8 @@ async function saveCapaian(e) {
                     </div>
                 </div>
 
-               <!-- Modal Input Risiko -->
-              <div id="risikoModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+                <!-- Modal Input Risiko -->
+                <div id="risikoModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-4">
                             <h3 id="risikoModalTitle" class="font-bold text-slate-900 text-base">Input Pernyataan Risiko & Matriks 5x5</h3>
@@ -6942,7 +6953,7 @@ async function saveCapaian(e) {
                         <form onsubmit="saveRisiko(event)" class="space-y-4 text-sm">
                             <input type="hidden" id="editRisikoId" value="">
                             <input type="hidden" id="editRisikoIdx" value="-1">
-                           <div>
+                            <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator Kinerja yang Dicascading ke Anda</label>
                                 <select id="rIndikatorRef" required class="w-full p-3 bg-slate-50 border rounded-xl">
                                     ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => `<option value="${ct.targetDirektur}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun:${ct.tahun || '2025'})</option>`).join('')}
