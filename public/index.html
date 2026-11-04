@@ -200,13 +200,12 @@ button { position: relative; z-index: 10; }
 </div>
     <script>
         // =========================================================================
-        // REVISI 14: GLOBAL CHART.JS STABLE ANIMATION ENGINE
+        // REVISI 2: MATIKAN ANIMASI CHART.JS AGAR GRAFIK INSTAN & TIDAK HILANG
         // =========================================================================
         if (typeof Chart !== 'undefined') {
-            Chart.defaults.animation = {
-                duration: 600,
-                easing: 'easeOutQuart'
-            };
+            Chart.defaults.animation = false;
+            Chart.defaults.animations = { colors: false, x: false, y: false };
+            Chart.defaults.transitions = { active: { animation: { duration: 0 } } };
             Chart.defaults.elements.line.tension = 0.3;
         }
 
@@ -440,27 +439,27 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
         }
 
         // Helper Menghitung Realisasi Gabungan (Akumulatif / Rata-rata) pada Suatu Indikator & Triwulan
-        function getAggregatedRealisasiForDashboard(capsList, cdTarget, tahun) {
-            if (!Array.isArray(capsList) || capsList.length === 0) return 0;
-            const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5 };
+        async function submitValidation() {
+            if (!requireWriteAccess(['tim_kerja', 'admin'])) return;
+            const id = document.getElementById('validateCapaianId').value;
+            const rawStatusVal = document.getElementById('validateStatusChoice').value;
+            const statusVal = rawStatusVal.toLowerCase().includes('tidak') ? 'Tidak Valid' : 'Valid';
             
-            const sortedByTw = [...capsList].sort((a, b) => (twOrder[String(a.triwulan || '').trim().toUpperCase()] || 0) - (twOrder[String(b.triwulan || '').trim().toUpperCase()] || 0));
-            if (sortedByTw.length === 0 || !sortedByTw[sortedByTw.length - 1]) return 0;
+            const comment = sanitizeHTML(document.getElementById('validateComment').value.trim());
+            const checkedPenyesuaian = Array.from(document.querySelectorAll('input[name="penyesuaianCheck"]:checked')).map(el => el.value);
 
-            const latestTw = sortedByTw[sortedByTw.length - 1].triwulan;
-            const latestCaps = sortedByTw.filter(c => c && String(c.triwulan || '').trim().toUpperCase() === String(latestTw || '').trim().toUpperCase());
-            if (latestCaps.length === 0 || !latestCaps[latestCaps.length - 1]) return 0;
-
-            const cu = (DB.cascadingUnit || []).find(x => x && x.targetDirektur === cdTarget && String(x.tahun || '2025') === String(tahun));
-            if (cu && latestCaps.length > 1) {
-                const sum = latestCaps.reduce((acc, c) => acc + (Number(c ? c.realisasi : 0) || 0), 0);
-                if (cu.aggregationMode === 'akumulatif') {
-                    return Number(sum.toFixed(2));
-                } else {
-                    return Number((sum / latestCaps.length).toFixed(2));
-                }
+            const targetIdx = (DB.capaian || []).findIndex(c => c && String(c.id) === String(id));
+            if (targetIdx !== -1) {
+                DB.capaian[targetIdx].status = statusVal;
+                DB.capaian[targetIdx].rekomendasi = comment;
+                DB.capaian[targetIdx].penyesuaian = checkedPenyesuaian;
+                await syncToGoogleSheets('Validasi Kinerja', DB.capaian[targetIdx]);
             }
-            return Number(latestCaps[latestCaps.length - 1].realisasi) || 0;
+            
+            await saveToMySQL();
+            closeValidateModal();
+            showToast(`Status capaian berhasil divalidasi Ketua Tim Kerja menjadi: ${statusVal}`, statusVal === 'Valid' ? 'success' : 'info');
+            renderCapaianView(document.getElementById('mainContent'));
         }
         let DB = {
             users: [
@@ -544,6 +543,32 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
         let filterChartIndikator = 'Semua';
 
         let filterCapaianTahun = '2025';
+        // =========================================================================
+        // TAMBAHAN STATE & FUNGSI UNTUK REVISI 4 (TABEL CAPAIAN KINERJA)
+        // =========================================================================
+        let filterCapaianTriwulan = 'Semua';
+        let limitCapaianRows = 5;       // Default menampilkan 5 baris sesuai permintaan
+        let sortCapaianCol = 'unit';    // Kolom default awal untuk pengurutan
+        let sortCapaianAsc = true;      // Arah sorting ascending (True = A-Z / Kecil ke Besar)
+
+        // Fungsi yang menangkap klik pada header kolom tabel Capaian
+        function toggleSortCapaian(col) {
+            if (sortCapaianCol === col) {
+                sortCapaianAsc = !sortCapaianAsc; // Balik arah jika diklik ulang
+            } else {
+                sortCapaianCol = col;
+                sortCapaianAsc = true;
+            }
+            renderCapaianView(document.getElementById('mainContent'));
+        }
+
+        // Helper untuk menampilkan ikon panah sorting di header kolom
+        function getSortCapaianIcon(col) {
+            if (sortCapaianCol !== col) return '<i class="fa-solid fa-sort text-slate-300 ml-1"></i>';
+            return sortCapaianAsc 
+                ? '<i class="fa-solid fa-sort-up text-blue-600 ml-1"></i>' 
+                : '<i class="fa-solid fa-sort-down text-blue-600 ml-1"></i>';
+        }
         let filterRisikoTahun = '2025';
         let filterTindakLanjutTahun = '2025';
 
@@ -1368,62 +1393,62 @@ function triggerGoogleLogin() {
          reader.readAsText ? reader.readAsDataURL(file) : null;
      }
 
-     async function handleSelfEditProfile(e) {
-         e.preventDefault();
-         if (!currentUser) return;
+async function handleSelfEditProfile(e) {
+            e.preventDefault();
+            if (!currentUser) return;
 
-         const newName = sanitizeHTML(document.getElementById('selfProfileName').value.trim());
-         const newNip = document.getElementById('selfProfileNip') ? sanitizeHTML(document.getElementById('selfProfileNip').value.trim()) : (currentUser.nip || '');
-         const newUnit = sanitizeHTML(document.getElementById('selfProfileUnit').value.trim());
-         currentUser.nip = newNip;
-         if (userIdx !== -1) DB.users[userIdx].nip = newNip;
-         const newAvatar = document.getElementById('selfAvatarBase64').value;
+            const newName = sanitizeHTML(document.getElementById('selfProfileName').value.trim());
+            const newNip = document.getElementById('selfProfileNip') ? sanitizeHTML(document.getElementById('selfProfileNip').value.trim()) : (currentUser.nip || '');
+            const newUnit = sanitizeHTML(document.getElementById('selfProfileUnit').value.trim());
+            const newAvatar = document.getElementById('selfAvatarBase64').value;
 
-         const oldPass = document.getElementById('selfOldPass').value;
-         const newPass = document.getElementById('selfNewPass').value;
-         const confirmPass = document.getElementById('selfConfirmPass').value;
+            const oldPass = document.getElementById('selfOldPass').value;
+            const newPass = document.getElementById('selfNewPass').value;
+            const confirmPass = document.getElementById('selfConfirmPass').value;
 
-         const userIdx = DB.users.findIndex(u => String(u.id) === String(currentUser.id) || u.username === currentUser.username);
+            // Cari index user di DB.users terlebih dahulu
+            const userIdx = DB.users.findIndex(u => String(u.id) === String(currentUser.id) || u.username === currentUser.username);
 
-         if (newPass || confirmPass) {
-             if (oldPass !== currentUser.password) {
-                 showToast('Password lama tidak sesuai!', 'error');
-                 return;
-             }
-             if (newPass.length < 3) {
-                 showToast('Password baru minimal 3 karakter!', 'error');
-                 return;
-             }
-             if (newPass !== confirmPass) {
-                 showToast('Konfirmasi password baru tidak cocok!', 'error');
-                 return;
-             }
-             currentUser.password = newPass;
-             if (userIdx !== -1) DB.users[userIdx].password = newPass;
-         }
+            if (newPass || confirmPass) {
+                if (oldPass !== currentUser.password) {
+                    showToast('Password lama tidak sesuai!', 'error');
+                    return;
+                }
+                if (newPass.length < 3) {
+                    showToast('Password baru minimal 3 karakter!', 'error');
+                    return;
+                }
+                if (newPass !== confirmPass) {
+                    showToast('Konfirmasi password baru tidak cocok!', 'error');
+                    return;
+                }
+                currentUser.password = newPass;
+                if (userIdx !== -1) DB.users[userIdx].password = newPass;
+            }
 
-         const oldUnit = currentUser.unit;
-         currentUser.name = newName;
-         currentUser.unit = newUnit;
-         currentUser.avatar = newAvatar;
+            const oldUnit = currentUser.unit;
+            currentUser.name = newName;
+            currentUser.nip = newNip;
+            currentUser.unit = newUnit;
+            currentUser.avatar = newAvatar;
 
-         if (userIdx !== -1) {
-             DB.users[userIdx].name = newName;
-             DB.users[userIdx].unit = newUnit;
-             DB.users[userIdx].avatar = newAvatar;
-         }
+            if (userIdx !== -1) {
+                DB.users[userIdx].name = newName;
+                DB.users[userIdx].nip = newNip;
+                DB.users[userIdx].unit = newUnit;
+                DB.users[userIdx].avatar = newAvatar;
+            }
 
-         // Jika nama unit diubah oleh ketua_unit, sinkronkan juga di daftar unit
-         if (oldUnit && oldUnit !== newUnit) {
-             syncUnitListFromUsers();
-         }
+            if (oldUnit && oldUnit !== newUnit) {
+                syncUnitListFromUsers();
+            }
 
-         localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
-         await saveToMySQL();
-         closeChangePasswordModal();
-         showToast('Profil dan tampilan avatar berhasil diperbarui!');
-         renderDashboardLayout();
-     }
+            localStorage.setItem('ki_jaro_user', JSON.stringify(currentUser));
+            await saveToMySQL();
+            closeChangePasswordModal();
+            showToast('Profil dan tampilan avatar berhasil diperbarui!');
+            renderDashboardLayout();
+        }
 function renderDashboardLayout() {
             const app = document.getElementById('app');
             const roleLabels = ROLE_LABELS;
@@ -1514,15 +1539,15 @@ function renderDashboardLayout() {
                             </a>
                             
                             ${currentUser.role === 'admin' ? `
-                             <a href="javascript:void(0)" onclick="switchTab('admin')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                 <i class="fa-solid fa-users-gear w-5 text-center"></i>
-                                 <span class="sidebar-text">Manajemen Pejabat & User</span>
-                             </a>
-                             <a href="javascript:void(0)" onclick="switchTab('auditlog')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'auditlog' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                 <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i>
-                                 <span class="sidebar-text">Audit Log Aktivitas</span>
-                             </a>
-                         ` : ''}
+                                <a href="javascript:void(0)" onclick="switchTab('admin')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                    <i class="fa-solid fa-users-gear w-5 text-center"></i>
+                                    <span class="sidebar-text">Manajemen Pejabat & User</span>
+                                </a>
+                                <a href="javascript:void(0)" onclick="switchTab('auditlog')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'auditlog' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                    <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i>
+                                    <span class="sidebar-text">Audit Log Aktivitas</span>
+                                </a>
+                            ` : ''}
 
                             <a href="javascript:void(0)" onclick="switchTab('laporan')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'laporan' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-file-pdf w-5 text-center"></i>
@@ -1658,6 +1683,12 @@ function renderDashboardLayout() {
             }
         });
             function switchTab(tab) {
+            // PENGAMAN REVISI 7: Jika mencoba akses auditlog tapi bukan admin, tolak & batalkan
+            if (tab === 'auditlog' && (!currentUser || currentUser.role !== 'admin')) {
+                showToast('Akses Ditolak: Menu Audit Log hanya untuk Administrator!', 'error');
+                return;
+            }
+
             activeTab = tab;
             
             // Mengatur ulang warna tombol menu sidebar secara dinamis saat diklik
@@ -1671,13 +1702,21 @@ function renderDashboardLayout() {
             const content = document.getElementById('mainContent');
             if (!content) return;
             const sb = document.getElementById('appSidebar');
-         const backdrop = document.getElementById('mobileSidebarBackdrop');
-         if (sb && window.innerWidth < 768) {
-             sb.classList.add('hidden');
-             sb.classList.remove('flex');
-             if (backdrop) backdrop.classList.add('hidden');
-         }
-            if (tab === 'dashboard') renderDashboardView(content);
+            const backdrop = document.getElementById('mobileSidebarBackdrop');
+            if (sb && window.innerWidth < 768) {
+                sb.classList.add('hidden');
+                sb.classList.remove('flex');
+                if (backdrop) backdrop.classList.add('hidden');
+            }
+
+            if (tab === 'dashboard') {
+                try {
+                    renderDashboardView(content);
+                } catch (err) {
+                    console.error("Error merender Dashboard:", err);
+                    content.innerHTML = `<div class="p-8 text-center bg-white rounded-2xl shadow-sm border"><p class="text-rose-500 font-bold">Gagal memuat Dashboard Kinerja Utama.</p></div>`;
+                }
+            }
             else if (tab === 'renstra') renderRenstraView(content);
             else if (tab === 'dokumen') renderDokumenView(content);
             else if (tab === 'cascading') {
@@ -1697,7 +1736,6 @@ function renderDashboardLayout() {
             else if (tab === 'laporan') renderLaporanView(content);
             else if (tab === 'dokumen_ukur_lapor') renderDokumenUkurLaporView(content);
         }
-
 // State Sort Header Kolom untuk Dokumen Pengukuran & Pelaporan
         let sortPengukuranCol = 'nama';
         let sortPengukuranAsc = true;
@@ -3707,8 +3745,8 @@ function renderDokumenUkurLaporView(container) {
                                                         </div>
                                                     </td>
                                                     <td class="p-3 text-center">
-                                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${realisasiVal > targetVal ? 'bg-blue-100 text-blue-800' : isTercapai ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-                                                            ${realisasiVal > targetVal ? '★ Melebihi Ekspektasi' : isTercapai ? '✓ Mencapai Ekspektasi' : '✗ Belum Tercapai'}
+                                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isTercapai ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                                                            ${isTercapai ? '✓ Tercapai' : '✗ Tidak Tercapai'}
                                                         </span>
                                                     </td>
                                                 </tr>
@@ -4266,10 +4304,19 @@ if (DB.cascadingDirektur.length > 0) {
             }
         }
 let dashboardChartInstances = {};
-
+// Helper untuk menghitung agresi realisasi di dashboard
+        function getAggregatedRealisasiForDashboard(matchedCaps, targetName, tahun) {
+            if (!Array.isArray(matchedCaps) || matchedCaps.length === 0) return 0;
+            // Ambil rata-rata atau nilai terakhir dari capaian yang valid
+            const sum = matchedCaps.reduce((acc, cur) => acc + (Number(cur.realisasi) || 0), 0);
+            return Number((sum / matchedCaps.length).toFixed(1));
+        }
         function safeInitChart(canvasId, config) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return null;
+            if (canvas.parentElement) {
+                canvas.parentElement.style.height = canvasId.includes('Risiko') ? '260px' : (canvasId === 'unitRankingChart' ? '280px' : '340px');
+            }
             try {
                 if (dashboardChartInstances[canvasId]) {
                     dashboardChartInstances[canvasId].destroy();
@@ -4277,10 +4324,12 @@ let dashboardChartInstances = {};
                 }
                 const existing = typeof Chart.getChart === 'function' ? Chart.getChart(canvas) : null;
                 if (existing) existing.destroy();
-            } catch (e) {
-                console.warn('Cleanup chart warning:', e);
-            }
+            } catch (e) {}
             try {
+                if (!config.options) config.options = {};
+                config.options.animation = false;
+                config.options.responsive = true;
+                config.options.maintainAspectRatio = false;
                 const ctx = canvas.getContext('2d');
                 const instance = new Chart(ctx, config);
                 dashboardChartInstances[canvasId] = instance;
@@ -5995,18 +6044,14 @@ async function saveCascadingTim(e) {
             const isKetuaTim = currentUser.role === 'tim_kerja';
             const isAdmin = currentUser.role === 'admin';
 
-            let displayCapaian = DB.capaian;
+            let displayCapaian = [...(DB.capaian || [])];
             if (isSubUnit) {
-                // Level bawah melihat capaian unitnya (termasuk arahan Ketua Tim Kerja)
-                displayCapaian = DB.capaian.filter(c => c.unit === currentUser.unit);
+                displayCapaian = displayCapaian.filter(c => c.unit === currentUser.unit);
             } else if (isKaUnit) {
-                displayCapaian = DB.capaian.filter(c => c.unit === currentUser.unit);
+                displayCapaian = displayCapaian.filter(c => c.unit === currentUser.unit);
             } else if (isKetuaTim) {
-                const validUnits = DB.cascadingTim.filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets);
-                // Ketua Tim Kerja HANYA melihat capaian yang:
-                // 1) Diinput langsung oleh Ketua Unit, ATAU
-                // 2) Diinput oleh level bawah (Sekretaris/Kalab/Dosen/Tendik) DAN SUDAH divalidasi Tahap 1 (Valid) oleh Ketua Unit/Prodi
-                displayCapaian = DB.capaian.filter(c => {
+                const validUnits = (DB.cascadingTim || []).filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets);
+                displayCapaian = displayCapaian.filter(c => {
                     const matchScope = validUnits.includes(c.unit) && c.timKey === currentUser.timKey;
                     if (!matchScope) return false;
                     if (c.isSubUnitInput && c.statusProdi !== 'Valid') return false;
@@ -6014,11 +6059,36 @@ async function saveCascadingTim(e) {
                 });
             }
 
+            // 1. Terapkan Filter Tahun
             if (filterCapaianTahun !== 'Semua') {
                 displayCapaian = displayCapaian.filter(c => String(c.tahun || '2025') === String(filterCapaianTahun));
             }
+            
+            // 2. Terapkan Filter Triwulan (Revisi 4)
+            if (filterCapaianTriwulan !== 'Semua') {
+                displayCapaian = displayCapaian.filter(c => String(c.triwulan || '').trim().toUpperCase() === String(filterCapaianTriwulan).trim().toUpperCase());
+            }
 
-            // Daftar indikator yang bisa diinput oleh user saat ini
+            // 3. Terapkan Sorting Berdasarkan Header yang Diklik
+            displayCapaian.sort((a, b) => {
+                let valA = '', valB = '';
+                if (sortCapaianCol === 'unit') { valA = a.unit || ''; valB = b.unit || ''; }
+                else if (sortCapaianCol === 'indikator') { valA = a.targetDirektur || ''; valB = b.targetDirektur || ''; }
+                else if (sortCapaianCol === 'program') { valA = a.program || ''; valB = b.program || ''; }
+                else if (sortCapaianCol === 'periode') { valA = `${a.tahun || ''}_${a.triwulan || ''}`; valB = `${b.tahun || ''}_${b.triwulan || ''}`; }
+                else if (sortCapaianCol === 'realisasi') { 
+                    return sortCapaianAsc ? (Number(a.realisasi || 0) - Number(b.realisasi || 0)) : (Number(b.realisasi || 0) - Number(a.realisasi || 0)); 
+                }
+                else if (sortCapaianCol === 'permasalahan') { valA = a.permasalahan || ''; valB = b.permasalahan || ''; }
+                else if (sortCapaianCol === 'status') { valA = a.status || ''; valB = b.status || ''; }
+                
+                return sortCapaianAsc ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+            });
+
+            const totalRows = displayCapaian.length;
+            // 4. Batasi Baris Sesuai Pilihan (Default 5 Baris)
+            const paginatedCapaian = displayCapaian.slice(0, Number(limitCapaianRows));
+
             let availableCascadingForInput = [];
             if (isKaUnit) {
                 availableCascadingForInput = (DB.cascadingTim || []).filter(ct => Array.isArray(ct.unitTargets) && ct.unitTargets.includes(currentUser.unit)).map(ct => {
@@ -6047,65 +6117,85 @@ async function saveCascadingTim(e) {
 
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
-                    <div class="flex flex-wrap items-center gap-3">
-                        <div>
-                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Tahun</label>
-                            <select onchange="filterCapaianTahun = this.value; renderCapaianView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                <option value="Semua" ${filterCapaianTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                <option value="2025" ${filterCapaianTahun === '2025' ? 'selected' : ''}>2025</option>
-                                <option value="2026" ${filterCapaianTahun === '2026' ? 'selected' : ''}>2026</option>
-                                <option value="2027" ${filterCapaianTahun === '2027' ? 'selected' : ''}>2027</option>
-                                <option value="2028" ${filterCapaianTahun === '2028' ? 'selected' : ''}>2028</option>
-                                <option value="2029" ${filterCapaianTahun === '2029' ? 'selected' : ''}>2029</option>
-                            </select>
+                    <!-- Baris Filter & Limit Baris -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-end justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Tahun</label>
+                                <select onchange="filterCapaianTahun = this.value; renderCapaianView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                    <option value="Semua" ${filterCapaianTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
+                                    <option value="2025" ${filterCapaianTahun === '2025' ? 'selected' : ''}>2025</option>
+                                    <option value="2026" ${filterCapaianTahun === '2026' ? 'selected' : ''}>2026</option>
+                                    <option value="2027" ${filterCapaianTahun === '2027' ? 'selected' : ''}>2027</option>
+                                    <option value="2028" ${filterCapaianTahun === '2028' ? 'selected' : ''}>2028</option>
+                                    <option value="2029" ${filterCapaianTahun === '2029' ? 'selected' : ''}>2029</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Periode Triwulan</label>
+                                <select onchange="filterCapaianTriwulan = this.value; renderCapaianView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                    <option value="Semua" ${filterCapaianTriwulan === 'Semua' ? 'selected' : ''}>Semua Triwulan</option>
+                                    <option value="TW 1" ${filterCapaianTriwulan === 'TW 1' ? 'selected' : ''}>TW 1</option>
+                                    <option value="TW 2" ${filterCapaianTriwulan === 'TW 2' ? 'selected' : ''}>TW 2</option>
+                                    <option value="TW 3" ${filterCapaianTriwulan === 'TW 3' ? 'selected' : ''}>TW 3</option>
+                                    <option value="TW 4" ${filterCapaianTriwulan === 'TW 4' ? 'selected' : ''}>TW 4</option>
+                                    <option value="Tahunan" ${filterCapaianTriwulan === 'Tahunan' ? 'selected' : ''}>Tahunan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tampilkan Baris</label>
+                                <select onchange="limitCapaianRows = Number(this.value); renderCapaianView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700">
+                                    <option value="5" ${limitCapaianRows === 5 ? 'selected' : ''}>5 Baris</option>
+                                    <option value="10" ${limitCapaianRows === 10 ? 'selected' : ''}>10 Baris</option>
+                                    <option value="25" ${limitCapaianRows === 25 ? 'selected' : ''}>25 Baris</option>
+                                    <option value="100" ${limitCapaianRows === 100 ? 'selected' : ''}>100 Baris</option>
+                                </select>
+                            </div>
                         </div>
 
-                        ${!isPureViewer() ? `
-                            <button onclick="downloadTemplateCapaian()" class="mt-5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                                <i class="fa-solid fa-download"></i>
-                                <span>Template Capaian</span>
-                            </button>
-
-                            <label class="mt-5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow cursor-pointer">
-                                <i class="fa-solid fa-file-excel"></i>
-                                <span>Import Capaian</span>
-                                <input type="file" id="importCapaianFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportCapaian(event)">
-                            </label>
-
-                            <button id="btnDownloadLogCapaian" onclick="downloadLogCapaianError()" class="mt-5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow hidden">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                <span>Log Error Capaian</span>
-                            </button>
-                        ` : ''}
-
-                        ${(isKaUnit || isSubUnit) && !isPureViewer() ? `
-                            <button onclick="openCapaianModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                <i class="fa-solid fa-plus"></i>
-                                <span>Input Program & Capaian Baru</span>
-                            </button>
-                        ` : ''}
+                        <div class="flex flex-wrap items-center gap-2">
+                            ${!isPureViewer() ? `
+                                <button onclick="downloadTemplateCapaian()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs flex items-center space-x-1.5 shadow">
+                                    <i class="fa-solid fa-download"></i><span>Template</span>
+                                </button>
+                                <label class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs flex items-center space-x-1.5 shadow cursor-pointer">
+                                    <i class="fa-solid fa-file-excel"></i><span>Import</span>
+                                    <input type="file" id="importCapaianFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportCapaian(event)">
+                                </label>
+                            ` : ''}
+                            ${(isKaUnit || isSubUnit) && !isPureViewer() ? `
+                                <button onclick="openCapaianModal('add')" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow-md flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-plus"></i><span>Input Program & Capaian Baru</span>
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
 
+                    <!-- Tabel dengan Sorting Header -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="px-4 py-2.5 bg-slate-50 border-b text-xs text-slate-500 flex justify-between items-center">
+                            <span>Menampilkan <strong>${paginatedCapaian.length}</strong> dari total <strong>${totalRows}</strong> data capaian</span>
+                            <span class="text-[11px] italic"><i class="fa-solid fa-sort mr-1"></i>Klik header kolom untuk mengurutkan data</span>
+                        </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
                                 <thead>
-                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                        <th class="p-4">Unit / Penginput</th>
-                                        <th class="p-4">Indikator Utama (Direktur)</th>
+                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 select-none">
+                                        <th onclick="toggleSortCapaian('unit')" class="p-4 cursor-pointer hover:bg-slate-100">Unit / Penginput ${getSortCapaianIcon('unit')}</th>
+                                        <th onclick="toggleSortCapaian('indikator')" class="p-4 cursor-pointer hover:bg-slate-100">Indikator Utama (Direktur) ${getSortCapaianIcon('indikator')}</th>
                                         <th class="p-4 text-center">Kategori</th>
-                                        <th class="p-4">Program Kerja & Uraian Pekerjaan</th>
-                                        <th class="p-4">Tahun & Periode</th>
-                                        <th class="p-4">Target / Realisasi</th>
+                                        <th onclick="toggleSortCapaian('program')" class="p-4 cursor-pointer hover:bg-slate-100">Program Kerja & Uraian Pekerjaan ${getSortCapaianIcon('program')}</th>
+                                        <th onclick="toggleSortCapaian('periode')" class="p-4 cursor-pointer hover:bg-slate-100">Tahun & Periode ${getSortCapaianIcon('periode')}</th>
+                                        <th onclick="toggleSortCapaian('realisasi')" class="p-4 cursor-pointer hover:bg-slate-100">Target / Realisasi ${getSortCapaianIcon('realisasi')}</th>
                                         <th class="p-4">Link Bukti</th>
-                                        <th class="p-4">Permasalahan</th>
-                                        <th class="p-4">Status Validasi & Tindak Lanjut</th>
+                                        <th onclick="toggleSortCapaian('permasalahan')" class="p-4 cursor-pointer hover:bg-slate-100">Permasalahan ${getSortCapaianIcon('permasalahan')}</th>
+                                        <th onclick="toggleSortCapaian('status')" class="p-4 cursor-pointer hover:bg-slate-100">Status Validasi & Tindak Lanjut ${getSortCapaianIcon('status')}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${displayCapaian.length === 0 ? `
-                                        <tr><td colspan="9" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada tahun ${filterCapaianTahun}.</td></tr>
-                                    ` : displayCapaian.map((c) => {
+                                    ${paginatedCapaian.length === 0 ? `
+                                        <tr><td colspan="9" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada filter ini.</td></tr>
+                                    ` : paginatedCapaian.map((c) => {
                                         const tahunCap = String(c.tahun || '2025');
                                         const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahunCap) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
                                         const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahunCap && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && x.unitTargets.includes(c.unit));
@@ -6146,7 +6236,6 @@ async function saveCascadingTim(e) {
                                             </td>
                                             <td class="p-4 text-xs text-slate-600 font-medium">${sanitizeHTML(c.permasalahan || '-')}</td>
                                             <td class="p-4 space-y-2">
-                                                <!-- Tampilan Status Validasi Tahap 1 (Prodi/Unit) — DISEMBUNYIKAN dari Ketua Tim Kerja sesuai Poin 8 -->
                                                 ${!isKetuaTim && c.isSubUnitInput ? `
                                                     <div class="flex items-center space-x-1.5 text-[11px]">
                                                         <span class="text-slate-500 font-semibold">Validasi Tahap 1 (Unit):</span>
@@ -6154,14 +6243,13 @@ async function saveCascadingTim(e) {
                                                             ${c.statusProdi || 'Menunggu Validasi Unit'}
                                                         </span>
                                                         ${isKaUnit && !isPureViewer() ? `
-                                                            <button onclick="openValidateProdiModal('${c.id}')" class="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold shadow-2xs" title="Validasi Tahap 1 (Ketua Unit)">
+                                                            <button onclick="openValidateProdiModal('${c.id}')" class="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold shadow-2xs">
                                                                 <i class="fa-solid fa-check"></i> Validasi Unit
                                                             </button>
                                                         ` : ''}
                                                     </div>
                                                 ` : ''}
 
-                                                <!-- Status Validasi Akhir (Ketua Tim Kerja) -->
                                                 <div class="flex items-center space-x-2">
                                                     <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${
                                                         c.status === 'Valid' ? 'bg-emerald-50 text-emerald-700' : c.status === 'Tidak Valid' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
@@ -6181,7 +6269,6 @@ async function saveCascadingTim(e) {
                                                     ` : ''}
                                                 </div>
 
-                                                <!-- Arahan / Komentar Ketua Tim Kerja & Tindak Lanjut (Tindak lanjut hanya diisi Ketua Prodi/Unit; level bawah hanya membaca) -->
                                                 ${c.rekomendasi ? `
                                                     <div class="bg-primary-50 p-2.5 rounded-xl text-xs space-y-1 border border-primary-100">
                                                         <p class="text-primary-800"><strong class="font-semibold"><i class="fa-solid fa-comment-dots mr-1"></i>Arahan Ketua Tim Kerja:</strong> ${sanitizeHTML(c.rekomendasi)}</p>
@@ -6207,7 +6294,7 @@ async function saveCascadingTim(e) {
                     </div>
                 </div>
 
-                <!-- Modal Input / Edit Capaian (Dilengkapi Field "Uraian Pekerjaan" - Fase 2 Poin 10) -->
+                <!-- Modal Input / Edit Capaian -->
                 <div id="capaianModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-4">
@@ -6232,7 +6319,6 @@ async function saveCascadingTim(e) {
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Program Kerja</label>
                                 <input type="text" id="inputProgram" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Contoh: Optimalisasi Laboratorium...">
                             </div>
-                            <!-- FASE 2 POIN 10: Field Uraian Pekerjaan -->
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Uraian Pekerjaan</label>
                                 <textarea id="inputUraianPekerjaan" rows="2" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Tuliskan rincian / uraian pekerjaan yang dilaksanakan..."></textarea>
@@ -6279,32 +6365,7 @@ async function saveCascadingTim(e) {
                     </div>
                 </div>
 
-                <!-- Modal Validasi Tahap 1 oleh Ketua Prodi/Subbag/Unit (Hanya Valid/Tidak Valid tanpa saran - Fase 2 Poin 8) -->
-                <div id="validateProdiModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
-                        <div class="flex justify-between items-center border-b pb-3">
-                            <h3 class="font-bold text-slate-900 text-sm">Validasi Tahap 1 (Ketua Prodi/Subbag/Unit)</h3>
-                            <button type="button" onclick="closeValidateProdiModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-                        </div>
-                        <input type="hidden" id="validateProdiCapaianId">
-                        <div class="space-y-3 text-xs">
-                            <p class="text-slate-500">Capaian yang dinyatakan <strong>Valid</strong> pada Tahap 1 akan diteruskan ke Ketua Tim Kerja untuk divalidasi ulang.</p>
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Keputusan Validasi Tahap 1</label>
-                                <select id="validateProdiChoice" class="w-full p-3 bg-slate-50 border rounded-xl font-bold">
-                                    <option value="Valid" class="text-emerald-700">Valid</option>
-                                    <option value="Tidak Valid" class="text-rose-700">Tidak Valid</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="flex justify-end space-x-2 pt-2 border-t">
-                            <button type="button" onclick="closeValidateProdiModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">Batal</button>
-                            <button type="button" onclick="submitValidationProdi()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow">Simpan Validasi Tahap 1</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modal Validasi Tahap 2 (Ketua Tim Kerja) -->
+                               <!-- Modal Validasi Tahap 2 (Ketua Tim Kerja) -->
                 <div id="validateModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-4">
@@ -6374,12 +6435,11 @@ async function saveCascadingTim(e) {
                     </div>
                 </div>
             `;
+            
             setTimeout(() => {
                 const sel = document.getElementById('inputIndikatorRef');
-                if (sel && sel.options.length > 0) {
-                    updateSatuanAndTargetRef(sel);
-                }
-            }, 100);
+                if (sel && sel.options.length > 0) updateSatuanAndTargetRef(sel);
+            }, 50);
         }
 
         async function confirmDeleteCapaian(id) {
@@ -6694,12 +6754,14 @@ async function saveCapaian(e) {
             renderCapaianView(document.getElementById('mainContent'));
         }
 
+let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
+
         function renderRisikoView(container) {
             document.getElementById('pageTitle').innerText = 'Peta Risiko & Program Kerja (Sheet Realtime)';
             const isKaUnit = currentUser.role === 'ketua_unit';
             const isKetuaTim = currentUser.role === 'tim_kerja';
 
-            let displayRisiko = DB.risiko;
+            let displayRisiko = [...(DB.risiko || [])];
             if (isKaUnit) {
                 displayRisiko = DB.risiko.filter(r => r.unit === currentUser.unit);
             } else if (isKetuaTim) {
@@ -6707,8 +6769,12 @@ async function saveCapaian(e) {
             }
 
             if (filterRisikoTahun !== 'Semua') {
-    displayRisiko = displayRisiko.filter(r => (r.tahun || '2025') === filterRisikoTahun);
-}
+                displayRisiko = displayRisiko.filter(r => String(r.tahun || '2025') === String(filterRisikoTahun));
+            }
+
+            const totalRisikoRows = displayRisiko.length;
+            const paginatedRisiko = displayRisiko.slice(0, Number(limitRisikoRows));
+
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
                     <!-- TOMBOL & PANEL DROPDOWN PANDUAN PENGISIAN RISIKO -->
@@ -6857,7 +6923,9 @@ async function saveCapaian(e) {
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-3">
+                    <!-- Baris Filter Tahun, Tampilkan Baris, & Tombol Aksi -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-end justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
                             <div>
                                 <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Tahun</label>
                                 <select onchange="filterRisikoTahun = this.value; renderRisikoView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-semibold">
@@ -6869,39 +6937,42 @@ async function saveCapaian(e) {
                                     <option value="2029" ${filterRisikoTahun === '2029' ? 'selected' : ''}>2029</option>
                                 </select>
                             </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tampilkan Baris</label>
+                                <select onchange="limitRisikoRows = Number(this.value); renderRisikoView(document.getElementById('mainContent'));" class="p-2 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700">
+                                    <option value="5" ${limitRisikoRows === 5 ? 'selected' : ''}>5 Baris</option>
+                                    <option value="10" ${limitRisikoRows === 10 ? 'selected' : ''}>10 Baris</option>
+                                    <option value="25" ${limitRisikoRows === 25 ? 'selected' : ''}>25 Baris</option>
+                                    <option value="100" ${limitRisikoRows === 100 ? 'selected' : ''}>100 Baris</option>
+                                </select>
+                            </div>
+                        </div>
 
+                        <div class="flex flex-wrap items-center gap-2">
                             ${!isPureViewer() ? `
-                             <button onclick="downloadTemplateRisiko()" class="mt-5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                                 <i class="fa-solid fa-download"></i>
-                                 <span>Template Risiko</span>
-                             </button>
-
-                             <label class="mt-5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow cursor-pointer">
-                                 <i class="fa-solid fa-file-excel"></i>
-                                 <span>Import Risiko</span>
-                                 <input type="file" id="importRisikoFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportRisiko(event)">
-                             </label>
-
-                             <button id="btnDownloadLogRisiko" onclick="downloadLogRisikoError()" class="mt-5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow hidden">
-                                 <i class="fa-solid fa-triangle-exclamation"></i>
-                                 <span>Log Error Risiko</span>
-                             </button>
-                         ` : ''}
-                         <button onclick="openExportRisikoCsvModal()" class="mt-5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center space-x-2 shadow">
-                             <i class="fa-solid fa-file-excel"></i>
-                             <span>Ekspor CSV Risiko</span>
-                         </button>
-                         ${isKaUnit && !isPureViewer() ? `
-                             <button onclick="openRisikoModal('add')" class="mt-5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                                 <i class="fa-solid fa-plus"></i>
-                                 <span>Input Risiko Baru</span>
-                             </button>
-                         ` : ''}
-                     </div>
-                     
+                                <button onclick="downloadTemplateRisiko()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs flex items-center space-x-1.5 shadow">
+                                    <i class="fa-solid fa-download"></i><span>Template</span>
+                                </button>
+                                <label class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs flex items-center space-x-1.5 shadow cursor-pointer">
+                                    <i class="fa-solid fa-file-excel"></i><span>Import</span>
+                                    <input type="file" id="importRisikoFile" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleImportRisiko(event)">
+                                </label>
+                            ` : ''}
+                            <button onclick="openExportRisikoCsvModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs flex items-center space-x-1.5 shadow">
+                                <i class="fa-solid fa-file-excel"></i><span>Ekspor CSV</span>
+                            </button>
+                            ${isKaUnit && !isPureViewer() ? `
+                                <button onclick="openRisikoModal('add')" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow-md flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-plus"></i><span>Input Risiko Baru</span>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Tabel Peta Risiko -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-4 bg-slate-50 border-b flex justify-between items-center text-xs font-semibold text-slate-700">
-                            <span><i class="fa-solid fa-table text-primary-600 mr-1"></i> Header Google Sheets: [Unit, Tim Kerja, Indikator Kinerja, Pernyataan Risiko, Sebab Internal, Sebab Eksternal, Dampak, Skor Awal, Pengendalian, Skor Residu, Kuadran]</span>
+                            <span>Menampilkan <strong>${paginatedRisiko.length}</strong> dari total <strong>${totalRisikoRows}</strong> data risiko</span>
                             <span class="text-emerald-700 font-bold"><i class="fa-solid fa-circle-check mr-1"></i> Realtime Sync Active</span>
                         </div>
                         <div class="overflow-x-auto">
@@ -6922,36 +6993,36 @@ async function saveCapaian(e) {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${displayRisiko.length === 0 ? `
+                                    ${paginatedRisiko.length === 0 ? `
                                         <tr><td colspan="11" class="p-8 text-center text-slate-400">Belum ada data risiko pada tahun ${filterRisikoTahun}.</td></tr>
-                                    ` : displayRisiko.map((r, index) => {
+                                    ` : paginatedRisiko.map((r, index) => {
                                         const realIdx = DB.risiko.findIndex(item => item.id === r.id);
                                         return `
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-3 text-center font-semibold text-slate-600">${index + 1}</td>
-                                            <td class="p-3 font-medium text-slate-800">${r.unit}</td>
-                                            <td class="p-3 font-semibold text-primary-700 text-xs">${r.targetDirektur || '-'}</td>
-                                            <td class="p-3 font-semibold text-slate-900">${r.pernyataan}</td>
+                                            <td class="p-3 font-medium text-slate-800">${sanitizeHTML(r.unit)}</td>
+                                            <td class="p-3 font-semibold text-primary-700 text-xs">${sanitizeHTML(r.targetDirektur || '-')}</td>
+                                            <td class="p-3 font-semibold text-slate-900">${sanitizeHTML(r.pernyataan)}</td>
                                             <td class="p-3 text-slate-600">
-                                                <span class="block"><strong>Int:</strong> ${r.sebabInternal}</span>
-                                                <span class="block text-slate-400"><strong>Eks:</strong> ${r.sebabEksternal}</span>
+                                                <span class="block"><strong>Int:</strong> ${sanitizeHTML(r.sebabInternal)}</span>
+                                                <span class="block text-slate-400"><strong>Eks:</strong> ${sanitizeHTML(r.sebabEksternal)}</span>
                                             </td>
-                                            <td class="p-3 text-slate-600">${r.dampak}</td>
+                                            <td class="p-3 text-slate-600">${sanitizeHTML(r.dampak)}</td>
                                             <td class="p-3 text-center font-bold text-rose-600">${r.skor1}</td>
                                             <td class="p-3 text-slate-600">
-                                                <span class="block"><strong>${r.adaPengendalian}:</strong> ${r.uraianPengendalian}</span>
+                                                <span class="block"><strong>${r.adaPengendalian}:</strong> ${sanitizeHTML(r.uraianPengendalian)}</span>
                                                 <span class="text-[10px] text-emerald-600 font-semibold">Memadai: ${r.memadai}</span>
                                             </td>
                                             <td class="p-3 text-center font-bold text-emerald-600">${r.skor2}</td>
                                             <td class="p-3 text-center">
                                                 <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold ${r.warnaResidu}">
-                                                    ${r.kuadran2}
+                                                    ${sanitizeHTML(r.kuadran2)}
                                                 </span>
                                             </td>
                                             ${isKaUnit ? `
                                                 <td class="p-3 text-center space-x-1">
-                                                    <button onclick="openRisikoModal('edit', '${r.id}',${realIdx})" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="confirmDeleteRisiko('${r.id}',${realIdx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                    <button onclick="openRisikoModal('edit', '${r.id}', ${realIdx})" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="confirmDeleteRisiko('${r.id}', ${realIdx})" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -6962,8 +7033,8 @@ async function saveCapaian(e) {
                     </div>
                 </div>
 
-               <!-- Modal Input Risiko -->
-              <div id="risikoModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+                <!-- Modal Input Risiko -->
+                <div id="risikoModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4 my-8">
                         <div class="flex justify-between items-center border-b pb-4">
                             <h3 id="risikoModalTitle" class="font-bold text-slate-900 text-base">Input Pernyataan Risiko & Matriks 5x5</h3>
@@ -6972,7 +7043,7 @@ async function saveCapaian(e) {
                         <form onsubmit="saveRisiko(event)" class="space-y-4 text-sm">
                             <input type="hidden" id="editRisikoId" value="">
                             <input type="hidden" id="editRisikoIdx" value="-1">
-                           <div>
+                            <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Pilih Indikator Kinerja yang Dicascading ke Anda</label>
                                 <select id="rIndikatorRef" required class="w-full p-3 bg-slate-50 border rounded-xl">
                                     ${DB.cascadingTim.filter(ct => ct.unitTargets.includes(currentUser.unit)).map(ct => `<option value="${ct.targetDirektur}" data-timkey="${ct.timKey}">${ct.targetDirektur} (Tahun:${ct.tahun || '2025'})</option>`).join('')}
@@ -7106,22 +7177,26 @@ async function saveCapaian(e) {
             showToast('Data risiko berhasil diinput & disinkronkan ke Google Sheets!');
             renderRisikoView(document.getElementById('mainContent'));
         }
-        function renderTindakLanjutMonitorView(container) {
-    document.getElementById('pageTitle').innerText = 'Monitoring Tindak Lanjut & Scoreboard Pencapaian';
-    const isDirektur = currentUser.role === 'direktur';
-    const isTim = currentUser.role === 'tim_kerja';
-    const isRestrictedUnit = currentUser.role === 'ketua_unit' || SUB_UNIT_ROLES.includes(currentUser.role);
+       let filterTindakLanjutTriwulan = 'Semua';
+        let limitTindakLanjutRows = 5;
 
-    let list = DB.capaian;
-    if (isTim) {
-        list = DB.capaian.filter(c => c.timKey === currentUser.timKey);
-    } else if (isRestrictedUnit) {
-        // REVISI 4: Ketua Unit / Subbag / Prodi / Staf hanya bisa melihat data milik unitnya sendiri
-        list = DB.capaian.filter(c => c.unit === currentUser.unit);
-    }
+        function renderTindakLanjutMonitorView(container) {
+            document.getElementById('pageTitle').innerText = 'Monitoring Tindak Lanjut & Scoreboard Pencapaian';
+            const isTim = currentUser.role === 'tim_kerja';
+            const isRestrictedUnit = currentUser.role === 'ketua_unit' || SUB_UNIT_ROLES.includes(currentUser.role);
+
+            let list = [...(DB.capaian || [])];
+            if (isTim) {
+                list = list.filter(c => c.timKey === currentUser.timKey);
+            } else if (isRestrictedUnit) {
+                list = list.filter(c => c.unit === currentUser.unit);
+            }
 
             if (filterTindakLanjutTahun !== 'Semua') {
-                list = list.filter(c => (c.tahun || '2025') === filterTindakLanjutTahun);
+                list = list.filter(c => String(c.tahun || '2025') === String(filterTindakLanjutTahun));
+            }
+            if (filterTindakLanjutTriwulan !== 'Semua') {
+                list = list.filter(c => String(c.triwulan || '').trim().toUpperCase() === String(filterTindakLanjutTriwulan).trim().toUpperCase());
             }
 
             let totalCapaianList = list.length;
@@ -7131,21 +7206,47 @@ async function saveCapaian(e) {
             let validCount = list.filter(c => c.status === 'Valid').length;
             let percentValid = totalCapaianList > 0 ? Math.round((validCount / totalCapaianList) * 100) : 0;
 
+            const paginatedList = list.slice(0, Number(limitTindakLanjutRows));
+
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
                         <div>
-                            <h3 class="font-bold text-slate-900 text-base">Filter Tahun Monitoring Tindak Lanjut</h3>
+                            <h3 class="font-bold text-slate-900 text-base">Filter Monitoring Tindak Lanjut</h3>
+                            <p class="text-xs text-slate-500">Menampilkan ${paginatedList.length} dari ${totalCapaianList} data</p>
                         </div>
-                        <div>
-                            <select onchange="filterTindakLanjutTahun = this.value; renderTindakLanjutMonitorView(document.getElementById('mainContent'));" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
-                                <option value="Semua" ${filterTindakLanjutTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
-                                <option value="2025" ${filterTindakLanjutTahun === '2025' ? 'selected' : ''}>2025</option>
-                                <option value="2026" ${filterTindakLanjutTahun === '2026' ? 'selected' : ''}>2026</option>
-                                <option value="2027" ${filterTindakLanjutTahun === '2027' ? 'selected' : ''}>2027</option>
-                                <option value="2028" ${filterTindakLanjutTahun === '2028' ? 'selected' : ''}>2028</option>
-                                <option value="2029" ${filterTindakLanjutTahun === '2029' ? 'selected' : ''}>2029</option>
-                            </select>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tahun</label>
+                                <select onchange="filterTindakLanjutTahun = this.value; renderTindakLanjutMonitorView(document.getElementById('mainContent'));" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                    <option value="Semua" ${filterTindakLanjutTahun === 'Semua' ? 'selected' : ''}>Semua Tahun</option>
+                                    <option value="2025" ${filterTindakLanjutTahun === '2025' ? 'selected' : ''}>2025</option>
+                                    <option value="2026" ${filterTindakLanjutTahun === '2026' ? 'selected' : ''}>2026</option>
+                                    <option value="2027" ${filterTindakLanjutTahun === '2027' ? 'selected' : ''}>2027</option>
+                                    <option value="2028" ${filterTindakLanjutTahun === '2028' ? 'selected' : ''}>2028</option>
+                                    <option value="2029" ${filterTindakLanjutTahun === '2029' ? 'selected' : ''}>2029</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Triwulan</label>
+                                <select onchange="filterTindakLanjutTriwulan = this.value; renderTindakLanjutMonitorView(document.getElementById('mainContent'));" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+                                    <option value="Semua" ${filterTindakLanjutTriwulan === 'Semua' ? 'selected' : ''}>Semua Triwulan</option>
+                                    <option value="TW 1" ${filterTindakLanjutTriwulan === 'TW 1' ? 'selected' : ''}>TW 1</option>
+                                    <option value="TW 2" ${filterTindakLanjutTriwulan === 'TW 2' ? 'selected' : ''}>TW 2</option>
+                                    <option value="TW 3" ${filterTindakLanjutTriwulan === 'TW 3' ? 'selected' : ''}>TW 3</option>
+                                    <option value="TW 4" ${filterTindakLanjutTriwulan === 'TW 4' ? 'selected' : ''}>TW 4</option>
+                                    <option value="Tahunan" ${filterTindakLanjutTriwulan === 'Tahunan' ? 'selected' : ''}>Tahunan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tampilkan Baris</label>
+                                <select onchange="limitTindakLanjutRows = Number(this.value); renderTindakLanjutMonitorView(document.getElementById('mainContent'));" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-bold text-primary-700">
+                                    <option value="5" ${limitTindakLanjutRows === 5 ? 'selected' : ''}>5 Baris</option>
+                                    <option value="10" ${limitTindakLanjutRows === 10 ? 'selected' : ''}>10 Baris</option>
+                                    <option value="25" ${limitTindakLanjutRows === 25 ? 'selected' : ''}>25 Baris</option>
+                                    <option value="100" ${limitTindakLanjutRows === 100 ? 'selected' : ''}>100 Baris</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -7178,6 +7279,7 @@ async function saveCapaian(e) {
                             <thead>
                                 <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                                     <th class="p-4">Unit / Prodi</th>
+                                    <th class="p-4 text-center">Triwulan</th>
                                     <th class="p-4">Indikator / Program</th>
                                     <th class="p-4">Arahan / Rekomendasi Pimpinan</th>
                                     <th class="p-4">Status Tindak Lanjut Unit</th>
@@ -7185,11 +7287,15 @@ async function saveCapaian(e) {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
-                                ${list.length === 0 ? `
-                                    <tr><td colspan="5" class="p-8 text-center text-slate-400">Belum ada data capaian pada tahun ${filterTindakLanjutTahun}.</td></tr>
-                                ` : list.map(c => `
+                                ${paginatedList.length === 0 ? `
+                                    <tr><td colspan="6" class="p-8 text-center text-slate-400">Belum ada data capaian pada filter ini.</td></tr>
+                                ` : paginatedList.map(c => `
                                     <tr class="hover:bg-slate-50 transition-all">
                                         <td class="p-4 font-semibold text-slate-800">${c.unit}</td>
+                                        <td class="p-4 text-center">
+                                            <span class="px-2.5 py-1 bg-blue-50 text-primary-700 rounded-lg text-xs font-bold">${c.triwulan || '-'}</span>
+                                            <span class="block text-[10px] text-slate-400 mt-0.5">${c.tahun || '2025'}</span>
+                                        </td>
                                         <td class="p-4">
                                             <p class="font-bold text-slate-900 text-xs">${c.targetDirektur}</p>
                                             <p class="text-xs text-slate-500">${c.program}</p>
@@ -8561,6 +8667,8 @@ async function saveCapaian(e) {
                             <h3 class="font-bold text-slate-900 text-sm">Keputusan Final & Penilaian Perilaku SKP (Direktur)</h3>
                             <button type="button" onclick="document.getElementById('assessSkpDirModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
                         </div>
+                        <!-- Kotak Panduan Ekspektasi, Target, Hasil & Kelayakan untuk Direktur -->
+                        <div id="assessSkpDirInfoBox" class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs"></div>
                         <input type="hidden" id="assessSkpDirId">
                         <div class="space-y-3 text-xs">
                             <div>
@@ -8695,11 +8803,14 @@ async function saveCapaian(e) {
                                 <th class="p-2 border">Program & Uraian Pekerjaan</th>
                                 <th class="p-2 border text-center">Target</th>
                                 <th class="p-2 border text-center">Realisasi</th>
+                                <th class="p-2 border text-center">Status</th>
                                 <th class="p-2 border text-center">Status Validasi</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${caps.map((c, i) => `
+                            ${caps.map((c, i) => {
+                                const isTercapai = Number(c.realisasi || 0) >= Number(c.target || 0) && Number(c.realisasi || 0) > 0;
+                                return `
                                 <tr>
                                     <td class="p-2 border text-center">${i + 1}</td>
                                     <td class="p-2 border">${sanitizeHTML(c.unit)}</td>
@@ -8707,12 +8818,13 @@ async function saveCapaian(e) {
                                     <td class="p-2 border">${sanitizeHTML(c.program)}${c.uraianPekerjaan ? `<br><span class="text-[10px] text-slate-500">${sanitizeHTML(c.uraianPekerjaan)}</span>` : ''}</td>
                                     <td class="p-2 border text-center">${c.target} ${c.satuan || '%'}</td>
                                     <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi} ${c.satuan || '%'}</td>
+                                    <td class="p-2 border text-center font-bold ${isTercapai ? 'text-emerald-700' : 'text-rose-600'}">${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}</td>
                                     <td class="p-2 border text-center font-bold text-emerald-700">${c.status}</td>
                                 </tr>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </tbody>
-                    </table>
-                    <div class="pt-6 grid grid-cols-3 gap-4 text-center text-xs">
+                    </table>                    <div class="pt-6 grid grid-cols-3 gap-4 text-center text-xs">
                         <div class="flex flex-col items-center">
                             <p class="mb-2">Menyetujui,<br><strong>Direktur</strong></p>
                             ${allValid ? `<div id="qrLapKinDir" class="p-1.5 bg-white border rounded my-1"></div><span class="text-[8px] font-mono text-slate-400 mb-1">${hashDir}</span>` : '<div class="h-16"></div>'}
@@ -8736,13 +8848,26 @@ async function saveCapaian(e) {
             `;
 
             if (allValid && typeof QRCode !== 'undefined') {
-                setTimeout(() => {
-                    const el1 = document.getElementById('qrLapKinDir');
-                    if (el1) new QRCode(el1, { text: `HASH:${hashDir}|DIREKTUR:${req.sign1}|VALID`, width: 74, height: 74 });
-                    const el2 = document.getElementById('qrLapKinTim');
-                    if (el2) new QRCode(el2, { text: `HASH:${hashTim}|KETUA_TIM:${req.sign2}|VALID`, width: 74, height: 74 });
-                    const el3 = document.getElementById('qrLapKinUsr');
-                    if (el3) new QRCode(el3, { text: `HASH:${hashUsr}|PENYUSUN:${req.sign3}|VALID`, width: 74, height: 74 });
+    setTimeout(() => {
+        const el1 = document.getElementById('qrLapKinDir');
+        if (el1) new QRCode(el1, { 
+            text: `Dokumen ini sudah disetujui oleh Direktur: ${req.sign1} (NIP: ${req.sign1Nip}) pada periode ${req.triwulan} ${req.tahun}. Hash: ${hashDir}`, 
+            width: 74, 
+            height: 74 
+        });
+        
+        const el2 = document.getElementById('qrLapKinTim');
+        if (el2) new QRCode(el2, { 
+            text: `Dokumen ini sudah disetujui oleh Ketua Tim Kerja: ${req.sign2} (NIP: ${req.sign2Nip}). Hash: ${hashTim}`, 
+            width: 74, 
+            height: 74 
+        });
+
+        const el3 = document.getElementById('qrLapKinUsr');
+        if (el3) new QRCode(el3, { 
+            text: `Dokumen ini dibuat dan disetujui oleh Penyusun Laporan: ${req.sign3} (NIP: ${req.sign3Nip}). Hash: ${hashUsr}`, 
+            width: 74, 
+            height: 74});
                 }, 80);
             }
             area.scrollIntoView({ behavior: 'smooth' });
@@ -8974,21 +9099,32 @@ async function saveCapaian(e) {
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
             if (!skp) return;
             document.getElementById('assessSkpDirId').value = skpId;
-            document.getElementById('assessSkpDirRating').value = skp.nilaiFinalKinerja || skp.nilaiTimKinerja || 'Sesuai Ekspektasi';
-            document.getElementById('assessSkpDirBehavior').value = skp.nilaiPerilakuDirektur || 'Sesuai Ekspektasi';
-            document.getElementById('assessSkpDirNote').value = skp.catatanDirektur || '';
 
             const capObj = skp.capaianId ? (DB.capaian || []).find(c => String(c.id) === String(skp.capaianId)) : (DB.capaian || []).find(c => c.unit === skp.unit && c.targetDirektur === skp.indikator && String(c.tahun || '2025') === String(skp.tahun || '2025'));
             const cdObj = (DB.cascadingDirektur || []).find(cd => cd.target === skp.indikator && String(cd.tahun || '2025') === String(skp.tahun || '2025')) || (DB.cascadingDirektur || []).find(cd => cd.target === skp.indikator);
             const ctObj = (DB.cascadingTim || []).find(ct => ct.targetDirektur === skp.indikator && String(ct.tahun || '2025') === String(skp.tahun || '2025') && (!skp.timKey || ct.timKey === skp.timKey));
             const ikObj = (DB.renstraIndikatorKinerja || []).find(ik => ik.namaIndikator === skp.indikator);
 
-            const targetVal = skp.targetNum !== undefined ? skp.targetNum : (capObj ? capObj.target : (cdObj && cdObj.targetVal !== undefined ? cdObj.targetVal : 100));
-            const realVal = skp.realisasiNum !== undefined ? skp.realisasiNum : (capObj ? capObj.realisasi : 0);
+            const targetVal = Number(skp.targetNum !== undefined ? skp.targetNum : (capObj ? capObj.target : (cdObj && cdObj.targetVal !== undefined ? cdObj.targetVal : 100))) || 100;
+            const realVal = Number(skp.realisasiNum !== undefined ? skp.realisasiNum : (capObj ? capObj.realisasi : 0)) || 0;
             const satuanStr = skp.satuan || (capObj ? capObj.satuan : (cdObj ? cdObj.satuan : '%')) || '%';
 
             const rkDir = (cdObj && cdObj.rangeKinerja) ? cdObj.rangeKinerja : ((ctObj && ctObj.rangeKinerja) ? ctObj.rangeKinerja : ((ikObj && ikObj.rangeKinerja) ? ikObj.rangeKinerja : { tidakMencapai: '< 100%', mencapai: '100%', melebihi: '> 100%' }));
-            const rs360 = (ikObj && ikObj.rangeSikap360) ? ikObj.rangeSikap360 : { tidakSesuai: '< 75', sesuai: '75 - 90', melebihi: '> 90' };
+
+            // Penentuan otomatis layak dapat predikat apa berdasarkan perbandingan Hasil vs Target
+            let layakPredikat = 'Sesuai Ekspektasi';
+            let layakColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+            if (realVal < targetVal) {
+                layakPredikat = 'Di Bawah Ekspektasi';
+                layakColor = 'bg-rose-100 text-rose-800 border-rose-300';
+            } else if (realVal > targetVal) {
+                layakPredikat = 'Di Atas Ekspektasi';
+                layakColor = 'bg-blue-100 text-blue-800 border-blue-300';
+            }
+
+            document.getElementById('assessSkpDirRating').value = skp.nilaiFinalKinerja || skp.nilaiTimKinerja || layakPredikat;
+            document.getElementById('assessSkpDirBehavior').value = skp.nilaiPerilakuDirektur || 'Sesuai Ekspektasi';
+            document.getElementById('assessSkpDirNote').value = skp.catatanDirektur || '';
 
             const infoBox = document.getElementById('assessSkpDirInfoBox');
             if (infoBox) {
@@ -8999,7 +9135,7 @@ async function saveCapaian(e) {
                             <strong class="text-slate-900">${sanitizeHTML(skp.requesterName)} (${sanitizeHTML(skp.unit || '-')})</strong>
                         </div>
                         <div>
-                            <span class="text-[10px] text-slate-500 block">Rekomendasi Ketua Tim Kerja:</span>
+                            <span class="text-[10px] text-slate-500 block">Penilaian Ketua Tim Kerja:</span>
                             <strong class="text-blue-700">${sanitizeHTML(skp.nilaiTimKinerja || 'Langsung ke Direktur')}</strong>
                         </div>
                     </div>
@@ -9007,29 +9143,33 @@ async function saveCapaian(e) {
                         <span class="text-[10px] text-slate-500 block">Nama Indikator Kinerja (${sanitizeHTML(skp.triwulan)} - ${sanitizeHTML(skp.tahun)}):</span>
                         <strong class="text-slate-900">${sanitizeHTML(skp.indikator)}</strong>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border">
+                    <div class="grid grid-cols-3 gap-2 bg-white p-2.5 rounded-lg border">
                         <div>
-                            <span class="text-[10px] text-slate-500 block">Target Indikator:</span>
+                            <span class="text-[10px] text-slate-500 block">Target:</span>
                             <strong class="text-blue-700 text-sm">${targetVal} ${sanitizeHTML(satuanStr)}</strong>
                         </div>
                         <div>
-                            <span class="text-[10px] text-slate-500 block">Realisasi Capaian:</span>
+                            <span class="text-[10px] text-slate-500 block">Hasil Didapat:</span>
                             <strong class="text-emerald-700 text-sm">${realVal} ${sanitizeHTML(satuanStr)}</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Layak Dapat:</span>
+                            <span class="inline-block mt-0.5 px-2 py-0.5 rounded border text-[10px] font-extrabold ${layakColor}">${layakPredikat}</span>
                         </div>
                     </div>
                     <div class="bg-blue-50/80 p-2.5 rounded-lg border border-blue-200 space-y-1">
-                        <span class="text-[10px] font-bold text-blue-950 uppercase block"><i class="fa-solid fa-gauge-high mr-1"></i>Acuan Range Ekspektasi Kinerja (Inputan Cascading Direktur):</span>
+                        <span class="text-[10px] font-bold text-blue-950 uppercase block"><i class="fa-solid fa-gauge-high mr-1"></i>Panduan Ekspektasi Penilaian Indikator:</span>
                         <div class="grid grid-cols-3 gap-1.5 text-[11px] pt-1">
                             <div class="p-1.5 bg-white rounded border border-rose-200 text-center">
-                                <span class="block text-[9px] font-bold text-rose-700">Di Bawah</span>
+                                <span class="block text-[9px] font-bold text-rose-700">Di Bawah Ekspektasi</span>
                                 <strong class="text-slate-800">${sanitizeHTML(rkDir.tidakMencapai)}</strong>
                             </div>
                             <div class="p-1.5 bg-white rounded border border-emerald-200 text-center">
-                                <span class="block text-[9px] font-bold text-emerald-700">Sesuai</span>
+                                <span class="block text-[9px] font-bold text-emerald-700">Sesuai Ekspektasi</span>
                                 <strong class="text-slate-800">${sanitizeHTML(rkDir.mencapai)}</strong>
                             </div>
                             <div class="p-1.5 bg-white rounded border border-blue-200 text-center">
-                                <span class="block text-[9px] font-bold text-blue-700">Di Atas</span>
+                                <span class="block text-[9px] font-bold text-blue-700">Di Atas Ekspektasi</span>
                                 <strong class="text-slate-800">${sanitizeHTML(rkDir.melebihi)}</strong>
                             </div>
                         </div>
@@ -9041,7 +9181,6 @@ async function saveCapaian(e) {
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
-
         async function submitAssessSKPDir(decision) {
             const skpId = document.getElementById('assessSkpDirId').value;
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
@@ -9080,13 +9219,13 @@ async function saveCapaian(e) {
             if (!area) return;
 
             const twRomawi = skp.triwulan.includes('1') ? 'I' : skp.triwulan.includes('2') ? 'II' : skp.triwulan.includes('3') ? 'III' : 'IV';
-
-            // Cek apakah konten panjang sehingga dibagi menjadi 2 halaman berpenanda (Halaman 1 dari 2 & Halaman 2 dari 2)
             const totalTextLength = (skp.indikator || '').length + (skp.uraianKegiatan || '').length + (skp.hasilKegiatan || '').length + (skp.permasalahan || '').length + (skp.saranKetuaTim || '').length;
-            const useTwoPages = totalTextLength > 180 || true; // Selalu mendukung penanda Halaman 1 dari 2 & Halaman 2 dari 2 yang rapi saat dicetak
+            
+            // Default 1 halaman; hanya dibagi 2 halaman jika teks sangat panjang (> 1100 karakter)
+            const useTwoPages = totalTextLength > 1100;
 
             area.innerHTML = `
-                <div class="space-y-6 text-slate-900 font-serif">
+                <div class="space-y-4 text-slate-900 font-serif">
                     <div class="flex items-center justify-between border-b pb-4 no-print font-sans">
                         <div class="flex items-center space-x-2">
                             <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold"><i class="fa-solid fa-shield-check mr-1"></i>Terverifikasi & Disetujui Final</span>
@@ -9097,155 +9236,123 @@ async function saveCapaian(e) {
                         </button>
                     </div>
 
-                    <!-- HALAMAN 1 (Romawi I s.d. V) Tanpa Border Tabel -->
-                    <div class="${useTwoPages ? 'skp-page-break pb-6 mb-6 border-b border-dashed border-slate-200' : ''} space-y-5">
-                        <div class="text-center space-y-1">
+                    <div class="${useTwoPages ? 'skp-page-break pb-6 mb-6 border-b border-dashed border-slate-200' : ''} space-y-3">
+                        <div class="text-center space-y-0.5">
                             <h2 class="text-base font-bold uppercase tracking-wide">LAPORAN PELAKSANAAN KEGIATAN</h2>
                             <h3 class="text-base font-bold uppercase tracking-wide">SASARAN KERJA PEGAWAI</h3>
-                            <p class="text-sm font-bold">TAHUN ${sanitizeHTML(skp.tahun)}</p>
-                            <p class="text-sm font-bold">Triwulan ${twRomawi}</p>
+                            <p class="text-sm font-bold">TAHUN ${sanitizeHTML(skp.tahun)} — Triwulan ${twRomawi}</p>
                         </div>
 
                         <table class="w-full skp-borderless-table text-xs">
                             <tbody>
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 w-8 text-left align-top">I.</td>
-                                    <td class="py-2 uppercase">NAMA INDIKATOR KINERJA</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3 font-semibold">${sanitizeHTML(skp.indikator)}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 w-8 text-left align-top">I.</td><td class="py-1 uppercase">NAMA INDIKATOR KINERJA</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5 font-semibold">${sanitizeHTML(skp.indikator)}</td></tr>
 
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 text-left align-top">II.</td>
-                                    <td class="py-2 uppercase">URAIAN KEGIATAN</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">Kegiatan yang dilakukan adalah sebagai berikut:<br>${sanitizeHTML(skp.uraianKegiatan)}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">II.</td><td class="py-1 uppercase">URAIAN KEGIATAN</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">Kegiatan yang dilakukan adalah sebagai berikut:<br>${sanitizeHTML(skp.uraianKegiatan)}</td></tr>
 
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 text-left align-top">III.</td>
-                                    <td class="py-2 uppercase">TARGET KINERJA</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">${sanitizeHTML(skp.targetText)}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">III.</td><td class="py-1 uppercase">TARGET KINERJA</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.targetText)}</td></tr>
 
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 text-left align-top">IV.</td>
-                                    <td class="py-2 uppercase">WAKTU PELAKSANAAN</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">${sanitizeHTML(skp.waktuPelaksanaan)}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">IV.</td><td class="py-1 uppercase">WAKTU PELAKSANAAN</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.waktuPelaksanaan)}</td></tr>
 
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 text-left align-top">V.</td>
-                                    <td class="py-2 uppercase">HASIL KEGIATAN/PEKERJAAN</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">${sanitizeHTML(skp.hasilKegiatan)}<br><span class="font-bold text-emerald-800">Predikat Hasil Kerja: ${sanitizeHTML(skp.nilaiFinalKinerja)} | Predikat Perilaku: ${sanitizeHTML(skp.nilaiPerilakuDirektur)}</span></td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">V.</td><td class="py-1 uppercase">HASIL KEGIATAN/PEKERJAAN</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.hasilKegiatan)}<br><span class="font-bold text-emerald-800">Predikat Hasil Kerja: ${sanitizeHTML(skp.nilaiFinalKinerja)} | Predikat Perilaku: ${sanitizeHTML(skp.nilaiPerilakuDirektur)}</span></td></tr>
                             </tbody>
                         </table>
 
-                        <div class="text-right text-[11px] font-bold text-slate-500 pt-4">
-                            Halaman 1 dari 2
-                        </div>
+                        ${useTwoPages ? `<div class="text-right text-[11px] font-bold text-slate-500 pt-2">Halaman 1 dari 2</div>` : ''}
                     </div>
 
-                    <!-- HALAMAN 2 (Romawi VI, VII & Tanda Tangan QR Code Hash) Tanpa Border Tabel -->
-                    <div class="space-y-6">
+                    <div class="space-y-4">
                         <table class="w-full skp-borderless-table text-xs">
                             <tbody>
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 w-8 text-left align-top">VI.</td>
-                                    <td class="py-2 uppercase">PERMASALAHAN YANG DIHADAPI</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">${sanitizeHTML(skp.permasalahan)}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 w-8 text-left align-top">VI.</td><td class="py-1 uppercase">PERMASALAHAN YANG DIHADAPI</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.permasalahan)}</td></tr>
 
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 text-left align-top">VII.</td>
-                                    <td class="py-2 uppercase">SARAN DAN TINDAK LANJUT</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">${sanitizeHTML(skp.saranKetuaTim)}${skp.catatanDirektur ? `<br><strong>Arahan Direktur:</strong> ${sanitizeHTML(skp.catatanDirektur)}` : ''}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">VII.</td><td class="py-1 uppercase">SARAN DAN TINDAK LANJUT</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.saranKetuaTim)}${skp.catatanDirektur ? `<br><strong>Arahan Direktur:</strong> ${sanitizeHTML(skp.catatanDirektur)}` : ''}</td></tr>
                             </tbody>
                         </table>
 
-                        <!-- BLOK TANDA TANGAN DENGAN QR CODE TER-HASH -->
-                        <div class="pt-4">
-                            <p class="text-xs mb-3">${sanitizeHTML(skp.tanggalKota)}</p>
-                            <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-6 text-xs text-center pt-4">
-                                
-                                <!-- Penandatangan 1: Direktur -->
+                        <div class="pt-2">
+                            <p class="text-xs mb-2">${sanitizeHTML(skp.tanggalKota)}</p>
+                            <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-4 text-xs text-center pt-2">
                                 <div class="flex flex-col items-center">
                                     <p class="font-semibold">Pejabat Penilai,</p>
-                                    <p class="font-bold mb-2">Direktur</p>
-                                    <div id="qrSignDirektur" class="p-2 bg-white rounded-lg my-1"></div>
-                                    <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashDirektur)}</span>
+                                    <p class="font-bold mb-1">Direktur</p>
+                                    <div id="qrSignDirektur" class="p-1 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashDirektur)}</span>
                                     <p class="font-bold underline">${sanitizeHTML(skp.dirName)}</p>
                                     <p>NIP. ${sanitizeHTML(skp.dirNip)}</p>
                                 </div>
-
                                 ${!skp.isKetuaTimRequest ? `
-                                <!-- Penandatangan 2: Ketua Tim Kerja -->
                                 <div class="flex flex-col items-center">
                                     <p class="font-semibold">Mengetahui,</p>
-                                    <p class="font-bold mb-2">Ketua Tim Kerja</p>
-                                    <div id="qrSignKetuaTim" class="p-2 bg-white rounded-lg my-1"></div>
-                                    <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashKetuaTim)}</span>
+                                    <p class="font-bold mb-1">Ketua Tim Kerja</p>
+                                    <div id="qrSignKetuaTim" class="p-1 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashKetuaTim)}</span>
                                     <p class="font-bold underline">${sanitizeHTML(skp.timName)}</p>
                                     <p>NIP. ${sanitizeHTML(skp.timNip)}</p>
                                 </div>
                                 ` : ''}
-
-                                <!-- Penandatangan 3: Penyusun Laporan -->
                                 <div class="flex flex-col items-center">
                                     <p class="font-semibold">Yang membuat,</p>
-                                    <p class="font-bold mb-2">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
-                                    <div id="qrSignPenyusun" class="p-2 bg-white rounded-lg my-1"></div>
-                                    <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashPenyusun)}</span>
+                                    <p class="font-bold mb-1">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
+                                    <div id="qrSignPenyusun" class="p-1 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashPenyusun)}</span>
                                     <p class="font-bold underline">${sanitizeHTML(skp.userName)}</p>
                                     <p>NIP. ${sanitizeHTML(skp.userNip)}</p>
                                 </div>
-
                             </div>
                         </div>
 
-                        <div class="text-right text-[11px] font-bold text-slate-500 pt-6">
-                            Halaman 2 dari 2
+                        <div class="text-right text-[11px] font-bold text-slate-500 pt-2">
+                            ${useTwoPages ? 'Halaman 2 dari 2' : 'Halaman 1 dari 1'}
                         </div>
                     </div>
                 </div>
             `;
 
-            setTimeout(() => {
-                if (typeof QRCode !== 'undefined') {
-                    const elDir = document.getElementById('qrSignDirektur');
-                    if (elDir) new QRCode(elDir, { text: `HASH:${skp.hashDirektur}|PENANDATANGAN:${skp.dirName}|NIP:${skp.dirNip}|HASIL:${skp.nilaiFinalKinerja}`, width: 78, height: 78 });
-
-                    const elTim = document.getElementById('qrSignKetuaTim');
-                    if (elTim) new QRCode(elTim, { text: `HASH:${skp.hashKetuaTim}|PENANDATANGAN:${skp.timName}|NIP:${skp.timNip}|VALIDASI:VALID`, width: 78, height: 78 });
-
-                    const elUsr = document.getElementById('qrSignPenyusun');
-                    if (elUsr) new QRCode(elUsr, { text: `HASH:${skp.hashPenyusun}|PEMBUAT:${skp.userName}|NIP:${skp.userNip}|INDIKATOR:${skp.indikator}`, width: 78, height: 78 });
+           setTimeout(() => {
+            if (typeof QRCode !== 'undefined') {
+                // 1. QR Code Direktur
+                const elDir = document.getElementById('qrSignDirektur');
+                if (elDir) {
+                    elDir.innerHTML = ""; // Bersihkan kontainer agar tidak duplikat
+                    new QRCode(elDir, { 
+                        text: `Dokumen SKP ini sudah disetujui oleh Direktur: ${skp.dirName} (NIP: ${skp.dirNip}) pada periode ${skp.triwulan} Tahun ${skp.tahun}. Hash: ${skp.hashDirektur}`, 
+                        width: 70, 
+                        height: 70 
+                    });
                 }
-            }, 80);
-            area.scrollIntoView({ behavior: 'smooth' });
-        }
-        let currentActiveLaporanType = 'kinerja';
+                
+                // 2. QR Code Ketua Tim Kerja
+                const elTim = document.getElementById('qrSignKetuaTim');
+                if (elTim) {
+                    elTim.innerHTML = ""; 
+                    new QRCode(elTim, { 
+                        text: `Dokumen SKP ini sudah disetujui oleh Ketua Tim Kerja: ${skp.timName} (NIP: ${skp.timNip}). Hash: ${skp.hashKetuaTim}`, 
+                        width: 70, 
+                        height: 70 
+                    });
+                }
+
+                // 3. QR Code Penyusun / Pegawai
+                const elUsr = document.getElementById('qrSignPenyusun');
+                if (elUsr) {
+                    elUsr.innerHTML = ""; 
+                    new QRCode(elUsr, { 
+                        text: `Dokumen SKP ini dibuat dan diajukan oleh Penyusun: ${skp.userName} (NIP: ${skp.userNip}) untuk Indikator: ${skp.indikator}. Hash: ${skp.hashPenyusun}`, 
+                        width: 70, 
+                        height: 70 
+                    });
+                }
+            }
+        }, 80);
+        area.scrollIntoView({ behavior: 'smooth' });
+        }        let currentActiveLaporanType = 'kinerja';
 
         function openLaporanModal(type) {
             currentActiveLaporanType = type;
