@@ -60,6 +60,52 @@
             #printableArea { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: none; padding: 20px; }
             .no-print { display: none !important; }
         }
+        /* === REVISI 3 & 4: TEMA TAMPILAN & AKSESIBILITAS DISABILITAS === */
+:root {
+    --theme-primary: #1d4ed8;
+    --theme-primary-hover: #1e40af;
+    --theme-primary-light: #eff6ff;
+}
+/* Override warna dinamis untuk Sidebar & Tombol Utama */
+#appSidebar { background-color: var(--theme-primary) !important; }
+.bg-primary-600, .bg-blue-600 { background-color: var(--theme-primary) !important; }
+.hover\:bg-primary-700:hover, .hover\:bg-blue-700:hover { background-color: var(--theme-primary-hover) !important; }
+.text-primary-700, .text-blue-600, .text-blue-700 { color: var(--theme-primary) !important; }
+
+/* Dark Mode */
+body.theme-dark { background-color: #0f172a !important; color: #f8fafc !important; }
+body.theme-dark .bg-white { background-color: #1e293b !important; color: #f1f5f9 !important; border-color: #334155 !important; }
+body.theme-dark .bg-slate-50, body.theme-dark .bg-slate-100 { background-color: #090d16 !important; color: #cbd5e1 !important; border-color: #334155 !important; }
+body.theme-dark .text-slate-900, body.theme-dark .text-slate-800, body.theme-dark .text-slate-700 { color: #f8fafc !important; }
+body.theme-dark input, body.theme-dark select, body.theme-dark textarea { background-color: #0f172a !important; color: #f8fafc !important; border-color: #475569 !important; }
+
+/* Contrast & Saturation */
+body.theme-contrast-high { filter: contrast(135%); }
+body.acc-smart-contrast { filter: contrast(115%) brightness(105%); }
+body.acc-colorblind { filter: grayscale(100%) contrast(120%); }
+body.acc-saturation-low { filter: saturate(40%); }
+body.acc-saturation-high { filter: saturate(190%); }
+
+/* Aksesibilitas Teks, Kursor, Tautan, & Gambar */
+body.acc-highlight-links a, body.acc-highlight-links button { outline: 2px solid #eab308 !important; outline-offset: 2px !important; }
+body.acc-big-text { zoom: 1.12; }
+body.acc-text-spacing * { letter-spacing: 0.08em !important; word-spacing: 0.16em !important; }
+body.acc-pause-anim *, body.acc-epilepsy * { animation: none !important; transition: none !important; }
+body.acc-hide-images img, body.acc-hide-images svg { opacity: 0.05 !important; }
+body.acc-dyslexia * { font-family: 'Comic Sans MS', 'Arial', sans-serif !important; line-height: 1.8 !important; }
+body.acc-big-cursor, body.acc-big-cursor * { cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='48' viewport='0 0 100 100'><polygon points='0,0 0,36 10,26 18,42 24,38 16,22 28,22' fill='black' stroke='white' stroke-width='2'/></svg>"), auto !important; }
+body.acc-line-height * { line-height: 2.1 !important; }
+body.acc-text-align-left p, body.acc-text-align-left td, body.acc-text-align-left th { text-align: left !important; }
+body.acc-text-align-center p, body.acc-text-align-center td, body.acc-text-align-center th { text-align: center !important; }
+body.acc-motor *:focus { outline: 4px solid #2563eb !important; outline-offset: 3px !important; }
+
+/* ADHD Reading Mask */
+#adhdReadingMaskTop, #adhdReadingMaskBottom {
+    position: fixed; left: 0; width: 100%; background: rgba(0, 0, 0, 0.65);
+    z-index: 9990; pointer-events: none; display: none;
+}
+body.acc-adhd #adhdReadingMaskTop, body.acc-adhd #adhdReadingMaskBottom { display: block; }
+        
         /* Style tambahan untuk bagan organisasi / pohon cascading */
 .tree-box {
     background: #ffffff;
@@ -77,6 +123,394 @@
     background-color: #94a3b8;
     margin: 0 auto;
 }
+        // =========================================================================
+        // REVISI 1: ENGINE LONCENG NOTIFIKASI TUGAS AKTIF (OTOMATIS HILANG JIKA SELESAI)
+        // =========================================================================
+        function getActiveRoleNotifications() {
+            if (!currentUser) return [];
+            const role = currentUser.role;
+            const notifs = [];
+
+            // 1. Notifikasi untuk DIREKTUR: Request Penilaian Final SKP yang menunggu Direktur
+            if (role === 'direktur') {
+                (DB.approvalSKP || []).filter(s => s && s.status === 'Menunggu Direktur').forEach(s => {
+                    notifs.push({
+                        id: s.id,
+                        title: `Verifikasi & Penilaian Final SKP`,
+                        desc: `Pemohon: ${s.requesterName} (${s.unit || '-'}) — Indikator: ${s.indikator} (${s.triwulan} ${s.tahun})`,
+                        targetTab: 'laporan',
+                        icon: 'fa-gavel',
+                        badgeClass: 'bg-indigo-100 text-indigo-700',
+                        actionLabel: 'Buka Keputusan Direktur'
+                    });
+                });
+            }
+
+            // 2. Notifikasi untuk KETUA TIM KERJA:
+            //    a) Validasi Capaian Kinerja dari Unit/Prodi yang masih 'Menunggu Validasi'
+            //    b) Verifikasi/Penilaian SKP yang berstatus 'Menunggu Ketua Tim Kerja'
+            if (role === 'tim_kerja') {
+                const validUnits = (DB.cascadingTim || []).filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets || []);
+                (DB.capaian || []).filter(c => {
+                    if (!c || c.status !== 'Menunggu Validasi') return false;
+                    const inTim = c.timKey === currentUser.timKey || validUnits.includes(c.unit);
+                    if (!inTim) return false;
+                    if (c.isSubUnitInput && c.statusProdi !== 'Valid') return false;
+                    return true;
+                }).forEach(c => {
+                    notifs.push({
+                        id: c.id,
+                        title: `Validasi Capaian Kinerja Unit (${c.unit})`,
+                        desc: `Indikator: ${c.targetDirektur} | Realisasi: ${c.realisasi} ${c.satuan || '%'} (${c.triwulan} ${c.tahun})`,
+                        targetTab: 'capaian',
+                        icon: 'fa-check-to-slot',
+                        badgeClass: 'bg-blue-100 text-blue-700',
+                        actionLabel: 'Proses Validasi Capaian'
+                    });
+                });
+
+                (DB.approvalSKP || []).filter(s => s && !s.isKetuaTimRequest && s.timKey === currentUser.timKey && s.status === 'Menunggu Ketua Tim Kerja').forEach(s => {
+                    notifs.push({
+                        id: s.id,
+                        title: `Penilaian SKP dari ${s.requesterName}`,
+                        desc: `Indikator: ${s.indikator} (${s.triwulan} ${s.tahun}) menunggu penilaian Ketua Tim Kerja`,
+                        targetTab: 'laporan',
+                        icon: 'fa-star-half-stroke',
+                        badgeClass: 'bg-emerald-100 text-emerald-700',
+                        actionLabel: 'Nilai & Validasi SKP'
+                    });
+                });
+            }
+
+            // 3. Notifikasi untuk KETUA PRODI / SUBBAG / UNIT:
+            //    a) Arahan/Rekomendasi dari Ketua Tim Kerja pasca validasi yang belum ditindaklanjuti
+            //    b) Validasi Tahap 1 capaian dari Staf/Dosen di bawah unitnya
+            if (role === 'ketua_unit') {
+                (DB.capaian || []).filter(c =>
+                    c && c.unit === currentUser.unit &&
+                    c.rekomendasi && c.rekomendasi.trim() !== '' &&
+                    c.statusTindakLanjut !== 'Sudah Ditindaklanjuti'
+                ).forEach(c => {
+                    notifs.push({
+                        id: c.id,
+                        title: `Arahan Ketua Tim Kerja (${c.triwulan} ${c.tahun})`,
+                        desc: `Arahan: "${c.rekomendasi}" pada indikator ${c.targetDirektur}`,
+                        targetTab: 'capaian',
+                        icon: 'fa-comment-dots',
+                        badgeClass: 'bg-amber-100 text-amber-700',
+                        actionLabel: 'Isi Tindak Lanjut Unit'
+                    });
+                });
+
+                (DB.capaian || []).filter(c =>
+                    c && c.unit === currentUser.unit &&
+                    c.isSubUnitInput && c.statusProdi === 'Menunggu Validasi Unit'
+                ).forEach(c => {
+                    notifs.push({
+                        id: c.id,
+                        title: `Validasi Inputan Staf (${c.inputByName || 'Staf'})`,
+                        desc: `Program: ${c.program} — Menunggu validasi tahap 1 Ketua Unit`,
+                        targetTab: 'capaian',
+                        icon: 'fa-user-check',
+                        badgeClass: 'bg-purple-100 text-purple-700',
+                        actionLabel: 'Validasi Capaian Staf'
+                    });
+                });
+            }
+
+            return notifs;
+        }
+
+        function toggleNotifDropdown() {
+            const menu = document.getElementById('notifDropdownMenu');
+            if (menu) menu.classList.toggle('hidden');
+        }
+
+        function handleNotifClick(targetTab) {
+            const menu = document.getElementById('notifDropdownMenu');
+            if (menu) menu.classList.add('hidden');
+            switchTab(targetTab);
+        }
+
+        window.addEventListener('click', (e) => {
+            const menu = document.getElementById('notifDropdownMenu');
+            const btn = document.getElementById('notifBellBtn');
+            if (menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // =========================================================================
+        // REVISI 2: MENU SIDETAB "SETTING" KHUSUS ADMIN (ATUR GAMBAR DEPAN & LOGO)
+        // =========================================================================
+        function renderSettingAdminView(container) {
+            if (!requireWriteAccess(['admin'])) {
+                container.innerHTML = `<div class="p-8 bg-white rounded-2xl border text-center text-rose-600 font-bold">Akses Ditolak: Menu Setting hanya untuk Administrator.</div>`;
+                return;
+            }
+            document.getElementById('pageTitle').innerText = 'Setting Tampilan Halaman Depan & Logo Institusi';
+            if (!DB.siteSettings) {
+                DB.siteSettings = { logoUrl: 'logo_poltek-removebg-preview.png', heroImageUrl: 'gambar tampilan depan.jpeg' };
+            }
+
+            container.innerHTML = `
+                <div class="max-w-4xl space-y-6 animate-fadeIn">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                        <div class="border-b pb-4">
+                            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-images text-blue-600 mr-2"></i>Pengaturan Gambar Halaman Depan (Landing Page) & Logo</h3>
+                            <p class="text-xs text-slate-500 mt-1">Unggah file gambar baru atau masukkan URL gambar untuk mengubah Logo dan Ilustrasi Halaman Depan secara langsung.</p>
+                        </div>
+
+                        <form onsubmit="saveSiteSettingsAdmin(event)" class="space-y-6 text-xs">
+                            <!-- 1. Pengaturan Logo -->
+                            <div class="p-4 bg-slate-50 rounded-2xl border space-y-3">
+                                <label class="block font-bold text-slate-800 text-sm">1. Logo Institusi (Header & Sidebar)</label>
+                                <div class="flex flex-col sm:flex-row items-center gap-4">
+                                    <div class="w-24 h-24 rounded-2xl bg-white border p-2 flex items-center justify-center shadow-2xs shrink-0">
+                                        <img id="previewSettingLogo" src="${DB.siteSettings.logoUrl}" alt="Logo Preview" class="max-h-full max-w-full object-contain" onerror="this.src='https://placehold.co/80x80/2563eb/ffffff?text=Logo'">
+                                    </div>
+                                    <div class="flex-1 space-y-2 w-full">
+                                        <label class="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl cursor-pointer shadow-xs">
+                                            <i class="fa-solid fa-upload mr-1.5"></i> Upload File Logo Baru
+                                            <input type="file" accept="image/*" class="hidden" onchange="handleSettingImageUpload(event, 'settingLogoInput', 'previewSettingLogo')">
+                                        </label>
+                                        <input type="text" id="settingLogoInput" value="${sanitizeHTML(DB.siteSettings.logoUrl)}" oninput="document.getElementById('previewSettingLogo').src = this.value" class="w-full p-2.5 bg-white border rounded-xl font-mono text-[11px]" placeholder="Atau tempel URL / Nama File Logo...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Pengaturan Gambar Halaman Depan -->
+                            <div class="p-4 bg-slate-50 rounded-2xl border space-y-3">
+                                <label class="block font-bold text-slate-800 text-sm">2. Gambar Utama Halaman Depan (Hero Landing Page)</label>
+                                <div class="flex flex-col sm:flex-row items-center gap-4">
+                                    <div class="w-44 h-28 rounded-2xl bg-white border overflow-hidden flex items-center justify-center shadow-2xs shrink-0">
+                                        <img id="previewSettingHero" src="${DB.siteSettings.heroImageUrl}" alt="Hero Preview" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/f8fafc/2563eb?text=Hero+Image'">
+                                    </div>
+                                    <div class="flex-1 space-y-2 w-full">
+                                        <label class="inline-block px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl cursor-pointer shadow-xs">
+                                            <i class="fa-solid fa-image mr-1.5"></i> Upload Gambar Halaman Depan Baru
+                                            <input type="file" accept="image/*" class="hidden" onchange="handleSettingImageUpload(event, 'settingHeroInput', 'previewSettingHero')">
+                                        </label>
+                                        <input type="text" id="settingHeroInput" value="${sanitizeHTML(DB.siteSettings.heroImageUrl)}" oninput="document.getElementById('previewSettingHero').src = this.value" class="w-full p-2.5 bg-white border rounded-xl font-mono text-[11px]" placeholder="Atau tempel URL / Nama File Gambar Depan...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end space-x-3 pt-2 border-t">
+                                <button type="button" onclick="resetDefaultSiteImages()" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl">Kembalikan Default</button>
+                                <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md">
+                                    <i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan Pengaturan Gambar & Logo
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleSettingImageUpload(event, inputId, previewId) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2500000) {
+                showToast('Ukuran gambar maksimal 2.5 MB!', 'error');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64 = e.target.result;
+                document.getElementById(inputId).value = base64;
+                document.getElementById(previewId).src = base64;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveSiteSettingsAdmin(e) {
+            e.preventDefault();
+            if (!requireWriteAccess(['admin'])) return;
+            DB.siteSettings = {
+                logoUrl: document.getElementById('settingLogoInput').value.trim() || 'logo_poltek-removebg-preview.png',
+                heroImageUrl: document.getElementById('settingHeroInput').value.trim() || 'gambar tampilan depan.jpeg'
+            };
+            recordAuditLog('Update Setting Gambar & Logo', 'Setting Admin', 'Admin memperbarui Logo / Gambar Halaman Depan');
+            await saveToMySQL();
+            showToast('Logo dan Gambar Halaman Depan berhasil diperbarui!');
+            renderDashboardLayout();
+        }
+
+        async function resetDefaultSiteImages() {
+            DB.siteSettings = {
+                logoUrl: 'logo_poltek-removebg-preview.png',
+                heroImageUrl: 'gambar tampilan depan.jpeg'
+            };
+            await saveToMySQL();
+            showToast('Gambar dan Logo dikembalikan ke bawaan awal.');
+            renderDashboardLayout();
+        }
+
+        // =========================================================================
+        // REVISI 3: DRAWER PENGATURAN TAMPILAN / TEMA & WARNA
+        // =========================================================================
+        let uiThemeConfig = JSON.parse(localStorage.getItem('kijaro_ui_theme') || '{"mode":"light","contrast":"normal","dir":"ltr","layout":"expanded","stretch":false,"color":"#1d4ed8"}');
+
+        function toggleThemeSettingsDrawer() {
+            const drw = document.getElementById('themeSettingsDrawer');
+            if (drw) drw.classList.toggle('translate-x-full');
+        }
+
+        function applyUiTheme(changes = {}) {
+            uiThemeConfig = { ...uiThemeConfig, ...changes };
+            if (changes.stretch === 'toggle') uiThemeConfig.stretch = !uiThemeConfig.stretch;
+
+            document.body.classList.toggle('theme-dark', uiThemeConfig.mode === 'dark');
+            document.body.classList.toggle('theme-contrast-high', uiThemeConfig.contrast === 'high');
+            document.documentElement.dir = uiThemeConfig.dir || 'ltr';
+
+            if (uiThemeConfig.color) {
+                document.documentElement.style.setProperty('--theme-primary', uiThemeConfig.color);
+                document.documentElement.style.setProperty('--theme-primary-hover', uiThemeConfig.color);
+            }
+
+            if (changes.layout) {
+                const sb = document.getElementById('appSidebar');
+                if (sb) {
+                    if (uiThemeConfig.layout === 'collapsed' && !isSidebarCollapsed) toggleSidebarCollapse();
+                    else if (uiThemeConfig.layout === 'expanded' && isSidebarCollapsed) toggleSidebarCollapse();
+                    else if (uiThemeConfig.layout === 'top') sb.classList.add('md:hidden');
+                    else sb.classList.remove('md:hidden');
+                }
+            }
+
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) {
+                mainContent.classList.toggle('max-w-7xl', !uiThemeConfig.stretch);
+                mainContent.classList.toggle('mx-auto', !uiThemeConfig.stretch);
+            }
+
+            localStorage.setItem('kijaro_ui_theme', JSON.stringify(uiThemeConfig));
+        }
+
+        function resetThemeSettings() {
+            localStorage.removeItem('kijaro_ui_theme');
+            uiThemeConfig = { mode: 'light', contrast: 'normal', dir: 'ltr', layout: 'expanded', stretch: true, color: '#1d4ed8' };
+            applyUiTheme();
+            showToast('Pengaturan tampilan dikembalikan ke semula.');
+        }
+
+        function toggleBrowserFullscreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+            else document.exitFullscreen().catch(() => {});
+        }
+
+        // =========================================================================
+        // REVISI 4: WIDGET MENU AKSESIBILITAS DISABILITAS (CTRL+U)
+        // =========================================================================
+        let activeAccState = {};
+
+        function toggleAccessibilityModal() {
+            const modal = document.getElementById('accessibilityModal');
+            if (!modal) return;
+            const isHidden = modal.classList.contains('hidden');
+            modal.classList.toggle('hidden', !isHidden);
+            modal.classList.toggle('flex', isHidden);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key.toLowerCase() === 'u') {
+                e.preventDefault();
+                toggleAccessibilityModal();
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!document.body.classList.contains('acc-adhd')) return;
+            const topMask = document.getElementById('adhdReadingMaskTop');
+            const botMask = document.getElementById('adhdReadingMaskBottom');
+            const gap = 110;
+            if (topMask && botMask) {
+                topMask.style.height = Math.max(0, e.clientY - gap / 2) + 'px';
+                botMask.style.top = (e.clientY + gap / 2) + 'px';
+                botMask.style.height = Math.max(0, window.innerHeight - (e.clientY + gap / 2)) + 'px';
+            }
+        });
+
+        function toggleAccProfile(profile) {
+            activeAccState[profile] = !activeAccState[profile];
+            const btn = document.getElementById('accProf_' + profile);
+            if (btn) {
+                btn.classList.toggle('bg-blue-600', activeAccState[profile]);
+                btn.classList.toggle('text-white', activeAccState[profile]);
+                btn.classList.toggle('bg-white', !activeAccState[profile]);
+            }
+
+            if (profile === 'motor') document.body.classList.toggle('acc-motor', activeAccState[profile]);
+            if (profile === 'colorblind') document.body.classList.toggle('acc-colorblind', activeAccState[profile]);
+            if (profile === 'dyslexia') document.body.classList.toggle('acc-dyslexia', activeAccState[profile]);
+            if (profile === 'lowvision') {
+                document.body.classList.toggle('acc-big-text', activeAccState[profile]);
+                document.body.classList.toggle('theme-contrast-high', activeAccState[profile]);
+            }
+            if (profile === 'cognitive') document.body.classList.toggle('acc-highlight-links', activeAccState[profile]);
+            if (profile === 'epilepsy') {
+                document.body.classList.toggle('acc-epilepsy', activeAccState[profile]);
+                document.body.classList.toggle('acc-saturation-low', activeAccState[profile]);
+            }
+            if (profile === 'adhd') document.body.classList.toggle('acc-adhd', activeAccState[profile]);
+            if (profile === 'blind') {
+                toggleAccFeature('tts');
+            }
+        }
+
+        function toggleAccFeature(feat) {
+            activeAccState[feat] = !activeAccState[feat];
+            const btn = document.getElementById('accFeat_' + feat);
+            if (btn) {
+                btn.classList.toggle('bg-blue-600', activeAccState[feat]);
+                btn.classList.toggle('text-white', activeAccState[feat]);
+                btn.classList.toggle('bg-white', !activeAccState[feat]);
+            }
+
+            if (feat === 'tts') {
+                if (activeAccState[feat] && 'speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utter = new SpeechSynthesisUtterance(document.body.innerText.substring(0, 1200));
+                    utter.lang = 'id-ID';
+                    window.speechSynthesis.speak(utter);
+                    showToast('Membacakan teks halaman (Suara Bahasa Indonesia)...');
+                } else if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                }
+            }
+            if (feat === 'contrast') document.body.classList.toggle('theme-contrast-high', activeAccState[feat]);
+            if (feat === 'smartContrast') document.body.classList.toggle('acc-smart-contrast', activeAccState[feat]);
+            if (feat === 'links') document.body.classList.toggle('acc-highlight-links', activeAccState[feat]);
+            if (feat === 'bigText') document.body.classList.toggle('acc-big-text', activeAccState[feat]);
+            if (feat === 'spacing') document.body.classList.toggle('acc-text-spacing', activeAccState[feat]);
+            if (feat === 'pauseAnim') document.body.classList.toggle('acc-pause-anim', activeAccState[feat]);
+            if (feat === 'hideImg') document.body.classList.toggle('acc-hide-images', activeAccState[feat]);
+            if (feat === 'dyslexia') document.body.classList.toggle('acc-dyslexia', activeAccState[feat]);
+            if (feat === 'cursor') document.body.classList.toggle('acc-big-cursor', activeAccState[feat]);
+            if (feat === 'lineHeight') document.body.classList.toggle('acc-line-height', activeAccState[feat]);
+            if (feat === 'align') document.body.classList.toggle('acc-text-align-left', activeAccState[feat]);
+            if (feat === 'saturation') document.body.classList.toggle('acc-saturation-high', activeAccState[feat]);
+            if (feat === 'structure') {
+                const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4')).map(h => '• ' + h.innerText.trim()).filter(Boolean).join('\n');
+                alert('STRUKTUR JUDUL HALAMAN:\n\n' + (headings || 'Tidak ada sub-judul.'));
+            }
+        }
+
+        function resetAllAccessibility() {
+            activeAccState = {};
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            document.body.className = "bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col";
+            document.querySelectorAll('#accessibilityModal button').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white');
+                if (!b.closest('.bg-blue-600')) b.classList.add('bg-white');
+            });
+            applyUiTheme();
+            showToast('Seluruh pengaturan aksesibilitas direset.');
+        }
+
+        setTimeout(() => applyUiTheme(), 150);
 /* Memastikan tombol tidak terhalang elemen lain */
 button { position: relative; z-index: 10; }
 
@@ -526,6 +960,10 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             dokumenPengukuran: [],
             dokumenPelaporan: [],
             spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1qR_zS0ZUNKW5EU2oFGCVoGBxn7m2zh5c2Cf3cP2MveA/edit?usp=sharing"
+            siteSettings: {
+                logoUrl: "logo_poltek-removebg-preview.png",
+                heroImageUrl: "gambar tampilan depan.jpeg"
+            }
         };
 
         let currentUser = null;
@@ -10402,6 +10840,238 @@ function downloadLogRisikoError() {
             <button type="button" onclick="executeDownloadRisikoCSV()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-xs flex items-center space-x-2">
                 <i class="fa-solid fa-download"></i>
                 <span>Download CSV Sekarang</span>
+            </button>
+        </div>
+    </div>
+</div>
+    <!-- MASK BACA ADHD -->
+<div id="adhdReadingMaskTop" style="height:35%;"></div>
+<div id="adhdReadingMaskBottom" style="top:55%; height:45%;"></div>
+
+<!-- TOMBOL FLOATING WIDGET AKSESIBILITAS DISABILITAS (KANAN TENGAH/ATAS SESUAI GAMBAR) -->
+<button type="button" id="floatingAccBtn" onclick="toggleAccessibilityModal()" title="Menu Aksesibilitas (CTRL+U)"
+    class="fixed right-4 top-24 z-[85] w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-2xl border-4 border-blue-200 flex items-center justify-center transition-transform hover:scale-110 no-print">
+    <i class="fa-solid fa-universal-access text-2xl"></i>
+</button>
+
+<!-- DRAWER PENGATURAN TAMPILAN / TEMA (REVISI 3 - SESUAI GAMBAR LAMPIRAN 1) -->
+<div id="themeSettingsDrawer" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 z-[95] transform translate-x-full transition-transform duration-300 flex flex-col justify-between p-6 overflow-y-auto no-print">
+    <div class="space-y-6">
+        <div class="flex items-center justify-between border-b pb-4">
+            <h3 class="font-extrabold text-slate-900 text-base">Settings</h3>
+            <div class="flex items-center space-x-3">
+                <button type="button" onclick="resetThemeSettings()" class="text-slate-400 hover:text-blue-600 relative" title="Reset Default">
+                    <i class="fa-solid fa-rotate-right text-sm"></i>
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5"></span>
+                </button>
+                <button type="button" onclick="toggleThemeSettingsDrawer()" class="text-slate-400 hover:text-slate-700">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mode: Light / Dark -->
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-400">Mode</label>
+            <div class="grid grid-cols-2 gap-3">
+                <button type="button" onclick="applyUiTheme({ mode: 'light' })" id="btnModeLight" class="p-4 rounded-2xl border border-slate-200 flex items-center justify-center text-blue-600 bg-blue-50/50 shadow-2xs">
+                    <i class="fa-solid fa-sun text-xl"></i>
+                </button>
+                <button type="button" onclick="applyUiTheme({ mode: 'dark' })" id="btnModeDark" class="p-4 rounded-2xl border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50">
+                    <i class="fa-solid fa-cloud-moon text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Contrast -->
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-400">Contrast</label>
+            <div class="grid grid-cols-2 gap-3">
+                <button type="button" onclick="applyUiTheme({ contrast: 'normal' })" id="btnContrastNormal" class="p-4 rounded-2xl border border-slate-200 flex items-center justify-center text-blue-600 bg-blue-50/50">
+                    <i class="fa-solid fa-circle-half-stroke text-xl"></i>
+                </button>
+                <button type="button" onclick="applyUiTheme({ contrast: 'high' })" id="btnContrastHigh" class="p-4 rounded-2xl border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50">
+                    <i class="fa-solid fa-adjust text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Direction -->
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-400">Direction</label>
+            <div class="grid grid-cols-2 gap-3">
+                <button type="button" onclick="applyUiTheme({ dir: 'ltr' })" class="p-4 rounded-2xl border border-slate-200 flex items-center justify-center text-blue-600 bg-blue-50/50">
+                    <i class="fa-solid fa-align-left text-xl"></i>
+                </button>
+                <button type="button" onclick="applyUiTheme({ dir: 'rtl' })" class="p-4 rounded-2xl border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50">
+                    <i class="fa-solid fa-align-right text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Layout -->
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-400">Layout</label>
+            <div class="grid grid-cols-3 gap-2">
+                <button type="button" onclick="applyUiTheme({ layout: 'expanded' })" class="p-3 rounded-xl border border-blue-300 bg-blue-50/40 flex items-center justify-center text-blue-600" title="Sidebar Penuh">
+                    <i class="fa-solid fa-table-columns"></i>
+                </button>
+                <button type="button" onclick="applyUiTheme({ layout: 'top' })" class="p-3 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400" title="Fokus Konten">
+                    <i class="fa-solid fa-window-maximize"></i>
+                </button>
+                <button type="button" onclick="applyUiTheme({ layout: 'collapsed' })" class="p-3 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400" title="Sidebar Ringkas">
+                    <i class="fa-solid fa-bars-staggered"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stretch -->
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-400">Stretch <i class="fa-solid fa-circle-info ml-1"></i></label>
+            <button type="button" onclick="applyUiTheme({ stretch: 'toggle' })" class="w-full p-3.5 rounded-2xl border border-slate-200 flex items-center justify-center text-blue-600 font-bold text-xs tracking-widest hover:bg-slate-50">
+                &lt; ------------ &gt;
+            </button>
+        </div>
+
+        <!-- Presets Warna -->
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-400">Presets</label>
+            <div class="grid grid-cols-3 gap-2.5">
+                <button type="button" onclick="applyUiTheme({ color: '#059669' })" class="p-3 rounded-xl border border-slate-100 hover:border-emerald-400 flex items-center justify-center"><span class="w-4 h-4 rounded-full bg-emerald-600"></span></button>
+                <button type="button" onclick="applyUiTheme({ color: '#65a30d' })" class="p-3 rounded-xl border border-slate-100 hover:border-lime-400 flex items-center justify-center"><span class="w-4 h-4 rounded-full bg-lime-500"></span></button>
+                <button type="button" onclick="applyUiTheme({ color: '#ea580c' })" class="p-3 rounded-xl border border-slate-100 hover:border-orange-400 flex items-center justify-center"><span class="w-4 h-4 rounded-full bg-orange-500"></span></button>
+                <button type="button" onclick="applyUiTheme({ color: '#1d4ed8' })" class="p-3 rounded-xl border border-blue-200 bg-blue-50/50 flex items-center justify-center"><span class="w-6 h-6 rounded-full bg-blue-700"></span></button>
+                <button type="button" onclick="applyUiTheme({ color: '#0284c7' })" class="p-3 rounded-xl border border-slate-100 hover:border-sky-400 flex items-center justify-center"><span class="w-4 h-4 rounded-full bg-sky-500"></span></button>
+                <button type="button" onclick="applyUiTheme({ color: '#7c3aed' })" class="p-3 rounded-xl border border-slate-100 hover:border-purple-400 flex items-center justify-center"><span class="w-4 h-4 rounded-full bg-purple-600"></span></button>
+                <button type="button" onclick="applyUiTheme({ color: '#dc2626' })" class="p-3 rounded-xl border border-slate-100 hover:border-red-400 flex items-center justify-center"><span class="w-4 h-4 rounded-full bg-red-600"></span></button>
+                <button type="button" onclick="applyUiTheme({ color: '#ec4899' })" class="p-3 rounded-xl border border-slate-100 hover:border-pink-400 flex items-center justify-center"><span class="w-4 h-4 rounded-full bg-pink-500"></span></button>
+                <button type="button" onclick="applyUiTheme({ color: '#be123c' })" class="p-3 rounded-xl border border-slate-100 hover:border-rose-400 flex items-center justify-center"><span class="w-4 h-4 rounded-full bg-rose-700"></span></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="pt-6">
+        <button type="button" onclick="toggleBrowserFullscreen()" class="w-full py-3 rounded-2xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-600 flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-expand"></i>
+            <span>Fullscreen</span>
+        </button>
+    </div>
+</div>
+
+<!-- MODAL MENU AKSESIBILITAS DISABILITAS (REVISI 4 - SESUAI GAMBAR LAMPIRAN 2 & 3) -->
+<div id="accessibilityModal" class="fixed top-4 right-4 w-[380px] max-w-[95vw] max-h-[92vh] bg-slate-50 rounded-3xl shadow-2xl border border-slate-200 z-[98] hidden flex-col overflow-hidden no-print">
+    <!-- Header Biru -->
+    <div class="bg-blue-600 text-white px-5 py-4 flex items-center justify-between">
+        <h3 class="font-bold text-sm">Menu Aksesibilitas (CTRL+U)</h3>
+        <button type="button" onclick="toggleAccessibilityModal()" class="w-7 h-7 rounded-full bg-blue-800/60 hover:bg-blue-800 flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+    </div>
+
+    <div class="p-4 space-y-4 overflow-y-auto flex-1 text-xs">
+        <!-- Bahasa -->
+        <div class="flex items-center justify-between bg-white p-3 rounded-2xl border">
+            <div class="flex items-center space-x-2.5">
+                <span class="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[10px]">ID</span>
+                <span class="font-semibold text-slate-800">Bahasa Indonesia (Indonesian)</span>
+            </div>
+            <i class="fa-solid fa-caret-right text-slate-400"></i>
+        </div>
+
+        <!-- Profil Aksesibilitas -->
+        <div class="space-y-2.5">
+            <div class="flex items-center justify-between px-1">
+                <span class="font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-universal-access text-base"></i> Profil Aksesibilitas</span>
+                <button type="button" onclick="resetAllAccessibility()" class="text-[10px] font-bold text-rose-600 hover:underline">Reset Semua</button>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+                <button type="button" onclick="toggleAccProfile('motor')" id="accProf_motor" class="acc-btn p-3 bg-white hover:bg-blue-50 rounded-2xl border flex items-center space-x-2.5 text-left transition-all">
+                    <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0"><i class="fa-solid fa-wheelchair"></i></span>
+                    <span class="font-semibold">Gangguan Motorik</span>
+                </button>
+                <button type="button" onclick="toggleAccProfile('blind')" id="accProf_blind" class="acc-btn p-3 bg-white hover:bg-blue-50 rounded-2xl border flex items-center space-x-2.5 text-left transition-all">
+                    <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0"><i class="fa-solid fa-wave-square"></i></span>
+                    <span class="font-semibold">Netra Total</span>
+                </button>
+                <button type="button" onclick="toggleAccProfile('colorblind')" id="accProf_colorblind" class="acc-btn p-3 bg-white hover:bg-blue-50 rounded-2xl border flex items-center space-x-2.5 text-left transition-all">
+                    <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0"><i class="fa-solid fa-droplet"></i></span>
+                    <span class="font-semibold">Buta warna</span>
+                </button>
+                <button type="button" onclick="toggleAccProfile('dyslexia')" id="accProf_dyslexia" class="acc-btn p-3 bg-white hover:bg-blue-50 rounded-2xl border flex items-center space-x-2.5 text-left transition-all">
+                    <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 font-bold">Df</span>
+                    <span class="font-semibold">Disleksia</span>
+                </button>
+                <button type="button" onclick="toggleAccProfile('lowvision')" id="accProf_lowvision" class="acc-btn p-3 bg-white hover:bg-blue-50 rounded-2xl border flex items-center space-x-2.5 text-left transition-all">
+                    <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0"><i class="fa-regular fa-eye"></i></span>
+                    <span class="font-semibold">Penglihatan rendah</span>
+                </button>
+                <button type="button" onclick="toggleAccProfile('cognitive')" id="accProf_cognitive" class="acc-btn p-3 bg-white hover:bg-blue-50 rounded-2xl border flex items-center space-x-2.5 text-left transition-all">
+                    <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0"><i class="fa-solid fa-puzzle-piece"></i></span>
+                    <span class="font-semibold">Kognitif & Belajar</span>
+                </button>
+                <button type="button" onclick="toggleAccProfile('epilepsy')" id="accProf_epilepsy" class="acc-btn p-3 bg-white hover:bg-blue-50 rounded-2xl border flex items-center space-x-2.5 text-left transition-all">
+                    <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0"><i class="fa-solid fa-brain"></i></span>
+                    <span class="font-semibold">Kejang dan Epilepsi</span>
+                </button>
+                <button type="button" onclick="toggleAccProfile('adhd')" id="accProf_adhd" class="acc-btn p-3 bg-white hover:bg-blue-50 rounded-2xl border flex items-center space-x-2.5 text-left transition-all">
+                    <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0"><i class="fa-solid fa-bullseye"></i></span>
+                    <span class="font-semibold">ADHD</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Widget Kebesaran Toggle -->
+        <div class="flex items-center justify-between border-y py-2.5 px-1">
+            <span class="font-bold text-slate-800"><strong class="mr-1.5">XL</strong> Widget kebesaran</span>
+            <input type="checkbox" onchange="document.getElementById('accessibilityModal').classList.toggle('w-[460px]', this.checked)" class="w-4 h-4 rounded text-blue-600">
+        </div>
+
+        <!-- Grid 15 Fitur Aksesibilitas -->
+        <div class="grid grid-cols-3 gap-2.5 text-center">
+            <button type="button" onclick="toggleAccFeature('tts')" id="accFeat_tts" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-volume-high text-lg"></i><span class="font-semibold text-[11px]">Baca Halaman</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('contrast')" id="accFeat_contrast" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-circle-half-stroke text-lg"></i><span class="font-semibold text-[11px]">Kontras +</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('smartContrast')" id="accFeat_smartContrast" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-wand-magic-sparkles text-lg"></i><span class="font-semibold text-[11px]">Kontras Cerdas</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('links')" id="accFeat_links" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-link text-lg"></i><span class="font-semibold text-[11px]">Sorot tautan</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('bigText')" id="accFeat_bigText" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-text-height text-lg"></i><span class="font-semibold text-[11px]">Teks Lebih Besar</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('spacing')" id="accFeat_spacing" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-arrows-left-right text-lg"></i><span class="font-semibold text-[11px]">Spasi teks</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('pauseAnim')" id="accFeat_pauseAnim" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-regular fa-circle-pause text-lg"></i><span class="font-semibold text-[11px]">Animasi dijeda</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('hideImg')" id="accFeat_hideImg" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-regular fa-image text-lg"></i><span class="font-semibold text-[11px]">Sembunyikan Gambar</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('dyslexia')" id="accFeat_dyslexia" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <span class="font-black text-base">Df</span><span class="font-semibold text-[11px]">Ramah Disleksia</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('cursor')" id="accFeat_cursor" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-arrow-pointer text-lg"></i><span class="font-semibold text-[11px]">Kursor</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('tooltip')" id="accFeat_tooltip" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-regular fa-message text-lg"></i><span class="font-semibold text-[11px]">Keterangan alat</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('structure')" id="accFeat_structure" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-layer-group text-lg"></i><span class="font-semibold text-[11px]">Struktur halaman</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('lineHeight')" id="accFeat_lineHeight" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-align-justify text-lg"></i><span class="font-semibold text-[11px]">Tinggi garis</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('align')" id="accFeat_align" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-align-left text-lg"></i><span class="font-semibold text-[11px]">Perataan Teks</span>
+            </button>
+            <button type="button" onclick="toggleAccFeature('saturation')" id="accFeat_saturation" class="p-3 bg-white hover:bg-blue-50 rounded-2xl border flex flex-col items-center justify-center space-y-1.5">
+                <i class="fa-solid fa-droplet text-lg"></i><span class="font-semibold text-[11px]">Kejenuhan</span>
             </button>
         </div>
     </div>
