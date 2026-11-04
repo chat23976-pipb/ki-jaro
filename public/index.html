@@ -153,6 +153,157 @@
             }
         }
     
+/* Memastikan tombol tidak terhalang elemen lain */
+button { position: relative; z-index: 10; }
+
+/* Animasi Futuristik & Print Page Counter (Revisi 12 & 14) */
+@keyframes floatGlow {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-3px); }
+}
+.futuristic-card {
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.futuristic-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 28px -8px rgba(37, 99, 235, 0.18);
+}
+
+/* Revisi 12: Menghilangkan Border Tabel SKP & Penanda Halaman Otomatis */
+.skp-borderless-table, 
+.skp-borderless-table th, 
+.skp-borderless-table td {
+    border: none !important;
+}
+.skp-borderless-table tr {
+    border-bottom: 1px solid #f1f5f9;
+}
+@media print {
+    .skp-print-container {
+        counter-reset: page;
+    }
+    .skp-page-break {
+        page-break-after: always;
+        break-after: page;
+    }
+    .skp-page-footer {
+        display: block !important;
+        position: fixed;
+        bottom: 10px;
+        right: 20px;
+        font-size: 10px;
+        font-weight: bold;
+        color: #475569;
+    }
+}
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <div id="app" class="flex-1 flex flex-col">
+        <!-- Dynamic View -->
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2"></div>
+<!-- Modal Edit Profil & Password Mandiri (Fase 1 Poin 6) -->
+<div id="changePasswordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 my-8">
+        <div class="flex justify-between items-center border-b pb-4">
+            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-user-pen text-primary-600 mr-2"></i>Edit Profil & Keamanan Akun</h3>
+            <button type="button" onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <form onsubmit="handleSelfEditProfile(event)" class="space-y-4 text-sm">
+            <!-- Upload Foto Profil -->
+            <div class="flex flex-col items-center space-y-2 pb-2 border-b border-slate-100">
+                <div id="profileEditPreviewContainer" class="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-2xl overflow-hidden border-2 border-blue-400 shadow-sm">
+                    <span id="profileEditInitial">U</span>
+                    <img id="profileEditPreviewImg" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                </div>
+                <label class="cursor-pointer px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition-all border border-blue-200">
+                    <i class="fa-solid fa-camera mr-1"></i> Upload Foto Profil
+                    <input type="file" id="selfAvatarInput" accept="image/*" class="hidden" onchange="previewSelfAvatar(event)">
+                </label>
+                <input type="hidden" id="selfAvatarBase64" value="">
+            </div>
+
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar (Otomatis jadi Nama Penyusun)</label>
+                <input type="text" id="selfProfileName" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+            </div>
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">NIP / NIK Resmi</label>
+                <input type="text" id="selfProfileNip" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold" placeholder="Contoh: 198501012015041001">
+            </div>
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Unit / Prodi / Subbag</label>
+                <input type="text" id="selfProfileUnit" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
+            </div>
+
+            <div class="pt-2 border-t border-slate-100">
+                <p class="text-[11px] font-bold text-slate-500 uppercase mb-2"><i class="fa-solid fa-lock mr-1"></i>Ganti Password (Kosongkan jika tidak diubah)</p>
+                <div class="space-y-2.5">
+                    <div>
+                        <input type="password" id="selfOldPass" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Password Lama (Wajib jika ganti password)">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="password" id="selfNewPass" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Password Baru">
+                        <input type="password" id="selfConfirmPass" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Ulangi Password Baru">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-3 border-t">
+                <button type="button" onclick="closeChangePasswordModal()" class="px-4 py-2 bg-slate-200 rounded-xl text-slate-700 text-xs font-semibold">Batal</button>
+                <button type="submit" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold shadow">Simpan Profil</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Pilih Role Saat Login / Switch Role jika >1 Role (Fase 1 Poin 1) -->
+<div id="roleSelectorModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center z-[90] p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 space-y-5 border border-slate-100 animate-fadeIn">
+        <div class="text-center space-y-1">
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-xl mb-2 shadow-xs">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <h3 class="text-lg font-black text-slate-900">Pilih Peran Akses (Multi-Role)</h3>
+            <p class="text-xs text-slate-500">Akun Anda memiliki lebih dari 1 role. Pilih role untuk sesi ini:</p>
+        </div>
+        <div id="roleSelectorList" class="space-y-2.5 max-h-64 overflow-y-auto pr-1"></div>
+    </div>
+</div>
+    <script>
+        // =========================================================================
+        // REVISI 2: MATIKAN ANIMASI CHART.JS AGAR GRAFIK INSTAN & TIDAK HILANG
+        // =========================================================================
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.animation = false;
+            Chart.defaults.animations = { colors: false, x: false, y: false };
+            Chart.defaults.transitions = { active: { animation: { duration: 0 } } };
+            Chart.defaults.elements.line.tension = 0.3;
+        }
+
+        // =========================================================================
+        // FASE 1: FONDASI KEAMANAN (XSS, CSRF, RATE LIMIT, SESSION, IDLE TIMEOUT)
+        // =========================================================================
+        const ROLE_LABELS = {
+         admin: 'Administrator Sistem',
+         direktur: 'Direktur',
+         pudir2: 'Pembantu Direktur II (Pudir 2)',
+         program: 'Tim Program / Evaluasi (Program)',
+         tim_kerja: 'Ketua Tim Kerja',
+         ketua_unit: 'Ketua Prodi / Subbag / Unit',
+         viewer: 'Viewer (Monitoring & Evaluasi)',
+         sekretaris: 'Sekretaris',
+         kalab: 'Kepala Laboratorium',
+         koordinator: 'Koordinator Bidang',
+         dosen: 'Dosen',
+         tendik: 'Tenaga Kependidikan (Tendik)'
+     };
+        // Daftar role fungsional tingkat bawah di bawah Unit/Prodi
+        const SUB_UNIT_ROLES = ['sekretaris', 'kalab', 'koordinator', 'dosen', 'tendik'];
         // =========================================================================
         // REVISI 1: ENGINE LONCENG NOTIFIKASI TUGAS AKTIF (OTOMATIS HILANG JIKA SELESAI)
         // =========================================================================
@@ -534,159 +685,7 @@
             showToast('Seluruh pengaturan aksesibilitas direset.');
         }
 
-        setTimeout(() => applyUiTheme(), 150);/* Memastikan tombol tidak terhalang elemen lain */
-button { position: relative; z-index: 10; }
-
-/* Animasi Futuristik & Print Page Counter (Revisi 12 & 14) */
-@keyframes floatGlow {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-3px); }
-}
-.futuristic-card {
-    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.futuristic-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 28px -8px rgba(37, 99, 235, 0.18);
-}
-
-/* Revisi 12: Menghilangkan Border Tabel SKP & Penanda Halaman Otomatis */
-.skp-borderless-table, 
-.skp-borderless-table th, 
-.skp-borderless-table td {
-    border: none !important;
-}
-.skp-borderless-table tr {
-    border-bottom: 1px solid #f1f5f9;
-}
-@media print {
-    .skp-print-container {
-        counter-reset: page;
-    }
-    .skp-page-break {
-        page-break-after: always;
-        break-after: page;
-    }
-    .skp-page-footer {
-        display: block !important;
-        position: fixed;
-        bottom: 10px;
-        right: 20px;
-        font-size: 10px;
-        font-weight: bold;
-        color: #475569;
-    }
-}
-    </script>
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
-
-    <div id="app" class="flex-1 flex flex-col">
-        <!-- Dynamic View -->
-    </div>
-
-    <!-- Toast Notification Container -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2"></div>
-<!-- Modal Edit Profil & Password Mandiri (Fase 1 Poin 6) -->
-<div id="changePasswordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 my-8">
-        <div class="flex justify-between items-center border-b pb-4">
-            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-user-pen text-primary-600 mr-2"></i>Edit Profil & Keamanan Akun</h3>
-            <button type="button" onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-        </div>
-        <form onsubmit="handleSelfEditProfile(event)" class="space-y-4 text-sm">
-            <!-- Upload Foto Profil -->
-            <div class="flex flex-col items-center space-y-2 pb-2 border-b border-slate-100">
-                <div id="profileEditPreviewContainer" class="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-2xl overflow-hidden border-2 border-blue-400 shadow-sm">
-                    <span id="profileEditInitial">U</span>
-                    <img id="profileEditPreviewImg" src="" alt="Preview" class="w-full h-full object-cover hidden">
-                </div>
-                <label class="cursor-pointer px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition-all border border-blue-200">
-                    <i class="fa-solid fa-camera mr-1"></i> Upload Foto Profil
-                    <input type="file" id="selfAvatarInput" accept="image/*" class="hidden" onchange="previewSelfAvatar(event)">
-                </label>
-                <input type="hidden" id="selfAvatarBase64" value="">
-            </div>
-
-            <div>
-                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Lengkap & Gelar (Otomatis jadi Nama Penyusun)</label>
-                <input type="text" id="selfProfileName" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
-            </div>
-            <div>
-                <label class="block font-semibold text-slate-700 mb-1 text-xs">NIP / NIK Resmi</label>
-                <input type="text" id="selfProfileNip" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold" placeholder="Contoh: 198501012015041001">
-            </div>
-            <div>
-                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Unit / Prodi / Subbag</label>
-                <input type="text" id="selfProfileUnit" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold">
-            </div>
-
-            <div class="pt-2 border-t border-slate-100">
-                <p class="text-[11px] font-bold text-slate-500 uppercase mb-2"><i class="fa-solid fa-lock mr-1"></i>Ganti Password (Kosongkan jika tidak diubah)</p>
-                <div class="space-y-2.5">
-                    <div>
-                        <input type="password" id="selfOldPass" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Password Lama (Wajib jika ganti password)">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="password" id="selfNewPass" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Password Baru">
-                        <input type="password" id="selfConfirmPass" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Ulangi Password Baru">
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex justify-end space-x-2 pt-3 border-t">
-                <button type="button" onclick="closeChangePasswordModal()" class="px-4 py-2 bg-slate-200 rounded-xl text-slate-700 text-xs font-semibold">Batal</button>
-                <button type="submit" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold shadow">Simpan Profil</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Modal Pilih Role Saat Login / Switch Role jika >1 Role (Fase 1 Poin 1) -->
-<div id="roleSelectorModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center z-[90] p-4">
-    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 space-y-5 border border-slate-100 animate-fadeIn">
-        <div class="text-center space-y-1">
-            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-xl mb-2 shadow-xs">
-                <i class="fa-solid fa-user-shield"></i>
-            </div>
-            <h3 class="text-lg font-black text-slate-900">Pilih Peran Akses (Multi-Role)</h3>
-            <p class="text-xs text-slate-500">Akun Anda memiliki lebih dari 1 role. Pilih role untuk sesi ini:</p>
-        </div>
-        <div id="roleSelectorList" class="space-y-2.5 max-h-64 overflow-y-auto pr-1"></div>
-    </div>
-</div>
-    <script>
-        // =========================================================================
-        // REVISI 2: MATIKAN ANIMASI CHART.JS AGAR GRAFIK INSTAN & TIDAK HILANG
-        // =========================================================================
-        if (typeof Chart !== 'undefined') {
-            Chart.defaults.animation = false;
-            Chart.defaults.animations = { colors: false, x: false, y: false };
-            Chart.defaults.transitions = { active: { animation: { duration: 0 } } };
-            Chart.defaults.elements.line.tension = 0.3;
-        }
-
-        // =========================================================================
-        // FASE 1: FONDASI KEAMANAN (XSS, CSRF, RATE LIMIT, SESSION, IDLE TIMEOUT)
-        // =========================================================================
-        const ROLE_LABELS = {
-         admin: 'Administrator Sistem',
-         direktur: 'Direktur',
-         pudir2: 'Pembantu Direktur II (Pudir 2)',
-         program: 'Tim Program / Evaluasi (Program)',
-         tim_kerja: 'Ketua Tim Kerja',
-         ketua_unit: 'Ketua Prodi / Subbag / Unit',
-         viewer: 'Viewer (Monitoring & Evaluasi)',
-         sekretaris: 'Sekretaris',
-         kalab: 'Kepala Laboratorium',
-         koordinator: 'Koordinator Bidang',
-         dosen: 'Dosen',
-         tendik: 'Tenaga Kependidikan (Tendik)'
-     };
-        // Daftar role fungsional tingkat bawah di bawah Unit/Prodi
-        const SUB_UNIT_ROLES = ['sekretaris', 'kalab', 'koordinator', 'dosen', 'tendik'];
-
+        setTimeout(() => applyUiTheme(), 150);
         // 1. Sanitasi Anti-XSS untuk input teks
         function sanitizeHTML(str) {
             if (str === null || str === undefined) return '';
