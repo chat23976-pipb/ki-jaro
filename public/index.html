@@ -4060,195 +4060,211 @@ function renderDokumenUkurLaporView(container) {
                 </div>
             `;
 
-            if (DB.cascadingDirektur.length > 0) {
+if (DB.cascadingDirektur.length > 0) {
                 setTimeout(() => {
-                    try {
-                        ['targetVsRealMultiYearChart', 'capaianChart', 'anggaranChart', 'unitRankingChart', 'petaRisikoPreChart', 'petaRisikoResiduChart'].forEach(id => {
-                            const el = document.getElementById(id);
-                            if (el && el.parentElement) {
-                                el.parentElement.style.height = id.includes('Risiko') ? '260px' : '340px';
+                    // Pastikan semua parent canvas memiliki tinggi eksplisit agar tidak kolaps menjadi 0px
+                    ['targetVsRealMultiYearChart', 'capaianChart', 'anggaranChart', 'unitRankingChart', 'petaRisikoPreChart', 'petaRisikoResiduChart'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el && el.parentElement) {
+                            el.parentElement.style.height = id.includes('Risiko') ? '260px' : '340px';
+                        }
+                    });
+
+                    // 1. Render Grafik Multi-Tahun (2025-2029)
+                    renderMultiYearIndikatorChart();
+
+                    // 2. Render Grafik Line Chart Capaian Indikator Utama
+                    let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
+                    let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+                    const colorPalette = [
+                        '#2563eb', '#dc2626', '#10b981', '#f59e0b', '#8b5cf6',
+                        '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+                    ];
+
+                    // Hanya tampilkan garis untuk indikator yang memiliki capaian Valid & Utama,
+                    // jika semua dijadikan Tidak Valid, tampilkan garis rata-rata 0% agar grafik tetap muncul bersih
+                    let multiDatasets = [];
+                    filteredCascading.forEach((cd, index) => {
+                        let color = colorPalette[index % colorPalette.length];
+                        let hasAnyValidInTw = false;
+
+                        let dataPoints = twPeriods.map(tw => {
+                            let match = validCapaian.filter(c =>
+                                c &&
+                                String(c.targetDirektur || '').trim() === String(cd.target || '').trim() &&
+                                c.triwulan && String(c.triwulan).trim().toUpperCase() === tw &&
+                                String(c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? String(c.tahun || '2025') : String(filterDashboardTahun))
+                            );
+                            if (match.length > 0) {
+                                hasAnyValidInTw = true;
+                                let targetVal = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
+                                let realVal = getAggregatedRealisasiForDashboard(match, cd.target, cd.tahun || '2025');
+                                return targetVal > 0 ? Number(((realVal / targetVal) * 100).toFixed(1)) : 0;
                             }
+                            return 0;
                         });
 
-                        // 1. Render Grafik Multi-Tahun (2025-2029)
-                        renderMultiYearIndikatorChart();
-
-                        // 2. Render Grafik Line Chart Capaian Indikator Utama
-                        let chartLabels = ['Triwulan 1', 'Triwulan 2', 'Triwulan 3', 'Triwulan 4'];
-                        let twPeriods = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
-                        const colorPalette = [
-                            '#2563eb', '#dc2626', '#10b981', '#f59e0b', '#8b5cf6',
-                            '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
-                        ];
-
-                        let multiDatasets = [];
-                        filteredCascading.forEach((cd, index) => {
-                            let color = colorPalette[index % colorPalette.length];
-                            let hasAnyValidInTw = false;
-
-                            let dataPoints = twPeriods.map(tw => {
-                                let match = validCapaian.filter(c =>
-                                    c &&
-                                    String(c.targetDirektur || '').trim() === String(cd.target || '').trim() &&
-                                    c.triwulan && String(c.triwulan).trim().toUpperCase() === tw &&
-                                    String(c.tahun || '2025') === (filterDashboardTahun === 'Semua' ? String(c.tahun || '2025') : String(filterDashboardTahun))
-                                );
-                                if (match.length > 0) {
-                                    hasAnyValidInTw = true;
-                                    let targetVal = cd.targetVal !== undefined ? Number(cd.targetVal) : 100;
-                                    let realVal = getAggregatedRealisasiForDashboard(match, cd.target, cd.tahun || '2025');
-                                    return targetVal > 0 ? Number(((realVal / targetVal) * 100).toFixed(1)) : 0;
-                                }
-                                return 0;
+                        // Hanya masukkan ke grafik jika indikator ini punya data Valid (atau tampilkan 0 jika ingin tetap terlihat garisnya)
+                        let labelName = String(cd.target || '').length > 40 ? String(cd.target).substring(0, 40) + '...' : String(cd.target || 'Indikator');
+                        if (hasAnyValidInTw) {
+                            multiDatasets.push({
+                                label: labelName,
+                                data: dataPoints,
+                                borderColor: color,
+                                backgroundColor: color,
+                                borderWidth: 2.5,
+                                fill: false,
+                                tension: 0.25,
+                                pointRadius: 5,
+                                pointHoverRadius: 7
                             });
+                        }
+                    });
 
-                            let labelName = String(cd.target || '').length > 40 ? String(cd.target).substring(0, 40) + '...' : String(cd.target || 'Indikator');
-                            if (hasAnyValidInTw) {
-                                multiDatasets.push({
-                                    label: labelName,
-                                    data: dataPoints,
-                                    borderColor: color,
-                                    backgroundColor: color,
-                                    borderWidth: 2.5,
-                                    fill: false,
-                                    tension: 0.25,
-                                    pointRadius: 5,
-                                    pointHoverRadius: 7
-                                });
-                            }
-                        });
+                    // Garis Standar Target 100% selalu tampil agar kanvas grafik selalu hidup meskipun semua data Tidak Valid
+                    multiDatasets.push({
+                        label: 'Standar Target (100%)',
+                        data: [100, 100, 100, 100],
+                        borderColor: '#94a3b8',
+                        backgroundColor: '#94a3b8',
+                        borderWidth: 2,
+                        borderDash: [6, 6],
+                        fill: false,
+                        pointRadius: 0
+                    });
 
-                        // Garis Standar Target 100% selalu tampil
-                        multiDatasets.push({
-                            label: 'Standar Target (100%)',
-                            data: [100, 100, 100, 100],
-                            borderColor: '#94a3b8',
-                            backgroundColor: '#94a3b8',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            fill: false,
-                            pointRadius: 0
-                        });
-
-                        safeInitChart('capaianChart', {
-                            type: 'line',
-                            data: { labels: chartLabels, datasets: multiDatasets },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    y: { beginAtZero: true, max: 140, title: { display: true, text: 'Persentase Realisasi (%)' }, ticks: { callback: v => v + '%' } },
-                                    x: { title: { display: true, text: 'Triwulan' } }
+                    safeInitChart('capaianChart', {
+                        type: 'line',
+                        data: { labels: chartLabels, datasets: multiDatasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 140,
+                                    title: { display: true, text: 'Persentase Realisasi (%)', font: { weight: 'bold', size: 12 } },
+                                    ticks: { font: { size: 11 }, callback: v => v + '%' }
                                 },
-                                plugins: {
-                                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-                                    datalabels: { display: false }
+                                x: {
+                                    title: { display: true, text: 'Triwulan', font: { weight: 'bold', size: 12 } },
+                                    ticks: { font: { weight: 'bold', size: 12 } }
                                 }
-                            }
-                        });
-
-                        // 3. Render Grafik Peringkat Unit
-                        const unitNames = Object.keys(unitScores);
-                        const unitVals = Object.values(unitScores).map(v => Number(v.toFixed(1)));
-                        const hasRankData = unitVals.length > 0;
-
-                        safeInitChart('unitRankingChart', {
-                            type: 'bar',
-                            data: {
-                                labels: hasRankData ? unitNames : ['Belum Ada Capaian Valid'],
-                                datasets: [{
-                                    label: 'Rata-rata Capaian Unit (%)',
-                                    data: hasRankData ? unitVals : [0],
-                                    backgroundColor: hasRankData ? unitVals.map(v => v >= 100 ? '#10b981' : v >= 80 ? '#3b82f6' : '#f59e0b') : ['#cbd5e1'],
-                                    borderRadius: 6
-                                }]
                             },
-                            options: {
-                                indexAxis: 'y',
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: { x: { beginAtZero: true, max: 120, ticks: { callback: v => v + '%' } } },
-                                plugins: { legend: { display: false }, datalabels: { display: false } }
+                            plugins: {
+                                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 }, padding: 15 } },
+                                datalabels: { display: false }
                             }
-                        });
+                        }
+                    });
 
-                        // 4. Render Grafik Realisasi Anggaran
-                        let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
-                        let targetIkList = (DB.renstraIndikatorKinerja || []).filter(ik => activeIndikatorIds.length === 0 || activeIndikatorIds.includes(ik.id));
-                        if (targetIkList.length === 0) targetIkList = DB.renstraIndikatorKinerja || [];
+                    // 3. Render Grafik Peringkat Unit
+                    const unitNames = Object.keys(unitScores);
+                    const unitVals = Object.values(unitScores).map(v => Number(v.toFixed(1)));
+                    const hasRankData = unitVals.length > 0;
 
-                        const ikLabels = targetIkList.length > 0 ? targetIkList.map(ik => ik.namaIndikator && ik.namaIndikator.length > 20 ? ik.namaIndikator.substring(0, 20) + '...' : (ik.namaIndikator || 'Indikator')) : ['Belum Ada Indikator'];
-                        const paguData = targetIkList.length > 0 ? targetIkList.map(ik => {
-                            let yKey = filterDashboardTahun !== 'Semua' ? 'anggaran' + filterDashboardTahun : 'anggaran2025';
-                            return Number(ik[yKey]) || 0;
-                        }) : [0];
-                        const realAngData = targetIkList.length > 0 ? targetIkList.map(ik => {
-                            let subRa = filteredRealisasiAdmin.filter(ra => ra.indikatorId === ik.id);
-                            return subRa.reduce((a, b) => a + (Number(b.realisasiAnggaran) || 0), 0);
-                        }) : [0];
-
-                        safeInitChart('anggaranChart', {
-                            type: 'bar',
-                            data: {
-                                labels: ikLabels,
-                                datasets: [
-                                    { label: 'Pagu Anggaran (Rp)', data: paguData, backgroundColor: '#3b82f6', borderRadius: 6 },
-                                    { label: 'Realisasi Anggaran (Rp)', data: realAngData, backgroundColor: '#10b981', borderRadius: 6 }
-                                ]
+                    safeInitChart('unitRankingChart', {
+                        type: 'bar',
+                        data: {
+                            labels: hasRankData ? unitNames : ['Belum Ada Capaian Valid'],
+                            datasets: [{
+                                label: 'Rata-rata Capaian Unit (%)',
+                                data: hasRankData ? unitVals : [0],
+                                backgroundColor: hasRankData ? unitVals.map(v => v >= 100 ? '#10b981' : v >= 80 ? '#3b82f6' : '#f59e0b') : ['#cbd5e1'],
+                                borderRadius: 6
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { beginAtZero: true, max: 120, ticks: { callback: v => v + '%' } }
                             },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: { y: { beginAtZero: true } },
-                                plugins: { legend: { position: 'bottom' }, datalabels: { display: false } }
+                            plugins: {
+                                legend: { display: false },
+                                datalabels: { display: false }
                             }
-                        });
+                        }
+                    });
 
-                        // 5. Render Peta Risiko Inherent
-                        const preData = filteredRisiko.map(r => ({
-                            x: Number(r.damp1) || 1, y: Number(r.prob1) || 1, r: Math.max(10, (Number(r.skor1) || 1) * 1.1), label: r.pernyataan, skor: r.skor1
-                        }));
-                        safeInitChart('petaRisikoPreChart', {
-                            type: 'bubble',
-                            data: {
-                                datasets: [{ label: 'Risiko Pre-Control', data: preData, backgroundColor: 'rgba(239, 68, 68, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
+                    // 4. Render Grafik Realisasi Anggaran
+                    let activeIndikatorIds = filteredRealisasiAdmin.map(ra => ra.indikatorId);
+                    let targetIkList = (DB.renstraIndikatorKinerja || []).filter(ik => activeIndikatorIds.length === 0 || activeIndikatorIds.includes(ik.id));
+                    if (targetIkList.length === 0) targetIkList = DB.renstraIndikatorKinerja || [];
+
+                    const ikLabels = targetIkList.length > 0 ? targetIkList.map(ik => ik.namaIndikator.length > 20 ? ik.namaIndikator.substring(0, 20) + '...' : ik.namaIndikator) : ['Belum Ada Indikator'];
+                    const paguData = targetIkList.length > 0 ? targetIkList.map(ik => {
+                        let yKey = filterDashboardTahun !== 'Semua' ? 'anggaran' + filterDashboardTahun : 'anggaran2025';
+                        return Number(ik[yKey]) || 0;
+                    }) : [0];
+                    const realAngData = targetIkList.length > 0 ? targetIkList.map(ik => {
+                        let subRa = filteredRealisasiAdmin.filter(ra => ra.indikatorId === ik.id);
+                        return subRa.reduce((a, b) => a + (Number(b.realisasiAnggaran) || 0), 0);
+                    }) : [0];
+
+                    safeInitChart('anggaranChart', {
+                        type: 'bar',
+                        data: {
+                            labels: ikLabels,
+                            datasets: [
+                                { label: 'Pagu Anggaran (Rp)', data: paguData, backgroundColor: '#3b82f6', borderRadius: 6 },
+                                { label: 'Realisasi Anggaran (Rp)', data: realAngData, backgroundColor: '#10b981', borderRadius: 6 }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: { y: { beginAtZero: true } },
+                            plugins: {
+                                legend: { position: 'bottom' },
+                                datalabels: { display: false }
+                            }
+                        }
+                    });
+
+                    // 5. Render Peta Risiko Inherent
+                    const preData = filteredRisiko.map(r => ({
+                        x: Number(r.damp1) || 1, y: Number(r.prob1) || 1, r: Math.max(10, (Number(r.skor1) || 1) * 1.1), label: r.pernyataan, skor: r.skor1
+                    }));
+                    safeInitChart('petaRisikoPreChart', {
+                        type: 'bubble',
+                        data: {
+                            datasets: [{ label: 'Risiko Pre-Control', data: preData, backgroundColor: 'rgba(239, 68, 68, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
+                                y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
                             },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
-                                    y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
-                                },
-                                plugins: { legend: { display: false }, datalabels: { display: false } }
-                            }
-                        });
+                            plugins: { legend: { display: false }, datalabels: { display: false } }
+                        }
+                    });
 
-                        // 6. Render Peta Risiko Residu
-                        const residuData = filteredRisiko.map(r => ({
-                            x: Number(r.damp2) || 1, y: Number(r.prob2) || 1, r: Math.max(10, (Number(r.skor2) || 1) * 1.1), label: r.pernyataan, skor: r.skor2
-                        }));
-                        safeInitChart('petaRisikoResiduChart', {
-                            type: 'bubble',
-                            data: {
-                                datasets: [{ label: 'Risiko Residu', data: residuData, backgroundColor: 'rgba(16, 185, 129, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
+                    // 6. Render Peta Risiko Residu
+                    const residuData = filteredRisiko.map(r => ({
+                        x: Number(r.damp2) || 1, y: Number(r.prob2) || 1, r: Math.max(10, (Number(r.skor2) || 1) * 1.1), label: r.pernyataan, skor: r.skor2
+                    }));
+                    safeInitChart('petaRisikoResiduChart', {
+                        type: 'bubble',
+                        data: {
+                            datasets: [{ label: 'Risiko Residu', data: residuData, backgroundColor: 'rgba(16, 185, 129, 0.75)', borderColor: '#0f172a', borderWidth: 1 }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
+                                y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
                             },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    x: { title: { display: true, text: 'Level Dampak (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } },
-                                    y: { title: { display: true, text: 'Level Kemungkinan (1-5)' }, min: 0.5, max: 5.5, ticks: { stepSize: 1 } }
-                                },
-                                plugins: { legend: { display: false }, datalabels: { display: false } }
-                            }
-                        });
-
-                    } catch (error) {
-                        console.error("Gagal merender salah satu grafik dashboard: ", error);
-                    }
+                            plugins: { legend: { display: false }, datalabels: { display: false } }
+                        }
+                    });
                 }, 120);
-            }        }
+            }
+        }
 let dashboardChartInstances = {};
 
         function safeInitChart(canvasId, config) {
@@ -4275,81 +4291,79 @@ let dashboardChartInstances = {};
             }
         }
 
-function renderMultiYearIndikatorChart() {
-    const canvas = document.getElementById('targetVsRealMultiYearChart');
-    if (!canvas) return;
-    const selEl = document.getElementById('selectIndikatorMultiYearChart');
-    const selectedInd = selEl ? selEl.value : 'Semua';
+        function renderMultiYearIndikatorChart() {
+            const canvas = document.getElementById('targetVsRealMultiYearChart');
+            if (!canvas) return;
+            const selEl = document.getElementById('selectIndikatorMultiYearChart');
+            const selectedInd = selEl ? selEl.value : 'Semua';
 
-    const allYears = ['2025', '2026', '2027', '2028', '2029'];
-    const years = filterDashboardTahun !== 'Semua' ? [String(filterDashboardTahun)] : allYears;
-    const ikList = (DB.renstraIndikatorKinerja || []).filter(ik => selectedInd === 'Semua' || ik.namaIndikator === selectedInd);
+            const allYears = ['2025', '2026', '2027', '2028', '2029'];
+            const years = filterDashboardTahun !== 'Semua' ? [String(filterDashboardTahun)] : allYears;
+            const ikList = (DB.renstraIndikatorKinerja || []).filter(ik => selectedInd === 'Semua' || ik.namaIndikator === selectedInd);
 
-    const targetData = years.map(yr => {
-        if (ikList.length === 0) return 0;
-        const sum = ikList.reduce((acc, ik) => {
-            if (!ik) return acc; // Guard clause: lewati jika data indikator rusak/kosong
-            const cd = (DB.cascadingDirektur || []).find(x => x && (x.indikatorId === ik.id || String(x.target || '').trim() === String(ik.namaIndikator || '').trim()) && String(x.tahun || '2025') === String(yr));
-            const tVal = (cd && cd.targetVal !== undefined) ? Number(cd.targetVal) : (ik['target' + yr] !== undefined ? Number(ik['target' + yr]) : 100);
-            return acc + (isNaN(tVal) ? 100 : tVal);
-        }, 0);
-        return Number((sum / ikList.length).toFixed(2)) || 0;
-    });
+            const targetData = years.map(yr => {
+                if (ikList.length === 0) return 0;
+                const sum = ikList.reduce((acc, ik) => {
+                    const cd = (DB.cascadingDirektur || []).find(x => x && (x.indikatorId === ik.id || String(x.target || '').trim() === String(ik.namaIndikator || '').trim()) && String(x.tahun || '2025') === String(yr));
+                    const tVal = (cd && cd.targetVal !== undefined) ? Number(cd.targetVal) : (ik['target' + yr] !== undefined ? Number(ik['target' + yr]) : 100);
+                    return acc + (isNaN(tVal) ? 100 : tVal);
+                }, 0);
+                return Number((sum / ikList.length).toFixed(2)) || 0;
+            });
 
-    const realData = years.map(yr => {
-        if (ikList.length === 0) return 0;
-        const sum = ikList.reduce((acc, ik) => {
-            if (!ik) return acc; // Guard clause
-            let caps = (DB.capaian || []).filter(c =>
-                c &&
-                String(c.targetDirektur || '').trim() === String(ik.namaIndikator || '').trim() &&
-                String(c.tahun || '2025') === String(yr) &&
-                String(c.status || '').trim() === 'Valid' &&
-                isCapaianUtamaForDashboard(c)
-            );
-            if (filterDashboardTim !== 'Semua') {
-                caps = caps.filter(c => c.timKey === filterDashboardTim);
-            }
-            if (filterDashboardUnit !== 'Semua') {
-                caps = caps.filter(c => c.unit === filterDashboardUnit);
-            }
-            if (filterDashboardTriwulan !== 'Semua') {
-                caps = caps.filter(c => c.triwulan && String(c.triwulan).trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
-            }
-            if (caps.length === 0) return acc;
+            const realData = years.map(yr => {
+                if (ikList.length === 0) return 0;
+                const sum = ikList.reduce((acc, ik) => {
+                    let caps = (DB.capaian || []).filter(c =>
+                        c &&
+                        String(c.targetDirektur || '').trim() === String(ik.namaIndikator || '').trim() &&
+                        String(c.tahun || '2025') === String(yr) &&
+                        String(c.status || '').trim() === 'Valid' &&
+                        isCapaianUtamaForDashboard(c)
+                    );
+                    if (filterDashboardTim !== 'Semua') {
+                        caps = caps.filter(c => c.timKey === filterDashboardTim);
+                    }
+                    if (filterDashboardUnit !== 'Semua') {
+                        caps = caps.filter(c => c.unit === filterDashboardUnit);
+                    }
+                    if (filterDashboardTriwulan !== 'Semua') {
+                        caps = caps.filter(c => c.triwulan && String(c.triwulan).trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
+                    }
+                    if (caps.length === 0) return acc;
 
-            const rVal = getAggregatedRealisasiForDashboard(caps, ik.namaIndikator, yr);
-            return acc + (Number(rVal) || 0);
-        }, 0);
-        return Number((sum / ikList.length).toFixed(2)) || 0;
-    });
+                    const rVal = getAggregatedRealisasiForDashboard(caps, ik.namaIndikator, yr);
+                    return acc + (Number(rVal) || 0);
+                }, 0);
+                return Number((sum / ikList.length).toFixed(2)) || 0;
+            });
 
-    safeInitChart('targetVsRealMultiYearChart', {
-        type: 'bar',
-        data: {
-            labels: years.map(y => 'Tahun ' + y),
-            datasets: [
-                { label: 'Target', data: targetData, backgroundColor: '#3b82f6', borderRadius: 6 },
-                { label: 'Realisasi (Valid & Utama)', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
-            ]
-        },
-        plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } },
-            plugins: {
-                legend: { position: 'bottom' },
-                datalabels: {
-                    anchor: 'end',
-                    align: 'top',
-                    font: { weight: 'bold', size: 10 },
-                    formatter: v => (v !== null && v !== undefined) ? v : 0
+            safeInitChart('targetVsRealMultiYearChart', {
+                type: 'bar',
+                data: {
+                    labels: years.map(y => 'Tahun ' + y),
+                    datasets: [
+                        { label: 'Target', data: targetData, backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'Realisasi (Valid & Utama)', data: realData, backgroundColor: '#10b981', borderRadius: 6 }
+                    ]
+                },
+                plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: v => (v !== null && v !== undefined) ? v : 0
+                        }
+                    }
                 }
-            }
+            });
         }
-    });
-}
         function renderCascadingView(container) {
             document.getElementById('pageTitle').innerText = 'Cascading & Crosscutting Indikator Kinerja (3 Level & Migrasi)';
             const isAdmin = currentUser.role === 'admin';
@@ -6555,9 +6569,9 @@ async function saveCapaian(e) {
                 showToast(isSubInput ? 'Capaian disimpan! Menunggu Validasi Tahap 1 oleh Ketua Prodi/Unit.' : 'Capaian berhasil diinput & diteruskan ke Ketua Tim Kerja!');
             }
 
-           await saveToMySQL();
-closeCapaianModal();
-if (activeTab === 'capaian') renderCapaianView(document.getElementById('mainContent'));
+            await saveToMySQL();
+            closeCapaianModal();
+            renderCapaianView(document.getElementById('mainContent'));
         }
 
         // Validasi Tahap 1 oleh Ketua Prodi/Subbag/Unit (Hanya Valid/Tidak Valid tanpa saran)
@@ -6593,9 +6607,9 @@ if (activeTab === 'capaian') renderCapaianView(document.getElementById('mainCont
                 }
             }
             await saveToMySQL();
-closeValidateProdiModal();
-showToast(choice === 'Valid' ? 'Validasi Tahap 1 (Unit) berhasil! Data kini diteruskan ke Ketua Tim Kerja.' : 'Capaian ditandai Tidak Valid oleh Unit.', choice === 'Valid' ? 'success' : 'info');
-if (activeTab === 'capaian') renderCapaianView(document.getElementById('mainContent'));
+            closeValidateProdiModal();
+            showToast(choice === 'Valid' ? 'Validasi Tahap 1 (Unit) berhasil! Data kini diteruskan ke Ketua Tim Kerja.' : 'Capaian ditandai Tidak Valid oleh Unit.', choice === 'Valid' ? 'success' : 'info');
+            renderCapaianView(document.getElementById('mainContent'));
         }
 
         // Validasi Tahap 2 oleh Ketua Tim Kerja
@@ -6643,48 +6657,8 @@ if (activeTab === 'capaian') renderCapaianView(document.getElementById('mainCont
             }
             
             await saveToMySQL();
-closeValidateModal();
-showToast(`Status capaian berhasil divalidasi Ketua Tim Kerja menjadi: ${statusVal}`, statusVal === 'Valid' ? 'success' : 'info');
-
-if (activeTab === 'capaian') {
-    renderCapaianView(document.getElementById('mainContent'));
-} else if (activeTab === 'dashboard') {
-    renderDashboardView(document.getElementById('mainContent'));
-}        }
-
-        // Tindak Lanjut hanya diisi oleh Ketua Prodi/Subbag/Unit (Level bawah hanya membaca)
-        function openTindakLanjutModal(id) {
-            if (!requireWriteAccess(['ketua_unit', 'admin'])) {
-                showToast('Tindak lanjut hanya dapat diisi oleh Ketua Prodi / Subbag / Unit!', 'error');
-                return;
-            }
-            document.getElementById('tindakLanjutCapaianId').value = id;
-            const found = DB.capaian.find(c => c.id === id);
-            if (found) {
-                document.getElementById('statusTindakLanjutChoice').value = found.statusTindakLanjut || 'Belum Ditindaklanjuti';
-                document.getElementById('inputLinkBuktiTindakLanjut').value = found.linkBuktiTindakLanjut || '';
-            }
-            document.getElementById('tindakLanjutModal').classList.remove('hidden');
-            document.getElementById('tindakLanjutModal').classList.add('flex');
-        }
-
-        function closeTindakLanjutModal() { 
-            document.getElementById('tindakLanjutModal').classList.remove('flex'); 
-            document.getElementById('tindakLanjutModal').classList.add('hidden'); 
-        }
-
-        async function submitTindakLanjut() {
-            if (!requireWriteAccess(['ketua_unit', 'admin'])) return;
-            const id = document.getElementById('tindakLanjutCapaianId').value;
-            const idx = DB.capaian.findIndex(c => c.id === id);
-            if (idx !== -1) {
-                DB.capaian[idx].statusTindakLanjut = document.getElementById('statusTindakLanjutChoice').value;
-                DB.capaian[idx].linkBuktiTindakLanjut = document.getElementById('inputLinkBuktiTindakLanjut').value;
-                await syncToGoogleSheets('Update Tindak Lanjut Unit', DB.capaian[idx]);
-            }
-            await saveToMySQL();
-            closeTindakLanjutModal();
-            showToast('Status & bukti tindak lanjut berhasil diperbarui oleh Ketua Unit!');
+            closeValidateModal();
+            showToast(`Status capaian berhasil divalidasi Ketua Tim Kerja menjadi: ${statusVal}`, statusVal === 'Valid' ? 'success' : 'info');
             renderCapaianView(document.getElementById('mainContent'));
         }
 
@@ -6715,9 +6689,9 @@ if (activeTab === 'capaian') {
                 await syncToGoogleSheets('Update Tindak Lanjut Unit', DB.capaian[idx]);
             }
             await saveToMySQL();
-closeTindakLanjutModal();
-showToast('Status & bukti tindak lanjut berhasil diperbarui oleh Ketua Unit!');
-if (activeTab === 'capaian') renderCapaianView(document.getElementById('mainContent'));
+            closeTindakLanjutModal();
+            showToast('Status & bukti tindak lanjut berhasil diperbarui oleh Ketua Unit!');
+            renderCapaianView(document.getElementById('mainContent'));
         }
 
         function renderRisikoView(container) {
@@ -7087,9 +7061,7 @@ if (activeTab === 'capaian') renderCapaianView(document.getElementById('mainCont
         }
 
         function openRisikoModal() { document.getElementById('risikoModal').classList.remove('hidden'); document.getElementById('risikoModal').classList.add('flex'); }
-       function closeRisikoModal() { const m = document.getElementById('risikoModal'); 
-    if (m) { m.classList.remove('flex'); m.classList.add('hidden'); } 
-}
+        function closeRisikoModal() { document.getElementById('risikoModal').classList.remove('flex'); document.getElementById('risikoModal').classList.add('hidden'); }
         
        async function saveRisiko(e) {
             e.preventDefault();
@@ -8684,13 +8656,12 @@ if (activeTab === 'capaian') renderCapaianView(document.getElementById('mainCont
                 sign3: document.getElementById('reqLapSign3').value.trim(),
                 sign3Nip: document.getElementById('reqLapSign3Nip') ? document.getElementById('reqLapSign3Nip').value.trim() : '-'
             };
-           DB.approvalLaporan.push(newReq);
-recordAuditLog('Request Laporan Kinerja', 'Laporan', `Mengajukan laporan capaian kinerja periode ${tw} ${yr}`);
-await saveToMySQL();
-const _reqLapM = document.getElementById('reqLapKinerjaModal');
-if (_reqLapM) { _reqLapM.classList.remove('flex'); _reqLapM.classList.add('hidden'); }
-showToast('Request Laporan Capaian Kinerja berhasil ditambahkan!');
-if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainContent'));
+            DB.approvalLaporan.push(newReq);
+            recordAuditLog('Request Laporan Kinerja', 'Laporan', `Mengajukan laporan capaian kinerja periode ${tw} ${yr}`);
+            await saveToMySQL();
+            document.getElementById('reqLapKinerjaModal').classList.add('hidden');
+            showToast('Request Laporan Capaian Kinerja berhasil ditambahkan!');
+            renderLaporanView(document.getElementById('mainContent'));
         }
 
         // REVISI 6: Laporan Kinerja Otomatis Menampilkan QR Code Apabila Ketua Tim Kerja Sudah Memvalidasi
@@ -8901,12 +8872,11 @@ if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainCont
             };
 
             DB.approvalSKP.push(newSkp);
-recordAuditLog('Request SKP', 'Laporan SKP', `${currentUser.name} mengajukan SKP indikator "${indikatorName}" (${tw} ${yr})`);
-await saveToMySQL();
-const _reqSkpM = document.getElementById('reqSKPModal');
-if (_reqSkpM) { _reqSkpM.classList.remove('flex'); _reqSkpM.classList.add('hidden'); }
-showToast('Request Approval SKP berhasil diajukan!');
-if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainContent'));
+            recordAuditLog('Request SKP', 'Laporan SKP', `${currentUser.name} mengajukan SKP indikator "${indikatorName}" (${tw} ${yr})`);
+            await saveToMySQL();
+            document.getElementById('reqSKPModal').classList.add('hidden');
+            showToast('Request Approval SKP berhasil diajukan!');
+            renderLaporanView(document.getElementById('mainContent'));
         }
 
         // REVISI 10: Menampilkan Nama Ketua Unit, Indikator, Target, Realisasi, & Range Ekspektasi Kinerja pada Modal Penilaian Ketua Tim Kerja
@@ -8981,26 +8951,24 @@ if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainCont
             modal.classList.add('flex');
         }
 
-       async function submitAssessSKPTim(decision) {
-    const skpId = document.getElementById('assessSkpTimId').value;
-    const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
-    if (!skp) return;
+        async function submitAssessSKPTim(decision) {
+            const skpId = document.getElementById('assessSkpTimId').value;
+            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
+            if (!skp) return;
 
-    if (decision === 'Ditolak') {
-        skp.status = 'Ditolak';
-    } else {
-        skp.nilaiTimKinerja = document.getElementById('assessSkpTimRating').value;
-        skp.saranKetuaTim = document.getElementById('assessSkpTimNote').value.trim() || 'Dilanjutkan dan ditingkatkan pada periode berikutnya';
-        skp.status = 'Menunggu Direktur';
-    }
-    recordAuditLog('Validasi SKP Tahap 1', 'Laporan SKP', `Ketua Tim Kerja menilai SKP ${skp.requesterName}: ${skp.nilaiTimKinerja} (${skp.status})`);
-await saveToMySQL();
-const _modalTim = document.getElementById('assessSkpTimModal');
-if (_modalTim) { _modalTim.classList.remove('flex'); _modalTim.classList.add('hidden'); }
-showToast(`Status SKP diperbarui menjadi: ${skp.status}`);
-if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainContent'));
-    }
-}
+            if (decision === 'Ditolak') {
+                skp.status = 'Ditolak';
+            } else {
+                skp.nilaiTimKinerja = document.getElementById('assessSkpTimRating').value;
+                skp.saranKetuaTim = document.getElementById('assessSkpTimNote').value.trim() || 'Dilanjutkan dan ditingkatkan pada periode berikutnya';
+                skp.status = 'Menunggu Direktur';
+            }
+            recordAuditLog('Validasi SKP Tahap 1', 'Laporan SKP', `Ketua Tim Kerja menilai SKP ${skp.requesterName}: ${skp.nilaiTimKinerja} (${skp.status})`);
+            await saveToMySQL();
+            document.getElementById('assessSkpTimModal').classList.add('hidden');
+            showToast(`Status SKP diperbarui menjadi: ${skp.status}`);
+            renderLaporanView(document.getElementById('mainContent'));
+        }
 
         function openAssessSKPDirModal(skpId) {
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
@@ -9094,11 +9062,10 @@ if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainCont
             }
 
             recordAuditLog('Persetujuan Final SKP (Direktur)', 'Laporan SKP', `Direktur menyetujui final SKP ${skp.requesterName} (Hasil: ${skp.nilaiFinalKinerja}, Perilaku: ${skp.nilaiPerilakuDirektur})`);
-await saveToMySQL();
-const _modalDir = document.getElementById('assessSkpDirModal');
-if (_modalDir) { _modalDir.classList.remove('flex'); _modalDir.classList.add('hidden'); }
-showToast(`SKP ${skp.status}! QR Code Hash Digital telah diterbitkan.`);
-if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainContent'));
+            await saveToMySQL();
+            document.getElementById('assessSkpDirModal').classList.add('hidden');
+            showToast(`SKP ${skp.status}! QR Code Hash Digital telah diterbitkan.`);
+            renderLaporanView(document.getElementById('mainContent'));
         }
 
         // REVISI 12: Cetak Laporan SKP Tanpa Border Tabel + Penanda Halaman Otomatis (Halaman 1 dari 2 & Halaman 2 dari 2)
@@ -9871,9 +9838,10 @@ if (activeTab === 'laporan') renderLaporanView(document.getElementById('mainCont
             }
 
             await syncToGoogleSheets('Program Kerja dan Peta Resiko', risikoPayload);
-await saveToMySQL();
-closeRisikoModal();
-if (activeTab === 'risiko') renderRisikoView(document.getElementById('mainContent'));
+            await saveToMySQL();
+
+            closeRisikoModal();
+            renderRisikoView(document.getElementById('mainContent'));
         }
 
         // Fungsi Hapus Risiko oleh Unit/Prodi
