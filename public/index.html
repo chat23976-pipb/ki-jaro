@@ -5425,8 +5425,14 @@ function updateDirRenstraOptions(tahun) {
             openCascadingDirModal();
             document.getElementById('dirTahunTarget').value = item.tahun || '2025';
             updateDirRenstraOptions(item.tahun || '2025');
-            document.getElementById('dirIndikatorRenstra').value = item.indikatorId;
+            document.getElementById('dirIndikatorRenstra').value = item.indikatorId || item.target;
             updateDirAnggaranPreview();
+
+            // PENGISIAN KEMBALI RANGE EKSPEKTASI YANG TERSIMPAN (AGAR TIDAK RESET)
+            const rk = item.rangeKinerja || { tidakMencapai: '< 100%', mencapai: '100%', melebihi: '> 100%' };
+            if (document.getElementById('dirRangeTidak')) document.getElementById('dirRangeTidak').value = rk.tidakMencapai;
+            if (document.getElementById('dirRangeMencapai')) document.getElementById('dirRangeMencapai').value = rk.mencapai;
+            if (document.getElementById('dirRangeMelebihi')) document.getElementById('dirRangeMelebihi').value = rk.melebihi;
 
             DB.timKerjaList.forEach((t, idx) => {
                 const chk = document.querySelector(`input[name="timCheck"][value="${t}"]`);
@@ -5562,6 +5568,12 @@ function toggleUnitRoleSelect(idx, isChecked) {
             document.getElementById('timTahunTarget').value = item.tahun || '2025';
             updateTimDirRefOptions(item.tahun || '2025');
             document.getElementById('timDirRef').value = item.targetDirektur;
+
+            // PENGISIAN KEMBALI RANGE EKSPEKTASI TIM KERJA YANG TERSIMPAN
+            const rk = item.rangeKinerja || { tidakMencapai: '< 100%', mencapai: '100%', melebihi: '> 100%' };
+            if (document.getElementById('timRangeTidak')) document.getElementById('timRangeTidak').value = rk.tidakMencapai;
+            if (document.getElementById('timRangeMencapai')) document.getElementById('timRangeMencapai').value = rk.mencapai;
+            if (document.getElementById('timRangeMelebihi')) document.getElementById('timRangeMelebihi').value = rk.melebihi;
 
             document.querySelectorAll('input[name="unitCheck"]').forEach((chk, idx) => {
                 const uName = chk.value;
@@ -8661,37 +8673,35 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 </div>
 
                 <!-- MODAL PENILAIAN FINAL SKP OLEH DIREKTUR -->
+<!-- MODAL PENILAIAN FINAL SKP OLEH DIREKTUR (PANDUAN TETAP ADA, PERILAKU DIHAPUS) -->
                 <div id="assessSkpDirModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
                         <div class="flex justify-between items-center border-b pb-3">
-                            <h3 class="font-bold text-slate-900 text-sm">Keputusan Final & Penilaian Perilaku SKP (Direktur)</h3>
+                            <h3 class="font-bold text-slate-900 text-sm">Keputusan Final Penilaian SKP (Direktur)</h3>
                             <button type="button" onclick="document.getElementById('assessSkpDirModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
                         </div>
-                        <!-- Kotak Panduan Ekspektasi, Target, Hasil & Kelayakan untuk Direktur -->
+                        
+                        <!-- Kotak Panduan Ekspektasi, Target, Hasil & Kelayakan TETAP DIPERTAHANKAN -->
                         <div id="assessSkpDirInfoBox" class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs"></div>
+                        
                         <input type="hidden" id="assessSkpDirId">
+                        
                         <div class="space-y-3 text-xs">
                             <div>
-                                <label class="block font-bold mb-1">Penilaian Final Hasil Kerja (Bisa Tetap atau Diubah Direktur)</label>
+                                <label class="block font-bold mb-1">Penilaian Capaian Kinerja</label>
                                 <select id="assessSkpDirRating" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-emerald-700">
                                     <option value="Di Bawah Ekspektasi">Di Bawah Ekspektasi</option>
                                     <option value="Sesuai Ekspektasi">Sesuai Ekspektasi</option>
                                     <option value="Di Atas Ekspektasi">Di Atas Ekspektasi</option>
                                 </select>
                             </div>
-                            <div>
-                                <label class="block font-bold mb-1">Penilaian Perilaku Kerja Pegawai (Oleh Direktur)</label>
-                                <select id="assessSkpDirBehavior" class="w-full p-2.5 bg-purple-50 border border-purple-200 rounded-xl font-bold text-purple-800">
-                                    <option value="Di Bawah Ekspektasi">Di Bawah Ekspektasi</option>
-                                    <option value="Sesuai Ekspektasi" selected>Sesuai Ekspektasi</option>
-                                    <option value="Di Atas Ekspektasi">Di Atas Ekspektasi</option>
-                                </select>
-                            </div>
+                            
                             <div>
                                 <label class="block font-bold mb-1">Catatan / Evaluasi Final Direktur</label>
                                 <textarea id="assessSkpDirNote" rows="2" class="w-full p-2.5 bg-slate-50 border rounded-xl" placeholder="Catatan persetujuan final..."></textarea>
                             </div>
                         </div>
+                        
                         <div class="flex justify-end space-x-2 pt-2 border-t">
                             <button type="button" onclick="submitAssessSKPDir('Ditolak')" class="px-4 py-2 bg-rose-100 text-rose-700 rounded-xl font-bold text-xs">Tolak SKP</button>
                             <button type="button" onclick="submitAssessSKPDir('Disetujui')" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs shadow">Setujui Final & Terbitkan QR Hash</button>
@@ -9123,7 +9133,6 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             }
 
             document.getElementById('assessSkpDirRating').value = skp.nilaiFinalKinerja || skp.nilaiTimKinerja || layakPredikat;
-            document.getElementById('assessSkpDirBehavior').value = skp.nilaiPerilakuDirektur || 'Sesuai Ekspektasi';
             document.getElementById('assessSkpDirNote').value = skp.catatanDirektur || '';
 
             const infoBox = document.getElementById('assessSkpDirInfoBox');
@@ -9190,7 +9199,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 skp.status = 'Ditolak';
             } else {
                 skp.nilaiFinalKinerja = document.getElementById('assessSkpDirRating').value;
-                skp.nilaiPerilakuDirektur = document.getElementById('assessSkpDirBehavior').value;
+                skp.nilaiPerilakuDirektur = ''; // Dihapus sesuai permintaan
                 skp.catatanDirektur = document.getElementById('assessSkpDirNote').value.trim();
                 skp.status = 'Disetujui';
 
@@ -9200,7 +9209,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 skp.hashPenyusun = generateSimpleDocHash(`USR|${skp.id}|${skp.userName}|${skp.userNip}|${skp.indikator}|${timestamp}`);
             }
 
-            recordAuditLog('Persetujuan Final SKP (Direktur)', 'Laporan SKP', `Direktur menyetujui final SKP ${skp.requesterName} (Hasil: ${skp.nilaiFinalKinerja}, Perilaku: ${skp.nilaiPerilakuDirektur})`);
+            recordAuditLog('Persetujuan Final SKP (Direktur)', 'Laporan SKP', `Direktur menyetujui final SKP ${skp.requesterName} (Capaian Kinerja: ${skp.nilaiFinalKinerja})`);
             await saveToMySQL();
             document.getElementById('assessSkpDirModal').classList.add('hidden');
             showToast(`SKP ${skp.status}! QR Code Hash Digital telah diterbitkan.`);
@@ -9229,7 +9238,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                     <div class="flex items-center justify-between border-b pb-4 no-print font-sans">
                         <div class="flex items-center space-x-2">
                             <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold"><i class="fa-solid fa-shield-check mr-1"></i>Terverifikasi & Disetujui Final</span>
-                            <span class="text-xs text-slate-500">Hasil Kerja: <strong>${sanitizeHTML(skp.nilaiFinalKinerja)}</strong> | Perilaku: <strong>${sanitizeHTML(skp.nilaiPerilakuDirektur)}</strong></span>
+                            <span class="text-xs text-slate-500">Capaian Kinerja: <strong>${sanitizeHTML(skp.nilaiFinalKinerja)}</strong></span>
                         </div>
                         <button onclick="window.print()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow flex items-center space-x-2">
                             <i class="fa-solid fa-print"></i><span>Cetak / Download SKP (PDF)</span>
@@ -9258,7 +9267,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                 <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.waktuPelaksanaan)}</td></tr>
 
                                 <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">V.</td><td class="py-1 uppercase">HASIL KEGIATAN/PEKERJAAN</td></tr>
-                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.hasilKegiatan)}<br><span class="font-bold text-emerald-800">Predikat Hasil Kerja: ${sanitizeHTML(skp.nilaiFinalKinerja)} | Predikat Perilaku: ${sanitizeHTML(skp.nilaiPerilakuDirektur)}</span></td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.hasilKegiatan)}<br>                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.hasilKegiatan)}<br><span class="font-bold text-emerald-800">Predikat Capaian Kinerja: ${sanitizeHTML(skp.nilaiFinalKinerja)}</span></td></tr>
                             </tbody>
                         </table>
 
