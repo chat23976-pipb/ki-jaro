@@ -8847,7 +8847,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 </div>
             `;
 
-            if (allValid && typeof QRCode !== 'undefined') {
+    if (allValid && typeof QRCode !== 'undefined') {
     setTimeout(() => {
         const el1 = document.getElementById('qrLapKinDir');
         if (el1) new QRCode(el1, { 
@@ -8867,11 +8867,9 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
         if (el3) new QRCode(el3, { 
             text: `Dokumen ini dibuat dan disetujui oleh Penyusun Laporan: ${req.sign3} (NIP: ${req.sign3Nip}). Hash: ${hashUsr}`, 
             width: 74, 
-            height: 74});
-                }, 80);
-            }
-            area.scrollIntoView({ behavior: 'smooth' });
-        }
+            height: 74 
+        });
+    }, 80);
 
         function openRequestSKPModal() {
             const modal = document.getElementById('reqSKPModal');
@@ -9316,16 +9314,29 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             `;
 
             setTimeout(() => {
-                if (typeof QRCode !== 'undefined') {
-                    const elDir = document.getElementById('qrSignDirektur');
-                    if (elDir) new QRCode(elDir, { text: `HASH:${skp.hashDirektur}|PENANDATANGAN:${skp.dirName}|NIP:${skp.dirNip}|HASIL:${skp.nilaiFinalKinerja}`, width: 70, height: 70 });
-                    const elTim = document.getElementById('qrSignKetuaTim');
-                    if (elTim) new QRCode(elTim, { text: `HASH:${skp.hashKetuaTim}|PENANDATANGAN:${skp.timName}|NIP:${skp.timNip}|VALIDASI:VALID`, width: 70, height: 70 });
-                    const elUsr = document.getElementById('qrSignPenyusun');
-                    if (elUsr) new QRCode(elUsr, { text: `HASH:${skp.hashPenyusun}|PEMBUAT:${skp.userName}|NIP:${skp.userNip}|INDIKATOR:${skp.indikator}`, width: 70, height: 70 });
-                }
-            }, 80);
-            area.scrollIntoView({ behavior: 'smooth' });
+                if (allValid && typeof QRCode !== 'undefined') {
+    setTimeout(() => {
+        const el1 = document.getElementById('qrLapKinDir');
+        if (el1) new QRCode(el1, { 
+            text: `Dokumen ini sudah disetujui oleh Direktur: ${req.sign1} (NIP: ${req.sign1Nip}) pada periode ${req.triwulan} ${req.tahun}. Hash: ${hashDir}`, 
+            width: 74, 
+            height: 74 
+        });
+        
+        const el2 = document.getElementById('qrLapKinTim');
+        if (el2) new QRCode(el2, { 
+            text: `Dokumen ini sudah disetujui oleh Ketua Tim Kerja: ${req.sign2} (NIP: ${req.sign2Nip}). Hash: ${hashTim}`, 
+            width: 74, 
+            height: 74 
+        });
+
+        const el3 = document.getElementById('qrLapKinUsr');
+        if (el3) new QRCode(el3, { 
+            text: `Dokumen ini dibuat dan disetujui oleh Penyusun Laporan: ${req.sign3} (NIP: ${req.sign3Nip}). Hash: ${hashUsr}`, 
+            width: 74, 
+            height: 74 
+        });
+    }, 80);
         }        let currentActiveLaporanType = 'kinerja';
 
         function openLaporanModal(type) {
