@@ -1539,15 +1539,15 @@ function renderDashboardLayout() {
                             </a>
                             
                             ${currentUser.role === 'admin' ? `
-                             <a href="javascript:void(0)" onclick="switchTab('admin')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                 <i class="fa-solid fa-users-gear w-5 text-center"></i>
-                                 <span class="sidebar-text">Manajemen Pejabat & User</span>
-                             </a>
-                             <a href="javascript:void(0)" onclick="switchTab('auditlog')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'auditlog' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
-                                 <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i>
-                                 <span class="sidebar-text">Audit Log Aktivitas</span>
-                             </a>
-                         ` : ''}
+                                <a href="javascript:void(0)" onclick="switchTab('admin')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admin' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                    <i class="fa-solid fa-users-gear w-5 text-center"></i>
+                                    <span class="sidebar-text">Manajemen Pejabat & User</span>
+                                </a>
+                                <a href="javascript:void(0)" onclick="switchTab('auditlog')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'auditlog' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                                    <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i>
+                                    <span class="sidebar-text">Audit Log Aktivitas</span>
+                                </a>
+                            ` : ''}
 
                             <a href="javascript:void(0)" onclick="switchTab('laporan')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'laporan' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-file-pdf w-5 text-center"></i>
@@ -1683,6 +1683,12 @@ function renderDashboardLayout() {
             }
         });
             function switchTab(tab) {
+            // PENGAMAN REVISI 7: Jika mencoba akses auditlog tapi bukan admin, tolak & batalkan
+            if (tab === 'auditlog' && (!currentUser || currentUser.role !== 'admin')) {
+                showToast('Akses Ditolak: Menu Audit Log hanya untuk Administrator!', 'error');
+                return;
+            }
+
             activeTab = tab;
             
             // Mengatur ulang warna tombol menu sidebar secara dinamis saat diklik
@@ -1696,12 +1702,13 @@ function renderDashboardLayout() {
             const content = document.getElementById('mainContent');
             if (!content) return;
             const sb = document.getElementById('appSidebar');
-         const backdrop = document.getElementById('mobileSidebarBackdrop');
-         if (sb && window.innerWidth < 768) {
-             sb.classList.add('hidden');
-             sb.classList.remove('flex');
-             if (backdrop) backdrop.classList.add('hidden');
-         }
+            const backdrop = document.getElementById('mobileSidebarBackdrop');
+            if (sb && window.innerWidth < 768) {
+                sb.classList.add('hidden');
+                sb.classList.remove('flex');
+                if (backdrop) backdrop.classList.add('hidden');
+            }
+
             if (tab === 'dashboard') renderDashboardView(content);
             else if (tab === 'renstra') renderRenstraView(content);
             else if (tab === 'dokumen') renderDokumenView(content);
@@ -8577,6 +8584,8 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                             <h3 class="font-bold text-slate-900 text-sm">Keputusan Final & Penilaian Perilaku SKP (Direktur)</h3>
                             <button type="button" onclick="document.getElementById('assessSkpDirModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
                         </div>
+                        <!-- Kotak Panduan Ekspektasi, Target, Hasil & Kelayakan untuk Direktur -->
+                        <div id="assessSkpDirInfoBox" class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs"></div>
                         <input type="hidden" id="assessSkpDirId">
                         <div class="space-y-3 text-xs">
                             <div>
@@ -8711,11 +8720,14 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                 <th class="p-2 border">Program & Uraian Pekerjaan</th>
                                 <th class="p-2 border text-center">Target</th>
                                 <th class="p-2 border text-center">Realisasi</th>
+                                <th class="p-2 border text-center">Status</th>
                                 <th class="p-2 border text-center">Status Validasi</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${caps.map((c, i) => `
+                            ${caps.map((c, i) => {
+                                const isTercapai = Number(c.realisasi || 0) >= Number(c.target || 0) && Number(c.realisasi || 0) > 0;
+                                return `
                                 <tr>
                                     <td class="p-2 border text-center">${i + 1}</td>
                                     <td class="p-2 border">${sanitizeHTML(c.unit)}</td>
@@ -8723,12 +8735,13 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                     <td class="p-2 border">${sanitizeHTML(c.program)}${c.uraianPekerjaan ? `<br><span class="text-[10px] text-slate-500">${sanitizeHTML(c.uraianPekerjaan)}</span>` : ''}</td>
                                     <td class="p-2 border text-center">${c.target} ${c.satuan || '%'}</td>
                                     <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi} ${c.satuan || '%'}</td>
+                                    <td class="p-2 border text-center font-bold ${isTercapai ? 'text-emerald-700' : 'text-rose-600'}">${isTercapai ? 'Tercapai' : 'Tidak Tercapai'}</td>
                                     <td class="p-2 border text-center font-bold text-emerald-700">${c.status}</td>
                                 </tr>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </tbody>
-                    </table>
-                    <div class="pt-6 grid grid-cols-3 gap-4 text-center text-xs">
+                    </table>                    <div class="pt-6 grid grid-cols-3 gap-4 text-center text-xs">
                         <div class="flex flex-col items-center">
                             <p class="mb-2">Menyetujui,<br><strong>Direktur</strong></p>
                             ${allValid ? `<div id="qrLapKinDir" class="p-1.5 bg-white border rounded my-1"></div><span class="text-[8px] font-mono text-slate-400 mb-1">${hashDir}</span>` : '<div class="h-16"></div>'}
@@ -8990,21 +9003,32 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
             if (!skp) return;
             document.getElementById('assessSkpDirId').value = skpId;
-            document.getElementById('assessSkpDirRating').value = skp.nilaiFinalKinerja || skp.nilaiTimKinerja || 'Sesuai Ekspektasi';
-            document.getElementById('assessSkpDirBehavior').value = skp.nilaiPerilakuDirektur || 'Sesuai Ekspektasi';
-            document.getElementById('assessSkpDirNote').value = skp.catatanDirektur || '';
 
             const capObj = skp.capaianId ? (DB.capaian || []).find(c => String(c.id) === String(skp.capaianId)) : (DB.capaian || []).find(c => c.unit === skp.unit && c.targetDirektur === skp.indikator && String(c.tahun || '2025') === String(skp.tahun || '2025'));
             const cdObj = (DB.cascadingDirektur || []).find(cd => cd.target === skp.indikator && String(cd.tahun || '2025') === String(skp.tahun || '2025')) || (DB.cascadingDirektur || []).find(cd => cd.target === skp.indikator);
             const ctObj = (DB.cascadingTim || []).find(ct => ct.targetDirektur === skp.indikator && String(ct.tahun || '2025') === String(skp.tahun || '2025') && (!skp.timKey || ct.timKey === skp.timKey));
             const ikObj = (DB.renstraIndikatorKinerja || []).find(ik => ik.namaIndikator === skp.indikator);
 
-            const targetVal = skp.targetNum !== undefined ? skp.targetNum : (capObj ? capObj.target : (cdObj && cdObj.targetVal !== undefined ? cdObj.targetVal : 100));
-            const realVal = skp.realisasiNum !== undefined ? skp.realisasiNum : (capObj ? capObj.realisasi : 0);
+            const targetVal = Number(skp.targetNum !== undefined ? skp.targetNum : (capObj ? capObj.target : (cdObj && cdObj.targetVal !== undefined ? cdObj.targetVal : 100))) || 100;
+            const realVal = Number(skp.realisasiNum !== undefined ? skp.realisasiNum : (capObj ? capObj.realisasi : 0)) || 0;
             const satuanStr = skp.satuan || (capObj ? capObj.satuan : (cdObj ? cdObj.satuan : '%')) || '%';
 
             const rkDir = (cdObj && cdObj.rangeKinerja) ? cdObj.rangeKinerja : ((ctObj && ctObj.rangeKinerja) ? ctObj.rangeKinerja : ((ikObj && ikObj.rangeKinerja) ? ikObj.rangeKinerja : { tidakMencapai: '< 100%', mencapai: '100%', melebihi: '> 100%' }));
-            const rs360 = (ikObj && ikObj.rangeSikap360) ? ikObj.rangeSikap360 : { tidakSesuai: '< 75', sesuai: '75 - 90', melebihi: '> 90' };
+
+            // Penentuan otomatis layak dapat predikat apa berdasarkan perbandingan Hasil vs Target
+            let layakPredikat = 'Sesuai Ekspektasi';
+            let layakColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+            if (realVal < targetVal) {
+                layakPredikat = 'Di Bawah Ekspektasi';
+                layakColor = 'bg-rose-100 text-rose-800 border-rose-300';
+            } else if (realVal > targetVal) {
+                layakPredikat = 'Di Atas Ekspektasi';
+                layakColor = 'bg-blue-100 text-blue-800 border-blue-300';
+            }
+
+            document.getElementById('assessSkpDirRating').value = skp.nilaiFinalKinerja || skp.nilaiTimKinerja || layakPredikat;
+            document.getElementById('assessSkpDirBehavior').value = skp.nilaiPerilakuDirektur || 'Sesuai Ekspektasi';
+            document.getElementById('assessSkpDirNote').value = skp.catatanDirektur || '';
 
             const infoBox = document.getElementById('assessSkpDirInfoBox');
             if (infoBox) {
@@ -9015,7 +9039,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                             <strong class="text-slate-900">${sanitizeHTML(skp.requesterName)} (${sanitizeHTML(skp.unit || '-')})</strong>
                         </div>
                         <div>
-                            <span class="text-[10px] text-slate-500 block">Rekomendasi Ketua Tim Kerja:</span>
+                            <span class="text-[10px] text-slate-500 block">Penilaian Ketua Tim Kerja:</span>
                             <strong class="text-blue-700">${sanitizeHTML(skp.nilaiTimKinerja || 'Langsung ke Direktur')}</strong>
                         </div>
                     </div>
@@ -9023,29 +9047,33 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                         <span class="text-[10px] text-slate-500 block">Nama Indikator Kinerja (${sanitizeHTML(skp.triwulan)} - ${sanitizeHTML(skp.tahun)}):</span>
                         <strong class="text-slate-900">${sanitizeHTML(skp.indikator)}</strong>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border">
+                    <div class="grid grid-cols-3 gap-2 bg-white p-2.5 rounded-lg border">
                         <div>
-                            <span class="text-[10px] text-slate-500 block">Target Indikator:</span>
+                            <span class="text-[10px] text-slate-500 block">Target:</span>
                             <strong class="text-blue-700 text-sm">${targetVal} ${sanitizeHTML(satuanStr)}</strong>
                         </div>
                         <div>
-                            <span class="text-[10px] text-slate-500 block">Realisasi Capaian:</span>
+                            <span class="text-[10px] text-slate-500 block">Hasil Didapat:</span>
                             <strong class="text-emerald-700 text-sm">${realVal} ${sanitizeHTML(satuanStr)}</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Layak Dapat:</span>
+                            <span class="inline-block mt-0.5 px-2 py-0.5 rounded border text-[10px] font-extrabold ${layakColor}">${layakPredikat}</span>
                         </div>
                     </div>
                     <div class="bg-blue-50/80 p-2.5 rounded-lg border border-blue-200 space-y-1">
-                        <span class="text-[10px] font-bold text-blue-950 uppercase block"><i class="fa-solid fa-gauge-high mr-1"></i>Acuan Range Ekspektasi Kinerja (Inputan Cascading Direktur):</span>
+                        <span class="text-[10px] font-bold text-blue-950 uppercase block"><i class="fa-solid fa-gauge-high mr-1"></i>Panduan Ekspektasi Penilaian Indikator:</span>
                         <div class="grid grid-cols-3 gap-1.5 text-[11px] pt-1">
                             <div class="p-1.5 bg-white rounded border border-rose-200 text-center">
-                                <span class="block text-[9px] font-bold text-rose-700">Di Bawah</span>
+                                <span class="block text-[9px] font-bold text-rose-700">Di Bawah Ekspektasi</span>
                                 <strong class="text-slate-800">${sanitizeHTML(rkDir.tidakMencapai)}</strong>
                             </div>
                             <div class="p-1.5 bg-white rounded border border-emerald-200 text-center">
-                                <span class="block text-[9px] font-bold text-emerald-700">Sesuai</span>
+                                <span class="block text-[9px] font-bold text-emerald-700">Sesuai Ekspektasi</span>
                                 <strong class="text-slate-800">${sanitizeHTML(rkDir.mencapai)}</strong>
                             </div>
                             <div class="p-1.5 bg-white rounded border border-blue-200 text-center">
-                                <span class="block text-[9px] font-bold text-blue-700">Di Atas</span>
+                                <span class="block text-[9px] font-bold text-blue-700">Di Atas Ekspektasi</span>
                                 <strong class="text-slate-800">${sanitizeHTML(rkDir.melebihi)}</strong>
                             </div>
                         </div>
@@ -9057,7 +9085,6 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
-
         async function submitAssessSKPDir(decision) {
             const skpId = document.getElementById('assessSkpDirId').value;
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
@@ -9096,13 +9123,13 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             if (!area) return;
 
             const twRomawi = skp.triwulan.includes('1') ? 'I' : skp.triwulan.includes('2') ? 'II' : skp.triwulan.includes('3') ? 'III' : 'IV';
-
-            // Cek apakah konten panjang sehingga dibagi menjadi 2 halaman berpenanda (Halaman 1 dari 2 & Halaman 2 dari 2)
             const totalTextLength = (skp.indikator || '').length + (skp.uraianKegiatan || '').length + (skp.hasilKegiatan || '').length + (skp.permasalahan || '').length + (skp.saranKetuaTim || '').length;
-            const useTwoPages = totalTextLength > 180 || true; // Selalu mendukung penanda Halaman 1 dari 2 & Halaman 2 dari 2 yang rapi saat dicetak
+            
+            // Default 1 halaman; hanya dibagi 2 halaman jika teks sangat panjang (> 1100 karakter)
+            const useTwoPages = totalTextLength > 1100;
 
             area.innerHTML = `
-                <div class="space-y-6 text-slate-900 font-serif">
+                <div class="space-y-4 text-slate-900 font-serif">
                     <div class="flex items-center justify-between border-b pb-4 no-print font-sans">
                         <div class="flex items-center space-x-2">
                             <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold"><i class="fa-solid fa-shield-check mr-1"></i>Terverifikasi & Disetujui Final</span>
@@ -9113,135 +9140,80 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                         </button>
                     </div>
 
-                    <!-- HALAMAN 1 (Romawi I s.d. V) Tanpa Border Tabel -->
-                    <div class="${useTwoPages ? 'skp-page-break pb-6 mb-6 border-b border-dashed border-slate-200' : ''} space-y-5">
-                        <div class="text-center space-y-1">
+                    <div class="${useTwoPages ? 'skp-page-break pb-6 mb-6 border-b border-dashed border-slate-200' : ''} space-y-3">
+                        <div class="text-center space-y-0.5">
                             <h2 class="text-base font-bold uppercase tracking-wide">LAPORAN PELAKSANAAN KEGIATAN</h2>
                             <h3 class="text-base font-bold uppercase tracking-wide">SASARAN KERJA PEGAWAI</h3>
-                            <p class="text-sm font-bold">TAHUN ${sanitizeHTML(skp.tahun)}</p>
-                            <p class="text-sm font-bold">Triwulan ${twRomawi}</p>
+                            <p class="text-sm font-bold">TAHUN ${sanitizeHTML(skp.tahun)} — Triwulan ${twRomawi}</p>
                         </div>
 
                         <table class="w-full skp-borderless-table text-xs">
                             <tbody>
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 w-8 text-left align-top">I.</td>
-                                    <td class="py-2 uppercase">NAMA INDIKATOR KINERJA</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3 font-semibold">${sanitizeHTML(skp.indikator)}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 w-8 text-left align-top">I.</td><td class="py-1 uppercase">NAMA INDIKATOR KINERJA</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5 font-semibold">${sanitizeHTML(skp.indikator)}</td></tr>
 
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 text-left align-top">II.</td>
-                                    <td class="py-2 uppercase">URAIAN KEGIATAN</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">Kegiatan yang dilakukan adalah sebagai berikut:<br>${sanitizeHTML(skp.uraianKegiatan)}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">II.</td><td class="py-1 uppercase">URAIAN KEGIATAN</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">Kegiatan yang dilakukan adalah sebagai berikut:<br>${sanitizeHTML(skp.uraianKegiatan)}</td></tr>
 
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 text-left align-top">III.</td>
-                                    <td class="py-2 uppercase">TARGET KINERJA</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">${sanitizeHTML(skp.targetText)}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">III.</td><td class="py-1 uppercase">TARGET KINERJA</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.targetText)}</td></tr>
 
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 text-left align-top">IV.</td>
-                                    <td class="py-2 uppercase">WAKTU PELAKSANAAN</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">${sanitizeHTML(skp.waktuPelaksanaan)}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">IV.</td><td class="py-1 uppercase">WAKTU PELAKSANAAN</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.waktuPelaksanaan)}</td></tr>
 
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 text-left align-top">V.</td>
-                                    <td class="py-2 uppercase">HASIL KEGIATAN/PEKERJAAN</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">${sanitizeHTML(skp.hasilKegiatan)}<br><span class="font-bold text-emerald-800">Predikat Hasil Kerja: ${sanitizeHTML(skp.nilaiFinalKinerja)} | Predikat Perilaku: ${sanitizeHTML(skp.nilaiPerilakuDirektur)}</span></td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">V.</td><td class="py-1 uppercase">HASIL KEGIATAN/PEKERJAAN</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.hasilKegiatan)}<br><span class="font-bold text-emerald-800">Predikat Hasil Kerja: ${sanitizeHTML(skp.nilaiFinalKinerja)} | Predikat Perilaku: ${sanitizeHTML(skp.nilaiPerilakuDirektur)}</span></td></tr>
                             </tbody>
                         </table>
 
-                        <div class="text-right text-[11px] font-bold text-slate-500 pt-4">
-                            Halaman 1 dari 2
-                        </div>
+                        ${useTwoPages ? `<div class="text-right text-[11px] font-bold text-slate-500 pt-2">Halaman 1 dari 2</div>` : ''}
                     </div>
 
-                    <!-- HALAMAN 2 (Romawi VI, VII & Tanda Tangan QR Code Hash) Tanpa Border Tabel -->
-                    <div class="space-y-6">
+                    <div class="space-y-4">
                         <table class="w-full skp-borderless-table text-xs">
                             <tbody>
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 w-8 text-left align-top">VI.</td>
-                                    <td class="py-2 uppercase">PERMASALAHAN YANG DIHADAPI</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">${sanitizeHTML(skp.permasalahan)}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 w-8 text-left align-top">VI.</td><td class="py-1 uppercase">PERMASALAHAN YANG DIHADAPI</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.permasalahan)}</td></tr>
 
-                                <tr class="font-bold">
-                                    <td class="py-2 pr-2 text-left align-top">VII.</td>
-                                    <td class="py-2 uppercase">SARAN DAN TINDAK LANJUT</td>
-                                </tr>
-                                <tr>
-                                    <td class="pb-3"></td>
-                                    <td class="pb-3">${sanitizeHTML(skp.saranKetuaTim)}${skp.catatanDirektur ? `<br><strong>Arahan Direktur:</strong> ${sanitizeHTML(skp.catatanDirektur)}` : ''}</td>
-                                </tr>
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">VII.</td><td class="py-1 uppercase">SARAN DAN TINDAK LANJUT</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.saranKetuaTim)}${skp.catatanDirektur ? `<br><strong>Arahan Direktur:</strong> ${sanitizeHTML(skp.catatanDirektur)}` : ''}</td></tr>
                             </tbody>
                         </table>
 
-                        <!-- BLOK TANDA TANGAN DENGAN QR CODE TER-HASH -->
-                        <div class="pt-4">
-                            <p class="text-xs mb-3">${sanitizeHTML(skp.tanggalKota)}</p>
-                            <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-6 text-xs text-center pt-4">
-                                
-                                <!-- Penandatangan 1: Direktur -->
+                        <div class="pt-2">
+                            <p class="text-xs mb-2">${sanitizeHTML(skp.tanggalKota)}</p>
+                            <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-4 text-xs text-center pt-2">
                                 <div class="flex flex-col items-center">
                                     <p class="font-semibold">Pejabat Penilai,</p>
-                                    <p class="font-bold mb-2">Direktur</p>
-                                    <div id="qrSignDirektur" class="p-2 bg-white rounded-lg my-1"></div>
-                                    <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashDirektur)}</span>
+                                    <p class="font-bold mb-1">Direktur</p>
+                                    <div id="qrSignDirektur" class="p-1 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashDirektur)}</span>
                                     <p class="font-bold underline">${sanitizeHTML(skp.dirName)}</p>
                                     <p>NIP. ${sanitizeHTML(skp.dirNip)}</p>
                                 </div>
-
                                 ${!skp.isKetuaTimRequest ? `
-                                <!-- Penandatangan 2: Ketua Tim Kerja -->
                                 <div class="flex flex-col items-center">
                                     <p class="font-semibold">Mengetahui,</p>
-                                    <p class="font-bold mb-2">Ketua Tim Kerja</p>
-                                    <div id="qrSignKetuaTim" class="p-2 bg-white rounded-lg my-1"></div>
-                                    <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashKetuaTim)}</span>
+                                    <p class="font-bold mb-1">Ketua Tim Kerja</p>
+                                    <div id="qrSignKetuaTim" class="p-1 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashKetuaTim)}</span>
                                     <p class="font-bold underline">${sanitizeHTML(skp.timName)}</p>
                                     <p>NIP. ${sanitizeHTML(skp.timNip)}</p>
                                 </div>
                                 ` : ''}
-
-                                <!-- Penandatangan 3: Penyusun Laporan -->
                                 <div class="flex flex-col items-center">
                                     <p class="font-semibold">Yang membuat,</p>
-                                    <p class="font-bold mb-2">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
-                                    <div id="qrSignPenyusun" class="p-2 bg-white rounded-lg my-1"></div>
-                                    <span class="text-[8px] font-mono text-slate-500 mb-1">${sanitizeHTML(skp.hashPenyusun)}</span>
+                                    <p class="font-bold mb-1">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
+                                    <div id="qrSignPenyusun" class="p-1 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashPenyusun)}</span>
                                     <p class="font-bold underline">${sanitizeHTML(skp.userName)}</p>
                                     <p>NIP. ${sanitizeHTML(skp.userNip)}</p>
                                 </div>
-
                             </div>
                         </div>
 
-                        <div class="text-right text-[11px] font-bold text-slate-500 pt-6">
-                            Halaman 2 dari 2
+                        <div class="text-right text-[11px] font-bold text-slate-500 pt-2">
+                            ${useTwoPages ? 'Halaman 2 dari 2' : 'Halaman 1 dari 1'}
                         </div>
                     </div>
                 </div>
@@ -9250,18 +9222,15 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             setTimeout(() => {
                 if (typeof QRCode !== 'undefined') {
                     const elDir = document.getElementById('qrSignDirektur');
-                    if (elDir) new QRCode(elDir, { text: `HASH:${skp.hashDirektur}|PENANDATANGAN:${skp.dirName}|NIP:${skp.dirNip}|HASIL:${skp.nilaiFinalKinerja}`, width: 78, height: 78 });
-
+                    if (elDir) new QRCode(elDir, { text: `HASH:${skp.hashDirektur}|PENANDATANGAN:${skp.dirName}|NIP:${skp.dirNip}|HASIL:${skp.nilaiFinalKinerja}`, width: 70, height: 70 });
                     const elTim = document.getElementById('qrSignKetuaTim');
-                    if (elTim) new QRCode(elTim, { text: `HASH:${skp.hashKetuaTim}|PENANDATANGAN:${skp.timName}|NIP:${skp.timNip}|VALIDASI:VALID`, width: 78, height: 78 });
-
+                    if (elTim) new QRCode(elTim, { text: `HASH:${skp.hashKetuaTim}|PENANDATANGAN:${skp.timName}|NIP:${skp.timNip}|VALIDASI:VALID`, width: 70, height: 70 });
                     const elUsr = document.getElementById('qrSignPenyusun');
-                    if (elUsr) new QRCode(elUsr, { text: `HASH:${skp.hashPenyusun}|PEMBUAT:${skp.userName}|NIP:${skp.userNip}|INDIKATOR:${skp.indikator}`, width: 78, height: 78 });
+                    if (elUsr) new QRCode(elUsr, { text: `HASH:${skp.hashPenyusun}|PEMBUAT:${skp.userName}|NIP:${skp.userNip}|INDIKATOR:${skp.indikator}`, width: 70, height: 70 });
                 }
             }, 80);
             area.scrollIntoView({ behavior: 'smooth' });
-        }
-        let currentActiveLaporanType = 'kinerja';
+        }        let currentActiveLaporanType = 'kinerja';
 
         function openLaporanModal(type) {
             currentActiveLaporanType = type;
