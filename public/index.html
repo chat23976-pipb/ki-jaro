@@ -9267,7 +9267,13 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                 <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.waktuPelaksanaan)}</td></tr>
 
                                 <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">V.</td><td class="py-1 uppercase">HASIL KEGIATAN/PEKERJAAN</td></tr>
-                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.hasilKegiatan)}<br>                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.hasilKegiatan)}<br><span class="font-bold text-emerald-800">Predikat Capaian Kinerja: ${sanitizeHTML(skp.nilaiFinalKinerja)}</span></td></tr>
+<tr>
+    <td class="pb-1.5"></td>
+    <td class="pb-1.5">
+        ${sanitizeHTML(skp.hasilKegiatan || '-')}<br>
+        <span class="font-bold text-emerald-800">Predikat Capaian Kinerja: ${sanitizeHTML(skp.nilaiFinalKinerja || 'Sesuai Ekspektasi')}</span>
+    </td>
+</tr>
                             </tbody>
                         </table>
 
@@ -9329,40 +9335,45 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 // 1. QR Code Direktur
                 const elDir = document.getElementById('qrSignDirektur');
                 if (elDir) {
-                    elDir.innerHTML = ""; // Bersihkan kontainer agar tidak duplikat
+                    elDir.innerHTML = "";
+                    const textDir = `VALIDASI DIREKTUR: ${skp.dirName || '-'} | NIP: ${skp.dirNip || '-'} | Periode: ${skp.triwulan} ${skp.tahun} | Hasil: ${skp.nilaiFinalKinerja || 'Sesuai Ekspektasi'} | Hash: ${skp.hashDirektur || '-'}`;
                     new QRCode(elDir, { 
-                        text: `Dokumen SKP ini sudah disetujui oleh Direktur: ${skp.dirName} (NIP: ${skp.dirNip}) pada periode ${skp.triwulan} Tahun ${skp.tahun}. Hash: ${skp.hashDirektur}`, 
-                        width: 70, 
-                        height: 70 
+                        text: textDir, 
+                        width: 75, 
+                        height: 75,
+                        correctLevel: QRCode.CorrectLevel.L
                     });
                 }
                 
-                // 2. QR Code Ketua Tim Kerja
+                // 2. QR Code Ketua Tim Kerja (Jika Bukan Request Ketua Tim Sendiri)
                 const elTim = document.getElementById('qrSignKetuaTim');
                 if (elTim) {
-                    elTim.innerHTML = ""; 
+                    elTim.innerHTML = "";
+                    const textTim = `VALIDASI TIM KERJA: ${skp.timName || '-'} | NIP: ${skp.timNip || '-'} | Hash: ${skp.hashKetuaTim || '-'}`;
                     new QRCode(elTim, { 
-                        text: `Dokumen SKP ini sudah disetujui oleh Ketua Tim Kerja: ${skp.timName} (NIP: ${skp.timNip}). Hash: ${skp.hashKetuaTim}`, 
-                        width: 70, 
-                        height: 70 
+                        text: textTim, 
+                        width: 75, 
+                        height: 75,
+                        correctLevel: QRCode.CorrectLevel.L
                     });
                 }
 
-                // 3. QR Code Penyusun / Pegawai
+                // 3. QR Code Penyusun / Pembuat Laporan (DIPERBAIKI)
                 const elUsr = document.getElementById('qrSignPenyusun');
                 if (elUsr) {
-                    elUsr.innerHTML = ""; 
+                    elUsr.innerHTML = "";
+                    const textUsr = `PENYUSUN LAPORAN: ${skp.userName || skp.requesterName || '-'} | NIP: ${skp.userNip || '-'} | Indikator: ${skp.indikator || '-'} | Hash: ${skp.hashPenyusun || '-'}`;
                     new QRCode(elUsr, { 
-                        text: `Dokumen SKP ini dibuat dan diajukan oleh Penyusun: ${skp.userName} (NIP: ${skp.userNip}) untuk Indikator: ${skp.indikator}. Hash: ${skp.hashPenyusun}`, 
-                        width: 70, 
-                        height: 70 
+                        text: textUsr, 
+                        width: 75, 
+                        height: 75,
+                        correctLevel: QRCode.CorrectLevel.L
                     });
                 }
             }
-        }, 80);
-        area.scrollIntoView({ behavior: 'smooth' });
-        }        let currentActiveLaporanType = 'kinerja';
-
+        }, 120);
+        area.scrollIntoView({ behavior: 'smooth' });        
+        let currentActiveLaporanType = 'kinerja';
         function openLaporanModal(type) {
             currentActiveLaporanType = type;
             const modal = document.getElementById('laporanPopupModal');
