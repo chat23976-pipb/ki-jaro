@@ -4304,7 +4304,13 @@ if (DB.cascadingDirektur.length > 0) {
             }
         }
 let dashboardChartInstances = {};
-
+// Helper untuk menghitung agresi realisasi di dashboard
+        function getAggregatedRealisasiForDashboard(matchedCaps, targetName, tahun) {
+            if (!Array.isArray(matchedCaps) || matchedCaps.length === 0) return 0;
+            // Ambil rata-rata atau nilai terakhir dari capaian yang valid
+            const sum = matchedCaps.reduce((acc, cur) => acc + (Number(cur.realisasi) || 0), 0);
+            return Number((sum / matchedCaps.length).toFixed(1));
+        }
         function safeInitChart(canvasId, config) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return null;
