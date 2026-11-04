@@ -6364,7 +6364,47 @@ async function saveCascadingTim(e) {
                         </form>
                     </div>
                 </div>
+
+                <!-- Modal Validasi Tahap 2 oleh Ketua Tim Kerja -->
+                <div id="validateModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <h3 class="font-bold text-slate-900 text-base">Validasi Capaian Kinerja (Ketua Tim Kerja)</h3>
+                            <button type="button" onclick="closeValidateModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <div class="space-y-4 text-xs">
+                            <input type="hidden" id="validateCapaianId" value="">
+                            <div class="p-3 bg-slate-50 border rounded-xl space-y-1">
+                                <span class="font-bold text-slate-700 block">Permasalahan yang Dilaporkan Unit:</span>
+                                <p id="validatePermasalahanText" class="text-slate-600 italic">-</p>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Status Validasi</label>
+                                <select id="validateStatusChoice" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold">
+                                    <option value="Valid" class="text-emerald-700">Valid (Disetujui)</option>
+                                    <option value="Tidak Valid" class="text-rose-700">Tidak Valid (Perlu Perbaikan)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Arahan / Rekomendasi Ketua Tim Kerja</label>
+                                <textarea id="validateComment" rows="3" class="w-full p-2.5 bg-slate-50 border rounded-xl" placeholder="Tuliskan arahan atau rekomendasi untuk unit..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Penyesuaian (Opsional)</label>
+                                <div class="space-y-1.5 bg-slate-50 p-3 rounded-xl border">
+                                    <label class="flex items-center space-x-2"><input type="checkbox" name="penyesuaianCheck" value="Revisi Target" class="rounded text-blue-600"><span>Revisi Target</span></label>
+                                    <label class="flex items-center space-x-2"><input type="checkbox" name="penyesuaianCheck" value="Perpanjangan Waktu" class="rounded text-blue-600"><span>Perpanjangan Waktu Pelaksanaan</span></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-end space-x-2 pt-3 border-t">
+                            <button type="button" onclick="closeValidateModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
+                            <button type="button" onclick="submitValidation()" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold shadow text-xs">Simpan & Kirim Validasi</button>
+                        </div>
+                    </div>
+                </div>
             `;
+            
             setTimeout(() => {
                 const sel = document.getElementById('inputIndikatorRef');
                 if (sel && sel.options.length > 0) updateSatuanAndTargetRef(sel);
