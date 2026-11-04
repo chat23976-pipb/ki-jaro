@@ -62,45 +62,41 @@
         }
         /* === REVISI 3 & 4: TEMA TAMPILAN & AKSESIBILITAS DISABILITAS === */
 :root {
-    --theme-primary: #1d4ed8;
-    --theme-primary-hover: #1e40af;
-    --theme-primary-light: #eff6ff;
-}
+            --theme-primary: #1d4ed8;
+            --theme-primary-hover: #1e40af;
+            --theme-primary-light: #eff6ff;
+        }
 /* Override warna dinamis untuk Sidebar & Tombol Utama */
 #appSidebar { background-color: var(--theme-primary) !important; }
-.bg-primary-600, .bg-blue-600 { background-color: var(--theme-primary) !important; }
-.hover\:bg-primary-700:hover, .hover\:bg-blue-700:hover { background-color: var(--theme-primary-hover) !important; }
-.text-primary-700, .text-blue-600, .text-blue-700 { color: var(--theme-primary) !important; }
+        .bg-primary-600, .bg-blue-600 { background-color: var(--theme-primary) !important; }
+        .hover\:bg-primary-700:hover, .hover\:bg-blue-700:hover { background-color: var(--theme-primary-hover) !important; }
+        .text-primary-700, .text-blue-600, .text-blue-700 { color: var(--theme-primary) !important; }
 
-/* Dark Mode */
-body.theme-dark { background-color: #0f172a !important; color: #f8fafc !important; }
-body.theme-dark .bg-white { background-color: #1e293b !important; color: #f1f5f9 !important; border-color: #334155 !important; }
-body.theme-dark .bg-slate-50, body.theme-dark .bg-slate-100 { background-color: #090d16 !important; color: #cbd5e1 !important; border-color: #334155 !important; }
-body.theme-dark .text-slate-900, body.theme-dark .text-slate-800, body.theme-dark .text-slate-700 { color: #f8fafc !important; }
-body.theme-dark input, body.theme-dark select, body.theme-dark textarea { background-color: #0f172a !important; color: #f8fafc !important; border-color: #475569 !important; }
+        body.theme-dark { background-color: #0f172a !important; color: #f8fafc !important; }
+        body.theme-dark .bg-white { background-color: #1e293b !important; color: #f1f5f9 !important; border-color: #334155 !important; }
+        body.theme-dark .bg-slate-50, body.theme-dark .bg-slate-100 { background-color: #090d16 !important; color: #cbd5e1 !important; border-color: #334155 !important; }
+        body.theme-dark .text-slate-900, body.theme-dark .text-slate-800, body.theme-dark .text-slate-700 { color: #f8fafc !important; }
+        body.theme-dark input, body.theme-dark select, body.theme-dark textarea { background-color: #0f172a !important; color: #f8fafc !important; border-color: #475569 !important; }
 
-/* Contrast & Saturation */
-body.theme-contrast-high { filter: contrast(135%); }
-body.acc-smart-contrast { filter: contrast(115%) brightness(105%); }
-body.acc-colorblind { filter: grayscale(100%) contrast(120%); }
-body.acc-saturation-low { filter: saturate(40%); }
-body.acc-saturation-high { filter: saturate(190%); }
+        body.theme-contrast-high { filter: contrast(135%); }
+        body.acc-smart-contrast { filter: contrast(115%) brightness(105%); }
+        body.acc-colorblind { filter: grayscale(100%) contrast(120%); }
+        body.acc-saturation-low { filter: saturate(40%); }
+        body.acc-saturation-high { filter: saturate(190%); }
 
-/* Aksesibilitas Teks, Kursor, Tautan, & Gambar */
-body.acc-highlight-links a, body.acc-highlight-links button { outline: 2px solid #eab308 !important; outline-offset: 2px !important; }
-body.acc-big-text { zoom: 1.12; }
-body.acc-text-spacing * { letter-spacing: 0.08em !important; word-spacing: 0.16em !important; }
-body.acc-pause-anim *, body.acc-epilepsy * { animation: none !important; transition: none !important; }
-body.acc-hide-images img, body.acc-hide-images svg { opacity: 0.05 !important; }
-body.acc-dyslexia * { font-family: 'Comic Sans MS', 'Arial', sans-serif !important; line-height: 1.8 !important; }
-body.acc-big-cursor, body.acc-big-cursor * { cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='48' viewport='0 0 100 100'><polygon points='0,0 0,36 10,26 18,42 24,38 16,22 28,22' fill='black' stroke='white' stroke-width='2'/></svg>"), auto !important; }
-body.acc-line-height * { line-height: 2.1 !important; }
-body.acc-text-align-left p, body.acc-text-align-left td, body.acc-text-align-left th { text-align: left !important; }
-body.acc-text-align-center p, body.acc-text-align-center td, body.acc-text-align-center th { text-align: center !important; }
-body.acc-motor *:focus { outline: 4px solid #2563eb !important; outline-offset: 3px !important; }
+        body.acc-highlight-links a, body.acc-highlight-links button { outline: 2px solid #eab308 !important; outline-offset: 2px !important; }
+        body.acc-big-text { zoom: 1.12; }
+        body.acc-text-spacing * { letter-spacing: 0.08em !important; word-spacing: 0.16em !important; }
+        body.acc-pause-anim *, body.acc-epilepsy * { animation: none !important; transition: none !important; }
+        body.acc-hide-images img, body.acc-hide-images svg { opacity: 0.05 !important; }
+        body.acc-dyslexia * { font-family: 'Comic Sans MS', 'Arial', sans-serif !important; line-height: 1.8 !important; }
+        body.acc-big-cursor, body.acc-big-cursor * { cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='48' viewport='0 0 100 100'><polygon points='0,0 0,36 10,26 18,42 24,38 16,22 28,22' fill='black' stroke='white' stroke-width='2'/></svg>"), auto !important; }
+        body.acc-line-height * { line-height: 2.1 !important; }
+        body.acc-text-align-left p, body.acc-text-align-left td, body.acc-text-align-left th { text-align: left !important; }
+        body.acc-text-align-center p, body.acc-text-align-center td, body.acc-text-align-center th { text-align: center !important; }
+        body.acc-motor *:focus { outline: 4px solid #2563eb !important; outline-offset: 3px !important; }
 
-/* ADHD Reading Mask */
-#adhdReadingMaskTop, #adhdReadingMaskBottom {
+        #adhdReadingMaskTop, #adhdReadingMaskBottom {
     position: fixed; left: 0; width: 100%; background: rgba(0, 0, 0, 0.65);
     z-index: 9990; pointer-events: none; display: none;
 }
@@ -123,6 +119,36 @@ body.acc-adhd #adhdReadingMaskTop, body.acc-adhd #adhdReadingMaskBottom { displa
     background-color: #94a3b8;
     margin: 0 auto;
 }
+        .futuristic-card {
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .futuristic-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 28px -8px rgba(37, 99, 235, 0.18);
+        }
+
+        .skp-borderless-table, 
+        .skp-borderless-table th, 
+        .skp-borderless-table td {
+            border: none !important;
+        }
+        .skp-borderless-table tr {
+            border-bottom: 1px solid #f1f5f9;
+        }
+        @media print {
+            .skp-print-container { counter-reset: page; }
+            .skp-page-break { page-break-after: always; break-after: page; }
+            .skp-page-footer {
+                display: block !important;
+                position: fixed;
+                bottom: 10px;
+                right: 20px;
+                font-size: 10px;
+                font-weight: bold;
+                color: #475569;
+            }
+        }
+    </style>
         // =========================================================================
         // REVISI 1: ENGINE LONCENG NOTIFIKASI TUGAS AKTIF (OTOMATIS HILANG JIKA SELESAI)
         // =========================================================================
@@ -959,7 +985,7 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             ],
             dokumenPengukuran: [],
             dokumenPelaporan: [],
-            spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1qR_zS0ZUNKW5EU2oFGCVoGBxn7m2zh5c2Cf3cP2MveA/edit?usp=sharing"
+            spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1qR_zS0ZUNKW5EU2oFGCVoGBxn7m2zh5c2Cf3cP2MveA/edit?usp=sharing".
             siteSettings: {
                 logoUrl: "logo_poltek-removebg-preview.png",
                 heroImageUrl: "gambar tampilan depan.jpeg"
