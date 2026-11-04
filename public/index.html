@@ -152,12 +152,14 @@ body.acc-adhd #adhdReadingMaskTop, body.acc-adhd #adhdReadingMaskBottom { displa
         // =========================================================================
         // REVISI 1: ENGINE LONCENG NOTIFIKASI TUGAS AKTIF (OTOMATIS HILANG JIKA SELESAI)
         // =========================================================================
+        // =========================================================================
+        // REVISI 1: ENGINE LONCENG NOTIFIKASI TUGAS AKTIF (OTOMATIS HILANG JIKA SELESAI)
+        // =========================================================================
         function getActiveRoleNotifications() {
             if (!currentUser) return [];
             const role = currentUser.role;
             const notifs = [];
 
-            // 1. Notifikasi untuk DIREKTUR: Request Penilaian Final SKP yang menunggu Direktur
             if (role === 'direktur') {
                 (DB.approvalSKP || []).filter(s => s && s.status === 'Menunggu Direktur').forEach(s => {
                     notifs.push({
@@ -172,9 +174,6 @@ body.acc-adhd #adhdReadingMaskTop, body.acc-adhd #adhdReadingMaskBottom { displa
                 });
             }
 
-            // 2. Notifikasi untuk KETUA TIM KERJA:
-            //    a) Validasi Capaian Kinerja dari Unit/Prodi yang masih 'Menunggu Validasi'
-            //    b) Verifikasi/Penilaian SKP yang berstatus 'Menunggu Ketua Tim Kerja'
             if (role === 'tim_kerja') {
                 const validUnits = (DB.cascadingTim || []).filter(ct => ct.timKey === currentUser.timKey).flatMap(ct => ct.unitTargets || []);
                 (DB.capaian || []).filter(c => {
@@ -208,9 +207,6 @@ body.acc-adhd #adhdReadingMaskTop, body.acc-adhd #adhdReadingMaskBottom { displa
                 });
             }
 
-            // 3. Notifikasi untuk KETUA PRODI / SUBBAG / UNIT:
-            //    a) Arahan/Rekomendasi dari Ketua Tim Kerja pasca validasi yang belum ditindaklanjuti
-            //    b) Validasi Tahap 1 capaian dari Staf/Dosen di bawah unitnya
             if (role === 'ketua_unit') {
                 (DB.capaian || []).filter(c =>
                     c && c.unit === currentUser.unit &&
@@ -288,7 +284,6 @@ body.acc-adhd #adhdReadingMaskTop, body.acc-adhd #adhdReadingMaskBottom { displa
                         </div>
 
                         <form onsubmit="saveSiteSettingsAdmin(event)" class="space-y-6 text-xs">
-                            <!-- 1. Pengaturan Logo -->
                             <div class="p-4 bg-slate-50 rounded-2xl border space-y-3">
                                 <label class="block font-bold text-slate-800 text-sm">1. Logo Institusi (Header & Sidebar)</label>
                                 <div class="flex flex-col sm:flex-row items-center gap-4">
@@ -305,7 +300,6 @@ body.acc-adhd #adhdReadingMaskTop, body.acc-adhd #adhdReadingMaskBottom { displa
                                 </div>
                             </div>
 
-                            <!-- 2. Pengaturan Gambar Halaman Depan -->
                             <div class="p-4 bg-slate-50 rounded-2xl border space-y-3">
                                 <label class="block font-bold text-slate-800 text-sm">2. Gambar Utama Halaman Depan (Hero Landing Page)</label>
                                 <div class="flex flex-col sm:flex-row items-center gap-4">
@@ -536,8 +530,7 @@ body.acc-adhd #adhdReadingMaskTop, body.acc-adhd #adhdReadingMaskBottom { displa
             showToast('Seluruh pengaturan aksesibilitas direset.');
         }
 
-        setTimeout(() => applyUiTheme(), 150);
-/* Memastikan tombol tidak terhalang elemen lain */
+        setTimeout(() => applyUiTheme(), 150);/* Memastikan tombol tidak terhalang elemen lain */
 button { position: relative; z-index: 10; }
 
 /* Animasi Futuristik & Print Page Counter (Revisi 12 & 14) */
