@@ -66,7 +66,11 @@
             --theme-primary-hover: #1e40af;
             --theme-primary-light: #eff6ff;
         }
-        #appSidebar { background-color: var(--theme-primary) !important; }
+         #appSidebar { background-color: var(--theme-primary) !important; }
+        .bg-blue-700 { background-color: var(--theme-primary) !important; }
+        .border-blue-600 { border-color: var(--theme-primary-hover) !important; }
+        .text-blue-800 { color: var(--theme-primary) !important; }
+        .bg-blue-50 { background-color: var(--theme-primary-light) !important; }
         .bg-primary-600, .bg-blue-600 { background-color: var(--theme-primary) !important; }
         .hover\:bg-primary-700:hover, .hover\:bg-blue-700:hover { background-color: var(--theme-primary-hover) !important; }
         .text-primary-700, .text-blue-600, .text-blue-700 { color: var(--theme-primary) !important; }
@@ -991,6 +995,11 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
 
         let currentUser = null;
         let activeTab = 'dashboard';
+        let toggleCascadingTree = true;
+        let toggleCrosscuttingChart = true;
+        let toggleCascLevel1 = true;
+        let toggleCascLevel2 = true;
+        let toggleCascLevel3 = true;
         
         let filterDashboardTahun = '2025';
         let filterDashboardTriwulan = 'Semua';
@@ -4039,7 +4048,17 @@ function renderDokumenUkurLaporView(container) {
             filteredRealisasiAdmin.forEach(ra => {
                 const ik = (DB.renstraIndikatorKinerja || []).find(x => x.id === ra.indikatorId);
                 const pagu = ik ? (Number(ik['anggaran' + ra.tahun]) || 100000000) : 100000000;
-                const realAnggaran = Number(ra.realisasiAnggaran) || 0;
+                                let realAnggaran = 0;
+                if (filterDashboardTriwulan === 'Semua') {
+                    let subRaAll = (DB.realisasiAnggaranAdmin || []).filter(x => x && x.indikatorId === ra.indikatorId && String(x.tahun || '2025') === String(filterDashboardTahun) && String(x.triwulan || '').trim().toUpperCase() === String(ra.triwulan || '').trim().toUpperCase());
+                    if (subRaAll.length > 0) {
+                        const twO = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4 };
+                        subRaAll.sort((a,b) => (twO[String(a.triwulan||'').trim().toUpperCase()]||0) - (twO[String(b.triwulan||'').trim().toUpperCase()]||0));
+                        realAnggaran = Number(subRaAll[subRaAll.length - 1].realisasiAnggaran) || 0;
+                    }
+                } else {
+                    realAnggaran = Number(ra.realisasiAnggaran) || 0;
+                }
                 const pAnggaran = pagu > 0 ? (realAnggaran / pagu) * 100 : 0;
                 const match = (DB.capaian || []).filter(c => c && ik && String(c.targetDirektur || '').trim() === String(ik.namaIndikator || '').trim() && String(c.tahun || '2025') === String(ra.tahun || '2025') && String(c.triwulan || '').trim().toUpperCase() === String(ra.triwulan || '').trim().toUpperCase() && String(c.status || '').trim() === 'Valid' && isCapaianUtamaForDashboard(c));
                 const pOutput = match.length > 0 ? (match.reduce((a, b) => a + (Number(b.realisasi) || 0), 0) / match.length) : 0;
@@ -4319,7 +4338,12 @@ function renderDokumenUkurLaporView(container) {
                                             if (filterDashboardTriwulan !== 'Semua') {
                                                 subRa = subRa.filter(ra => String(ra.triwulan || '').trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
                                             }
-                                            const realisasiAnggaranVal = subRa.reduce((a, b) => a + (Number(b.realisasiAnggaran) || 0), 0);
+                                            let realisasiAnggaranVal = 0;
+                                            if (subRa.length > 0) {
+                                            const twO = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4 };
+                                            const sortedRa = [...subRa].sort((a, b) => (twO[String(a.triwulan || '').trim().toUpperCase()] || 0) - (twO[String(b.triwulan || '').trim().toUpperCase()] || 0));
+                                            realisasiAnggaranVal = Number(sortedRa[sortedRa.length - 1].realisasiAnggaran) || 0;
+                                            }
                                             const pRealisasiAnggaran = paguVal > 0 ? (realisasiAnggaranVal / paguVal) * 100 : 0;
 
                                             const isEfektif = pRealisasiOutput >= 100;
@@ -4818,11 +4842,17 @@ if (DB.cascadingDirektur.length > 0) {
         }
 let dashboardChartInstances = {};
 // Helper untuk menghitung agresi realisasi di dashboard
-        function getAggregatedRealisasiForDashboard(matchedCaps, targetName, tahun) {
+                function getAggregatedRealisasiForDashboard(matchedCaps, targetName, tahun) {
             if (!Array.isArray(matchedCaps) || matchedCaps.length === 0) return 0;
-            // Ambil rata-rata atau nilai terakhir dari capaian yang valid
-            const sum = matchedCaps.reduce((acc, cur) => acc + (Number(cur.realisasi) || 0), 0);
-            return Number((sum / matchedCaps.length).toFixed(1));
+            // Ambil nilai dari triwulan terakhir yang diinput (bukan rata-rata)
+            const twOrder = { 'TW 1': 1, 'TW 2': 2, 'TW 3': 3, 'TW 4': 4, 'TAHUNAN': 5, 'TAHUNAN (FULL YEAR)': 5 };
+            const sorted = [...matchedCaps].sort((a, b) => {
+                const orderA = twOrder[String(a.triwulan || '').trim().toUpperCase()] || 0;
+                const orderB = twOrder[String(b.triwulan || '').trim().toUpperCase()] || 0;
+                return orderA - orderB;
+            });
+            const lastCap = sorted[sorted.length - 1];
+            return Number(lastCap.realisasi) || 0;
         }
         function safeInitChart(canvasId, config) {
             const canvas = document.getElementById(canvasId);
@@ -4966,7 +4996,11 @@ let dashboardChartInstances = {};
                                 <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-blue-600 mr-2"></i> Cascading & Crosscutting Indikator Kinerja</h3>
                                 <p class="text-xs text-slate-500">Visualisasi alur penurunan Perjanjian Kinerja Direktur &rarr; Indikator Kinerja &rarr; Ketua Tim Kerja &rarr; Unit/Prodi &rarr; Pejabat/Dosen/Tendik.</p>
                             </div>
-                            <div class="flex flex-wrap items-center gap-3">
+                                                        <div class="flex flex-wrap items-center gap-3">
+                                <button onclick="toggleCascadingTree = !toggleCascadingTree; renderCascadingView(document.getElementById('mainContent'));" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow flex items-center space-x-1.5 border border-slate-300">
+                                    <i class="fa-solid ${toggleCascadingTree ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                    <span>${toggleCascadingTree ? 'Sembunyikan Pohon' : 'Tampilkan Pohon'}</span>
+                                </button>
                                 ${canMigrate ? `
                                     <button onclick="openMigrasiCascadingModal()" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow flex items-center space-x-1.5">
                                         <i class="fa-solid fa-copy"></i>
@@ -4987,7 +5021,7 @@ let dashboardChartInstances = {};
                             </div>
                         </div>
                         
-                        <div class="overflow-x-auto p-8 bg-slate-50 rounded-2xl border min-w-[950px]">
+                            <div class="${toggleCascadingTree ? '' : 'hidden'} overflow-x-auto p-8 bg-slate-50 rounded-2xl border min-w-[950px]">
                             ${filteredDir.length === 0 ? `<p class="text-xs text-slate-400 text-center py-6 italic">Belum ada Indikator Kinerja yang dicascadingkan pada tahun ${filterCascadingTahun}.</p>` : `
                             <div class="flex items-center space-x-6">
                                 <!-- Root Kiri: Perjanjian Kinerja Politeknik / Direktur -->
@@ -5085,7 +5119,7 @@ let dashboardChartInstances = {};
 
                     <!-- Bagian 1: Cascading Direktur ke Ketua Tim Kerja (Level 1) -->
                     <!-- REVISI 2, 3, 4: CROSSCUTTING EXPLORER (SANKEY, CHORD KOLABORASI, MATRIKS BOBOT) -->
-                 <div class="bg-[#07111e] text-white rounded-3xl shadow-2xl border border-slate-800 p-6 lg:p-8 space-y-6">
+                     <div class="${getStrategyThemeStyles().outer} rounded-3xl shadow-2xl border p-6 lg:p-8 space-y-6 transition-all duration-300">
                      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                          <div>
                              <h3 class="text-lg font-black text-white tracking-tight">Crosscutting Explorer — Keterkaitan Lintas Unit & Indikator</h3>
@@ -5094,22 +5128,29 @@ let dashboardChartInstances = {};
                          <div class="flex flex-wrap items-center gap-2">
                              <button type="button" id="btnTabCC_sankey" onclick="switchCrosscuttingTab('sankey')" class="px-4 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-slate-950 shadow-md transition-all">1. Sankey Flow Diagram</button>
                              <button type="button" id="btnTabCC_chord" onclick="switchCrosscuttingTab('chord')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">2. Chord Kolaborasi Unit</button>
-                             <button type="button" id="btnTabCC_matrix" onclick="switchCrosscuttingTab('matrix')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">3. Heatmap Matriks Bobot</button>
+                                                          <button type="button" id="btnTabCC_matrix" onclick="switchCrosscuttingTab('matrix')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">3. Heatmap Matriks Bobot</button>
+                             <button type="button" onclick="toggleCrosscuttingChart = !toggleCrosscuttingChart; renderCascadingView(document.getElementById('mainContent'));" class="px-3 py-2 rounded-xl text-xs font-bold bg-white/20 hover:bg-white/30 text-current transition-all border border-current/20 ml-2">
+                                 <i class="fa-solid ${toggleCrosscuttingChart ? 'fa-eye-slash' : 'fa-eye'} mr-1"></i> ${toggleCrosscuttingChart ? 'Sembunyikan' : 'Tampilkan'}
+                             </button>
                          </div>
                      </div>
-                     <div id="crosscuttingExplorerBody" class="min-h-[380px]"></div>
+                     <div id="crosscuttingExplorerBody" class="${toggleCrosscuttingChart ? '' : 'hidden'} min-h-[380px]"></div>
                  </div>
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-primary-600 mr-2"></i> 1. Cascading Direktur ke Ketua Tim Kerja (Level 1)</h3>
+                                                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-primary-600 mr-2"></i> 1. Cascading Direktur ke Ketua Tim Kerja (Level 1)</h3>
                                 <p class="text-xs text-slate-500">Direktur memilih tahun dan Indikator Kinerja dari Renstra untuk diturunkan ke Ketua Tim Kerja.</p>
                             </div>
                             <div class="flex items-center space-x-3">
+                                <button type="button" onclick="toggleCascLevel1 = !toggleCascLevel1; renderCascadingView(document.getElementById('mainContent'));" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow flex items-center space-x-1.5 border border-slate-300">
+                                    <i class="fa-solid ${toggleCascLevel1 ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                    <span>${toggleCascLevel1 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
+                                </button>
                                 ${(isDirektur || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingDirModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1"><i class="fa-solid fa-plus mr-1"></i><span>Tambah Cascading Direktur</span></button>` : ''}
                             </div>
                         </div>
-                        <div class="overflow-x-auto">
+                        <div class="${toggleCascLevel1 ? '' : 'hidden'} overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
                                 <thead>
                                     <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
@@ -5156,12 +5197,18 @@ let dashboardChartInstances = {};
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-network-wired text-primary-600 mr-2"></i> 2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag (Level 2)</h3>
+                                                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-network-wired text-primary-600 mr-2"></i> 2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag (Level 2)</h3>
                                 <p class="text-xs text-slate-500">Ketua Tim Kerja menurunkan indikator ke unit/prodi/subbag di bawah koordinasinya.</p>
                             </div>
-                            ${(isKetuaTim || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
+                            <div class="flex items-center space-x-3">
+                                <button type="button" onclick="toggleCascLevel2 = !toggleCascLevel2; renderCascadingView(document.getElementById('mainContent'));" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow flex items-center space-x-1.5 border border-slate-300">
+                                    <i class="fa-solid ${toggleCascLevel2 ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                    <span>${toggleCascLevel2 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
+                                </button>
+                                ${(isKetuaTim || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
+                            </div>
                         </div>
-                        <div class="overflow-x-auto">
+                        <div class="${toggleCascLevel2 ? '' : 'hidden'} overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
                                 <thead>
                                     <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
@@ -5203,12 +5250,18 @@ let dashboardChartInstances = {};
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-users-rays text-emerald-600 mr-2"></i> 3. Cascading Ketua Prodi / Subbag / Unit ke Staf (Sekretaris / Kalab / Koordinator / Dosen / Tendik)</h3>
+                                                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-users-rays text-emerald-600 mr-2"></i> 3. Cascading Ketua Prodi / Subbag / Unit ke Staf (Sekretaris / Kalab / Koordinator / Dosen / Tendik)</h3>
                                 <p class="text-xs text-slate-500">Pilihan Utama boleh >1. Jika Utama >1, tentukan metode penggabungan capaian: <strong>Akumulatif</strong> atau <strong>Rata-rata</strong>.</p>
                             </div>
-                            ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingUnitModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Staf/Dosen</span></button>` : ''}
+                            <div class="flex items-center space-x-3">
+                                <button type="button" onclick="toggleCascLevel3 = !toggleCascLevel3; renderCascadingView(document.getElementById('mainContent'));" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow flex items-center space-x-1.5 border border-slate-300">
+                                    <i class="fa-solid ${toggleCascLevel3 ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                    <span>${toggleCascLevel3 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
+                                </button>
+                                ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingUnitModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Staf/Dosen</span></button>` : ''}
+                            </div>
                         </div>
-                        <div class="overflow-x-auto">
+                        <div class="${toggleCascLevel3 ? '' : 'hidden'} overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
                                 <thead>
                                     <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
