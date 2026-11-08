@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ki-Jaro - Kinerja-Jawara-Petro (Sistem Informasi Kinerja & Manajemen Risiko)</title>
+    <title>Ki-Jaro - Kinerja-Jawara-Petro (Sistem Informasi Kinerja & Manajemen Risiko PIPB)</title>
+    <link id="dynamicFavicon" rel="icon" href="logo_poltek-removebg-preview.png" type="image/png">
     <!-- Google Analytics (GA4) - Fase 1 Poin 7 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KIJARO2026"></script>
     <script>
@@ -458,7 +459,7 @@ button { position: relative; z-index: 10; }
 
                             <div class="p-4 bg-slate-50 rounded-2xl border space-y-3">
                                 <label class="block font-bold text-slate-800 text-sm">2. Gambar Utama Halaman Depan (Hero Landing Page)</label>
-                                <div class="flex flex-col sm:flex-row items-center gap-4">
+                                                                <div class="flex flex-col sm:flex-row items-center gap-4">
                                     <div class="w-44 h-28 rounded-2xl bg-white border overflow-hidden flex items-center justify-center shadow-2xs shrink-0">
                                         <img id="previewSettingHero" src="${DB.siteSettings.heroImageUrl}" alt="Hero Preview" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/f8fafc/2563eb?text=Hero+Image'">
                                     </div>
@@ -470,7 +471,22 @@ button { position: relative; z-index: 10; }
                                         <input type="text" id="settingHeroInput" value="${sanitizeHTML(DB.siteSettings.heroImageUrl)}" oninput="document.getElementById('previewSettingHero').src = this.value" class="w-full p-2.5 bg-white border rounded-xl font-mono text-[11px]" placeholder="Atau tempel URL / Nama File Gambar Depan...">
                                     </div>
                                 </div>
-                            </div>
+
+                                <div class="p-4 bg-slate-50 rounded-2xl border space-y-3">
+                                    <label class="block font-bold text-slate-800 text-sm">3. Logo Tab Browser (Favicon)</label>
+                                    <div class="flex flex-col sm:flex-row items-center gap-4">
+                                        <div class="w-16 h-16 rounded-xl bg-white border p-1 flex items-center justify-center shadow-2xs shrink-0">
+                                            <img id="previewSettingFavicon" src="${DB.siteSettings.faviconUrl || 'logo_poltek-removebg-preview.png'}" alt="Favicon Preview" class="max-h-full max-w-full object-contain" onerror="this.src='https://placehold.co/40x40/2563eb/ffffff?text=Icon'">
+                                        </div>
+                                        <div class="flex-1 space-y-2 w-full">
+                                            <label class="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl cursor-pointer shadow-xs">
+                                                <i class="fa-solid fa-upload mr-1.5"></i> Upload File Favicon
+                                                <input type="file" accept="image/*" class="hidden" onchange="handleSettingImageUpload(event, 'settingFaviconInput', 'previewSettingFavicon')">
+                                            </label>
+                                            <input type="text" id="settingFaviconInput" value="${sanitizeHTML(DB.siteSettings.faviconUrl || 'logo_poltek-removebg-preview.png')}" oninput="document.getElementById('previewSettingFavicon').src = this.value" class="w-full p-2.5 bg-white border rounded-xl font-mono text-[11px]" placeholder="Atau tempel URL / Nama File Favicon...">
+                                        </div>
+                                    </div>
+                                </div>
 
                             <div class="flex justify-end space-x-3 pt-2 border-t">
                                 <button type="button" onclick="resetDefaultSiteImages()" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl">Kembalikan Default</button>
@@ -505,8 +521,13 @@ button { position: relative; z-index: 10; }
             if (!requireWriteAccess(['admin'])) return;
             DB.siteSettings = {
                 logoUrl: document.getElementById('settingLogoInput').value.trim() || 'logo_poltek-removebg-preview.png',
-                heroImageUrl: document.getElementById('settingHeroInput').value.trim() || 'gambar tampilan depan.jpeg'
+                heroImageUrl: document.getElementById('settingHeroInput').value.trim() || 'gambar tampilan depan.jpeg',
+                faviconUrl: document.getElementById('settingFaviconInput').value.trim() || 'logo_poltek-removebg-preview.png'
             };
+            if (document.getElementById('dynamicFavicon')) {
+                document.getElementById('dynamicFavicon').href = DB.siteSettings.faviconUrl;
+            }
+            recordAuditLog('Update Setting Gambar & Logo', 'Setting Admin', 'Admin memperbarui Logo / Gambar Halaman Depan / Favicon');
             recordAuditLog('Update Setting Gambar & Logo', 'Setting Admin', 'Admin memperbarui Logo / Gambar Halaman Depan');
             await saveToMySQL();
             showToast('Logo dan Gambar Halaman Depan berhasil diperbarui!');
@@ -514,10 +535,14 @@ button { position: relative; z-index: 10; }
         }
 
         async function resetDefaultSiteImages() {
-            DB.siteSettings = {
+                        DB.siteSettings = {
                 logoUrl: 'logo_poltek-removebg-preview.png',
-                heroImageUrl: 'gambar tampilan depan.jpeg'
+                heroImageUrl: 'gambar tampilan depan.jpeg',
+                faviconUrl: 'logo_poltek-removebg-preview.png'
             };
+            if (document.getElementById('dynamicFavicon')) {
+                document.getElementById('dynamicFavicon').href = DB.siteSettings.faviconUrl;
+            }
             await saveToMySQL();
             showToast('Gambar dan Logo dikembalikan ke bawaan awal.');
             renderDashboardLayout();
@@ -844,8 +869,10 @@ button { position: relative; z-index: 10; }
         // Helper Cek apakah Capaian berhak masuk ke Dashboard Kinerja Utama (Wajib Valid + Status Utama)
 function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             if (!capaianItem) return false;
-            // 1. Wajib berstatus 'Valid' (Jika diubah ke 'Tidak Valid', otomatis return false / dihapus dari dashboard)
+             // 1. Wajib berstatus 'Valid' (Jika diubah ke 'Tidak Valid', otomatis return false / dihapus dari dashboard)
             if (String(capaianItem.status || '').trim() !== 'Valid') return false;
+            // 1b. Jika merupakan indikator tambahan (Support), jangan pernah masuk Dashboard Utama
+            if (capaianItem.isTambahan) return false;
 
             const tahun = String(capaianItem.tahun || '2025').trim();
             const targetName = String(capaianItem.targetDirektur || '').trim().toLowerCase();
@@ -969,6 +996,7 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             cascadingDirektur: [],       
             cascadingTim: [],            
             cascadingUnit: [],           
+            indikatorTambahan: [],               
             capaian: [],                 
             risiko: [],                  
             realisasiAnggaranAdmin: [],  
@@ -989,7 +1017,8 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1qR_zS0ZUNKW5EU2oFGCVoGBxn7m2zh5c2Cf3cP2MveA/edit?usp=sharing",
             siteSettings: {
                 logoUrl: "logo_poltek-removebg-preview.png",
-                heroImageUrl: "gambar tampilan depan.jpeg"
+                heroImageUrl: "gambar tampilan depan.jpeg",
+                faviconUrl: "logo_poltek-removebg-preview.png"
             }
         };
 
@@ -8923,6 +8952,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                             <th class="p-3 text-center">Periode</th>
                                             <th class="p-3 text-center">Status Validasi Tim Kerja</th>
                                             <th class="p-3 text-center">Aksi / Cetak</th>
+                                            ${isAdmin ? '<th class="p-3 text-center">Hapus</th>' : ''}
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
@@ -8939,13 +8969,17 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                                             ${statusText}
                                                         </span>
                                                     </td>
-                                                    <td class="p-3 text-center">
+                                                                                                        <td class="p-3 text-center">
                                                         ${allValid ? `
                                                             <button onclick="previewAndPrintLaporanKinerja('${req.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-xs">
                                                                 <i class="fa-solid fa-qrcode mr-1"></i>Lihat & Download PDF
                                                             </button>
                                                         ` : `<span class="text-[10px] text-slate-400 italic">Menunggu Validasi</span>`}
                                                     </td>
+                                                    ${isAdmin ? `
+                                                    <td class="p-3 text-center">
+                                                        <button onclick="deleteLaporanKinerja('${req.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg text-xs font-bold hover:bg-rose-200" title="Hapus Permanen"><i class="fa-solid fa-trash"></i></button>
+                                                    </td>` : ''}
                                                 </tr>
                                             `;
                                         }).join('')}
@@ -9003,6 +9037,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                             <th class="p-3 text-center">Periode</th>
                                             <th class="p-3 text-center">Penilaian & Status</th>
                                             <th class="p-3 text-center">Aksi / Cetak SKP</th>
+                                            ${isAdmin ? '<th class="p-3 text-center">Hapus</th>' : ''}
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
@@ -9034,12 +9069,16 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                                                 <i class="fa-solid fa-gavel mr-1"></i>Keputusan Direktur
                                                             </button>
                                                         ` : ''}
-                                                        ${skp.status === 'Disetujui' ? `
+                                                          ${skp.status === 'Disetujui' ? `
                                                             <button onclick="previewAndPrintSKP('${skp.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-xs block w-full">
                                                                 <i class="fa-solid fa-qrcode mr-1"></i>Cetak SKP (QR Hash)
                                                             </button>
                                                         ` : ''}
                                                     </td>
+                                                    ${isAdmin ? `
+                                                    <td class="p-3 text-center">
+                                                        <button onclick="deleteSKP('${skp.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg text-xs font-bold hover:bg-rose-200" title="Hapus Permanen"><i class="fa-solid fa-trash"></i></button>
+                                                    </td>` : ''}
                                                 </tr>
                                             `;
                                         }).join('')}
@@ -9275,6 +9314,26 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                     </div>
                 </div>
             `;
+        }
+
+             async function deleteLaporanKinerja(id) {
+            if (!requireWriteAccess(['admin'])) return;
+            if (confirm('Hapus request Laporan Capaian Kinerja ini secara permanen?')) {
+                DB.approvalLaporan = (DB.approvalLaporan || []).filter(x => String(x.id) !== String(id));
+                await saveToMySQL();
+                showToast('Laporan Capaian Kinerja berhasil dihapus.', 'info');
+                renderLaporanView(document.getElementById('mainContent'));
+            }
+        }
+
+        async function deleteSKP(id) {
+            if (!requireWriteAccess(['admin'])) return;
+            if (confirm('Hapus request Laporan SKP ini secara permanen?')) {
+                DB.approvalSKP = (DB.approvalSKP || []).filter(x => String(x.id) !== String(id));
+                await saveToMySQL();
+                showToast('Laporan SKP berhasil dihapus.', 'info');
+                renderLaporanView(document.getElementById('mainContent'));
+            }
         }
 
         function openRequestLaporanKinerjaModal() {
