@@ -872,7 +872,7 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
              // 1. Wajib berstatus 'Valid' (Jika diubah ke 'Tidak Valid', otomatis return false / dihapus dari dashboard)
             if (String(capaianItem.status || '').trim() !== 'Valid') return false;
             // 1b. Jika merupakan indikator tambahan (Support), jangan pernah masuk Dashboard Utama
-            if (capaianItem.isTambahan) return false;
+            if (capaianItem.isSupport) return false;
 
             const tahun = String(capaianItem.tahun || '2025').trim();
             const targetName = String(capaianItem.targetDirektur || '').trim().toLowerCase();
@@ -996,8 +996,7 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             cascadingDirektur: [],       
             cascadingTim: [],            
             cascadingUnit: [],           
-            indikatorTambahan: [],               
-            capaian: [],                 
+            capaian: [],          
             risiko: [],                  
             realisasiAnggaranAdmin: [],  
             monevLakip: [],              // Fase 3 Poin 13
@@ -5257,7 +5256,10 @@ let dashboardChartInstances = {};
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
-                                            <td class="p-4 font-semibold text-slate-900">${c.targetDirektur}</td>
+                                                                                        <td class="p-4 font-semibold text-slate-900">
+                                                ${c.targetDirektur}
+                                                ${c.isSupport ? '<span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded-full">Support Tambahan</span>' : ''}
+                                            </td>
                                             <td class="p-4">
                                                 <div class="flex flex-wrap gap-1.5">
                                                     ${c.unitTargets.map(u => {
@@ -5353,7 +5355,10 @@ let dashboardChartInstances = {};
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4"><span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-full">${sanitizeHTML(cu.unit)}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${cu.tahun || '2025'}</td>
-                                            <td class="p-4 font-semibold text-slate-900">${sanitizeHTML(cu.targetDirektur)}</td>
+                                                                                        <td class="p-4 font-semibold text-slate-900">
+                                                ${sanitizeHTML(cu.targetDirektur)}
+                                                ${cu.isSupport ? '<span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded-full">Support Tambahan</span>' : ''}
+                                            </td>
                                             <td class="p-4 text-center">
                                                 <span class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-xs font-bold uppercase">
                                                     ${cu.aggregationMode === 'akumulatif' ? '∑ Akumulatif' : 'x̄ Rata-rata'}
@@ -6278,14 +6283,26 @@ function toggleUnitRoleSelect(idx, isChecked) {
             });
         }
 
-        async function confirmDeleteCascadingTim(id) {
+                async function confirmDeleteCascadingTim(id) {
             const idx = DB.cascadingTim.findIndex(x => x.id === id);
             if (idx === -1) return;
             const item = DB.cascadingTim[idx];
-            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}" (Tahun ${item.tahun || '2025'})?`)) {
+
+            if (item.isSupport) {
+                const relatedCaps = (DB.capaian || []).filter(c => c.targetDirektur === item.targetDirektur && String(c.tahun) === String(item.tahun) && c.status === 'Valid');
+                if (relatedCaps.length > 0) {
+                    showToast('Tidak dapat menghapus! Indikator Support ini sudah memiliki capaian yang VALID.', 'error');
+                    return;
+                }
+            }
+
+            if (confirm(`Apakah Anda yakin ingin menghapus indikator "${item.targetDirektur}" (Tahun ${item.tahun || '2025'})?`)) {
+                if (item.isSupport) {
+                    DB.capaian = DB.capaian.filter(c => !(c.targetDirektur === item.targetDirektur && String(c.tahun) === String(item.tahun) && c.status !== 'Valid'));
+                }
                 DB.cascadingTim.splice(idx, 1);
                 await saveToMySQL();
-                showToast('Cascading Tim & Pohon Kinerja diperbarui.', 'info');
+                showToast('Indikator berhasil dihapus.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
         }
@@ -6634,14 +6651,27 @@ async function saveCascadingTim(e) {
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        async function confirmDeleteCascadingUnit(id) {
+                async function confirmDeleteCascadingUnit(id) {
             if (!requireWriteAccess(['ketua_unit', 'admin'])) return;
             const idx = (DB.cascadingUnit || []).findIndex(x => x.id === id);
             if (idx === -1) return;
-            if (confirm('Hapus cascading level 3 ini?')) {
+            const item = DB.cascadingUnit[idx];
+
+            if (item.isSupport) {
+                const relatedCaps = (DB.capaian || []).filter(c => c.targetDirektur === item.targetDirektur && c.unit === currentUser.unit && String(c.tahun) === String(item.tahun) && c.status === 'Valid');
+                if (relatedCaps.length > 0) {
+                    showToast('Tidak dapat menghapus! Indikator Support ini sudah memiliki capaian VALID dari staf.', 'error');
+                    return;
+                }
+            }
+
+            if (confirm('Hapus indikator ini?')) {
+                if (item.isSupport) {
+                    DB.capaian = DB.capaian.filter(c => !(c.targetDirektur === item.targetDirektur && String(c.tahun) === String(item.tahun) && c.status !== 'Valid'));
+                }
                 DB.cascadingUnit.splice(idx, 1);
                 await saveToMySQL();
-                showToast('Cascading Level 3 dihapus.', 'info');
+                showToast('Indikator dihapus.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
         }
@@ -6792,15 +6822,15 @@ async function saveCascadingTim(e) {
             // 4. Batasi Baris Sesuai Pilihan (Default 5 Baris)
             const paginatedCapaian = displayCapaian.slice(0, Number(limitCapaianRows));
 
-            let availableCascadingForInput = [];
+                        let availableCascadingForInput = [];
             if (isKaUnit) {
                 availableCascadingForInput = (DB.cascadingTim || []).filter(ct => Array.isArray(ct.unitTargets) && ct.unitTargets.includes(currentUser.unit)).map(ct => {
                     const tahun = String(ct.tahun || '2025');
                     const dirObj = DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur);
-                    const satuan = dirObj ? (dirObj.satuan || '%') : '%';
-                    const targetVal = dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100;
-                    const isUtama = dirObj ? (isTimUtamaInDir(dirObj, ct.timKey) && isUnitUtamaInTim(ct, currentUser.unit)) : isUnitUtamaInTim(ct, currentUser.unit);
-                    return { targetDirektur: ct.targetDirektur, tahun, satuan, targetVal, timKey: ct.timKey, isUtama };
+                    const satuan = ct.isSupport ? ct.satuan : (dirObj ? (dirObj.satuan || '%') : '%');
+                    const targetVal = ct.isSupport ? ct.targetVal : (dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100);
+                    const isUtama = ct.isSupport ? false : (dirObj ? (isTimUtamaInDir(dirObj, ct.timKey) && isUnitUtamaInTim(ct, currentUser.unit)) : isUnitUtamaInTim(ct, currentUser.unit));
+                    return { targetDirektur: ct.targetDirektur, tahun, satuan, targetVal, timKey: ct.timKey, isUtama, isSupport: ct.isSupport };
                 });
             } else if (isSubUnit) {
                 const myKeyRole = `${currentUser.role}_${currentUser.unit}`;
@@ -6810,37 +6840,13 @@ async function saveCascadingTim(e) {
                     const tahun = String(cu.tahun || '2025');
                     const dirObj = DB.cascadingDirektur.find(cd => cd.target === cu.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === cu.targetDirektur);
                     const ctObj = (DB.cascadingTim || []).find(ct => ct.targetDirektur === cu.targetDirektur && String(ct.tahun || '2025') === tahun && Array.isArray(ct.unitTargets) && ct.unitTargets.includes(currentUser.unit));
-                    const satuan = dirObj ? (dirObj.satuan || '%') : '%';
-                    const targetVal = dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100;
+                    const satuan = cu.isSupport ? cu.satuan : (dirObj ? (dirObj.satuan || '%') : '%');
+                    const targetVal = cu.isSupport ? cu.targetVal : (dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100);
                     const matchKey = cu.subTargets.includes(currentUser.username) ? currentUser.username : myKeyRole;
-                    const isUtama = isSubRoleUtamaInUnit(cu, matchKey);
-                                        return { targetDirektur: cu.targetDirektur, tahun, satuan, targetVal, timKey: ctObj ? ctObj.timKey : (currentUser.timKey || 'Akademik'), isUtama };
+                    const isUtama = cu.isSupport ? false : isSubRoleUtamaInUnit(cu, matchKey);
+                    return { targetDirektur: cu.targetDirektur, tahun, satuan, targetVal, timKey: ctObj ? ctObj.timKey : (currentUser.timKey || 'Akademik'), isUtama, isSupport: cu.isSupport };
                 });
             }
-
-            // === TAMBAHKAN LOGIKA INDIKATOR SUPPORT TAMBAHAN DI SINI ===
-            const mySupportInds = (DB.indikatorTambahan || []).filter(ind => 
-                ind.ownerUsername === currentUser.username || ind.targetUsers.includes(currentUser.username)
-            );
-
-            mySupportInds.forEach(ind => {
-                const labelType = ind.parentIsUtama ? 'Utama - Tambahan' : 'Support - Tambahan';
-                // Cek agar tidak duplikat jika sudah ada di cascading utama
-                if (!availableCascadingForInput.some(a => a.targetDirektur === ind.namaIndikator && a.tahun === ind.tahun)) {
-                    availableCascadingForInput.push({
-                        targetDirektur: ind.namaIndikator,
-                        tahun: ind.tahun,
-                        satuan: ind.satuan,
-                        targetVal: ind.target,
-                        timKey: ind.ownerTimKey,
-                        isUtama: false, // Force Support
-                        isTambahan: true, // Penanda BARU
-                        labelTambahan: labelType, // Label BARU
-                        supportIndukId: ind.id // Simpan ID untuk referensi
-                    });
-                }
-            });
-
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
                     <!-- Baris Filter & Limit Baris -->
@@ -7032,10 +7038,17 @@ async function saveCascadingTim(e) {
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Pilih Indikator Kinerja yang Diintervensi</label>
                                 <select id="inputIndikatorRef" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" onchange="updateSatuanAndTargetRef(this)">
-                                                                        ${availableCascadingForInput.map(item => {
-                                        const labelStatus = item.isTambahan ? `Support - Tambahan` : (item.isUtama ? 'Utama - Utama' : 'Support - Utama');
+                                                                                                            ${availableCascadingForInput.map(item => {
+                                        let labelStatus = '';
+                                        if (item.isSupport) {
+                                            labelStatus = '(Support - Tambahan)';
+                                        } else if (item.isUtama) {
+                                            labelStatus = '(Utama - Utama)';
+                                        } else {
+                                            labelStatus = '(Support - Utama)';
+                                        }
                                         return `
-                                        <option value="${item.targetDirektur}" data-tahun="${item.tahun}" data-satuan="${item.satuan}" data-targetval="${item.targetVal}" data-timkey="${item.timKey}" data-isutama="${item.isUtama}" data-istambahan="${item.isTambahan || false}">${item.targetDirektur} (Tahun: ${item.tahun} - ${labelStatus})</option>
+                                        <option value="${item.targetDirektur}" data-tahun="${item.tahun}" data-satuan="${item.satuan}" data-targetval="${item.targetVal}" data-timkey="${item.timKey}" data-isutama="${item.isUtama}" data-issupport="${item.isSupport || false}">${item.targetDirektur} (Tahun: ${item.tahun} - ${labelStatus})</option>
                                     `}).join('')}
                                 </select>
                                 <div class="p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs mt-2">
@@ -7274,9 +7287,9 @@ async function saveCapaian(e) {
             const selectedOpt = selectEl.options[selectEl.selectedIndex];
             const tahunRef = selectedOpt ? selectedOpt.getAttribute('data-tahun') : '2025';
             const timKeyRef = selectedOpt ? selectedOpt.getAttribute('data-timkey') : 'Akademik';
-            const isSubInput = SUB_UNIT_ROLES.includes(currentUser.role);
-            const isTambahan = selectedOpt ? selectedOpt.getAttribute('data-istambahan') === 'true' : false;
-            // VALIDASI ANTI-DUPLIKASI: Cegah input lebih dari 1 kali untuk Indikator + Triwulan + Tahun yang sama pada Unit/Penginput yang sama
+                        const isSubInput = SUB_UNIT_ROLES.includes(currentUser.role);
+            const isSupport = selectedOpt ? selectedOpt.getAttribute('data-issupport') === 'true' : false;
+    // VALIDASI ANTI-DUPLIKASI: Cegah input lebih dari 1 kali untuk Indikator + Triwulan + Tahun yang sama pada Unit/Penginput yang sama
             const isDuplicate = (DB.capaian || []).some(c => {
                 if (!c) return false;
                 // Jika sedang mode edit, abaikan dirinya sendiri
@@ -7327,11 +7340,11 @@ async function saveCapaian(e) {
                 }
                 showToast('Capaian kinerja berhasil diperbarui!');
             } else {
-                 const newCapaian = {
+                                 const newCapaian = {
                     id: 'cp_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
                     unit: currentUser.unit,
                     timKey: timKeyRef,
-                    isTambahan: isTambahan, // TAMBAHAN BARU
+                    isSupport: isSupport, // GANTI isTambahan JADI isSupport
                     targetDirektur: targetDirRef,
                     tahun: tahunRef,
                     program: prog,
@@ -10480,7 +10493,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 console.error("Gagal menyimpan ke MySQL:", e);
             }
         }
-                function openIndikatorSupportModal(level) {
+                       function openIndikatorSupportModal(level) {
             const modal = document.getElementById('indikatorSupportModal');
             if (!modal) return;
             modal.classList.remove('hidden');
@@ -10489,29 +10502,21 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             document.getElementById('isNama').value = '';
             document.getElementById('isTarget').value = '100';
             document.getElementById('isSatuan').value = '%';
-            
+
             const parentSelect = document.getElementById('isParentInduk');
             parentSelect.innerHTML = '<option value="">-- Memuat Induk... --</option>';
-            
+
             let options = [];
             if (level === 'Level1') {
                 // Ketua Tim memilih induk dari Cascading Direktur
                 const dirCasc = DB.cascadingDirektur.filter(c => c.timKeys.includes(currentUser.timKey) && String(c.tahun || '2025') === '2025');
                 options = dirCasc.map(c => ({ id: c.id, text: `${c.target} (Target: ${c.targetVal} ${c.satuan})`, isUtama: isTimUtamaInDir(c, currentUser.timKey), target: c.targetVal, satuan: c.satuan, parentName: c.target }));
-            } else if (level === 'Level2') {
+            } else if (level === 'Level2' || level === 'Level3') {
                 // Ketua Unit memilih induk dari Cascading Tim
                 const timCasc = DB.cascadingTim.filter(c => c.unitTargets.includes(currentUser.unit) && String(c.tahun || '2025') === '2025');
                 options = timCasc.map(c => {
                     const dirObj = DB.cascadingDirektur.find(d => d.target === c.targetDirektur && String(d.tahun || '2025') === '2025');
                     return { id: c.id, text: `${c.targetDirektur} (Target: ${dirObj ? dirObj.targetVal : 100} ${dirObj ? dirObj.satuan : '%'})`, isUtama: isUnitUtamaInTim(c, currentUser.unit), target: dirObj ? dirObj.targetVal : 100, satuan: dirObj ? dirObj.satuan : '%', parentName: c.targetDirektur };
-                });
-            } else if (level === 'Level3') {
-                // Ketua Unit memilih induk dari Cascading Unit
-                const unitCasc = DB.cascadingUnit.filter(c => c.unit === currentUser.unit && String(c.tahun || '2025') === '2025');
-                options = unitCasc.map(c => {
-                    const timObj = DB.cascadingTim.find(t => t.targetDirektur === c.targetDirektur && t.unitTargets.includes(currentUser.unit));
-                    const dirObj = DB.cascadingDirektur.find(d => d.target === c.targetDirektur && String(d.tahun || '2025') === '2025');
-                    return { id: c.id, text: `${c.targetDirektur} (Target: ${dirObj ? dirObj.targetVal : 100} ${dirObj ? dirObj.satuan : '%'})`, isUtama: isSubRoleUtamaInUnit(c, currentUser.unit) || (timObj && isUnitUtamaInTim(timObj, currentUser.unit)), target: dirObj ? dirObj.targetVal : 100, satuan: dirObj ? dirObj.satuan : '%', parentName: c.targetDirektur };
                 });
             }
 
@@ -10521,20 +10526,32 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 parentSelect.innerHTML = options.map(o => `<option value="${o.id}" data-isutama="${o.isUtama}" data-target="${o.target}" data-satuan="${o.satuan}" data-parentname="${o.parentName}">${o.text}</option>`).join('');
             }
 
-            // Render Staf List jika Level 3
-            const stafCont = document.getElementById('isStafContainer');
-            const stafList = document.getElementById('isStafList');
-            if (level === 'Level3') {
-                stafCont.classList.remove('hidden');
-                const unitUsers = DB.users.filter(u => u.unit === currentUser.unit && u.role !== 'ketua_unit' && !u.roles.includes('ketua_unit'));
-                stafList.innerHTML = unitUsers.length === 0 ? '<p class="text-slate-400 italic">Tidak ada staf di unit ini.</p>' : unitUsers.map(u => `
+            // Render Recipient List based on level
+            const recipientCont = document.getElementById('isStafContainer');
+            const recipientList = document.getElementById('isStafList');
+            const recipientLabel = recipientCont.querySelector('label');
+            
+            if (level === 'Level1') {
+                recipientCont.classList.remove('hidden');
+                recipientLabel.innerText = 'Pilih Unit / Prodi Penerima (Bisa >1)';
+                const unitList = DB.users.filter(u => u.role === 'ketua_unit' && u.timKey === currentUser.timKey).map(u => u.unit);
+                const uniqueUnits = Array.from(new Set(unitList));
+                recipientList.innerHTML = uniqueUnits.length === 0 ? '<p class="text-slate-400 italic">Tidak ada Unit/Prodi di bawah Tim Kerja ini.</p>' : uniqueUnits.map(u => `
                     <label class="flex items-center space-x-2 p-1.5 bg-white rounded border">
-                        <input type="checkbox" name="isStafCheck" value="${u.username}" class="rounded text-indigo-600">
-                        <span class="font-semibold text-slate-700">${sanitizeHTML(u.name)} (${ROLE_LABELS[u.role] || u.role})</span>
+                        <input type="checkbox" name="isRecipientCheck" value="${u}" class="rounded text-indigo-600">
+                        <span class="font-semibold text-slate-700">${u}</span>
                     </label>
                 `).join('');
             } else {
-                stafCont.classList.add('hidden');
+                recipientCont.classList.remove('hidden');
+                recipientLabel.innerText = 'Pilih Staf Penerima (Bisa >1)';
+                const unitUsers = DB.users.filter(u => u.unit === currentUser.unit && u.role !== 'ketua_unit' && !u.roles?.includes('ketua_unit'));
+                recipientList.innerHTML = unitUsers.length === 0 ? '<p class="text-slate-400 italic">Tidak ada staf di unit ini.</p>' : unitUsers.map(u => `
+                    <label class="flex items-center space-x-2 p-1.5 bg-white rounded border">
+                        <input type="checkbox" name="isRecipientCheck" value="${u.username}" class="rounded text-indigo-600">
+                        <span class="font-semibold text-slate-700">${sanitizeHTML(u.name)} (${ROLE_LABELS[u.role] || u.role})</span>
+                    </label>
+                `).join('');
             }
 
             handleIndukChange();
@@ -10559,7 +10576,6 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             const satuanEl = document.getElementById('isSatuan');
 
             if (isUtama) {
-                // Jika Induk Utama: Nama disamakan (tapi boleh diedit), Target & Satuan read-only
                 namaEl.value = parentName;
                 targetEl.value = target;
                 satuanEl.value = satuan;
@@ -10568,7 +10584,6 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 targetEl.className = 'w-full p-2.5 bg-slate-100 border rounded-xl font-bold text-slate-500 cursor-not-allowed';
                 satuanEl.className = 'w-full p-2.5 bg-slate-100 border rounded-xl font-semibold text-slate-500 cursor-not-allowed';
             } else {
-                // Jika Induk Support: Nama bebas, Target & Satuan bebas
                 namaEl.value = parentName;
                 targetEl.value = target;
                 satuanEl.value = satuan;
@@ -10581,55 +10596,58 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
 
         async function saveIndikatorSupport(e) {
             e.preventDefault();
-            if (!DB.indikatorTambahan) DB.indikatorTambahan = [];
-            
             const level = document.getElementById('isLevel').value;
             const parentId = document.getElementById('isParentInduk').value;
-            const opt = document.getElementById('isParentInduk').options[document.getElementById('isParentInduk').selectedIndex];
-            const isUtamaParent = opt.getAttribute('data-isutama') === 'true';
+            if (!parentId) { showToast('Pilih Induk Indikator terlebih dahulu!', 'error'); return; }
             
-            let targetUsers = [currentUser.username];
-            if (level === 'Level3') {
-                const checkedStaf = Array.from(document.querySelectorAll('input[name="isStafCheck"]:checked')).map(c => c.value);
-                if (checkedStaf.length === 0) {
-                    showToast('Pilih minimal 1 staf penerima!', 'error');
-                    return;
-                }
-                targetUsers = checkedStaf;
+            const checkedRecipients = Array.from(document.querySelectorAll('input[name="isRecipientCheck"]:checked')).map(c => c.value);
+            if (checkedRecipients.length === 0) {
+                showToast('Pilih minimal 1 penerima!', 'error');
+                return;
             }
 
-            const newInd = {
-                id: 'ind_sup_' + Date.now(),
-                level: level,
-                parentId: parentId,
-                parentName: opt.getAttribute('data-parentname'),
-                parentIsUtama: isUtamaParent,
-                ownerUsername: currentUser.username,
-                ownerUnit: currentUser.unit,
-                ownerTimKey: currentUser.timKey || 'Akademik',
-                namaIndikator: document.getElementById('isNama').value.trim(),
-                target: parseFloat(document.getElementById('isTarget').value),
-                satuan: document.getElementById('isSatuan').value.trim(),
-                tahun: '2025',
-                targetUsers: targetUsers, // Array username staf (untuk level 3) atau pembuat
-                rangeKinerja: {
-                    tidakMencapai: document.getElementById('isRangeTidak').value.trim(),
-                    mencapai: document.getElementById('isRangeMencapai').value.trim(),
-                    melebihi: document.getElementById('isRangeMelebihi').value.trim()
-                }
-            };
+            const nama = document.getElementById('isNama').value.trim();
+            const target = parseFloat(document.getElementById('isTarget').value);
+            const satuan = document.getElementById('isSatuan').value.trim();
+            const rkTidak = document.getElementById('isRangeTidak').value.trim();
+            const rkMencapai = document.getElementById('isRangeMencapai').value.trim();
+            const rkMelebihi = document.getElementById('isRangeMelebihi').value.trim();
 
-            DB.indikatorTambahan.push(newInd);
+            if (level === 'Level1') {
+                DB.cascadingTim.push({
+                    id: 'ct_sup_' + Date.now(),
+                    parentDirId: parentId,
+                    isSupport: true,
+                    tahun: '2025',
+                    targetDirektur: nama,
+                    timKey: currentUser.timKey,
+                    unitTargets: checkedRecipients,
+                    unitRoles: checkedRecipients.reduce((acc, u) => ({...acc, [u]: 'Support'}), {}),
+                    targetVal: target,
+                    satuan: satuan,
+                    rangeKinerja: { tidakMencapai: rkTidak, mencapai: rkMencapai, melebihi: rkMelebihi }
+                });
+            } else {
+                DB.cascadingUnit.push({
+                    id: 'cu_sup_' + Date.now(),
+                    parentTimId: parentId,
+                    isSupport: true,
+                    tahun: '2025',
+                    targetDirektur: nama,
+                    unit: currentUser.unit,
+                    subTargets: checkedRecipients,
+                    subRoles: checkedRecipients.reduce((acc, u) => ({...acc, [u]: 'Support'}), {}),
+                    targetVal: target,
+                    satuan: satuan,
+                    rangeKinerja: { tidakMencapai: rkTidak, mencapai: rkMencapai, melebihi: rkMelebihi }
+                });
+            }
+
             await saveToMySQL();
             closeIndikatorSupportModal();
             showToast('Indikator Support berhasil ditambahkan!');
             renderCascadingView(document.getElementById('mainContent'));
         }
-        window.onload = async function() {
-         await loadDataFromMySQL();
-         const savedUser = localStorage.getItem('ki_jaro_user');
-         const lastActive = parseInt(localStorage.getItem('ki_jaro_last_active') || '0', 10);
-
          if (savedUser) {
              // Cek apakah sudah idle > 1 jam saat tab dibuka kembali
              if (lastActive > 0 && (Date.now() - lastActive >= IDLE_TIMEOUT_MS)) {
@@ -10660,12 +10678,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
              renderLogin();
          }
      };
-                async function deleteIndikatorSupport(id) {
-            if (!DB.indikatorTambahan) return;
-            const ind = DB.indikatorTambahan.find(x => x.id === id);
-            if (!ind) return;
-
-            // Cek apakah sudah ada capaian yang menggunakan indikator ini
+                // Cek apakah sudah ada capaian yang menggunakan indikator ini
             const relatedCaps = (DB.capaian || []).filter(c => 
                 c.targetDirektur === ind.namaIndikator && 
                 c.unit === ind.ownerUnit && 
