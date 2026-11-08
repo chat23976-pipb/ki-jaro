@@ -5176,6 +5176,7 @@ let dashboardChartInstances = {};
                                     <i class="fa-solid ${toggleCascLevel1 ? 'fa-eye-slash' : 'fa-eye'}"></i>
                                     <span>${toggleCascLevel1 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
                                 </button>
+                                                                ${(isKetuaTim || isAdmin) && !isPureViewer() ? `<button onclick="openIndikatorSupportModal('Level1')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1"><i class="fa-solid fa-plus mr-1"></i><span>Tambah Indikator Support</span></button>` : ''}
                                 ${(isDirektur || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingDirModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1"><i class="fa-solid fa-plus mr-1"></i><span>Tambah Cascading Direktur</span></button>` : ''}
                             </div>
                         </div>
@@ -5234,7 +5235,10 @@ let dashboardChartInstances = {};
                                     <i class="fa-solid ${toggleCascLevel2 ? 'fa-eye-slash' : 'fa-eye'}"></i>
                                     <span>${toggleCascLevel2 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
                                 </button>
+                                                            <div class="flex items-center space-x-2">
+                                ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openIndikatorSupportModal('Level2')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Indikator Support</span></button>` : ''}
                                 ${(isKetuaTim || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
+                            </div>
                             </div>
                         </div>
                         <div class="${toggleCascLevel2 ? '' : 'hidden'} overflow-x-auto">
@@ -5270,10 +5274,49 @@ let dashboardChartInstances = {};
                                             ` : ''}
                                         </tr>
                                     `).join('')}
+                                                               </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Daftar Indikator Support Level 2 (BARU) -->
+                    ${(isKaUnit || isKetuaTim || isAdmin) && !isPureViewer() ? `
+                    <div class="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden">
+                        <div class="p-4 bg-indigo-50 border-b border-indigo-200 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-list-check mr-2"></i>Daftar Indikator Support Tambahan (Level 2)</h3>
+                                <p class="text-[11px] text-indigo-700">Indikator ini tidak masuk Dashboard Utama.</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead class="bg-slate-50 text-slate-700 font-semibold border-b">
+                                    <tr>
+                                        <th class="p-3">Nama Induk (Parent)</th>
+                                        <th class="p-3">Nama Indikator Tambahan</th>
+                                        <th class="p-3 text-center">Target / Satuan</th>
+                                        <th class="p-3 text-center">Status</th>
+                                        <th class="p-3 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    ${(DB.indikatorTambahan || []).filter(i => i.level === 'Level2' && (i.ownerUsername === currentUser.username || isAdmin)).map(ind => `
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-3 font-semibold text-slate-700">${sanitizeHTML(ind.parentName)}</td>
+                                            <td class="p-3 font-bold text-indigo-800">${sanitizeHTML(ind.namaIndikator)}</td>
+                                            <td class="p-3 text-center font-bold">${ind.target} ${ind.satuan}</td>
+                                            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold text-[10px]">Support - Tambahan</span></td>
+                                            <td class="p-3 text-center">
+                                                <button onclick="deleteIndikatorSupport('${ind.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg font-bold hover:bg-rose-200"><i class="fa-solid fa-trash"></i> Hapus</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                    ${(DB.indikatorTambahan || []).filter(i => i.level === 'Level2' && (i.ownerUsername === currentUser.username || isAdmin)).length === 0 ? '<tr><td colspan="5" class="p-4 text-center text-slate-400 italic">Belum ada indikator support tambahan.</td></tr>' : ''}
                                 </tbody>
                             </table>
                         </div>
                     </div>
+                    ` : ''}
 
                     <!-- Bagian 3: Cascading Ketua Unit/Prodi/Subbag ke Sekretaris/Kalab/Koordinator/Dosen/Tendik (Level 3 - Fase 2 Poin 8) -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -5287,7 +5330,10 @@ let dashboardChartInstances = {};
                                     <i class="fa-solid ${toggleCascLevel3 ? 'fa-eye-slash' : 'fa-eye'}"></i>
                                     <span>${toggleCascLevel3 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
                                 </button>
+                                                            <div class="flex items-center space-x-2">
+                                ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openIndikatorSupportModal('Level3')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Indikator Support</span></button>` : ''}
                                 ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingUnitModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Staf/Dosen</span></button>` : ''}
+                            </div>
                             </div>
                         </div>
                         <div class="${toggleCascLevel3 ? '' : 'hidden'} overflow-x-auto">
@@ -5484,6 +5530,56 @@ let dashboardChartInstances = {};
                             <div class="flex justify-end space-x-3 pt-2 border-t">
                                 <button type="button" onclick="closeCascadingUnitModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
                                 <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-md text-xs">Simpan Cascading Level 3</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                               <!-- Modal Tambah Indikator Support (BARU) -->
+                <div id="indikatorSupportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[80] p-4 overflow-y-auto">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">Tambah Indikator Support</h3>
+                                <p class="text-[11px] text-slate-500">Indikator ini tidak akan masuk ke Dashboard Kinerja Utama.</p>
+                            </div>
+                            <button type="button" onclick="closeIndikatorSupportModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <form onsubmit="saveIndikatorSupport(event)" class="space-y-3.5 text-xs">
+                            <input type="hidden" id="isLevel" value="">
+                            <div>
+                                <label class="block font-bold mb-1">Pilih Induk Indikator (Dari Atasan)</label>
+                                <select id="isParentInduk" required class="w-full p-2.5 bg-slate-50 border rounded-xl font-semibold" onchange="handleIndukChange()"></select>
+                            </div>
+                            <div>
+                                <label class="block font-bold mb-1">Nama Indikator Tambahan</label>
+                                <input type="text" id="isNama" required class="w-full p-2.5 bg-slate-50 border rounded-xl" placeholder="Masukkan nama indikator...">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-bold mb-1">Target</label>
+                                    <input type="number" step="any" id="isTarget" required class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold">
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1">Satuan</label>
+                                    <input type="text" id="isSatuan" required class="w-full p-2.5 bg-slate-50 border rounded-xl">
+                                </div>
+                            </div>
+                            <div id="isStafContainer" class="hidden">
+                                <label class="block font-bold mb-1">Pilih Staf Penerima (Bisa >1)</label>
+                                <div id="isStafList" class="space-y-1.5 bg-slate-50 p-3 rounded-xl border max-h-32 overflow-y-auto text-xs"></div>
+                            </div>
+                            <div class="bg-blue-50 p-3 rounded-xl border border-blue-200 space-y-2">
+                                <label class="block font-bold text-blue-900 text-[10px]">Range Ekspektasi Kinerja (Acuan Penilaian)</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div><span class="text-[9px] font-bold text-rose-700 block">Tidak Mencapai</span><input type="text" id="isRangeTidak" required value="< 100%" class="w-full p-1.5 bg-white border rounded text-[11px]"></div>
+                                    <div><span class="text-[9px] font-bold text-emerald-700 block">Mencapai</span><input type="text" id="isRangeMencapai" required value="100%" class="w-full p-1.5 bg-white border rounded text-[11px]"></div>
+                                    <div><span class="text-[9px] font-bold text-blue-700 block">Melebihi</span><input type="text" id="isRangeMelebihi" required value="> 100%" class="w-full p-1.5 bg-white border rounded text-[11px]"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-2 pt-2 border-t">
+                                <button type="button" onclick="closeIndikatorSupportModal()" class="px-4 py-2 bg-slate-200 rounded-xl font-semibold">Batal</button>
+                                <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow">Simpan Indikator</button>
                             </div>
                         </form>
                     </div>
@@ -6718,9 +6814,32 @@ async function saveCascadingTim(e) {
                     const targetVal = dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100;
                     const matchKey = cu.subTargets.includes(currentUser.username) ? currentUser.username : myKeyRole;
                     const isUtama = isSubRoleUtamaInUnit(cu, matchKey);
-                    return { targetDirektur: cu.targetDirektur, tahun, satuan, targetVal, timKey: ctObj ? ctObj.timKey : (currentUser.timKey || 'Akademik'), isUtama };
+                                        return { targetDirektur: cu.targetDirektur, tahun, satuan, targetVal, timKey: ctObj ? ctObj.timKey : (currentUser.timKey || 'Akademik'), isUtama };
                 });
             }
+
+            // === TAMBAHKAN LOGIKA INDIKATOR SUPPORT TAMBAHAN DI SINI ===
+            const mySupportInds = (DB.indikatorTambahan || []).filter(ind => 
+                ind.ownerUsername === currentUser.username || ind.targetUsers.includes(currentUser.username)
+            );
+
+            mySupportInds.forEach(ind => {
+                const labelType = ind.parentIsUtama ? 'Utama - Tambahan' : 'Support - Tambahan';
+                // Cek agar tidak duplikat jika sudah ada di cascading utama
+                if (!availableCascadingForInput.some(a => a.targetDirektur === ind.namaIndikator && a.tahun === ind.tahun)) {
+                    availableCascadingForInput.push({
+                        targetDirektur: ind.namaIndikator,
+                        tahun: ind.tahun,
+                        satuan: ind.satuan,
+                        targetVal: ind.target,
+                        timKey: ind.ownerTimKey,
+                        isUtama: false, // Force Support
+                        isTambahan: true, // Penanda BARU
+                        labelTambahan: labelType, // Label BARU
+                        supportIndukId: ind.id // Simpan ID untuk referensi
+                    });
+                }
+            });
 
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
@@ -6913,9 +7032,11 @@ async function saveCascadingTim(e) {
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Pilih Indikator Kinerja yang Diintervensi</label>
                                 <select id="inputIndikatorRef" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" onchange="updateSatuanAndTargetRef(this)">
-                                    ${availableCascadingForInput.map(item => `
-                                        <option value="${item.targetDirektur}" data-tahun="${item.tahun}" data-satuan="${item.satuan}" data-targetval="${item.targetVal}" data-timkey="${item.timKey}" data-isutama="${item.isUtama}">${item.targetDirektur} (Tahun: ${item.tahun} - ${item.isUtama ? 'Utama' : 'Support'})</option>
-                                    `).join('')}
+                                                                        ${availableCascadingForInput.map(item => {
+                                        const labelStatus = item.isTambahan ? `Support - Tambahan` : (item.isUtama ? 'Utama - Utama' : 'Support - Utama');
+                                        return `
+                                        <option value="${item.targetDirektur}" data-tahun="${item.tahun}" data-satuan="${item.satuan}" data-targetval="${item.targetVal}" data-timkey="${item.timKey}" data-isutama="${item.isUtama}" data-istambahan="${item.isTambahan || false}">${item.targetDirektur} (Tahun: ${item.tahun} - ${labelStatus})</option>
+                                    `}).join('')}
                                 </select>
                                 <div class="p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs mt-2">
                                     <span class="font-semibold text-slate-700">Kategori Indikator:</span>
@@ -7154,7 +7275,7 @@ async function saveCapaian(e) {
             const tahunRef = selectedOpt ? selectedOpt.getAttribute('data-tahun') : '2025';
             const timKeyRef = selectedOpt ? selectedOpt.getAttribute('data-timkey') : 'Akademik';
             const isSubInput = SUB_UNIT_ROLES.includes(currentUser.role);
-
+            const isTambahan = selectedOpt ? selectedOpt.getAttribute('data-istambahan') === 'true' : false;
             // VALIDASI ANTI-DUPLIKASI: Cegah input lebih dari 1 kali untuk Indikator + Triwulan + Tahun yang sama pada Unit/Penginput yang sama
             const isDuplicate = (DB.capaian || []).some(c => {
                 if (!c) return false;
@@ -7206,10 +7327,11 @@ async function saveCapaian(e) {
                 }
                 showToast('Capaian kinerja berhasil diperbarui!');
             } else {
-                const newCapaian = {
+                 const newCapaian = {
                     id: 'cp_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
                     unit: currentUser.unit,
                     timKey: timKeyRef,
+                    isTambahan: isTambahan, // TAMBAHAN BARU
                     targetDirektur: targetDirRef,
                     tahun: tahunRef,
                     program: prog,
@@ -9449,7 +9571,10 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                 <tr>
                                     <td class="p-2 border text-center">${i + 1}</td>
                                     <td class="p-2 border">${sanitizeHTML(c.unit)}</td>
-                                    <td class="p-2 border font-bold">${sanitizeHTML(c.targetDirektur)}</td>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5 font-semibold">
+                                    ${sanitizeHTML(skp.indikator)}
+                                    <span class="block text-[10px] font-normal text-slate-500 mt-0.5">${skp.isTambahan ? '(Support - Tambahan)' : 'Indikator Utama'}</span>
+                                </td></tr>
                                     <td class="p-2 border">${sanitizeHTML(c.program)}${c.uraianPekerjaan ? `<br><span class="text-[10px] text-slate-500">${sanitizeHTML(c.uraianPekerjaan)}</span>` : ''}</td>
                                     <td class="p-2 border text-center">${c.target} ${c.satuan || '%'}</td>
                                     <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi} ${c.satuan || '%'}</td>
@@ -10355,7 +10480,151 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 console.error("Gagal menyimpan ke MySQL:", e);
             }
         }
+                function openIndikatorSupportModal(level) {
+            const modal = document.getElementById('indikatorSupportModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('isLevel').value = level;
+            document.getElementById('isNama').value = '';
+            document.getElementById('isTarget').value = '100';
+            document.getElementById('isSatuan').value = '%';
+            
+            const parentSelect = document.getElementById('isParentInduk');
+            parentSelect.innerHTML = '<option value="">-- Memuat Induk... --</option>';
+            
+            let options = [];
+            if (level === 'Level1') {
+                // Ketua Tim memilih induk dari Cascading Direktur
+                const dirCasc = DB.cascadingDirektur.filter(c => c.timKeys.includes(currentUser.timKey) && String(c.tahun || '2025') === '2025');
+                options = dirCasc.map(c => ({ id: c.id, text: `${c.target} (Target: ${c.targetVal} ${c.satuan})`, isUtama: isTimUtamaInDir(c, currentUser.timKey), target: c.targetVal, satuan: c.satuan, parentName: c.target }));
+            } else if (level === 'Level2') {
+                // Ketua Unit memilih induk dari Cascading Tim
+                const timCasc = DB.cascadingTim.filter(c => c.unitTargets.includes(currentUser.unit) && String(c.tahun || '2025') === '2025');
+                options = timCasc.map(c => {
+                    const dirObj = DB.cascadingDirektur.find(d => d.target === c.targetDirektur && String(d.tahun || '2025') === '2025');
+                    return { id: c.id, text: `${c.targetDirektur} (Target: ${dirObj ? dirObj.targetVal : 100} ${dirObj ? dirObj.satuan : '%'})`, isUtama: isUnitUtamaInTim(c, currentUser.unit), target: dirObj ? dirObj.targetVal : 100, satuan: dirObj ? dirObj.satuan : '%', parentName: c.targetDirektur };
+                });
+            } else if (level === 'Level3') {
+                // Ketua Unit memilih induk dari Cascading Unit
+                const unitCasc = DB.cascadingUnit.filter(c => c.unit === currentUser.unit && String(c.tahun || '2025') === '2025');
+                options = unitCasc.map(c => {
+                    const timObj = DB.cascadingTim.find(t => t.targetDirektur === c.targetDirektur && t.unitTargets.includes(currentUser.unit));
+                    const dirObj = DB.cascadingDirektur.find(d => d.target === c.targetDirektur && String(d.tahun || '2025') === '2025');
+                    return { id: c.id, text: `${c.targetDirektur} (Target: ${dirObj ? dirObj.targetVal : 100} ${dirObj ? dirObj.satuan : '%'})`, isUtama: isSubRoleUtamaInUnit(c, currentUser.unit) || (timObj && isUnitUtamaInTim(timObj, currentUser.unit)), target: dirObj ? dirObj.targetVal : 100, satuan: dirObj ? dirObj.satuan : '%', parentName: c.targetDirektur };
+                });
+            }
 
+            if (options.length === 0) {
+                parentSelect.innerHTML = '<option value="">Belum ada indikator induk yang tersedia.</option>';
+            } else {
+                parentSelect.innerHTML = options.map(o => `<option value="${o.id}" data-isutama="${o.isUtama}" data-target="${o.target}" data-satuan="${o.satuan}" data-parentname="${o.parentName}">${o.text}</option>`).join('');
+            }
+
+            // Render Staf List jika Level 3
+            const stafCont = document.getElementById('isStafContainer');
+            const stafList = document.getElementById('isStafList');
+            if (level === 'Level3') {
+                stafCont.classList.remove('hidden');
+                const unitUsers = DB.users.filter(u => u.unit === currentUser.unit && u.role !== 'ketua_unit' && !u.roles.includes('ketua_unit'));
+                stafList.innerHTML = unitUsers.length === 0 ? '<p class="text-slate-400 italic">Tidak ada staf di unit ini.</p>' : unitUsers.map(u => `
+                    <label class="flex items-center space-x-2 p-1.5 bg-white rounded border">
+                        <input type="checkbox" name="isStafCheck" value="${u.username}" class="rounded text-indigo-600">
+                        <span class="font-semibold text-slate-700">${sanitizeHTML(u.name)} (${ROLE_LABELS[u.role] || u.role})</span>
+                    </label>
+                `).join('');
+            } else {
+                stafCont.classList.add('hidden');
+            }
+
+            handleIndukChange();
+        }
+
+        function closeIndikatorSupportModal() {
+            const modal = document.getElementById('indikatorSupportModal');
+            if (modal) { modal.classList.remove('flex'); modal.classList.add('hidden'); }
+        }
+
+        function handleIndukChange() {
+            const sel = document.getElementById('isParentInduk');
+            if (!sel || sel.selectedIndex === -1) return;
+            const opt = sel.options[sel.selectedIndex];
+            const isUtama = opt.getAttribute('data-isutama') === 'true';
+            const target = opt.getAttribute('data-target');
+            const satuan = opt.getAttribute('data-satuan');
+            const parentName = opt.getAttribute('data-parentname');
+
+            const namaEl = document.getElementById('isNama');
+            const targetEl = document.getElementById('isTarget');
+            const satuanEl = document.getElementById('isSatuan');
+
+            if (isUtama) {
+                // Jika Induk Utama: Nama disamakan (tapi boleh diedit), Target & Satuan read-only
+                namaEl.value = parentName;
+                targetEl.value = target;
+                satuanEl.value = satuan;
+                targetEl.readOnly = true;
+                satuanEl.readOnly = true;
+                targetEl.className = 'w-full p-2.5 bg-slate-100 border rounded-xl font-bold text-slate-500 cursor-not-allowed';
+                satuanEl.className = 'w-full p-2.5 bg-slate-100 border rounded-xl font-semibold text-slate-500 cursor-not-allowed';
+            } else {
+                // Jika Induk Support: Nama bebas, Target & Satuan bebas
+                namaEl.value = parentName;
+                targetEl.value = target;
+                satuanEl.value = satuan;
+                targetEl.readOnly = false;
+                satuanEl.readOnly = false;
+                targetEl.className = 'w-full p-2.5 bg-white border border-indigo-400 rounded-xl font-bold text-indigo-700 focus:ring-2 focus:ring-indigo-500';
+                satuanEl.className = 'w-full p-2.5 bg-white border border-indigo-400 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500';
+            }
+        }
+
+        async function saveIndikatorSupport(e) {
+            e.preventDefault();
+            if (!DB.indikatorTambahan) DB.indikatorTambahan = [];
+            
+            const level = document.getElementById('isLevel').value;
+            const parentId = document.getElementById('isParentInduk').value;
+            const opt = document.getElementById('isParentInduk').options[document.getElementById('isParentInduk').selectedIndex];
+            const isUtamaParent = opt.getAttribute('data-isutama') === 'true';
+            
+            let targetUsers = [currentUser.username];
+            if (level === 'Level3') {
+                const checkedStaf = Array.from(document.querySelectorAll('input[name="isStafCheck"]:checked')).map(c => c.value);
+                if (checkedStaf.length === 0) {
+                    showToast('Pilih minimal 1 staf penerima!', 'error');
+                    return;
+                }
+                targetUsers = checkedStaf;
+            }
+
+            const newInd = {
+                id: 'ind_sup_' + Date.now(),
+                level: level,
+                parentId: parentId,
+                parentName: opt.getAttribute('data-parentname'),
+                parentIsUtama: isUtamaParent,
+                ownerUsername: currentUser.username,
+                ownerUnit: currentUser.unit,
+                ownerTimKey: currentUser.timKey || 'Akademik',
+                namaIndikator: document.getElementById('isNama').value.trim(),
+                target: parseFloat(document.getElementById('isTarget').value),
+                satuan: document.getElementById('isSatuan').value.trim(),
+                tahun: '2025',
+                targetUsers: targetUsers, // Array username staf (untuk level 3) atau pembuat
+                rangeKinerja: {
+                    tidakMencapai: document.getElementById('isRangeTidak').value.trim(),
+                    mencapai: document.getElementById('isRangeMencapai').value.trim(),
+                    melebihi: document.getElementById('isRangeMelebihi').value.trim()
+                }
+            };
+
+            DB.indikatorTambahan.push(newInd);
+            await saveToMySQL();
+            closeIndikatorSupportModal();
+            showToast('Indikator Support berhasil ditambahkan!');
+            renderCascadingView(document.getElementById('mainContent'));
+        }
         window.onload = async function() {
          await loadDataFromMySQL();
          const savedUser = localStorage.getItem('ki_jaro_user');
@@ -10391,6 +10660,33 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
              renderLogin();
          }
      };
+                async function deleteIndikatorSupport(id) {
+            if (!DB.indikatorTambahan) return;
+            const ind = DB.indikatorTambahan.find(x => x.id === id);
+            if (!ind) return;
+
+            // Cek apakah sudah ada capaian yang menggunakan indikator ini
+            const relatedCaps = (DB.capaian || []).filter(c => 
+                c.targetDirektur === ind.namaIndikator && 
+                c.unit === ind.ownerUnit && 
+                String(c.tahun) === String(ind.tahun) &&
+                c.status === 'Valid' // Hanya cegah jika sudah VALID
+            );
+
+            if (relatedCaps.length > 0) {
+                showToast('Tidak dapat menghapus! Indikator ini sudah memiliki capaian yang VALID. Silakan hapus/tolak capaian terlebih dahulu dari level bawah.', 'error');
+                return;
+            }
+
+            if (confirm(`Hapus Indikator Support "${ind.namaIndikator}"?`)) {
+                // Hapus juga capaian yang masih menggantung (status belum valid)
+                DB.capaian = DB.capaian.filter(c => !(c.targetDirektur === ind.namaIndikator && c.unit === ind.ownerUnit && String(c.tahun) === String(ind.tahun) && c.status !== 'Valid'));
+                DB.indikatorTambahan = DB.indikatorTambahan.filter(x => x.id !== id);
+                await saveToMySQL();
+                showToast('Indikator Support berhasil dihapus.', 'info');
+                renderCascadingView(document.getElementById('mainContent'));
+            }
+        }
         function openExportRisikoCsvModal() {
             const modal = document.getElementById('exportRisikoCsvModal');
             if (modal) {
