@@ -9584,10 +9584,10 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                 <tr>
                                     <td class="p-2 border text-center">${i + 1}</td>
                                     <td class="p-2 border">${sanitizeHTML(c.unit)}</td>
-                                <tr><td class="pb-1.5"></td><td class="pb-1.5 font-semibold">
-                                    ${sanitizeHTML(skp.indikator)}
-                                    <span class="block text-[10px] font-normal text-slate-500 mt-0.5">${skp.isTambahan ? '(Support - Tambahan)' : 'Indikator Utama'}</span>
-                                </td></tr>
+                                    <td class="p-2 border font-bold">
+                                        ${sanitizeHTML(c.targetDirektur)}
+                                        <span class="block text-[10px] font-normal text-slate-500 mt-0.5">${c.isSupport ? '(Support - Tambahan)' : 'Indikator Utama'}</span>
+                                    </td>
                                     <td class="p-2 border">${sanitizeHTML(c.program)}${c.uraianPekerjaan ? `<br><span class="text-[10px] text-slate-500">${sanitizeHTML(c.uraianPekerjaan)}</span>` : ''}</td>
                                     <td class="p-2 border text-center">${c.target} ${c.satuan || '%'}</td>
                                     <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi} ${c.satuan || '%'}</td>
@@ -10648,58 +10648,42 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             showToast('Indikator Support berhasil ditambahkan!');
             renderCascadingView(document.getElementById('mainContent'));
         }
-         if (savedUser) {
-             // Cek apakah sudah idle > 1 jam saat tab dibuka kembali
-             if (lastActive > 0 && (Date.now() - lastActive >= IDLE_TIMEOUT_MS)) {
-                 localStorage.removeItem('ki_jaro_user');
-                 localStorage.removeItem('ki_jaro_last_active');
-                 renderLogin();
-                 showToast('Sesi Anda telah berakhir (>1 jam tanpa aktivitas). Silakan login kembali.', 'info');
-                 return;
-             }
-             try {
-                 const parsed = JSON.parse(savedUser);
-                 const freshUser = DB.users.find(u => u.username === parsed.username);
-                 if (freshUser) {
-                     const roles = getUserRoles(freshUser);
-                     freshUser.roles = roles;
-                     // Pertahankan role aktif dari sesi sebelumnya jika masih valid
-                     freshUser.role = (parsed.role && roles.includes(parsed.role)) ? parsed.role : roles[0];
-                     currentUser = freshUser;
-                 } else {
-                     currentUser = parsed;
-                 }
-                 updateLastActivity();
-                 renderDashboardLayout();
-             } catch (e) {
-                 renderLogin();
-             }
-         } else {
-             renderLogin();
-         }
-     };
-                // Cek apakah sudah ada capaian yang menggunakan indikator ini
-            const relatedCaps = (DB.capaian || []).filter(c => 
-                c.targetDirektur === ind.namaIndikator && 
-                c.unit === ind.ownerUnit && 
-                String(c.tahun) === String(ind.tahun) &&
-                c.status === 'Valid' // Hanya cegah jika sudah VALID
-            );
 
-            if (relatedCaps.length > 0) {
-                showToast('Tidak dapat menghapus! Indikator ini sudah memiliki capaian yang VALID. Silakan hapus/tolak capaian terlebih dahulu dari level bawah.', 'error');
-                return;
-            }
+        window.onload = async function() {
+            await loadDataFromMySQL();
+            const savedUser = localStorage.getItem('ki_jaro_user');
+            const lastActive = parseInt(localStorage.getItem('ki_jaro_last_active') || '0', 10);
 
-            if (confirm(`Hapus Indikator Support "${ind.namaIndikator}"?`)) {
-                // Hapus juga capaian yang masih menggantung (status belum valid)
-                DB.capaian = DB.capaian.filter(c => !(c.targetDirektur === ind.namaIndikator && c.unit === ind.ownerUnit && String(c.tahun) === String(ind.tahun) && c.status !== 'Valid'));
-                DB.indikatorTambahan = DB.indikatorTambahan.filter(x => x.id !== id);
-                await saveToMySQL();
-                showToast('Indikator Support berhasil dihapus.', 'info');
-                renderCascadingView(document.getElementById('mainContent'));
+            if (savedUser) {
+                // Cek apakah sudah idle > 1 jam saat tab dibuka kembali
+                if (lastActive > 0 && (Date.now() - lastActive >= IDLE_TIMEOUT_MS)) {
+                    localStorage.removeItem('ki_jaro_user');
+                    localStorage.removeItem('ki_jaro_last_active');
+                    renderLogin();
+                    showToast('Sesi Anda telah berakhir (>1 jam tanpa aktivitas). Silakan login kembali.', 'info');
+                    return;
+                }
+                try {
+                    const parsed = JSON.parse(savedUser);
+                    const freshUser = DB.users.find(u => u.username === parsed.username);
+                    if (freshUser) {
+                        const roles = getUserRoles(freshUser);
+                        freshUser.roles = roles;
+                        // Pertahankan role aktif dari sesi sebelumnya jika masih valid
+                        freshUser.role = (parsed.role && roles.includes(parsed.role)) ? parsed.role : roles[0];
+                        currentUser = freshUser;
+                    } else {
+                        currentUser = parsed;
+                    }
+                    updateLastActivity();
+                    renderDashboardLayout();
+                } catch (e) {
+                    renderLogin();
+                }
+            } else {
+                renderLogin();
             }
-        }
+        };
         function openExportRisikoCsvModal() {
             const modal = document.getElementById('exportRisikoCsvModal');
             if (modal) {
