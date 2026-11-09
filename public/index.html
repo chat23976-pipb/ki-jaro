@@ -306,9 +306,10 @@ button { position: relative; z-index: 10; }
          koordinator: 'Koordinator Bidang',
          dosen: 'Dosen',
          tendik: 'Tenaga Kependidikan (Tendik)'
+         anggota: 'Anggota' // <-- TAMBAHKAN INI
      };
         // Daftar role fungsional tingkat bawah di bawah Unit/Prodi
-        const SUB_UNIT_ROLES = ['sekretaris', 'kalab', 'koordinator', 'dosen', 'tendik'];
+        const SUB_UNIT_ROLES = ['sekretaris', 'kalab', 'koordinator', 'dosen', 'tendik', 'anggota'];
         // =========================================================================
         // REVISI 1: ENGINE LONCENG NOTIFIKASI TUGAS AKTIF (OTOMATIS HILANG JIKA SELESAI)
         // =========================================================================
@@ -1010,10 +1011,15 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             ],
             timKerjaList: ['Akademik', 'Umum dan Keuangan', 'Kemahasiswaan dan Kerjasama'],
             unitList: [
-                'Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 
-                'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 
-                'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'
-            ],
+            // Tim Akademik
+            'SPM', 'Prodi TPIP', 'Prodi TMIP', 'Prodi TIIP', 'Teaching Factory', 
+            'UPPM', 'Perpustakaan', 'Transformasi Industri Digital 4.0', 'LSP', 
+            'Subbagian Administrasi Akademik Kemahasiswaan dan Kerjasama','Komputer',
+            // Tim Umum & Keuangan
+            'Subbagian Umum dan Keuangan', 'Satuan Pengawasan Internal','Inkubator Bisnis',
+            // Tim Kemahasiswaan & Kerjasama
+            'Pengembangan Karir', 'Humas', 'PMB'
+        ],
             
             renstraTujuanKemenperin: [], 
             renstraBPSDMI: [],           
@@ -2011,16 +2017,6 @@ function renderDashboardLayout() {
                             </button>
                         </div>
 
-                        <div class="p-4 border-b border-blue-600 bg-blue-700/80 sidebar-profile-box">
-                         <div class="flex items-center space-x-3">
-                             ${renderUserAvatarHtml(currentUser, 'w-10 h-10 text-sm', 'border-2 border-blue-300 shadow-xs')}
-                             <div class="overflow-hidden sidebar-text">
-                                 <p class="text-sm font-semibold text-white truncate">${sanitizeHTML(currentUser.name)}</p>
-                                 <span class="inline-block px-2 py-0.5 text-[10px] font-semibold bg-blue-800 text-blue-100 rounded-full mt-0.5">${roleLabels[currentUser.role] || currentUser.role}</span>
-                             </div>
-                         </div>
-                     </div>
-
                         <!-- Menu Sidetab Warna Putih Elegan & Kontras -->
                         <nav class="flex-1 p-3 space-y-1.5 overflow-y-auto text-sm">
                             <a href="javascript:void(0)" onclick="switchTab('dashboard')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
@@ -2227,28 +2223,25 @@ ${['direktur', 'tim_kerja', 'ketua_unit'].includes(currentUser.role) ? (() => {
      // Fungsi JavaScript untuk Tombol Perkecil Sidetab (Desktop & Mobile)
      let isSidebarCollapsed = false;
      function toggleSidebarCollapse() {
-         if (window.innerWidth < 768) {
-             toggleMobileSidebar();
-             return;
-         }
-         const sidebar = document.getElementById('appSidebar');
-         const texts = document.querySelectorAll('.sidebar-text');
-         const profileBox = document.querySelector('.sidebar-profile-box');
-         if (!sidebar) return;
+    if (window.innerWidth < 768) {
+        toggleMobileSidebar();
+        return;
+    }
+    const sidebar = document.getElementById('appSidebar');
+    const texts = document.querySelectorAll('.sidebar-text');
+    if (!sidebar) return;
 
-         isSidebarCollapsed = !isSidebarCollapsed;
-         if (isSidebarCollapsed) {
-             sidebar.classList.remove('w-72');
-             sidebar.classList.add('w-20');
-             texts.forEach(el => el.classList.add('hidden'));
-             if (profileBox) profileBox.classList.add('hidden');
-         } else {
-             sidebar.classList.remove('w-20');
-             sidebar.classList.add('w-72');
-             texts.forEach(el => el.classList.remove('hidden'));
-             if (profileBox) profileBox.classList.remove('hidden');
-         }
-     }
+    isSidebarCollapsed = !isSidebarCollapsed;
+    if (isSidebarCollapsed) {
+        sidebar.classList.remove('w-72');
+        sidebar.classList.add('w-20');
+        texts.forEach(el => el.classList.add('hidden'));
+    } else {
+        sidebar.classList.remove('w-20');
+        sidebar.classList.add('w-72');
+        texts.forEach(el => el.classList.remove('hidden'));
+    }
+}
         // Fungsi untuk membuka/menutup dropdown profil saat diklik
         function toggleProfileDropdown() {
             const menu = document.getElementById('profileDropdownMenu');
