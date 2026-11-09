@@ -5007,11 +5007,11 @@ let dashboardChartInstances = {};
 
             let filteredTim = [...DB.cascadingTim];
             if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => String(c.tahun) === String(filterCascadingTahun));
-            let filteredTimTable = isKetuaTim ? filteredTim.filter(c => c.timKey === currentUser.timKey) : filteredTim;
+            let filteredTimTable = (isKetuaTim ? filteredTim.filter(c => c.timKey === currentUser.timKey) : filteredTim).filter(c => !c.isSupport);
 
             let filteredUnit = [...DB.cascadingUnit];
             if (filterCascadingTahun !== 'Semua') filteredUnit = filteredUnit.filter(c => String(c.tahun) === String(filterCascadingTahun));
-            let filteredUnitTable = isKaUnit ? filteredUnit.filter(c => c.unit === currentUser.unit) : filteredUnit;
+            let filteredUnitTable = (isKaUnit ? filteredUnit.filter(c => c.unit === currentUser.unit) : filteredUnit).filter(c => !c.isSupport);
 
             const canMigrate = (isAdmin || isDirektur || isKetuaTim || isKaUnit) && !isPureViewer();
 
@@ -5175,7 +5175,7 @@ let dashboardChartInstances = {};
                                     <i class="fa-solid ${toggleCascLevel1 ? 'fa-eye-slash' : 'fa-eye'}"></i>
                                     <span>${toggleCascLevel1 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
                                 </button>
-                                                                ${(isKetuaTim || isAdmin) && !isPureViewer() ? `<button onclick="openIndikatorSupportModal('Level1')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1"><i class="fa-solid fa-plus mr-1"></i><span>Tambah Indikator Support</span></button>` : ''}
+                        
                                 ${(isDirektur || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingDirModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1"><i class="fa-solid fa-plus mr-1"></i><span>Tambah Cascading Direktur</span></button>` : ''}
                             </div>
                         </div>
@@ -5221,7 +5221,93 @@ let dashboardChartInstances = {};
                             </table>
                         </div>
                     </div>
-
+                    <!-- ============================================ -->
+<!-- BAGIAN 1.5 / TIER 5.5: INDIKATOR TAMBAHAN TIM KERJA -->
+<!-- ============================================ -->
+<div class="bg-amber-50 rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
+    <div class="p-6 border-b border-amber-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h3 class="font-bold text-amber-900 text-base">
+                <i class="fa-solid fa-plus-circle mr-2 text-amber-600"></i>
+                Tier 5.5 — Indikator Tambahan Tim Kerja
+            </h3>
+            <p class="text-xs text-amber-700">
+                Indikator tambahan yang diajukan Ketua Tim untuk melengkapi Tier 5.
+                Disimpan sebagai metrik pendukung — <strong>tidak masuk Dashboard Utama</strong>.
+                Wajib divalidasi oleh <strong>Direktur</strong> sebelum aktif.
+            </p>
+        </div>
+        ${currentUser.role === 'tim_kerja' && !isPureViewer() ? `
+            <button onclick="openIndikatorSupportModal('Level1')" class="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs shadow-md flex items-center space-x-2 shrink-0">
+                <i class="fa-solid fa-plus"></i><span>Tambah Indikator Tambahan Tim</span>
+            </button>
+        ` : ''}
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-amber-100 text-amber-900 font-semibold border-b border-amber-200">
+                <tr>
+                    <th class="p-3">Induk (Tier 5)</th>
+                    <th class="p-3">Indikator Tambahan</th>
+                    <th class="p-3 text-center">Target</th>
+                    <th class="p-3 text-center">Satuan</th>
+                    <th class="p-3">Tim Kerja</th>
+                    <th class="p-3 text-center">Status Validasi</th>
+                    <th class="p-3 text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-amber-100">
+                ${(() => {
+                    const list = (DB.cascadingTim || []).filter(ct => {
+                        if (!ct.isSupport) return false;
+                        if (filterCascadingTahun !== 'Semua' && String(ct.tahun || '2025') !== String(filterCascadingTahun)) return false;
+                        if (currentUser.role === 'tim_kerja') return ct.timKey === currentUser.timKey;
+                        if (currentUser.role === 'admin') return true;
+                        if (currentUser.role === 'direktur') return true; // Direktur bisa lihat semua untuk validasi
+                        return false;
+                    });
+                    if (list.length === 0) {
+                        return '<tr><td colspan="7" class="p-6 text-center text-amber-600 italic">Belum ada indikator tambahan Tim Kerja pada periode ini.</td></tr>';
+                    }
+                    return list.map(ct => {
+                        const parent = (DB.cascadingDirektur || []).find(cd => cd.id === ct.parentDirId);
+                        const status = ct.validationStatus || 'Menunggu Validasi Direktur';
+                        const statusCls = status === 'Disetujui' ? 'bg-emerald-100 text-emerald-800'
+                                       : status === 'Ditolak'   ? 'bg-rose-100 text-rose-800'
+                                       : 'bg-amber-100 text-amber-800';
+                        const canValidate = (currentUser.role === 'direktur' || currentUser.role === 'admin') && !isPureViewer() && status === 'Menunggu Validasi Direktur';
+                        const canDelete = (currentUser.role === 'tim_kerja' && ct.timKey === currentUser.timKey && status !== 'Disetujui') || currentUser.role === 'admin';
+                        return `
+                            <tr class="hover:bg-amber-50/50 bg-white">
+                                <td class="p-3 font-semibold text-slate-700">${parent ? sanitizeHTML(parent.target) : '<span class="text-amber-500 italic">Induk tidak ditemukan</span>'}</td>
+                                <td class="p-3 font-bold text-amber-900">${sanitizeHTML(ct.targetDirektur)}</td>
+                                <td class="p-3 text-center font-bold text-amber-800">${ct.targetVal !== undefined ? ct.targetVal : 100}</td>
+                                <td class="p-3 text-center"><span class="px-2 py-0.5 bg-amber-100 rounded text-[11px] font-semibold">${ct.satuan || '%'}</span></td>
+                                <td class="p-3 font-semibold text-purple-700">${sanitizeHTML(ct.timKey || '-')}</td>
+                                <td class="p-3 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${statusCls}">${sanitizeHTML(status)}</span></td>
+                                <td class="p-3 text-center space-x-1">
+                                    ${canValidate ? `
+                                        <button onclick="openValidateSupportModal('${ct.id}', '5.5')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shadow-2xs">
+                                            <i class="fa-solid fa-check-to-slot mr-1"></i>Validasi
+                                        </button>
+                                    ` : ''}
+                                    ${canDelete ? `
+                                        <button onclick="deleteIndikatorSupport('${ct.id}')" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-[11px] font-bold">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    ` : ''}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                })()}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- ============================================ -->
+<!-- END TIER 5.5 -->
+<!-- ============================================ -->
                     <!-- Bagian 2: Cascading Ketua Tim Kerja ke Unit / Prodi (Level 2) -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -5235,7 +5321,7 @@ let dashboardChartInstances = {};
                                     <span>${toggleCascLevel2 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
                                 </button>
                                                             <div class="flex items-center space-x-2">
-                                ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openIndikatorSupportModal('Level2')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Indikator Support</span></button>` : ''}
+                                
                                 ${(isKetuaTim || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
                             </div>
                             </div>
@@ -5280,46 +5366,97 @@ let dashboardChartInstances = {};
                             </table>
                         </div>
                     </div>
-
-                    <!-- Tabel Daftar Indikator Support Level 2 (BARU) -->
-                    ${(isKaUnit || isKetuaTim || isAdmin) && !isPureViewer() ? `
-                    <div class="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden">
-                        <div class="p-4 bg-indigo-50 border-b border-indigo-200 flex justify-between items-center">
-                            <div>
-                                <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-list-check mr-2"></i>Daftar Indikator Support Tambahan (Level 2)</h3>
-                                <p class="text-[11px] text-indigo-700">Indikator ini tidak masuk Dashboard Utama.</p>
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-xs">
-                                <thead class="bg-slate-50 text-slate-700 font-semibold border-b">
-                                    <tr>
-                                        <th class="p-3">Nama Induk (Parent)</th>
-                                        <th class="p-3">Nama Indikator Tambahan</th>
-                                        <th class="p-3 text-center">Target / Satuan</th>
-                                        <th class="p-3 text-center">Status</th>
-                                        <th class="p-3 text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">
-                                    ${(DB.indikatorTambahan || []).filter(i => i.level === 'Level2' && (i.ownerUsername === currentUser.username || isAdmin)).map(ind => `
-                                        <tr class="hover:bg-slate-50">
-                                            <td class="p-3 font-semibold text-slate-700">${sanitizeHTML(ind.parentName)}</td>
-                                            <td class="p-3 font-bold text-indigo-800">${sanitizeHTML(ind.namaIndikator)}</td>
-                                            <td class="p-3 text-center font-bold">${ind.target} ${ind.satuan}</td>
-                                            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold text-[10px]">Support - Tambahan</span></td>
-                                            <td class="p-3 text-center">
-                                                <button onclick="deleteIndikatorSupport('${ind.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg font-bold hover:bg-rose-200"><i class="fa-solid fa-trash"></i> Hapus</button>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                    ${(DB.indikatorTambahan || []).filter(i => i.level === 'Level2' && (i.ownerUsername === currentUser.username || isAdmin)).length === 0 ? '<tr><td colspan="5" class="p-4 text-center text-slate-400 italic">Belum ada indikator support tambahan.</td></tr>' : ''}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    ` : ''}
-
+<!-- ============================================ -->
+<!-- BAGIAN 2.5 / TIER 6.5: INDIKATOR TAMBAHAN UNIT -->
+<!-- ============================================ -->
+<div class="bg-sky-50 rounded-2xl shadow-sm border border-sky-200 overflow-hidden">
+    <div class="p-6 border-b border-sky-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h3 class="font-bold text-sky-900 text-base">
+                <i class="fa-solid fa-plus-circle mr-2 text-sky-600"></i>
+                Tier 6.5 — Indikator Tambahan Unit / Prodi / Subbag
+            </h3>
+            <p class="text-xs text-sky-700">
+                Indikator tambahan yang diajukan Ketua Unit untuk melengkapi Tier 6.
+                Wajib divalidasi oleh <strong>Ketua Tim Kerja</strong> sebelum aktif.
+            </p>
+        </div>
+        ${(currentUser.role === 'ketua_unit' || currentUser.role === 'admin') && !isPureViewer() ? `
+            <button onclick="openIndikatorSupportModal('Level2')" class="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-xs shadow-md flex items-center space-x-2 shrink-0">
+                <i class="fa-solid fa-plus"></i><span>Tambah Indikator Tambahan Unit</span>
+            </button>
+        ` : ''}
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-sky-100 text-sky-900 font-semibold border-b border-sky-200">
+                <tr>
+                    <th class="p-3">Induk (Tier 6)</th>
+                    <th class="p-3">Indikator Tambahan</th>
+                    <th class="p-3">Unit / Prodi</th>
+                    <th class="p-3 text-center">Target</th>
+                    <th class="p-3 text-center">Satuan</th>
+                    <th class="p-3 text-center">Status Validasi</th>
+                    <th class="p-3 text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-sky-100">
+                ${(() => {
+                    const list = (DB.cascadingUnit || []).filter(cu => {
+                        if (!cu.isSupport) return false;
+                        if (filterCascadingTahun !== 'Semua' && String(cu.tahun || '2025') !== String(filterCascadingTahun)) return false;
+                        if (currentUser.role === 'ketua_unit') return cu.unit === currentUser.unit;
+                        if (currentUser.role === 'tim_kerja') {
+                            const parent = (DB.cascadingTim || []).find(ct => ct.id === cu.parentTimId);
+                            return parent && parent.timKey === currentUser.timKey;
+                        }
+                        if (currentUser.role === 'admin') return true;
+                        return false;
+                    });
+                    if (list.length === 0) {
+                        return '<tr><td colspan="7" class="p-6 text-center text-sky-600 italic">Belum ada indikator tambahan Unit pada periode ini.</td></tr>';
+                    }
+                    return list.map(cu => {
+                        const parent = (DB.cascadingTim || []).find(ct => ct.id === cu.parentTimId);
+                        const status = cu.validationStatus || 'Menunggu Validasi Ketua Tim';
+                        const statusCls = status === 'Disetujui' ? 'bg-emerald-100 text-emerald-800'
+                                       : status === 'Ditolak'   ? 'bg-rose-100 text-rose-800'
+                                       : 'bg-amber-100 text-amber-800';
+                        // Ketua Tim yang berhak validasi adalah pemilik parent Tier 6
+                        const isMyTimParent = parent && currentUser.role === 'tim_kerja' && parent.timKey === currentUser.timKey;
+                        const canValidate = ((currentUser.role === 'tim_kerja' && isMyTimParent) || currentUser.role === 'admin') && !isPureViewer() && status === 'Menunggu Validasi Ketua Tim';
+                        const canDelete = (currentUser.role === 'ketua_unit' && cu.unit === currentUser.unit && status !== 'Disetujui') || currentUser.role === 'admin';
+                        return `
+                            <tr class="hover:bg-sky-50/50 bg-white">
+                                <td class="p-3 font-semibold text-slate-700">${parent ? sanitizeHTML(parent.targetDirektur) : '<span class="text-sky-500 italic">Induk tidak ditemukan</span>'}</td>
+                                <td class="p-3 font-bold text-sky-900">${sanitizeHTML(cu.targetDirektur)}</td>
+                                <td class="p-3 font-semibold text-sky-700">${sanitizeHTML(cu.unit || '-')}</td>
+                                <td class="p-3 text-center font-bold text-sky-800">${cu.targetVal !== undefined ? cu.targetVal : 100}</td>
+                                <td class="p-3 text-center"><span class="px-2 py-0.5 bg-sky-100 rounded text-[11px] font-semibold">${cu.satuan || '%'}</span></td>
+                                <td class="p-3 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${statusCls}">${sanitizeHTML(status)}</span></td>
+                                <td class="p-3 text-center space-x-1">
+                                    ${canValidate ? `
+                                        <button onclick="openValidateSupportModal('${cu.id}', '6.5')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shadow-2xs">
+                                            <i class="fa-solid fa-check-to-slot mr-1"></i>Validasi
+                                        </button>
+                                    ` : ''}
+                                    ${canDelete ? `
+                                        <button onclick="deleteIndikatorSupport('${cu.id}')" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-[11px] font-bold">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    ` : ''}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                })()}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- ============================================ -->
+<!-- END TIER 6.5 -->
+<!-- ============================================ -->
                     <!-- Bagian 3: Cascading Ketua Unit/Prodi/Subbag ke Sekretaris/Kalab/Koordinator/Dosen/Tendik (Level 3 - Fase 2 Poin 8) -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -5333,7 +5470,7 @@ let dashboardChartInstances = {};
                                     <span>${toggleCascLevel3 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
                                 </button>
                                                             <div class="flex items-center space-x-2">
-                                ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openIndikatorSupportModal('Level3')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Indikator Support</span></button>` : ''}
+                            
                                 ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingUnitModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Staf/Dosen</span></button>` : ''}
                             </div>
                             </div>
@@ -5436,7 +5573,7 @@ let dashboardChartInstances = {};
                                             </label>
                                             <select id="timRole_${idx}" data-tim="${t}" onchange="handleTimRoleChange(${idx})" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
                                                 <option value="Utama">★ Tim Utama (Inti)</option>
-                                                <option value="Support">🛡️ Tim Support (Pendukung)</option>
+                                                <option value="Support">🛡️ Tim Pendukung</option>
                                             </select>
                                         </div>
                                     `).join('')}
@@ -6247,7 +6384,7 @@ function toggleUnitRoleSelect(idx, isChecked) {
                     </label>
                     <select id="unitRole_${idx}" data-unit="${u}" onchange="handleUnitRoleChange(${idx})" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
                         <option value="Utama">★ Unit Utama (Inti)</option>
-                        <option value="Support">🛡️ Unit Support (Pendukung)</option>
+                        <option value="Support">🛡️ Unit Pendukung</option>
                     </select>
                 </div>
             `).join('');
@@ -6469,7 +6606,7 @@ async function saveCascadingTim(e) {
                     </label>
                     <select id="subUnitRole_${idx}" data-sub="${item.key}" disabled class="p-1.5 text-xs font-bold rounded-lg border bg-slate-100 text-slate-400 transition-all cursor-pointer">
                         <option value="Utama">★ Utama (Boleh >1)</option>
-                        <option value="Support">🛡️ Support</option>
+                        <option value="Support">🛡️ Pendukung</option>
                     </select>
                 </div>
             `).join('');
@@ -10594,63 +10731,185 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             }
         }
 
-        async function saveIndikatorSupport(e) {
-            e.preventDefault();
-            const level = document.getElementById('isLevel').value;
-            const parentId = document.getElementById('isParentInduk').value;
-            if (!parentId) { showToast('Pilih Induk Indikator terlebih dahulu!', 'error'); return; }
-            
-            const checkedRecipients = Array.from(document.querySelectorAll('input[name="isRecipientCheck"]:checked')).map(c => c.value);
-            if (checkedRecipients.length === 0) {
-                showToast('Pilih minimal 1 penerima!', 'error');
-                return;
-            }
+async function saveIndikatorSupport(e) {
+    e.preventDefault();
+    const level = document.getElementById('isLevel').value;
+    const parentId = document.getElementById('isParentInduk').value;
+    if (!parentId) { showToast('Pilih Induk Indikator terlebih dahulu!', 'error'); return; }
 
-            const nama = document.getElementById('isNama').value.trim();
-            const target = parseFloat(document.getElementById('isTarget').value);
-            const satuan = document.getElementById('isSatuan').value.trim();
-            const rkTidak = document.getElementById('isRangeTidak').value.trim();
-            const rkMencapai = document.getElementById('isRangeMencapai').value.trim();
-            const rkMelebihi = document.getElementById('isRangeMelebihi').value.trim();
+    const checkedRecipients = Array.from(document.querySelectorAll('input[name="isRecipientCheck"]:checked')).map(c => c.value);
+    if (checkedRecipients.length === 0) {
+        showToast('Pilih minimal 1 penerima!', 'error');
+        return;
+    }
 
-            if (level === 'Level1') {
-                DB.cascadingTim.push({
-                    id: 'ct_sup_' + Date.now(),
-                    parentDirId: parentId,
-                    isSupport: true,
-                    tahun: '2025',
-                    targetDirektur: nama,
-                    timKey: currentUser.timKey,
-                    unitTargets: checkedRecipients,
-                    unitRoles: checkedRecipients.reduce((acc, u) => ({...acc, [u]: 'Support'}), {}),
-                    targetVal: target,
-                    satuan: satuan,
-                    rangeKinerja: { tidakMencapai: rkTidak, mencapai: rkMencapai, melebihi: rkMelebihi }
-                });
-            } else {
-                DB.cascadingUnit.push({
-                    id: 'cu_sup_' + Date.now(),
-                    parentTimId: parentId,
-                    isSupport: true,
-                    tahun: '2025',
-                    targetDirektur: nama,
-                    unit: currentUser.unit,
-                    subTargets: checkedRecipients,
-                    subRoles: checkedRecipients.reduce((acc, u) => ({...acc, [u]: 'Support'}), {}),
-                    targetVal: target,
-                    satuan: satuan,
-                    rangeKinerja: { tidakMencapai: rkTidak, mencapai: rkMencapai, melebihi: rkMelebihi }
-                });
-            }
+    const nama = document.getElementById('isNama').value.trim();
+    const target = parseFloat(document.getElementById('isTarget').value);
+    const satuan = document.getElementById('isSatuan').value.trim();
+    const rkTidak = document.getElementById('isRangeTidak').value.trim();
+    const rkMencapai = document.getElementById('isRangeMencapai').value.trim();
+    const rkMelebihi = document.getElementById('isRangeMelebihi').value.trim();
 
-            await saveToMySQL();
-            closeIndikatorSupportModal();
-            showToast('Indikator Support berhasil ditambahkan!');
-            renderCascadingView(document.getElementById('mainContent'));
-        }
+    // Default validationStatus per tier
+    if (level === 'Level1') {
+        // TIER 5.5 — Indikator Tambahan Tim Kerja (disimpan di cascadingTim)
+        DB.cascadingTim.push({
+            id: 'ct_sup_' + Date.now(),
+            parentDirId: parentId,
+            isSupport: true,
+            tier: '5.5',
+            tahun: (typeof filterCascadingTahun !== 'undefined' && filterCascadingTahun !== 'Semua') ? filterCascadingTahun : '2025',
+            targetDirektur: nama,
+            timKey: currentUser.timKey,
+            unitTargets: checkedRecipients,
+            unitRoles: checkedRecipients.reduce((acc, u) => ({...acc, [u]: 'Support'}), {}),
+            targetVal: target,
+            satuan: satuan,
+            rangeKinerja: { tidakMencapai: rkTidak, mencapai: rkMencapai, melebihi: rkMelebihi },
+            validationStatus: 'Menunggu Validasi Direktur',
+            createdBy: currentUser.name,
+            createdAt: new Date().toISOString()
+        });
+        showToast('Indikator Tambahan Tim berhasil diajukan. Menunggu validasi Direktur.');
+    } else {
+        // TIER 6.5 — Indikator Tambahan Unit (disimpan di cascadingUnit)
+        DB.cascadingUnit.push({
+            id: 'cu_sup_' + Date.now(),
+            parentTimId: parentId,
+            isSupport: true,
+            tier: '6.5',
+            tahun: (typeof filterCascadingTahun !== 'undefined' && filterCascadingTahun !== 'Semua') ? filterCascadingTahun : '2025',
+            targetDirektur: nama,
+            unit: currentUser.unit,
+            subTargets: checkedRecipients,
+            subRoles: checkedRecipients.reduce((acc, u) => ({...acc, [u]: 'Support'}), {}),
+            targetVal: target,
+            satuan: satuan,
+            rangeKinerja: { tidakMencapai: rkTidak, mencapai: rkMencapai, melebihi: rkMelebihi },
+            validationStatus: 'Menunggu Validasi Ketua Tim',
+            createdBy: currentUser.name,
+            createdAt: new Date().toISOString()
+        });
+        showToast('Indikator Tambahan Unit berhasil diajukan. Menunggu validasi Ketua Tim Kerja.');
+    }
+
+    await saveToMySQL();
+    closeIndikatorSupportModal();
+    renderCascadingView(document.getElementById('mainContent'));
+}
+        // =========================================================================
+// FUNGSI VALIDASI HYBRID UNTUK INDIKATOR TAMBAHAN (TIER 5.5 & 6.5)
+// =========================================================================
+function openValidateSupportModal(id, tier) {
+    let item = null;
+    if (tier === '5.5') item = (DB.cascadingTim || []).find(x => x.id === id);
+    else if (tier === '6.5') item = (DB.cascadingUnit || []).find(x => x.id === id);
+    if (!item) { showToast('Data indikator tidak ditemukan!', 'error'); return; }
+
+    // Buat modal inline (tidak butuh HTML statis)
+    let existing = document.getElementById('validateSupportModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'validateSupportModal';
+    modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-100">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-900 text-base">
+                    <i class="fa-solid fa-check-to-slot text-emerald-600 mr-2"></i>
+                    Validasi Indikator Tambahan (Tier ${tier})
+                </h3>
+                <button type="button" onclick="document.getElementById('validateSupportModal').remove()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border text-xs space-y-1.5">
+                <div><span class="text-slate-500">Indikator:</span> <strong class="text-slate-900">${sanitizeHTML(item.targetDirektur)}</strong></div>
+                <div><span class="text-slate-500">Target:</span> <strong class="text-primary-700">${item.targetVal} ${item.satuan || '%'}</strong></div>
+                <div><span class="text-slate-500">Diajukan oleh:</span> <strong>${sanitizeHTML(item.createdBy || '-')}</strong></div>
+            </div>
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">Keputusan Validasi</label>
+                <select id="vsDecision" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs">
+                    <option value="Disetujui" class="text-emerald-700">✅ Setujui (Indikator Aktif)</option>
+                    <option value="Ditolak" class="text-rose-700">❌ Tolak (Indikator Tidak Aktif)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">Catatan Validasi (Opsional)</label>
+                <textarea id="vsNote" rows="2" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Catatan / alasan..."></textarea>
+            </div>
+            <div class="flex justify-end space-x-2 pt-2 border-t">
+                <button type="button" onclick="document.getElementById('validateSupportModal').remove()" class="px-4 py-2 bg-slate-200 rounded-xl text-xs font-semibold">Batal</button>
+                <button type="button" onclick="submitValidateSupport('${id}', '${tier}')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow">
+                    Simpan Keputusan
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+async function submitValidateSupport(id, tier) {
+    const decision = document.getElementById('vsDecision').value;
+    const note = sanitizeHTML(document.getElementById('vsNote').value.trim());
+    let item = null;
+    if (tier === '5.5') item = (DB.cascadingTim || []).find(x => x.id === id);
+    else if (tier === '6.5') item = (DB.cascadingUnit || []).find(x => x.id === id);
+    if (!item) return;
+
+    item.validationStatus = decision;
+    item.validatedBy = currentUser.name;
+    item.validatedAt = new Date().toISOString();
+    item.validationNote = note;
+
+    recordAuditLog('Validasi Indikator Tambahan Tier ' + tier, 'Cascading',
+        `${currentUser.name} menetapkan status "${decision}" untuk indikator "${item.targetDirektur}"`);
+
+    await saveToMySQL();
+    const m = document.getElementById('validateSupportModal');
+    if (m) m.remove();
+    showToast(`Indikator Tambahan Tier ${tier} berhasil ${decision === 'Disetujui' ? 'disetujui' : 'ditolak'}.`, decision === 'Disetujui' ? 'success' : 'info');
+    renderCascadingView(document.getElementById('mainContent'));
+}
+
+async function deleteIndikatorSupport(id) {
+    if (currentUser.role !== 'admin' && isPureViewer()) return;
+    const inTim = (DB.cascadingTim || []).find(x => x.id === id && x.isSupport);
+    const inUnit = (DB.cascadingUnit || []).find(x => x.id === id && x.isSupport);
+    const item = inTim || inUnit;
+    if (!item) { showToast('Indikator tambahan tidak ditemukan!', 'error'); return; }
+    if (item.validationStatus === 'Disetujui' && currentUser.role !== 'admin') {
+        showToast('Indikator yang sudah disetujui tidak dapat dihapus. Hubungi Admin.', 'error');
+        return;
+    }
+    if (!confirm(`Hapus indikator tambahan "${item.targetDirektur}"?`)) return;
+
+    if (inTim) DB.cascadingTim = DB.cascadingTim.filter(x => x.id !== id);
+    if (inUnit) DB.cascadingUnit = DB.cascadingUnit.filter(x => x.id !== id);
+
+    recordAuditLog('Hapus Indikator Tambahan', 'Cascading', `Menghapus indikator "${item.targetDirektur}" (Tier ${item.tier || '?'})`);
+    await saveToMySQL();
+    showToast('Indikator tambahan berhasil dihapus.', 'info');
+    renderCascadingView(document.getElementById('mainContent'));
+}
 
         window.onload = async function() {
             await loadDataFromMySQL();
+            // MIGRASI DATA LAMA: Set default validationStatus untuk support indicators lama
+(DB.cascadingTim || []).forEach(ct => {
+    if (ct.isSupport && !ct.validationStatus) {
+        ct.validationStatus = 'Disetujui'; // anggap disetujui untuk data lama
+        ct.tier = '5.5';
+    }
+});
+(DB.cascadingUnit || []).forEach(cu => {
+    if (cu.isSupport && !cu.validationStatus) {
+        cu.validationStatus = 'Disetujui';
+        cu.tier = '6.5';
+    }
+});
             const savedUser = localStorage.getItem('ki_jaro_user');
             const lastActive = parseInt(localStorage.getItem('ki_jaro_last_active') || '0', 10);
 
