@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ki-Jaro - Kinerja-Jawara-Petro (Sistem Informasi Kinerja & Manajemen Risiko)</title>
+    <title>Ki-Jaro - Kinerja-Jawara-Petro (Sistem Informasi Kinerja & Manajemen Risiko PIPB)</title>
+    <link id="dynamicFavicon" rel="icon" href="logo_poltek-removebg-preview.png" type="image/png">
     <!-- Google Analytics (GA4) - Fase 1 Poin 7 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KIJARO2026"></script>
     <script>
@@ -458,7 +459,7 @@ button { position: relative; z-index: 10; }
 
                             <div class="p-4 bg-slate-50 rounded-2xl border space-y-3">
                                 <label class="block font-bold text-slate-800 text-sm">2. Gambar Utama Halaman Depan (Hero Landing Page)</label>
-                                <div class="flex flex-col sm:flex-row items-center gap-4">
+                                                                <div class="flex flex-col sm:flex-row items-center gap-4">
                                     <div class="w-44 h-28 rounded-2xl bg-white border overflow-hidden flex items-center justify-center shadow-2xs shrink-0">
                                         <img id="previewSettingHero" src="${DB.siteSettings.heroImageUrl}" alt="Hero Preview" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/f8fafc/2563eb?text=Hero+Image'">
                                     </div>
@@ -470,7 +471,22 @@ button { position: relative; z-index: 10; }
                                         <input type="text" id="settingHeroInput" value="${sanitizeHTML(DB.siteSettings.heroImageUrl)}" oninput="document.getElementById('previewSettingHero').src = this.value" class="w-full p-2.5 bg-white border rounded-xl font-mono text-[11px]" placeholder="Atau tempel URL / Nama File Gambar Depan...">
                                     </div>
                                 </div>
-                            </div>
+
+                                <div class="p-4 bg-slate-50 rounded-2xl border space-y-3">
+                                    <label class="block font-bold text-slate-800 text-sm">3. Logo Tab Browser (Favicon)</label>
+                                    <div class="flex flex-col sm:flex-row items-center gap-4">
+                                        <div class="w-16 h-16 rounded-xl bg-white border p-1 flex items-center justify-center shadow-2xs shrink-0">
+                                            <img id="previewSettingFavicon" src="${DB.siteSettings.faviconUrl || 'logo_poltek-removebg-preview.png'}" alt="Favicon Preview" class="max-h-full max-w-full object-contain" onerror="this.src='https://placehold.co/40x40/2563eb/ffffff?text=Icon'">
+                                        </div>
+                                        <div class="flex-1 space-y-2 w-full">
+                                            <label class="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl cursor-pointer shadow-xs">
+                                                <i class="fa-solid fa-upload mr-1.5"></i> Upload File Favicon
+                                                <input type="file" accept="image/*" class="hidden" onchange="handleSettingImageUpload(event, 'settingFaviconInput', 'previewSettingFavicon')">
+                                            </label>
+                                            <input type="text" id="settingFaviconInput" value="${sanitizeHTML(DB.siteSettings.faviconUrl || 'logo_poltek-removebg-preview.png')}" oninput="document.getElementById('previewSettingFavicon').src = this.value" class="w-full p-2.5 bg-white border rounded-xl font-mono text-[11px]" placeholder="Atau tempel URL / Nama File Favicon...">
+                                        </div>
+                                    </div>
+                                </div>
 
                             <div class="flex justify-end space-x-3 pt-2 border-t">
                                 <button type="button" onclick="resetDefaultSiteImages()" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl">Kembalikan Default</button>
@@ -505,8 +521,13 @@ button { position: relative; z-index: 10; }
             if (!requireWriteAccess(['admin'])) return;
             DB.siteSettings = {
                 logoUrl: document.getElementById('settingLogoInput').value.trim() || 'logo_poltek-removebg-preview.png',
-                heroImageUrl: document.getElementById('settingHeroInput').value.trim() || 'gambar tampilan depan.jpeg'
+                heroImageUrl: document.getElementById('settingHeroInput').value.trim() || 'gambar tampilan depan.jpeg',
+                faviconUrl: document.getElementById('settingFaviconInput').value.trim() || 'logo_poltek-removebg-preview.png'
             };
+            if (document.getElementById('dynamicFavicon')) {
+                document.getElementById('dynamicFavicon').href = DB.siteSettings.faviconUrl;
+            }
+            recordAuditLog('Update Setting Gambar & Logo', 'Setting Admin', 'Admin memperbarui Logo / Gambar Halaman Depan / Favicon');
             recordAuditLog('Update Setting Gambar & Logo', 'Setting Admin', 'Admin memperbarui Logo / Gambar Halaman Depan');
             await saveToMySQL();
             showToast('Logo dan Gambar Halaman Depan berhasil diperbarui!');
@@ -514,10 +535,14 @@ button { position: relative; z-index: 10; }
         }
 
         async function resetDefaultSiteImages() {
-            DB.siteSettings = {
+                        DB.siteSettings = {
                 logoUrl: 'logo_poltek-removebg-preview.png',
-                heroImageUrl: 'gambar tampilan depan.jpeg'
+                heroImageUrl: 'gambar tampilan depan.jpeg',
+                faviconUrl: 'logo_poltek-removebg-preview.png'
             };
+            if (document.getElementById('dynamicFavicon')) {
+                document.getElementById('dynamicFavicon').href = DB.siteSettings.faviconUrl;
+            }
             await saveToMySQL();
             showToast('Gambar dan Logo dikembalikan ke bawaan awal.');
             renderDashboardLayout();
@@ -844,8 +869,10 @@ button { position: relative; z-index: 10; }
         // Helper Cek apakah Capaian berhak masuk ke Dashboard Kinerja Utama (Wajib Valid + Status Utama)
 function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             if (!capaianItem) return false;
-            // 1. Wajib berstatus 'Valid' (Jika diubah ke 'Tidak Valid', otomatis return false / dihapus dari dashboard)
+             // 1. Wajib berstatus 'Valid' (Jika diubah ke 'Tidak Valid', otomatis return false / dihapus dari dashboard)
             if (String(capaianItem.status || '').trim() !== 'Valid') return false;
+            // 1b. Jika merupakan indikator tambahan (Support), jangan pernah masuk Dashboard Utama
+            if (capaianItem.isSupport) return false;
 
             const tahun = String(capaianItem.tahun || '2025').trim();
             const targetName = String(capaianItem.targetDirektur || '').trim().toLowerCase();
@@ -969,7 +996,7 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             cascadingDirektur: [],       
             cascadingTim: [],            
             cascadingUnit: [],           
-            capaian: [],                 
+            capaian: [],          
             risiko: [],                  
             realisasiAnggaranAdmin: [],  
             monevLakip: [],              // Fase 3 Poin 13
@@ -989,7 +1016,8 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             spreadsheetUrl: "https://docs.google.com/spreadsheets/d/1qR_zS0ZUNKW5EU2oFGCVoGBxn7m2zh5c2Cf3cP2MveA/edit?usp=sharing",
             siteSettings: {
                 logoUrl: "logo_poltek-removebg-preview.png",
-                heroImageUrl: "gambar tampilan depan.jpeg"
+                heroImageUrl: "gambar tampilan depan.jpeg",
+                faviconUrl: "logo_poltek-removebg-preview.png"
             }
         };
 
@@ -5147,6 +5175,7 @@ let dashboardChartInstances = {};
                                     <i class="fa-solid ${toggleCascLevel1 ? 'fa-eye-slash' : 'fa-eye'}"></i>
                                     <span>${toggleCascLevel1 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
                                 </button>
+                                                                ${(isKetuaTim || isAdmin) && !isPureViewer() ? `<button onclick="openIndikatorSupportModal('Level1')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1"><i class="fa-solid fa-plus mr-1"></i><span>Tambah Indikator Support</span></button>` : ''}
                                 ${(isDirektur || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingDirModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1"><i class="fa-solid fa-plus mr-1"></i><span>Tambah Cascading Direktur</span></button>` : ''}
                             </div>
                         </div>
@@ -5205,7 +5234,10 @@ let dashboardChartInstances = {};
                                     <i class="fa-solid ${toggleCascLevel2 ? 'fa-eye-slash' : 'fa-eye'}"></i>
                                     <span>${toggleCascLevel2 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
                                 </button>
+                                                            <div class="flex items-center space-x-2">
+                                ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openIndikatorSupportModal('Level2')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Indikator Support</span></button>` : ''}
                                 ${(isKetuaTim || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
+                            </div>
                             </div>
                         </div>
                         <div class="${toggleCascLevel2 ? '' : 'hidden'} overflow-x-auto">
@@ -5224,7 +5256,10 @@ let dashboardChartInstances = {};
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
-                                            <td class="p-4 font-semibold text-slate-900">${c.targetDirektur}</td>
+                                                                                        <td class="p-4 font-semibold text-slate-900">
+                                                ${c.targetDirektur}
+                                                ${c.isSupport ? '<span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded-full">Support Tambahan</span>' : ''}
+                                            </td>
                                             <td class="p-4">
                                                 <div class="flex flex-wrap gap-1.5">
                                                     ${c.unitTargets.map(u => {
@@ -5241,10 +5276,49 @@ let dashboardChartInstances = {};
                                             ` : ''}
                                         </tr>
                                     `).join('')}
+                                                               </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Daftar Indikator Support Level 2 (BARU) -->
+                    ${(isKaUnit || isKetuaTim || isAdmin) && !isPureViewer() ? `
+                    <div class="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden">
+                        <div class="p-4 bg-indigo-50 border-b border-indigo-200 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-list-check mr-2"></i>Daftar Indikator Support Tambahan (Level 2)</h3>
+                                <p class="text-[11px] text-indigo-700">Indikator ini tidak masuk Dashboard Utama.</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead class="bg-slate-50 text-slate-700 font-semibold border-b">
+                                    <tr>
+                                        <th class="p-3">Nama Induk (Parent)</th>
+                                        <th class="p-3">Nama Indikator Tambahan</th>
+                                        <th class="p-3 text-center">Target / Satuan</th>
+                                        <th class="p-3 text-center">Status</th>
+                                        <th class="p-3 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    ${(DB.indikatorTambahan || []).filter(i => i.level === 'Level2' && (i.ownerUsername === currentUser.username || isAdmin)).map(ind => `
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-3 font-semibold text-slate-700">${sanitizeHTML(ind.parentName)}</td>
+                                            <td class="p-3 font-bold text-indigo-800">${sanitizeHTML(ind.namaIndikator)}</td>
+                                            <td class="p-3 text-center font-bold">${ind.target} ${ind.satuan}</td>
+                                            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold text-[10px]">Support - Tambahan</span></td>
+                                            <td class="p-3 text-center">
+                                                <button onclick="deleteIndikatorSupport('${ind.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg font-bold hover:bg-rose-200"><i class="fa-solid fa-trash"></i> Hapus</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                    ${(DB.indikatorTambahan || []).filter(i => i.level === 'Level2' && (i.ownerUsername === currentUser.username || isAdmin)).length === 0 ? '<tr><td colspan="5" class="p-4 text-center text-slate-400 italic">Belum ada indikator support tambahan.</td></tr>' : ''}
                                 </tbody>
                             </table>
                         </div>
                     </div>
+                    ` : ''}
 
                     <!-- Bagian 3: Cascading Ketua Unit/Prodi/Subbag ke Sekretaris/Kalab/Koordinator/Dosen/Tendik (Level 3 - Fase 2 Poin 8) -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -5258,7 +5332,10 @@ let dashboardChartInstances = {};
                                     <i class="fa-solid ${toggleCascLevel3 ? 'fa-eye-slash' : 'fa-eye'}"></i>
                                     <span>${toggleCascLevel3 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
                                 </button>
+                                                            <div class="flex items-center space-x-2">
+                                ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openIndikatorSupportModal('Level3')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Indikator Support</span></button>` : ''}
                                 ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingUnitModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Staf/Dosen</span></button>` : ''}
+                            </div>
                             </div>
                         </div>
                         <div class="${toggleCascLevel3 ? '' : 'hidden'} overflow-x-auto">
@@ -5278,7 +5355,10 @@ let dashboardChartInstances = {};
                                         <tr class="hover:bg-slate-50 transition-all">
                                             <td class="p-4"><span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-full">${sanitizeHTML(cu.unit)}</span></td>
                                             <td class="p-4 font-bold text-primary-700">${cu.tahun || '2025'}</td>
-                                            <td class="p-4 font-semibold text-slate-900">${sanitizeHTML(cu.targetDirektur)}</td>
+                                                                                        <td class="p-4 font-semibold text-slate-900">
+                                                ${sanitizeHTML(cu.targetDirektur)}
+                                                ${cu.isSupport ? '<span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded-full">Support Tambahan</span>' : ''}
+                                            </td>
                                             <td class="p-4 text-center">
                                                 <span class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-xs font-bold uppercase">
                                                     ${cu.aggregationMode === 'akumulatif' ? '∑ Akumulatif' : 'x̄ Rata-rata'}
@@ -5455,6 +5535,56 @@ let dashboardChartInstances = {};
                             <div class="flex justify-end space-x-3 pt-2 border-t">
                                 <button type="button" onclick="closeCascadingUnitModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
                                 <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-md text-xs">Simpan Cascading Level 3</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                               <!-- Modal Tambah Indikator Support (BARU) -->
+                <div id="indikatorSupportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[80] p-4 overflow-y-auto">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">Tambah Indikator Support</h3>
+                                <p class="text-[11px] text-slate-500">Indikator ini tidak akan masuk ke Dashboard Kinerja Utama.</p>
+                            </div>
+                            <button type="button" onclick="closeIndikatorSupportModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <form onsubmit="saveIndikatorSupport(event)" class="space-y-3.5 text-xs">
+                            <input type="hidden" id="isLevel" value="">
+                            <div>
+                                <label class="block font-bold mb-1">Pilih Induk Indikator (Dari Atasan)</label>
+                                <select id="isParentInduk" required class="w-full p-2.5 bg-slate-50 border rounded-xl font-semibold" onchange="handleIndukChange()"></select>
+                            </div>
+                            <div>
+                                <label class="block font-bold mb-1">Nama Indikator Tambahan</label>
+                                <input type="text" id="isNama" required class="w-full p-2.5 bg-slate-50 border rounded-xl" placeholder="Masukkan nama indikator...">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-bold mb-1">Target</label>
+                                    <input type="number" step="any" id="isTarget" required class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold">
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1">Satuan</label>
+                                    <input type="text" id="isSatuan" required class="w-full p-2.5 bg-slate-50 border rounded-xl">
+                                </div>
+                            </div>
+                            <div id="isStafContainer" class="hidden">
+                                <label class="block font-bold mb-1">Pilih Staf Penerima (Bisa >1)</label>
+                                <div id="isStafList" class="space-y-1.5 bg-slate-50 p-3 rounded-xl border max-h-32 overflow-y-auto text-xs"></div>
+                            </div>
+                            <div class="bg-blue-50 p-3 rounded-xl border border-blue-200 space-y-2">
+                                <label class="block font-bold text-blue-900 text-[10px]">Range Ekspektasi Kinerja (Acuan Penilaian)</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div><span class="text-[9px] font-bold text-rose-700 block">Tidak Mencapai</span><input type="text" id="isRangeTidak" required value="< 100%" class="w-full p-1.5 bg-white border rounded text-[11px]"></div>
+                                    <div><span class="text-[9px] font-bold text-emerald-700 block">Mencapai</span><input type="text" id="isRangeMencapai" required value="100%" class="w-full p-1.5 bg-white border rounded text-[11px]"></div>
+                                    <div><span class="text-[9px] font-bold text-blue-700 block">Melebihi</span><input type="text" id="isRangeMelebihi" required value="> 100%" class="w-full p-1.5 bg-white border rounded text-[11px]"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-2 pt-2 border-t">
+                                <button type="button" onclick="closeIndikatorSupportModal()" class="px-4 py-2 bg-slate-200 rounded-xl font-semibold">Batal</button>
+                                <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow">Simpan Indikator</button>
                             </div>
                         </form>
                     </div>
@@ -6153,14 +6283,26 @@ function toggleUnitRoleSelect(idx, isChecked) {
             });
         }
 
-        async function confirmDeleteCascadingTim(id) {
+                async function confirmDeleteCascadingTim(id) {
             const idx = DB.cascadingTim.findIndex(x => x.id === id);
             if (idx === -1) return;
             const item = DB.cascadingTim[idx];
-            if (confirm(`Apakah Anda yakin ingin menghapus cascading ke unit/prodi untuk indikator "${item.targetDirektur}" (Tahun ${item.tahun || '2025'})?`)) {
+
+            if (item.isSupport) {
+                const relatedCaps = (DB.capaian || []).filter(c => c.targetDirektur === item.targetDirektur && String(c.tahun) === String(item.tahun) && c.status === 'Valid');
+                if (relatedCaps.length > 0) {
+                    showToast('Tidak dapat menghapus! Indikator Support ini sudah memiliki capaian yang VALID.', 'error');
+                    return;
+                }
+            }
+
+            if (confirm(`Apakah Anda yakin ingin menghapus indikator "${item.targetDirektur}" (Tahun ${item.tahun || '2025'})?`)) {
+                if (item.isSupport) {
+                    DB.capaian = DB.capaian.filter(c => !(c.targetDirektur === item.targetDirektur && String(c.tahun) === String(item.tahun) && c.status !== 'Valid'));
+                }
                 DB.cascadingTim.splice(idx, 1);
                 await saveToMySQL();
-                showToast('Cascading Tim & Pohon Kinerja diperbarui.', 'info');
+                showToast('Indikator berhasil dihapus.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
         }
@@ -6509,14 +6651,27 @@ async function saveCascadingTim(e) {
             renderCascadingView(document.getElementById('mainContent'));
         }
 
-        async function confirmDeleteCascadingUnit(id) {
+                async function confirmDeleteCascadingUnit(id) {
             if (!requireWriteAccess(['ketua_unit', 'admin'])) return;
             const idx = (DB.cascadingUnit || []).findIndex(x => x.id === id);
             if (idx === -1) return;
-            if (confirm('Hapus cascading level 3 ini?')) {
+            const item = DB.cascadingUnit[idx];
+
+            if (item.isSupport) {
+                const relatedCaps = (DB.capaian || []).filter(c => c.targetDirektur === item.targetDirektur && c.unit === currentUser.unit && String(c.tahun) === String(item.tahun) && c.status === 'Valid');
+                if (relatedCaps.length > 0) {
+                    showToast('Tidak dapat menghapus! Indikator Support ini sudah memiliki capaian VALID dari staf.', 'error');
+                    return;
+                }
+            }
+
+            if (confirm('Hapus indikator ini?')) {
+                if (item.isSupport) {
+                    DB.capaian = DB.capaian.filter(c => !(c.targetDirektur === item.targetDirektur && String(c.tahun) === String(item.tahun) && c.status !== 'Valid'));
+                }
                 DB.cascadingUnit.splice(idx, 1);
                 await saveToMySQL();
-                showToast('Cascading Level 3 dihapus.', 'info');
+                showToast('Indikator dihapus.', 'info');
                 renderCascadingView(document.getElementById('mainContent'));
             }
         }
@@ -6667,15 +6822,15 @@ async function saveCascadingTim(e) {
             // 4. Batasi Baris Sesuai Pilihan (Default 5 Baris)
             const paginatedCapaian = displayCapaian.slice(0, Number(limitCapaianRows));
 
-            let availableCascadingForInput = [];
+                        let availableCascadingForInput = [];
             if (isKaUnit) {
                 availableCascadingForInput = (DB.cascadingTim || []).filter(ct => Array.isArray(ct.unitTargets) && ct.unitTargets.includes(currentUser.unit)).map(ct => {
                     const tahun = String(ct.tahun || '2025');
                     const dirObj = DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === ct.targetDirektur);
-                    const satuan = dirObj ? (dirObj.satuan || '%') : '%';
-                    const targetVal = dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100;
-                    const isUtama = dirObj ? (isTimUtamaInDir(dirObj, ct.timKey) && isUnitUtamaInTim(ct, currentUser.unit)) : isUnitUtamaInTim(ct, currentUser.unit);
-                    return { targetDirektur: ct.targetDirektur, tahun, satuan, targetVal, timKey: ct.timKey, isUtama };
+                    const satuan = ct.isSupport ? ct.satuan : (dirObj ? (dirObj.satuan || '%') : '%');
+                    const targetVal = ct.isSupport ? ct.targetVal : (dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100);
+                    const isUtama = ct.isSupport ? false : (dirObj ? (isTimUtamaInDir(dirObj, ct.timKey) && isUnitUtamaInTim(ct, currentUser.unit)) : isUnitUtamaInTim(ct, currentUser.unit));
+                    return { targetDirektur: ct.targetDirektur, tahun, satuan, targetVal, timKey: ct.timKey, isUtama, isSupport: ct.isSupport };
                 });
             } else if (isSubUnit) {
                 const myKeyRole = `${currentUser.role}_${currentUser.unit}`;
@@ -6685,14 +6840,13 @@ async function saveCascadingTim(e) {
                     const tahun = String(cu.tahun || '2025');
                     const dirObj = DB.cascadingDirektur.find(cd => cd.target === cu.targetDirektur && String(cd.tahun || '2025') === tahun) || DB.cascadingDirektur.find(cd => cd.target === cu.targetDirektur);
                     const ctObj = (DB.cascadingTim || []).find(ct => ct.targetDirektur === cu.targetDirektur && String(ct.tahun || '2025') === tahun && Array.isArray(ct.unitTargets) && ct.unitTargets.includes(currentUser.unit));
-                    const satuan = dirObj ? (dirObj.satuan || '%') : '%';
-                    const targetVal = dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100;
+                    const satuan = cu.isSupport ? cu.satuan : (dirObj ? (dirObj.satuan || '%') : '%');
+                    const targetVal = cu.isSupport ? cu.targetVal : (dirObj && dirObj.targetVal !== undefined ? dirObj.targetVal : 100);
                     const matchKey = cu.subTargets.includes(currentUser.username) ? currentUser.username : myKeyRole;
-                    const isUtama = isSubRoleUtamaInUnit(cu, matchKey);
-                    return { targetDirektur: cu.targetDirektur, tahun, satuan, targetVal, timKey: ctObj ? ctObj.timKey : (currentUser.timKey || 'Akademik'), isUtama };
+                    const isUtama = cu.isSupport ? false : isSubRoleUtamaInUnit(cu, matchKey);
+                    return { targetDirektur: cu.targetDirektur, tahun, satuan, targetVal, timKey: ctObj ? ctObj.timKey : (currentUser.timKey || 'Akademik'), isUtama, isSupport: cu.isSupport };
                 });
             }
-
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
                     <!-- Baris Filter & Limit Baris -->
@@ -6884,9 +7038,18 @@ async function saveCascadingTim(e) {
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Pilih Indikator Kinerja yang Diintervensi</label>
                                 <select id="inputIndikatorRef" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" onchange="updateSatuanAndTargetRef(this)">
-                                    ${availableCascadingForInput.map(item => `
-                                        <option value="${item.targetDirektur}" data-tahun="${item.tahun}" data-satuan="${item.satuan}" data-targetval="${item.targetVal}" data-timkey="${item.timKey}" data-isutama="${item.isUtama}">${item.targetDirektur} (Tahun: ${item.tahun} - ${item.isUtama ? 'Utama' : 'Support'})</option>
-                                    `).join('')}
+                                                                                                            ${availableCascadingForInput.map(item => {
+                                        let labelStatus = '';
+                                        if (item.isSupport) {
+                                            labelStatus = '(Support - Tambahan)';
+                                        } else if (item.isUtama) {
+                                            labelStatus = '(Utama - Utama)';
+                                        } else {
+                                            labelStatus = '(Support - Utama)';
+                                        }
+                                        return `
+                                        <option value="${item.targetDirektur}" data-tahun="${item.tahun}" data-satuan="${item.satuan}" data-targetval="${item.targetVal}" data-timkey="${item.timKey}" data-isutama="${item.isUtama}" data-issupport="${item.isSupport || false}">${item.targetDirektur} (Tahun: ${item.tahun} - ${labelStatus})</option>
+                                    `}).join('')}
                                 </select>
                                 <div class="p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs mt-2">
                                     <span class="font-semibold text-slate-700">Kategori Indikator:</span>
@@ -7124,9 +7287,9 @@ async function saveCapaian(e) {
             const selectedOpt = selectEl.options[selectEl.selectedIndex];
             const tahunRef = selectedOpt ? selectedOpt.getAttribute('data-tahun') : '2025';
             const timKeyRef = selectedOpt ? selectedOpt.getAttribute('data-timkey') : 'Akademik';
-            const isSubInput = SUB_UNIT_ROLES.includes(currentUser.role);
-
-            // VALIDASI ANTI-DUPLIKASI: Cegah input lebih dari 1 kali untuk Indikator + Triwulan + Tahun yang sama pada Unit/Penginput yang sama
+                        const isSubInput = SUB_UNIT_ROLES.includes(currentUser.role);
+            const isSupport = selectedOpt ? selectedOpt.getAttribute('data-issupport') === 'true' : false;
+    // VALIDASI ANTI-DUPLIKASI: Cegah input lebih dari 1 kali untuk Indikator + Triwulan + Tahun yang sama pada Unit/Penginput yang sama
             const isDuplicate = (DB.capaian || []).some(c => {
                 if (!c) return false;
                 // Jika sedang mode edit, abaikan dirinya sendiri
@@ -7177,10 +7340,11 @@ async function saveCapaian(e) {
                 }
                 showToast('Capaian kinerja berhasil diperbarui!');
             } else {
-                const newCapaian = {
+                                 const newCapaian = {
                     id: 'cp_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
                     unit: currentUser.unit,
                     timKey: timKeyRef,
+                    isSupport: isSupport, // GANTI isTambahan JADI isSupport
                     targetDirektur: targetDirRef,
                     tahun: tahunRef,
                     program: prog,
@@ -8923,6 +9087,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                             <th class="p-3 text-center">Periode</th>
                                             <th class="p-3 text-center">Status Validasi Tim Kerja</th>
                                             <th class="p-3 text-center">Aksi / Cetak</th>
+                                            ${isAdmin ? '<th class="p-3 text-center">Hapus</th>' : ''}
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
@@ -8939,13 +9104,17 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                                             ${statusText}
                                                         </span>
                                                     </td>
-                                                    <td class="p-3 text-center">
+                                                                                                        <td class="p-3 text-center">
                                                         ${allValid ? `
                                                             <button onclick="previewAndPrintLaporanKinerja('${req.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-xs">
                                                                 <i class="fa-solid fa-qrcode mr-1"></i>Lihat & Download PDF
                                                             </button>
                                                         ` : `<span class="text-[10px] text-slate-400 italic">Menunggu Validasi</span>`}
                                                     </td>
+                                                    ${isAdmin ? `
+                                                    <td class="p-3 text-center">
+                                                        <button onclick="deleteLaporanKinerja('${req.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg text-xs font-bold hover:bg-rose-200" title="Hapus Permanen"><i class="fa-solid fa-trash"></i></button>
+                                                    </td>` : ''}
                                                 </tr>
                                             `;
                                         }).join('')}
@@ -9003,6 +9172,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                             <th class="p-3 text-center">Periode</th>
                                             <th class="p-3 text-center">Penilaian & Status</th>
                                             <th class="p-3 text-center">Aksi / Cetak SKP</th>
+                                            ${isAdmin ? '<th class="p-3 text-center">Hapus</th>' : ''}
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
@@ -9034,12 +9204,16 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                                                 <i class="fa-solid fa-gavel mr-1"></i>Keputusan Direktur
                                                             </button>
                                                         ` : ''}
-                                                        ${skp.status === 'Disetujui' ? `
+                                                          ${skp.status === 'Disetujui' ? `
                                                             <button onclick="previewAndPrintSKP('${skp.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-xs block w-full">
                                                                 <i class="fa-solid fa-qrcode mr-1"></i>Cetak SKP (QR Hash)
                                                             </button>
                                                         ` : ''}
                                                     </td>
+                                                    ${isAdmin ? `
+                                                    <td class="p-3 text-center">
+                                                        <button onclick="deleteSKP('${skp.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg text-xs font-bold hover:bg-rose-200" title="Hapus Permanen"><i class="fa-solid fa-trash"></i></button>
+                                                    </td>` : ''}
                                                 </tr>
                                             `;
                                         }).join('')}
@@ -9277,6 +9451,26 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             `;
         }
 
+             async function deleteLaporanKinerja(id) {
+            if (!requireWriteAccess(['admin'])) return;
+            if (confirm('Hapus request Laporan Capaian Kinerja ini secara permanen?')) {
+                DB.approvalLaporan = (DB.approvalLaporan || []).filter(x => String(x.id) !== String(id));
+                await saveToMySQL();
+                showToast('Laporan Capaian Kinerja berhasil dihapus.', 'info');
+                renderLaporanView(document.getElementById('mainContent'));
+            }
+        }
+
+        async function deleteSKP(id) {
+            if (!requireWriteAccess(['admin'])) return;
+            if (confirm('Hapus request Laporan SKP ini secara permanen?')) {
+                DB.approvalSKP = (DB.approvalSKP || []).filter(x => String(x.id) !== String(id));
+                await saveToMySQL();
+                showToast('Laporan SKP berhasil dihapus.', 'info');
+                renderLaporanView(document.getElementById('mainContent'));
+            }
+        }
+
         function openRequestLaporanKinerjaModal() {
             const modal = document.getElementById('reqLapKinerjaModal');
             if (!modal) return;
@@ -9390,7 +9584,10 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                 <tr>
                                     <td class="p-2 border text-center">${i + 1}</td>
                                     <td class="p-2 border">${sanitizeHTML(c.unit)}</td>
-                                    <td class="p-2 border font-bold">${sanitizeHTML(c.targetDirektur)}</td>
+                                    <td class="p-2 border font-bold">
+                                        ${sanitizeHTML(c.targetDirektur)}
+                                        <span class="block text-[10px] font-normal text-slate-500 mt-0.5">${c.isSupport ? '(Support - Tambahan)' : 'Indikator Utama'}</span>
+                                    </td>
                                     <td class="p-2 border">${sanitizeHTML(c.program)}${c.uraianPekerjaan ? `<br><span class="text-[10px] text-slate-500">${sanitizeHTML(c.uraianPekerjaan)}</span>` : ''}</td>
                                     <td class="p-2 border text-center">${c.target} ${c.satuan || '%'}</td>
                                     <td class="p-2 border text-center font-bold text-emerald-700">${c.realisasi} ${c.satuan || '%'}</td>
@@ -10296,42 +10493,197 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 console.error("Gagal menyimpan ke MySQL:", e);
             }
         }
+                       function openIndikatorSupportModal(level) {
+            const modal = document.getElementById('indikatorSupportModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('isLevel').value = level;
+            document.getElementById('isNama').value = '';
+            document.getElementById('isTarget').value = '100';
+            document.getElementById('isSatuan').value = '%';
+
+            const parentSelect = document.getElementById('isParentInduk');
+            parentSelect.innerHTML = '<option value="">-- Memuat Induk... --</option>';
+
+            let options = [];
+            if (level === 'Level1') {
+                // Ketua Tim memilih induk dari Cascading Direktur
+                const dirCasc = DB.cascadingDirektur.filter(c => c.timKeys.includes(currentUser.timKey) && String(c.tahun || '2025') === '2025');
+                options = dirCasc.map(c => ({ id: c.id, text: `${c.target} (Target: ${c.targetVal} ${c.satuan})`, isUtama: isTimUtamaInDir(c, currentUser.timKey), target: c.targetVal, satuan: c.satuan, parentName: c.target }));
+            } else if (level === 'Level2' || level === 'Level3') {
+                // Ketua Unit memilih induk dari Cascading Tim
+                const timCasc = DB.cascadingTim.filter(c => c.unitTargets.includes(currentUser.unit) && String(c.tahun || '2025') === '2025');
+                options = timCasc.map(c => {
+                    const dirObj = DB.cascadingDirektur.find(d => d.target === c.targetDirektur && String(d.tahun || '2025') === '2025');
+                    return { id: c.id, text: `${c.targetDirektur} (Target: ${dirObj ? dirObj.targetVal : 100} ${dirObj ? dirObj.satuan : '%'})`, isUtama: isUnitUtamaInTim(c, currentUser.unit), target: dirObj ? dirObj.targetVal : 100, satuan: dirObj ? dirObj.satuan : '%', parentName: c.targetDirektur };
+                });
+            }
+
+            if (options.length === 0) {
+                parentSelect.innerHTML = '<option value="">Belum ada indikator induk yang tersedia.</option>';
+            } else {
+                parentSelect.innerHTML = options.map(o => `<option value="${o.id}" data-isutama="${o.isUtama}" data-target="${o.target}" data-satuan="${o.satuan}" data-parentname="${o.parentName}">${o.text}</option>`).join('');
+            }
+
+            // Render Recipient List based on level
+            const recipientCont = document.getElementById('isStafContainer');
+            const recipientList = document.getElementById('isStafList');
+            const recipientLabel = recipientCont.querySelector('label');
+            
+            if (level === 'Level1') {
+                recipientCont.classList.remove('hidden');
+                recipientLabel.innerText = 'Pilih Unit / Prodi Penerima (Bisa >1)';
+                const unitList = DB.users.filter(u => u.role === 'ketua_unit' && u.timKey === currentUser.timKey).map(u => u.unit);
+                const uniqueUnits = Array.from(new Set(unitList));
+                recipientList.innerHTML = uniqueUnits.length === 0 ? '<p class="text-slate-400 italic">Tidak ada Unit/Prodi di bawah Tim Kerja ini.</p>' : uniqueUnits.map(u => `
+                    <label class="flex items-center space-x-2 p-1.5 bg-white rounded border">
+                        <input type="checkbox" name="isRecipientCheck" value="${u}" class="rounded text-indigo-600">
+                        <span class="font-semibold text-slate-700">${u}</span>
+                    </label>
+                `).join('');
+            } else {
+                recipientCont.classList.remove('hidden');
+                recipientLabel.innerText = 'Pilih Staf Penerima (Bisa >1)';
+                const unitUsers = DB.users.filter(u => u.unit === currentUser.unit && u.role !== 'ketua_unit' && !u.roles?.includes('ketua_unit'));
+                recipientList.innerHTML = unitUsers.length === 0 ? '<p class="text-slate-400 italic">Tidak ada staf di unit ini.</p>' : unitUsers.map(u => `
+                    <label class="flex items-center space-x-2 p-1.5 bg-white rounded border">
+                        <input type="checkbox" name="isRecipientCheck" value="${u.username}" class="rounded text-indigo-600">
+                        <span class="font-semibold text-slate-700">${sanitizeHTML(u.name)} (${ROLE_LABELS[u.role] || u.role})</span>
+                    </label>
+                `).join('');
+            }
+
+            handleIndukChange();
+        }
+
+        function closeIndikatorSupportModal() {
+            const modal = document.getElementById('indikatorSupportModal');
+            if (modal) { modal.classList.remove('flex'); modal.classList.add('hidden'); }
+        }
+
+        function handleIndukChange() {
+            const sel = document.getElementById('isParentInduk');
+            if (!sel || sel.selectedIndex === -1) return;
+            const opt = sel.options[sel.selectedIndex];
+            const isUtama = opt.getAttribute('data-isutama') === 'true';
+            const target = opt.getAttribute('data-target');
+            const satuan = opt.getAttribute('data-satuan');
+            const parentName = opt.getAttribute('data-parentname');
+
+            const namaEl = document.getElementById('isNama');
+            const targetEl = document.getElementById('isTarget');
+            const satuanEl = document.getElementById('isSatuan');
+
+            if (isUtama) {
+                namaEl.value = parentName;
+                targetEl.value = target;
+                satuanEl.value = satuan;
+                targetEl.readOnly = true;
+                satuanEl.readOnly = true;
+                targetEl.className = 'w-full p-2.5 bg-slate-100 border rounded-xl font-bold text-slate-500 cursor-not-allowed';
+                satuanEl.className = 'w-full p-2.5 bg-slate-100 border rounded-xl font-semibold text-slate-500 cursor-not-allowed';
+            } else {
+                namaEl.value = parentName;
+                targetEl.value = target;
+                satuanEl.value = satuan;
+                targetEl.readOnly = false;
+                satuanEl.readOnly = false;
+                targetEl.className = 'w-full p-2.5 bg-white border border-indigo-400 rounded-xl font-bold text-indigo-700 focus:ring-2 focus:ring-indigo-500';
+                satuanEl.className = 'w-full p-2.5 bg-white border border-indigo-400 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500';
+            }
+        }
+
+        async function saveIndikatorSupport(e) {
+            e.preventDefault();
+            const level = document.getElementById('isLevel').value;
+            const parentId = document.getElementById('isParentInduk').value;
+            if (!parentId) { showToast('Pilih Induk Indikator terlebih dahulu!', 'error'); return; }
+            
+            const checkedRecipients = Array.from(document.querySelectorAll('input[name="isRecipientCheck"]:checked')).map(c => c.value);
+            if (checkedRecipients.length === 0) {
+                showToast('Pilih minimal 1 penerima!', 'error');
+                return;
+            }
+
+            const nama = document.getElementById('isNama').value.trim();
+            const target = parseFloat(document.getElementById('isTarget').value);
+            const satuan = document.getElementById('isSatuan').value.trim();
+            const rkTidak = document.getElementById('isRangeTidak').value.trim();
+            const rkMencapai = document.getElementById('isRangeMencapai').value.trim();
+            const rkMelebihi = document.getElementById('isRangeMelebihi').value.trim();
+
+            if (level === 'Level1') {
+                DB.cascadingTim.push({
+                    id: 'ct_sup_' + Date.now(),
+                    parentDirId: parentId,
+                    isSupport: true,
+                    tahun: '2025',
+                    targetDirektur: nama,
+                    timKey: currentUser.timKey,
+                    unitTargets: checkedRecipients,
+                    unitRoles: checkedRecipients.reduce((acc, u) => ({...acc, [u]: 'Support'}), {}),
+                    targetVal: target,
+                    satuan: satuan,
+                    rangeKinerja: { tidakMencapai: rkTidak, mencapai: rkMencapai, melebihi: rkMelebihi }
+                });
+            } else {
+                DB.cascadingUnit.push({
+                    id: 'cu_sup_' + Date.now(),
+                    parentTimId: parentId,
+                    isSupport: true,
+                    tahun: '2025',
+                    targetDirektur: nama,
+                    unit: currentUser.unit,
+                    subTargets: checkedRecipients,
+                    subRoles: checkedRecipients.reduce((acc, u) => ({...acc, [u]: 'Support'}), {}),
+                    targetVal: target,
+                    satuan: satuan,
+                    rangeKinerja: { tidakMencapai: rkTidak, mencapai: rkMencapai, melebihi: rkMelebihi }
+                });
+            }
+
+            await saveToMySQL();
+            closeIndikatorSupportModal();
+            showToast('Indikator Support berhasil ditambahkan!');
+            renderCascadingView(document.getElementById('mainContent'));
+        }
 
         window.onload = async function() {
-         await loadDataFromMySQL();
-         const savedUser = localStorage.getItem('ki_jaro_user');
-         const lastActive = parseInt(localStorage.getItem('ki_jaro_last_active') || '0', 10);
+            await loadDataFromMySQL();
+            const savedUser = localStorage.getItem('ki_jaro_user');
+            const lastActive = parseInt(localStorage.getItem('ki_jaro_last_active') || '0', 10);
 
-         if (savedUser) {
-             // Cek apakah sudah idle > 1 jam saat tab dibuka kembali
-             if (lastActive > 0 && (Date.now() - lastActive >= IDLE_TIMEOUT_MS)) {
-                 localStorage.removeItem('ki_jaro_user');
-                 localStorage.removeItem('ki_jaro_last_active');
-                 renderLogin();
-                 showToast('Sesi Anda telah berakhir (>1 jam tanpa aktivitas). Silakan login kembali.', 'info');
-                 return;
-             }
-             try {
-                 const parsed = JSON.parse(savedUser);
-                 const freshUser = DB.users.find(u => u.username === parsed.username);
-                 if (freshUser) {
-                     const roles = getUserRoles(freshUser);
-                     freshUser.roles = roles;
-                     // Pertahankan role aktif dari sesi sebelumnya jika masih valid
-                     freshUser.role = (parsed.role && roles.includes(parsed.role)) ? parsed.role : roles[0];
-                     currentUser = freshUser;
-                 } else {
-                     currentUser = parsed;
-                 }
-                 updateLastActivity();
-                 renderDashboardLayout();
-             } catch (e) {
-                 renderLogin();
-             }
-         } else {
-             renderLogin();
-         }
-     };
+            if (savedUser) {
+                // Cek apakah sudah idle > 1 jam saat tab dibuka kembali
+                if (lastActive > 0 && (Date.now() - lastActive >= IDLE_TIMEOUT_MS)) {
+                    localStorage.removeItem('ki_jaro_user');
+                    localStorage.removeItem('ki_jaro_last_active');
+                    renderLogin();
+                    showToast('Sesi Anda telah berakhir (>1 jam tanpa aktivitas). Silakan login kembali.', 'info');
+                    return;
+                }
+                try {
+                    const parsed = JSON.parse(savedUser);
+                    const freshUser = DB.users.find(u => u.username === parsed.username);
+                    if (freshUser) {
+                        const roles = getUserRoles(freshUser);
+                        freshUser.roles = roles;
+                        // Pertahankan role aktif dari sesi sebelumnya jika masih valid
+                        freshUser.role = (parsed.role && roles.includes(parsed.role)) ? parsed.role : roles[0];
+                        currentUser = freshUser;
+                    } else {
+                        currentUser = parsed;
+                    }
+                    updateLastActivity();
+                    renderDashboardLayout();
+                } catch (e) {
+                    renderLogin();
+                }
+            } else {
+                renderLogin();
+            }
+        };
         function openExportRisikoCsvModal() {
             const modal = document.getElementById('exportRisikoCsvModal');
             if (modal) {
