@@ -305,7 +305,7 @@ button { position: relative; z-index: 10; }
          kalab: 'Kepala Laboratorium',
          koordinator: 'Koordinator Bidang',
          dosen: 'Dosen',
-         tendik: 'Tenaga Kependidikan (Tendik)'
+         tendik: 'Tenaga Kependidikan (Tendik)',
          anggota: 'Anggota' // <-- TAMBAHKAN INI
      };
         // Daftar role fungsional tingkat bawah di bawah Unit/Prodi
@@ -8330,7 +8330,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                     <th class="p-4">Nama Pejabat / Pegawai</th>
                                     <th class="p-4">Email Google (@poltek-petrokimia.ac.id)</th>
                                     <th class="p-4">Role Akses (Multi-Role)</th>
-                                    <<th class="p-4">Tim Kerja / Unit Terkait</th>
+                                    <th class="p-4">Tim Kerja / Unit Terkait</th>
                                     <th class="p-4">Atasan Langsung (Validator)</th>
                                     <th class="p-4 text-center">Aksi (Edit / Hapus / Reset)</th>
                                 </tr>
@@ -8351,17 +8351,18 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                             </div>
                                         </td>
                                         <td class="p-4 text-xs">
-                                        ${(() => {
-                                            const v = getValidatorForUser(u);
-                                            if (!v || v.name === '-') return '<span class="text-slate-400 italic">Top Level</span>';
-                                            return `<span class="font-semibold text-slate-800">${sanitizeHTML(v.name)}</span><span class="block text-[10px] text-indigo-600 font-semibold mt-0.5">${sanitizeHTML(ROLE_LABELS[v.role] || v.role)}</span>`;
-                                        })()}
-                                            </td>
-                                            <button onclick="openUserModal('edit', ${idx})" class="px-2.5 py-1 bg-blue-100 hover:bg-blue-200 text-primary-700 text-xs font-semibold rounded-lg" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                            <button onclick="confirmDeleteUser(${idx})" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-600 text-xs font-semibold rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                                            <button onclick="resetPassword(${idx})" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-semibold rounded-lg" title="Reset Pass"><i class="fa-solid fa-key"></i></button>
-                                        </td>
-                                    </tr>
+                                            ${(() => {
+                                const v = getValidatorForUser(u);
+                                if (!v || v.name === '-') return '<span class="text-slate-400 italic">Top Level</span>';
+                                return `<span class="font-semibold text-slate-800">${sanitizeHTML(v.name)}</span><span class="block text-[10px] text-indigo-600 font-semibold mt-0.5">${sanitizeHTML(ROLE_LABELS[v.role] || v.role)}</span>`;
+                            })()}
+                                </td>
+                                <td class="p-4 text-center space-x-1.5"> <!-- TAMBAHKAN BARIS INI -->
+                                    <button onclick="openUserModal('edit', ${idx})" class="px-2.5 py-1 bg-blue-100 hover:bg-blue-200 text-primary-700 text-xs font-semibold rounded-lg" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="confirmDeleteUser(${idx})" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-600 text-xs font-semibold rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                    <button onclick="resetPassword(${idx})" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-semibold rounded-lg" title="Reset Pass"><i class="fa-solid fa-key"></i></button>
+                                </td>                                    
+                                </tr>
                                 `;}).join('')}
                             </tbody>
                         </table>
@@ -8416,16 +8417,16 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                     <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Unit / Prodi / Lab Terkait</label>
                                     <input type="text" id="uUnit" required oninput="updateValidatorPreview()" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Contoh: Prodi TMIP / Lab Kimia">
                                 </div>
-                                <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3 space-y-1.5">
-    <p class="text-[10px] font-bold text-indigo-900 uppercase tracking-wider">
-        <i class="fa-solid fa-sitemap mr-1"></i> Atasan Langsung / Validator
-    </p>
-    <div id="uValidatorPreview" class="text-xs text-slate-700">
-        <span class="italic text-slate-400">Akan tampil setelah role & unit dipilih</span>
-    </div>
-</div>
+                                                            <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3 space-y-1.5">
+                                <p class="text-[10px] font-bold text-indigo-900 uppercase tracking-wider">
+                                    <i class="fa-solid fa-sitemap mr-1"></i> Atasan Langsung / Validator
+                                </p>
+                                <div id="uValidatorPreview" class="text-xs text-slate-700">
+                                    <span class="italic text-slate-400">Akan tampil setelah role & unit dipilih</span>
+                                </div>
                             </div>
-                            <div class="flex justify-end space-x-3 pt-2 border-t">
+                        </div> <!-- Penutup grid-cols-2 -->                            
+                        <div class="flex justify-end space-x-3 pt-2 border-t">
                                 <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
                                 <button type="submit" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold text-xs shadow">Simpan Pejabat / User</button>
                             </div>
