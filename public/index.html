@@ -843,27 +843,40 @@ button { position: relative; z-index: 10; }
 function getValidatorForUser(userObj) {
     if (!userObj) return { name: '-', unit: '-', role: '-' };
     const role = userObj.role;
+    const unitName = String(userObj.unit || '').trim().toLowerCase();
 
+    // 1. Direktur tidak punya atasan
     if (role === 'direktur') {
         return { name: 'Tidak Ada (Pimpinan Tertinggi)', unit: 'Pimpinan Tertinggi', role: 'direktur' };
     }
+    // 2. Ketua Tim Kerja atasannya Direktur
     if (role === 'tim_kerja') {
         const dir = DB.users.find(u => u.role === 'direktur');
-        return dir
-            ? { name: dir.name, unit: dir.unit, role: 'direktur' }
-            : { name: 'Direktur', unit: 'Pimpinan Tertinggi', role: 'direktur' };
+        return dir ? { name: dir.name, unit: dir.unit, role: 'direktur' } : { name: 'Direktur', unit: 'Pimpinan Tertinggi', role: 'direktur' };
     }
+    // 3. Ketua Unit (Prodi/Subbag) atasannya Ketua Tim Kerja (berdasarkan timKey)
     if (role === 'ketua_unit') {
         const kt = DB.users.find(u => u.role === 'tim_kerja' && u.timKey === userObj.timKey);
-        return kt
-            ? { name: kt.name, unit: kt.timKey || '-', role: 'tim_kerja' }
-            : { name: `Ketua Tim ${userObj.timKey || '-'}`, unit: userObj.timKey || '-', role: 'tim_kerja' };
+        return kt ? { name: kt.name, unit: kt.timKey || '-', role: 'tim_kerja' } : { name: `Ketua Tim ${userObj.timKey || '-'}`, unit: userObj.timKey || '-', role: 'tim_kerja' };
     }
+    // 4. Staf (Sekretaris/Dosen/Tendik/Koordinator/Anggota) atasannya KETUA UNIT yang UNIT-NYA SAMA
     if (SUB_UNIT_ROLES.includes(role)) {
-        const ku = DB.users.find(u => u.role === 'ketua_unit' && u.unit === userObj.unit);
-        return ku
-            ? { name: ku.name, unit: ku.unit, role: 'ketua_unit' }
-            : { name: `Ketua ${userObj.unit || '-'}`, unit: userObj.unit || '-', role: 'ketua_unit' };
+        if (!unitName) {
+            return { name: '(Harap isi Nama Unit)', unit: '-', role: 'ketua_unit' };
+        }
+        
+        // Cari persis: Role = ketua_unit DAN Nama Unitnya sama (Case-Insensitive)
+        const ketuaUnitMatch = DB.users.find(u => 
+            u.role === 'ketua_unit' && 
+            String(u.unit || '').trim().toLowerCase() === unitName
+        );
+
+        if (ketuaUnitMatch) {
+            return { name: ketuaUnitMatch.name, unit: ketuaUnitMatch.unit, role: 'ketua_unit' };
+        } else {
+            // Jika belum ada user Ketua-nya, tampilkan perkiraan nama ketua
+            return { name: `Ketua ${userObj.unit}`, unit: userObj.unit, role: 'ketua_unit' };
+        }
     }
     return { name: '-', unit: '-', role: '-' };
 }
@@ -8413,9 +8426,12 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                         ${DB.timKerjaList.map(t => `<option value="${t}">${t}</option>`).join('')}
                                     </select>
                                 </div>
-                                <div>
-                                    <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Unit / Prodi / Lab Terkait</label>
-                                    <input type="text" id="uUnit" required oninput="updateValidatorPreview()" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Contoh: Prodi TMIP / Lab Kimia">
+                               <div>
+                                <label class="block font-semibold text-slate-700 mb-1 text-xs">Nama Unit / Prodi / Lab Terkait</label>
+                                <input type="text" id="uUnit" list="unitOptions" required oninput="updateValidatorPreview()" class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" placeholder="Pilih atau ketik nama unit...">
+                                <datalist id="unitOptions">
+                                    ${DB.unitList.map(u => `<option value="${u}">`).join('')}
+                                </datalist>
                                 </div>
                                                             <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3 space-y-1.5">
                                 <p class="text-[10px] font-bold text-indigo-900 uppercase tracking-wider">
@@ -8984,32 +9000,32 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
         return;
     }
 
-    // Auto-fill timKey untuk sub-unit role
+    // Auto-fill timKey untuk sub-unit role berdasarkan unit yang dipilih
     const hasSubUnitRole = checkedRoles.some(r => SUB_UNIT_ROLES.includes(r));
     const hasKetuaUnit = checkedRoles.includes('ketua_unit');
     if ((hasSubUnitRole || hasKetuaUnit) && unitVal && timKeyEl) {
-        const ketuaUnitOfSameUnit = DB.users.find(u => u.role === 'ketua_unit' && u.unit === unitVal);
+        const ketuaUnitOfSameUnit = DB.users.find(u => u.role === 'ketua_unit' && String(u.unit).trim().toLowerCase() === unitVal.toLowerCase());
         if (ketuaUnitOfSameUnit && ketuaUnitOfSameUnit.timKey) {
             timKeyEl.value = ketuaUnitOfSameUnit.timKey;
         }
     }
 
-    // Bangun preview validator (ambil role utama = first selected)
+    // Bangun preview validator
     const primaryRole = checkedRoles[0];
-    const ketuaUnitOfUnit = DB.users.find(u => u.role === 'ketua_unit' && u.unit === unitVal);
-    const inferredTimKey = ketuaUnitOfUnit ? ketuaUnitOfUnit.timKey : (timKeyEl ? timKeyEl.value : '');
-
-    const fakeUser = { role: primaryRole, unit: unitVal, timKey: inferredTimKey };
+    const fakeUser = { role: primaryRole, unit: unitVal, timKey: timKeyEl ? timKeyEl.value : '' };
     const validator = getValidatorForUser(fakeUser);
 
     if (validator && validator.name !== '-') {
+        const isWarning = validator.name.includes('(Harap isi');
+        const colorClass = isWarning ? 'bg-rose-600' : 'bg-indigo-600';
+        
         previewEl.innerHTML = `
             <div class="flex items-center space-x-2">
-                <span class="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
-                    ${sanitizeHTML(validator.name.charAt(0).toUpperCase())}
+                <span class="w-7 h-7 rounded-full ${colorClass} text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                    ${isWarning ? '!' : sanitizeHTML(validator.name.charAt(0).toUpperCase())}
                 </span>
                 <div class="min-w-0">
-                    <p class="font-bold text-slate-900 truncate">${sanitizeHTML(validator.name)}</p>
+                    <p class="font-bold ${isWarning ? 'text-rose-700' : 'text-slate-900'} truncate">${sanitizeHTML(validator.name)}</p>
                     <p class="text-[10px] text-slate-500 truncate">${sanitizeHTML(ROLE_LABELS[validator.role] || validator.role)} — ${sanitizeHTML(validator.unit || '-')}</p>
                 </div>
             </div>
