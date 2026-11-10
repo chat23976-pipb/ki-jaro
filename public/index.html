@@ -5453,14 +5453,18 @@ let dashboardChartInstances = {};
                         </div>
                     </div>
                 
-                    <div class="bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-200 space-y-2 text-xs">
-                        <label class="block font-bold text-indigo-900"><i class="fa-solid fa-scale-balanced mr-1"></i> Range Ekspektasi Kinerja</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div><span class="text-[10px] font-bold text-rose-700 block">Tidak Mencapai</span><input type="text" id="timRangeTidak" required value="< 100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
-                            <div><span class="text-[10px] font-bold text-emerald-700 block">Mencapai Ekspektasi</span><input type="text" id="timRangeMencapai" required value="100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
-                            <div><span class="text-[10px] font-bold text-blue-700 block">Melebihi Ekspektasi</span><input type="text" id="timRangeMelebihi" required value="> 100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
-                        </div>
-                    </div>
+                    <!-- KODE BARU SETELAH DIBUNGKUS -->
+<div id="timRangeWrapper">
+    <div class="bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-200 space-y-2 text-xs">
+        <label class="block font-bold text-indigo-900"><i class="fa-solid fa-scale-balanced mr-1"></i> Range Ekspektasi Kinerja</label>
+        <div class="grid grid-cols-3 gap-2">
+            <div><span class="text-[10px] font-bold text-rose-700 block">Tidak Mencapai</span><input type="text" id="timRangeTidak" required value="< 100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
+            <div><span class="text-[10px] font-bold text-emerald-700 block">Mencapai Ekspektasi</span><input type="text" id="timRangeMencapai" required value="100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
+            <div><span class="text-[10px] font-bold text-blue-700 block">Melebihi Ekspektasi</span><input type="text" id="timRangeMelebihi" required value="> 100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
+        </div>
+    </div>
+</div>
+<!-- SELESAI -->
                 
                     <div id="timUnitWrapper">
                         <div class="flex items-center justify-between mb-2">
@@ -6947,8 +6951,11 @@ async function saveCascadingUnit(e) {
                                         <tr><td colspan="9" class="p-8 text-center text-slate-400">Belum ada data capaian kinerja pada filter ini.</td></tr>
                                     ` : paginatedCapaian.map((c) => {
                                         const tahunCap = String(c.tahun || '2025');
-                                        const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahunCap) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
-                                        const ctObj = DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahunCap && x.unitTargets.includes(c.unit)) || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && x.unitTargets.includes(c.unit));
+                                       const cdObj = DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur && String(cd.tahun || '2025') === tahunCap) || DB.cascadingDirektur.find(cd => cd.target === c.targetDirektur);
+                                        const ctObj = DB.cascadingTim.find(x => x.indikatorIndividu === c.targetDirektur && String(x.tahun || '2025') === tahunCap && x.unitTargets.includes(c.unit)) 
+                                        || DB.cascadingTim.find(x => x.indikatorIndividu === c.targetDirektur && x.unitTargets.includes(c.unit)) 
+                                        || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && String(x.tahun || '2025') === tahunCap && x.unitTargets.includes(c.unit)) 
+                                        || DB.cascadingTim.find(x => x.targetDirektur === c.targetDirektur && x.unitTargets.includes(c.unit));
                                         let isUtama = (cdObj && ctObj) ? (isTimUtamaInDir(cdObj, ctObj.timKey) && isUnitUtamaInTim(ctObj, c.unit)) : (ctObj ? isUnitUtamaInTim(ctObj, c.unit) : false);
                                         if (c.isSubUnitInput) {
                                             const cuObj = (DB.cascadingUnit || []).find(cu => cu.unit === c.unit && cu.targetDirektur === c.targetDirektur && String(cu.tahun || '2025') === tahunCap);
@@ -7292,7 +7299,7 @@ function rebuildCapaianIndikatorOptions(year) {
         if (item.isSupport) labelStatus = '(Support - Tambahan)';
         else if (item.isUtama) labelStatus = '(Utama - Utama)';
         else labelStatus = '(Support - Utama)';
-        return `<option value="${item.targetDirektur}" data-tahun="${item.tahun}" data-satuan="${item.satuan}" data-targetval="${item.targetVal}" data-timkey="${item.timKey}" data-isutama="${item.isUtama}" data-issupport="${item.isSupport || false}">${item.targetDirektur} ${labelStatus}</option>`;
+        return `<option value="${item.targetDirektur}" data-parenttarget="${item.parentTarget || ''}" data-tahun="${item.tahun}" data-satuan="${item.satuan}" data-targetval="${item.targetVal}" data-timkey="${item.timKey}" data-isutama="${item.isUtama}" data-issupport="${item.isSupport || false}">${item.targetDirektur} ${labelStatus}</option>`;
     }).join('');
     updateSatuanAndTargetRef(sel);
 }
