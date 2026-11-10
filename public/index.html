@@ -924,7 +924,7 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             if (capaianItem.isSupport) return false;
 
             const tahun = String(capaianItem.tahun || '2025').trim();
-            const targetName = String(capaianItem.targetDirektur || '').trim().toLowerCase();
+            const targetName = String(capaianItem.parentTarget || capaianItem.targetDirektur || '').trim().toLowerCase(); 
             const unitName = String(capaianItem.unit || '').trim();
 
             // 2. Jika pada saat disimpan/import sudah memiliki penanda eksplisit kategori
@@ -932,9 +932,9 @@ function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             if (!cd) return false;
 
             // 3. Cek di Cascading Tim Kerja apakah Unit ini benar-benar berstatus 'Utama'
-            const ctList = (DB.cascadingTim || []).filter(x =>
+                        const ctList = (DB.cascadingTim || []).filter(x =>
                 x &&
-                String(x.targetDirektur || '').trim().toLowerCase() === targetName &&
+                (String(x.targetDirektur || '').trim().toLowerCase() === targetName || String(x.indikatorIndividu || '').trim().toLowerCase() === String(capaianItem.targetDirektur || '').trim().toLowerCase()) &&
                 Array.isArray(x.unitTargets) &&
                 x.unitTargets.some(u => String(u || '').trim().toLowerCase() === unitName.toLowerCase())
             );
@@ -5882,20 +5882,45 @@ function isCurrentTimUtamaSelected() {
             return isTimUtamaInDir(cd, activeTim);
         }
 function toggleTimCascadingUI(val) {
-    const wrapper = document.getElementById('timUnitWrapper');
+    const wrapperUnit = document.getElementById('timUnitWrapper');
+    const wrapperRange = document.getElementById('timRangeWrapper');
+    
     if (val === 'Tidak') {
-        wrapper.classList.add('hidden');
+        wrapperUnit.classList.add('hidden');
+        if (wrapperRange) wrapperRange.classList.add('hidden'); // Sembunyikan Range
         document.querySelectorAll('input[name="unitCheck"]').forEach(chk => { chk.checked = false; });
     } else {
-        wrapper.classList.remove('hidden');
+        wrapperUnit.classList.remove('hidden');
+        if (wrapperRange) wrapperRange.classList.remove('hidden'); // Tampilkan Range
     }
 }
 
 function handleDirRefChange() {
     const sel = document.getElementById('timDirRef');
     const indInput = document.getElementById('timIndikatorIndividu');
+    const jenisSel = document.getElementById('timJenisIndikator');
+    const warnEl = document.getElementById('warnUtamaRule');
+    
     if (!sel || sel.selectedIndex === -1) return;
-    indInput.value = sel.options[sel.selectedIndex].value; // Auto-fill nama direktur
+    
+    const opt = sel.options[sel.selectedIndex];
+    const isUtamaDirektur = opt.getAttribute('data-isutama') === 'true';
+    
+    // Auto-fill nama individu dengan nama direktur
+    indInput.value = opt.value; 
+    
+    if (isUtamaDirektur) {
+        // Jika Direktur Utama, biarkan user memilih (bisa Utama atau Support)
+        jenisSel.disabled = false;
+        jenisSel.classList.remove('bg-slate-200', 'cursor-not-allowed');
+        warnEl.classList.add('hidden');
+    } else {
+        // Jika Direktur Support, Kunci ke Support
+        jenisSel.value = 'Support';
+        jenisSel.disabled = true;
+        jenisSel.classList.add('bg-slate-200', 'cursor-not-allowed');
+        warnEl.classList.add('hidden');
+    }
 }
         function updateTimDirRefOptions(tahun) {
             const sel = document.getElementById('timDirRef');
@@ -6229,6 +6254,7 @@ function toggleUnitRoleSelect(idx, isChecked) {
         yrEl.value = defaultYear;
         // Panggil fungsi ini secara eksplisit agar dropdown Induk dari Direktur terisi
         updateTimDirRefOptions(defaultYear);
+        handleDirRefChange(); // <-- TAMBAHKAN BARIS INI
     }
 }
         function closeCascadingTimModal() {
@@ -7203,7 +7229,6 @@ async function saveCascadingUnit(e) {
 function getAvailableCascadingForUser(user) {
     if (!user) return [];
     
-    // LEVEL 2: Ketua Unit
     if (user.role === 'ketua_unit') {
         const fromTim = (DB.cascadingTim || []).filter(ct => 
             Array.isArray(ct.unitTargets) && 
@@ -7218,22 +7243,17 @@ function getAvailableCascadingForUser(user) {
             
             return { 
                 targetDirektur: ct.indikatorIndividu || ct.targetDirektur, // NAMA INDIVIDU
-                parentTarget: ct.targetDirektur, 
-                tahun, satuan, targetVal, 
-                timKey: ct.timKey, 
-                isUtama, 
+                parentTarget: ct.targetDirektur, // <-- SIMPAN INDUKNYA
+                tahun, satuan, targetVal, timKey: ct.timKey, isUtama, 
                 isSupport: ct.jenis === 'Support' 
             };
         });
         return fromTim;
     }
-
-    // LEVEL 3: Staf (Dosen/Tendik/Kalab/Sekretaris)
     if (SUB_UNIT_ROLES.includes(user.role)) {
         const myKeyRole = `${user.role}_${user.unit}`;
         return (DB.cascadingUnit || []).filter(cu =>
-            cu.unit === user.unit && 
-            cu.isCascading === true &&
+            cu.unit === user.unit && cu.isCascading === true &&
             Array.isArray(cu.subTargets) && 
             (cu.subTargets.includes(user.username) || cu.subTargets.includes(myKeyRole))
         ).map(cu => {
@@ -7247,12 +7267,11 @@ function getAvailableCascadingForUser(user) {
             const isUtama = (cu.jenis === 'Utama') && cu.subRoles && cu.subRoles[matchKey] === 'Utama';
             
             return { 
-                targetDirektur: cu.indikatorIndividu || cu.targetDirektur, // NAMA INDIVIDU
-                parentTarget: cu.targetDirektur, 
+                targetDirektur: cu.indikatorIndividu || cu.targetDirektur, 
+                parentTarget: cu.targetDirektur, // <-- SIMPAN INDUKNYA
                 tahun, satuan, targetVal, 
                 timKey: parentTimObj ? parentTimObj.timKey : (user.timKey || 'Akademik'), 
-                isUtama, 
-                isSupport: cu.jenis === 'Support' 
+                isUtama, isSupport: cu.jenis === 'Support' 
             };
         });
     }
@@ -7431,10 +7450,11 @@ async function saveCapaian(e) {
                 }
                 showToast('Capaian kinerja berhasil diperbarui!');
             } else {
-                                 const newCapaian = {
+                    const newCapaian = {
                     id: 'cp_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
                     unit: currentUser.unit,
                     timKey: timKeyRef,
+                    parentTarget: selectedOpt ? selectedOpt.getAttribute('data-parenttarget') : null, // <-- TAMBAHKAN INI
                     isSupport: isSupport, // GANTI isTambahan JADI isSupport
                     targetDirektur: targetDirRef,
                     tahun: tahunRef,
@@ -11442,6 +11462,7 @@ async function handleImportCapaian(event) {
                 id: 'cp_imp_' + Date.now() + '_' + i,
                 unit: activeUnit,
                 timKey: timKeyRef,
+                parentTarget: selectedOpt ? selectedOpt.getAttribute('data-parenttarget') : null, // <-- TAMBAHKAN INI
                 targetDirektur: dirRef ? dirRef.target : indikator,
                 kategori: isUtama ? 'Utama' : 'Support',
                 tahun: tahun,
