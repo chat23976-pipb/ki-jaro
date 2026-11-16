@@ -2981,14 +2981,10 @@ function renderDokumenUkurLaporView(container) {
                 const item = isEdit ? DB.renstraIndikatorKinerja[idx] : { 
                     sasaranKinerjaId: '', kodeIndikator: '', namaIndikator: '', satuan: '%', 
                     target2025: 100, target2026: 100, target2027: 100, target2028: 100, target2029: 100, 
-                    anggaran2025: 0, anggaran2026: 0, anggaran2027: 0, anggaran2028: 0, anggaran2029: 0,
-                    rangeKinerja: { tidakMencapai: '< 100%', mencapai: '100%', melebihi: '> 100%' },
-                    rangeSikap360: { tidakSesuai: '< 75', sesuai: '75 - 90', melebihi: '> 90' }
+                    anggaran2025: 0, anggaran2026: 0, anggaran2027: 0, anggaran2028: 0, anggaran2029: 0
                 };
-                const rk = item.rangeKinerja || { tidakMencapai: '< 100%', mencapai: '100%', melebihi: '> 100%' };
-                const rs = item.rangeSikap360 || { tidakSesuai: '< 75', sesuai: '75 - 90', melebihi: '> 90' };
 
-                titleEl.innerText = isEdit ? 'Edit Indikator Kinerja, Range Ekspektasi & Anggaran' : 'Input Indikator Kinerja, Range Ekspektasi & Target 5 Tahun (Tier 4)';
+                titleEl.innerText = isEdit ? 'Edit Indikator Kinerja & Alokasi Anggaran' : 'Input Indikator Kinerja, Target 5 Tahun & Pagu Anggaran (Tier 4)';
                 formEl.innerHTML = `
                     <div><label class="block font-semibold mb-1">Pilih Sasaran Kinerja (Intervensi)</label><select id="r_parent" required class="w-full p-3 bg-slate-50 border rounded-xl">${DB.renstraSasaranKinerja.map(x => `<option value="${x.id}" ${item.sasaranKinerjaId === x.id ? 'selected' : ''}>${x.kode} - ${x.sasaranKinerja}</option>`).join('')}</select></div>
                     <div class="grid grid-cols-2 gap-3">
@@ -2997,22 +2993,7 @@ function renderDokumenUkurLaporView(container) {
                     </div>
                     <div><label class="block font-semibold mb-1">Nama Indikator Kinerja</label><textarea id="r_namaIndikator" rows="2" required class="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Nama indikator utama...">${item.namaIndikator}</textarea></div>
                     
-                    <!-- FASE 2 POIN 11: Input Range Ekspektasi Kinerja & Sikap 360 -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-blue-50/60 p-4 rounded-xl border border-blue-200">
-                        <div class="space-y-2">
-                            <h4 class="font-bold text-xs text-blue-900"><i class="fa-solid fa-gauge-high mr-1"></i> Range Ekspektasi Kinerja</h4>
-                            <div><label class="block text-[10px] font-semibold text-rose-700 mb-0.5">Tidak Mencapai Ekspektasi</label><input type="text" id="rk_tidak" required value="${rk.tidakMencapai}" class="w-full p-2 bg-white border rounded-lg text-xs" placeholder="Contoh: < 100%"></div>
-                            <div><label class="block text-[10px] font-semibold text-emerald-700 mb-0.5">Mencapai Ekspektasi</label><input type="text" id="rk_mencapai" required value="${rk.mencapai}" class="w-full p-2 bg-white border rounded-lg text-xs" placeholder="Contoh: 100%"></div>
-                            <div><label class="block text-[10px] font-semibold text-blue-700 mb-0.5">Melebihi Ekspektasi</label><input type="text" id="rk_melebihi" required value="${rk.melebihi}" class="w-full p-2 bg-white border rounded-lg text-xs" placeholder="Contoh: > 100%"></div>
-                        </div>
-                        <div class="space-y-2">
-                            <h4 class="font-bold text-xs text-purple-900"><i class="fa-solid fa-users-viewfinder mr-1"></i> Range Sikap 360 Derajat</h4>
-                            <div><label class="block text-[10px] font-semibold text-rose-700 mb-0.5">Tidak Sesuai Ekspektasi</label><input type="text" id="rs_tidak" required value="${rs.tidakSesuai}" class="w-full p-2 bg-white border rounded-lg text-xs" placeholder="Contoh: < 75"></div>
-                            <div><label class="block text-[10px] font-semibold text-emerald-700 mb-0.5">Sesuai Ekspektasi</label><input type="text" id="rs_sesuai" required value="${rs.sesuai}" class="w-full p-2 bg-white border rounded-lg text-xs" placeholder="Contoh: 75 - 90"></div>
-                            <div><label class="block text-[10px] font-semibold text-blue-700 mb-0.5">Melebihi Ekspektasi</label><input type="text" id="rs_melebihi" required value="${rs.melebihi}" class="w-full p-2 bg-white border rounded-lg text-xs" placeholder="Contoh: > 90"></div>
-                        </div>
-                    </div>
-
+<!-- Input Range Ekspektasi & Sikap 360 dihapus sesuai kebutuhan -->
                     <div class="space-y-3 bg-slate-50 p-4 rounded-xl border">
                         <h4 class="font-bold text-xs text-slate-700">Target & Alokasi Pagu Anggaran 2025 - 2029</h4>
                         <div class="grid grid-cols-2 gap-2">
@@ -3135,17 +3116,7 @@ function renderDokumenUkurLaporView(container) {
                  anggaran2026: parseFloat(document.getElementById('r_ang2026').value) || 0,
                  anggaran2027: parseFloat(document.getElementById('r_ang2027').value) || 0,
                  anggaran2028: parseFloat(document.getElementById('r_ang2028').value) || 0,
-                 anggaran2029: parseFloat(document.getElementById('r_ang2029').value) || 0,
-                 rangeKinerja: {
-                     tidakMencapai: document.getElementById('rk_tidak') ? document.getElementById('rk_tidak').value.trim() : '< 100%',
-                     mencapai: document.getElementById('rk_mencapai') ? document.getElementById('rk_mencapai').value.trim() : '100%',
-                     melebihi: document.getElementById('rk_melebihi') ? document.getElementById('rk_melebihi').value.trim() : '> 100%'
-                 },
-                 rangeSikap360: {
-                     tidakSesuai: document.getElementById('rs_tidak') ? document.getElementById('rs_tidak').value.trim() : '< 75',
-                     sesuai: document.getElementById('rs_sesuai') ? document.getElementById('rs_sesuai').value.trim() : '75 - 90',
-                     melebihi: document.getElementById('rs_melebihi') ? document.getElementById('rs_melebihi').value.trim() : '> 90'
-                 }
+                 anggaran2029: parseFloat(document.getElementById('r_ang2029').value) || 0
              };
                if (isEdit) {
                     const oldName = DB.renstraIndikatorKinerja[editingRenstraIndex].namaIndikator;
@@ -5899,32 +5870,67 @@ function toggleTimCascadingUI(val) {
     }
 }
 
-function handleDirRefChange() {
-    const sel = document.getElementById('timDirRef');
-    const indInput = document.getElementById('timIndikatorIndividu');
-    const jenisSel = document.getElementById('timJenisIndikator');
+function syncTimJenisIndikatorRule() {
+    const dirSelect = document.getElementById('timDirRef');
+    const jenisSelect = document.getElementById('timJenisIndikator');
     const warnEl = document.getElementById('warnUtamaRule');
+    const tahunEl = document.getElementById('timTahunTarget');
+    if (!dirSelect || !jenisSelect) return;
+
+    const selectedTarget = dirSelect.value;
+    const selectedTahun = tahunEl ? String(tahunEl.value) : '2025';
     
-    if (!sel || sel.selectedIndex === -1) return;
-    
-    const opt = sel.options[sel.selectedIndex];
-    const isUtamaDirektur = opt.getAttribute('data-isutama') === 'true';
-    
-    // Auto-fill nama individu dengan nama direktur
-    indInput.value = opt.value; 
-    
-    if (isUtamaDirektur) {
-        // Jika Direktur Utama, biarkan user memilih (bisa Utama atau Support)
-        jenisSel.disabled = false;
-        jenisSel.classList.remove('bg-slate-200', 'cursor-not-allowed');
-        warnEl.classList.add('hidden');
+    // Tentukan Tim Kerja yang sedang aktif (bisa dari user yang login atau dropdown admin)
+    const activeTimKey = (currentUser && currentUser.role === 'tim_kerja') 
+        ? currentUser.timKey 
+        : (document.getElementById('modalTimHeaderLabel') ? document.getElementById('modalTimHeaderLabel').innerText.trim() : '');
+
+    // Cari data indikator induk di DB.cascadingDirektur berdasarkan target & tahun
+    const cdObj = (DB.cascadingDirektur || []).find(cd => 
+        cd && 
+        String(cd.target || '').trim() === String(selectedTarget || '').trim() &&
+        String(cd.tahun || '2025') === selectedTahun
+    ) || (DB.cascadingDirektur || []).find(cd => 
+        cd && String(cd.target || '').trim() === String(selectedTarget || '').trim()
+    );
+
+    // Cek apakah Tim Kerja ini berstatus 'Utama' pada indikator induk Direktur
+    const isParentUtamaForThisTim = cdObj ? isTimUtamaInDir(cdObj, activeTimKey) : true;
+
+    if (isParentUtamaForThisTim) {
+        // JIKA INDUK = UTAMA -> BEBAS DIPILIH (UTAMA ATAU SUPPORT)
+        jenisSelect.disabled = false;
+        jenisSelect.classList.remove('bg-slate-200', 'text-slate-500', 'cursor-not-allowed', 'opacity-75');
+        jenisSelect.classList.add('bg-white', 'text-slate-800', 'cursor-pointer');
+        if (warnEl) {
+            warnEl.classList.remove('hidden');
+            warnEl.innerHTML = '<i class="fa-solid fa-circle-info text-blue-600"></i> Induk berstatus <b>Utama</b>: Anda dapat memilih <b>Utama</b> atau <b>Support</b>.';
+            warnEl.className = 'text-[10px] text-blue-700 mt-1';
+        }
     } else {
-        // Jika Direktur Support, Kunci ke Support
-        jenisSel.value = 'Support';
-        jenisSel.disabled = true;
-        jenisSel.classList.add('bg-slate-200', 'cursor-not-allowed');
-        warnEl.classList.add('hidden');
+        // JIKA INDUK = SUPPORT -> KUNCI KE SUPPORT (TIDAK BISA DIOTAK-ATIK)
+        jenisSelect.value = 'Support';
+        jenisSelect.disabled = true;
+        jenisSelect.classList.remove('bg-white', 'text-slate-800', 'cursor-pointer');
+        jenisSelect.classList.add('bg-slate-200', 'text-slate-500', 'cursor-not-allowed', 'opacity-75');
+        if (warnEl) {
+            warnEl.classList.remove('hidden');
+            warnEl.innerHTML = '<i class="fa-solid fa-lock text-amber-600"></i> Terkunci <b>Support</b> karena indikator induk dari Direktur berstatus Support untuk tim Anda.';
+            warnEl.className = 'text-[10px] text-amber-700 mt-1 font-semibold';
+        }
     }
+}
+
+function handleDirRefChange() {
+    const dirSelect = document.getElementById('timDirRef');
+    const indInput = document.getElementById('timIndikatorIndividu');
+    if (dirSelect && indInput && dirSelect.value) {
+        // Isi otomatis nama indikator individu jika masih kosong atau mengikuti induk
+        if (!indInput.dataset.manualEdited) {
+            indInput.value = dirSelect.value;
+        }
+    }
+    syncTimJenisIndikatorRule();
 }
         function updateTimDirRefOptions(tahun) {
             const sel = document.getElementById('timDirRef');
@@ -5944,10 +5950,13 @@ function handleDirRefChange() {
                 }).join('');
 
             sel.onchange = function() {
-                syncUnitRolesWithTimStatus();
-            };
             syncUnitRolesWithTimStatus();
+            handleDirRefChange();
+        };
+        syncUnitRolesWithTimStatus();
+        handleDirRefChange();
         }
+        
 
         function syncUnitRolesWithTimStatus() {
             const timIsUtama = isCurrentTimUtamaSelected();
