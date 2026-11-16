@@ -915,57 +915,73 @@ function findTimKeyForUnit(unitName) {
             return false;
         }
 
-        // Helper Cek apakah Capaian berhak masuk ke Dashboard Kinerja Utama (Wajib Valid + Status Utama)
-function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
+        // Helper Cek apakah Capaian berhak masuk ke Dashboard Kinerja Utama
+        // Syarat Wajib: Status = Valid AND (Direktur -> Tim = Utama) AND (Tim -> Unit = Utama)
+        function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             if (!capaianItem) return false;
-             // 1. Wajib berstatus 'Valid' (Jika diubah ke 'Tidak Valid', otomatis return false / dihapus dari dashboard)
+            // 1. Wajib berstatus 'Valid'
             if (String(capaianItem.status || '').trim() !== 'Valid') return false;
-            // 1b. Jika merupakan indikator tambahan (Support), jangan pernah masuk Dashboard Utama
-            if (capaianItem.isSupport) return false;
+            if (capaianItem.isSupport === true) return false;
 
             const tahun = String(capaianItem.tahun || '2025').trim();
-            const targetName = String(capaianItem.parentTarget || capaianItem.targetDirektur || '').trim().toLowerCase(); 
-            const unitName = String(capaianItem.unit || '').trim();
+            const rawTarget = String(capaianItem.targetDirektur || '').trim().toLowerCase();
+            const parentTarget = String(capaianItem.parentTarget || '').trim().toLowerCase();
+            const unitName = String(capaianItem.unit || '').trim().toLowerCase();
 
-            // 2. Jika pada saat disimpan/import sudah memiliki penanda eksplisit kategori
-            const cd = cdObj || (DB.cascadingDirektur || []).find(x => x && String(x.target || '').trim().toLowerCase() === targetName && String(x.tahun || '2025').trim() === tahun) || (DB.cascadingDirektur || []).find(x => x && String(x.target || '').trim().toLowerCase() === targetName);
-            if (!cd) return false;
+            // 2. Cari baris Cascading Tim Kerja (Level 2) yang menugaskan Unit ini
+            // Mencocokkan baik lewat nama indikator induk Direktur maupun nama indikator individu Tim
+            const ctList = (DB.cascadingTim || []).filter(ct => {
+                if (!ct) return false;
+                const ctInduk = String(ct.targetDirektur || '').trim().toLowerCase();
+                const ctIndividu = String(ct.indikatorIndividu || ct.targetDirektur || '').trim().toLowerCase();
+                const matchName = (ctInduk === rawTarget) || (ctIndividu === rawTarget) || (parentTarget && ctInduk === parentTarget);
+                const matchUnit = Array.isArray(ct.unitTargets) && ct.unitTargets.some(u => String(u || '').trim().toLowerCase() === unitName);
+                return matchName && matchUnit;
+            });
 
-            // 3. Cek di Cascading Tim Kerja apakah Unit ini benar-benar berstatus 'Utama'
-                        const ctList = (DB.cascadingTim || []).filter(x =>
-                x &&
-                (String(x.targetDirektur || '').trim().toLowerCase() === targetName || String(x.indikatorIndividu || '').trim().toLowerCase() === String(capaianItem.targetDirektur || '').trim().toLowerCase()) &&
-                Array.isArray(x.unitTargets) &&
-                x.unitTargets.some(u => String(u || '').trim().toLowerCase() === unitName.toLowerCase())
-            );
-
-            // Filter berdasarkan tahun jika ada yang cocok di tahun tersebut
             const ctYearMatched = ctList.filter(x => String(x.tahun || '2025').trim() === tahun);
             const activeCtList = ctYearMatched.length > 0 ? ctYearMatched : ctList;
             if (activeCtList.length === 0) return false;
 
-            const isUnitUtama = activeCtList.some(ct => {
-                const timUtama = isTimUtamaInDir(cd, ct.timKey);
-                if (!timUtama) return false;
+            // 3. Validasi rantai Utama: Direktur (Utama) -> Tim Kerja (Utama) -> Unit (Utama)
+            const validChainCt = activeCtList.find(ct => {
+                // Pastikan jenis indikator di level Ketua Tim bukan 'Support'
+                if (ct.jenis && String(ct.jenis).trim().toLowerCase() === 'support') return false;
 
-                // Cek role unit secara case-insensitive
+                // Cari indikator induk di Cascading Direktur (Level 1)
+                const ctIndukName = String(ct.targetDirektur || '').trim().toLowerCase();
+                const cd = cdObj || (DB.cascadingDirektur || []).find(x =>
+                    x &&
+                    String(x.target || '').trim().toLowerCase() === ctIndukName &&
+                    String(x.tahun || '2025').trim() === tahun
+                ) || (DB.cascadingDirektur || []).find(x =>
+                    x && String(x.target || '').trim().toLowerCase() === ctIndukName
+                );
+
+                if (!cd) return false;
+
+                // Syarat A: Pada level Direktur, Tim Kerja ini HARUS berstatus 'Utama'
+                if (!isTimUtamaInDir(cd, ct.timKey)) return false;
+
+                // Syarat B: Pada level Ketua Tim, Unit/Prodi/Subbag ini HARUS berstatus 'Utama'
                 if (ct.unitRoles && typeof ct.unitRoles === 'object') {
-                    const matchedKey = Object.keys(ct.unitRoles).find(k => String(k).trim().toLowerCase() === unitName.toLowerCase());
+                    const matchedKey = Object.keys(ct.unitRoles).find(k => String(k).trim().toLowerCase() === unitName);
                     if (matchedKey) {
-                        return ct.unitRoles[matchedKey] === 'Utama';
+                        return String(ct.unitRoles[matchedKey]).trim().toLowerCase() === 'utama';
                     }
                 }
-                return Array.isArray(ct.unitTargets) && String(ct.unitTargets[0] || '').trim().toLowerCase() === unitName.toLowerCase();
+                return Array.isArray(ct.unitTargets) && String(ct.unitTargets[0] || '').trim().toLowerCase() === unitName;
             });
 
-            if (!isUnitUtama) return false;
+            if (!validChainCt) return false;
 
-            // 4. Jika diinput oleh staf sub-unit, cek status Utama di Cascading Unit
+            // 4. Jika diinput oleh staf sub-unit, pastikan perannya juga Utama di Cascading Unit
             if (capaianItem.isSubUnitInput) {
+                const targetIndukLower = String(validChainCt.targetDirektur || rawTarget).trim().toLowerCase();
                 const cu = (DB.cascadingUnit || []).find(x =>
                     x &&
-                    String(x.unit || '').trim().toLowerCase() === unitName.toLowerCase() &&
-                    String(x.targetDirektur || '').trim().toLowerCase() === targetName &&
+                    String(x.unit || '').trim().toLowerCase() === unitName &&
+                    String(x.targetDirektur || '').trim().toLowerCase() === targetIndukLower &&
                     String(x.tahun || '2025').trim() === tahun
                 );
                 if (!cu) return false;
@@ -4290,7 +4306,17 @@ function renderDokumenUkurLaporView(container) {
                                     <tbody class="divide-y divide-slate-100">
                                         ${filteredCascading.filter(cd => filterDashboardTahun === 'Semua' || String(cd.tahun || '2025') === String(filterDashboardTahun)).map((cd, index) => {
                                             const cdTahun = String(cd.tahun || '2025');
-                                            let matchedCap = validCapaian.filter(c => String(c.targetDirektur || '').trim() === String(cd.target || '').trim() && String(c.tahun || '2025') === cdTahun && String(c.status || '').trim() === 'Valid');
+                                            const cdTargetLower = String(cd.target || '').trim().toLowerCase();
+                                            const childIndividuNames = (DB.cascadingTim || [])
+                                                .filter(ct => ct && String(ct.targetDirektur || '').trim().toLowerCase() === cdTargetLower && String(ct.tahun || '2025') === cdTahun)
+                                                .map(ct => String(ct.indikatorIndividu || ct.targetDirektur || '').trim().toLowerCase());
+
+                                            let matchedCap = validCapaian.filter(c => {
+                                                const capTargetLower = String(c.targetDirektur || '').trim().toLowerCase();
+                                                const capParentLower = String(c.parentTarget || '').trim().toLowerCase();
+                                                const isSameIndikator = (capTargetLower === cdTargetLower) || (capParentLower === cdTargetLower) || childIndividuNames.includes(capTargetLower);
+                                                return isSameIndikator && String(c.tahun || '2025') === cdTahun && String(c.status || '').trim() === 'Valid';
+                                            });
                                             if (filterDashboardTriwulan !== 'Semua') {
                                                 matchedCap = matchedCap.filter(c => c.triwulan && String(c.triwulan).trim().toUpperCase() === String(filterDashboardTriwulan).trim().toUpperCase());
                                             }
