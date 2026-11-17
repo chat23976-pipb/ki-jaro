@@ -11876,80 +11876,81 @@ function downloadLogRisikoError() {
     link.click();
     document.body.removeChild(link);
 }
-
-        // ====================================================================
-// REVISI 2 (FALLBACK): INPUT & FILTER CAPAIAN KETUA TIM
-// Ditempatkan SETELAH function downloadLogRisikoError() di part_12
+// ====================================================================
+// REVISI 2 (FIXED): INPUT & FILTER CAPAIAN KETUA TIM
 // ====================================================================
 (function setupRevisi2CapaianTim() {
     'use strict';
 
-    // ---------- Helper: apakah capaian adalah "individu" ketua tim ----------
-    function isIndividuKetuaTim(cap) {
-        if (!cap || !currentUser || currentUser.role !== 'tim_kerja') return false;
-        if (cap.timKey !== currentUser.timKey) return false;
-        const diturunkan = (DB.cascadingUnit || []).some(cu =>
-            cu.targetDirektur === cap.targetDirektur &&
-            String(cu.tahun || '2025') === String(cap.tahun || '2025')
-        );
-        return !diturunkan;
-    }
-
-    // ---------- Wrapper renderCapaianView (jika ada) ----------
+    // 1. Fungsi Pembungkus Tabel (Agar Ketua Tim Hanya Lihat Individunya)
     function wrapRenderCapaianView() {
         const orig = window.renderCapaianView;
-        if (typeof orig !== 'function') {
-            console.warn('[Revisi 2] renderCapaianView tidak terdeteksi — wrapper dilewati.');
-            return false;
-        }
+        if (typeof orig !== 'function' || orig.__wrappedByRevisi2) return;
+
         window.renderCapaianView = function (container) {
+            // HANYA untuk Ketua Tim Kerja
             if (currentUser && currentUser.role === 'tim_kerja') {
                 const _backup = DB.capaian;
-                DB.capaian = (_backup || []).filter(isIndividuKetuaTim);
+                // Filter: Hanya tampilkan milik tim ini DAN yang belum diturunkan ke unit (Individu)
+                DB.capaian = (_backup || []).filter(c => {
+                    if (c.timKey !== currentUser.timKey) return false;
+                    const diturunkan = (DB.cascadingUnit || []).some(cu =>
+                        cu.targetDirektur === c.targetDirektur &&
+                        String(cu.tahun || '2025') === String(c.tahun || '2025')
+                    );
+                    return !diturunkan;
+                });
+                
                 try {
                     return orig.apply(this, arguments);
                 } finally {
-                    DB.capaian = _backup;
+                    DB.capaian = _backup; // Kembalikan data asli setelah render
                 }
             }
             return orig.apply(this, arguments);
         };
-        console.log('[Revisi 2] Wrapper renderCapaianView aktif.');
-        return true;
+        window.renderCapaianView.__wrappedByRevisi2 = true;
+        console.log('[Revisi 2] Tabel capaian berhasil difilter untuk Ketua Tim.');
     }
 
-    // ---------- Tombol "Tambah Capaian Individu" khusus ketua tim ----------
+    // 2. Fungsi Menyisipkan Tombol di Toolbar
     function injectTambahCapaianIndividuButton() {
+        // Proteksi Ekstra: Jangan jalan kalau bukan Ketua Tim Kerja
         if (!currentUser || currentUser.role !== 'tim_kerja') return;
+        if (document.getElementById('btnTambahCapaianIndividu')) return;
+
         const main = document.getElementById('mainContent');
         if (!main) return;
-        // Cegah duplikasi
-        if (document.getElementById('btnTambahCapaianIndividu')) return;
-        // Cari tombol aksi di halaman capaian (biasanya ada toolbar)
-                const toolbar = main.querySelector('.flex.flex-wrap.gap-2, .flex.gap-2, .toolbar-actions');
 
-        // Hapus tombol lama jika ada, agar selalu fresh
-        const oldBtn = document.getElementById('btnTambahCapaianIndividu');
-        if (oldBtn) oldBtn.remove();
+        // Cari tombol "Template" atau "Import" untuk dijadikan patokan posisi
+        let targetBtn = null;
+        main.querySelectorAll('button').forEach(btn => {
+            if (btn.innerText.includes('Template') || btn.innerText.includes('Import')) {
+                targetBtn = btn;
+            }
+        });
 
+        // Jika tombol patokan tidak ada (karena loading dsb), tunggu sebentar
+        if (!targetBtn) return;
+
+        // Buat tombol baru
         const btn = document.createElement('button');
         btn.id = 'btnTambahCapaianIndividu';
+        btn.className = 'px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center space-x-2 shadow-sm ml-2';
         btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>Input Capaian Individu</span>';
         btn.onclick = () => openInputCapaianIndividuModal();
 
-        if (toolbar) {
-            // Jika toolbar ditemukan — sisipkan inline
-            btn.className = 'px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md';
-            toolbar.appendChild(btn);
-        } else {
-            // FALLBACK: Floating button di pojok kanan bawah
-            btn.className = 'fixed bottom-6 right-24 z-[80] px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-xs font-bold flex items-center space-x-2 shadow-2xl border-2 border-white';
-            document.body.appendChild(btn);
-        }
+        // Sisipkan tepat di sebelah kiri tombol "Template"
+        targetBtn.parentNode.insertBefore(btn, targetBtn);
     }
 
-    // ---------- Modal Input Capaian Individu ----------
+    // 3. Modal Input Capaian
     function openInputCapaianIndividuModal(editId) {
+        if (currentUser.role !== 'tim_kerja') {
+            showToast('Akses ditolak: Hanya Ketua Tim Kerja.', 'error');
+            return;
+        }
+
         let modal = document.getElementById('inputCapaianIndividuModal');
         if (!modal) {
             modal = document.createElement('div');
@@ -12000,7 +12001,7 @@ function downloadLogRisikoError() {
                         </div>
                         <div>
                             <label class="font-bold text-slate-700 block mb-1">Program / Uraian Pekerjaan</label>
-                            <textarea id="ciProgram" rows="2" class="w-full p-2 border rounded-lg"></textarea>
+                            <textarea id="ciProgram" rows="2" required class="w-full p-2 border rounded-lg"></textarea>
                         </div>
                         <div>
                             <label class="font-bold text-slate-700 block mb-1">Link Bukti Kinerja</label>
@@ -12020,7 +12021,7 @@ function downloadLogRisikoError() {
             modal.querySelector('#formCapaianIndividu').addEventListener('submit', saveCapaianIndividu);
         }
 
-        // Isi opsi indikator (hanya yang TIDAK diturunkan ke unit)
+        // Ambil indikator yang BELUM diturunkan ke unit
         const selectInd = modal.querySelector('#ciIndikator');
         const options = (DB.cascadingTim || []).filter(ct => {
             if (ct.timKey !== currentUser.timKey) return false;
@@ -12030,15 +12031,16 @@ function downloadLogRisikoError() {
             );
             return !sudahDiturunkan;
         });
+
         if (options.length === 0) {
-            selectInd.innerHTML = '<option value="">Belum ada indikator individu untuk diinput.</option>';
+            selectInd.innerHTML = '<option value="">Tidak ada indikator individu (semua sudah diturunkan ke unit).</option>';
         } else {
             selectInd.innerHTML = options.map(o =>
                 `<option value="${o.id}" data-indikator="${o.targetDirektur}" data-target="${o.targetVal || 100}" data-satuan="${o.satuan || '%'}">${o.targetDirektur} (Target: ${o.targetVal || 100} ${o.satuan || '%'})</option>`
             ).join('');
         }
 
-        // Mode edit
+        // Mode Edit
         if (editId) {
             const editItem = (DB.capaian || []).find(c => String(c.id) === String(editId));
             if (editItem) {
@@ -12063,13 +12065,11 @@ function downloadLogRisikoError() {
         modal.classList.add('flex');
     }
 
-    // ---------- Simpan Capaian Individu ----------
+    // 4. Fungsi Simpan
     async function saveCapaianIndividu(e) {
         e.preventDefault();
-        if (!currentUser || currentUser.role !== 'tim_kerja') {
-            showToast('Hanya Ketua Tim Kerja yang dapat menyimpan.', 'error');
-            return;
-        }
+        if (!currentUser || currentUser.role !== 'tim_kerja') return;
+
         const editId = document.getElementById('ciEditId').value;
         const selectInd = document.getElementById('ciIndikator');
         const selectedOpt = selectInd.options[selectInd.selectedIndex];
@@ -12077,13 +12077,13 @@ function downloadLogRisikoError() {
             showToast('Pilih indikator terlebih dahulu.', 'error');
             return;
         }
-        const indikatorName = selectedOpt.getAttribute('data-indikator');
+
         const payload = {
             id: editId || ('cp_tim_' + Date.now()),
             unit: currentUser.unit,
             timKey: currentUser.timKey,
-            targetDirektur: indikatorName,
-            kategori: 'Support',
+            targetDirektur: selectedOpt.getAttribute('data-indikator'),
+            kategori: 'Support', // Sebagai penanda ini bukan IKU Utama, melainkan individu
             tahun: document.getElementById('ciTahun').value,
             triwulan: document.getElementById('ciTriwulan').value,
             target: parseFloat(document.getElementById('ciTarget').value) || 100,
@@ -12092,13 +12092,14 @@ function downloadLogRisikoError() {
             program: document.getElementById('ciProgram').value || '',
             linkBukti: document.getElementById('ciLinkBukti').value || '',
             permasalahan: document.getElementById('ciPermasalahan').value || '',
-            status: 'Menunggu Validasi Direktur',
+            status: 'Menunggu Validasi Direktur', // Validasi oleh Direktur
             rekomendasi: '',
             penyesuaian: [],
             statusTindakLanjut: 'Belum Ditindaklanjuti',
             linkBuktiTindakLanjut: '',
-            isIndividuKetuaTim: true
+            isIndividuKetuaTim: true // Penanda khusus
         };
+
         if (editId) {
             const idx = DB.capaian.findIndex(c => String(c.id) === String(editId));
             if (idx >= 0) DB.capaian[idx] = payload;
@@ -12107,24 +12108,23 @@ function downloadLogRisikoError() {
             DB.capaian.push(payload);
             showToast('Capaian individu berhasil ditambahkan.', 'info');
         }
+
         await saveToMySQL();
         document.getElementById('inputCapaianIndividuModal').classList.add('hidden');
         document.getElementById('inputCapaianIndividuModal').classList.remove('flex');
         if (typeof renderCapaianView === 'function') renderCapaianView(document.getElementById('mainContent'));
     }
 
-    // Ekspos ke global agar bisa dipanggil dari tombol/menu lain
     window.openInputCapaianIndividuModal = openInputCapaianIndividuModal;
 
-    // ---------- Inisialisasi ----------
+    // 5. Inisialisasi & Observer
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             wrapRenderCapaianView();
             injectTambahCapaianIndividuButton();
-        }, 700);
+        }, 500);
     });
 
-    // Setiap kali mainContent berubah (navigasi antar menu), suntik ulang tombol
     let _tmr = null;
     const obs = new MutationObserver(() => {
         clearTimeout(_tmr);
@@ -12132,11 +12132,14 @@ function downloadLogRisikoError() {
             if (currentUser && currentUser.role === 'tim_kerja') {
                 injectTambahCapaianIndividuButton();
             }
-        }, 200);
+        }, 150);
     });
-    if (document.body) obs.observe(document.body, { childList: true, subtree: true });
+    
+    if (document.body) {
+        obs.observe(document.body, { childList: true, subtree: true });
+    }
 
-    console.log('[Revisi 2] Fallback input capaian ketua tim aktif.');
+    console.log('[Revisi 2 FIXED] Fallback input capaian ketua tim aktif.');
 })();
     </script>
     <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Manajemen Risiko -->
