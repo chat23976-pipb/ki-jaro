@@ -12007,15 +12007,26 @@ function downloadLogRisikoError() {
         // Cegah duplikasi
         if (document.getElementById('btnTambahCapaianIndividu')) return;
         // Cari tombol aksi di halaman capaian (biasanya ada toolbar)
-        const toolbar = main.querySelector('.flex.flex-wrap.gap-2, .flex.gap-2, .toolbar-actions');
-        if (!toolbar) return;
+                const toolbar = main.querySelector('.flex.flex-wrap.gap-2, .flex.gap-2, .toolbar-actions');
+
+        // Hapus tombol lama jika ada, agar selalu fresh
+        const oldBtn = document.getElementById('btnTambahCapaianIndividu');
+        if (oldBtn) oldBtn.remove();
 
         const btn = document.createElement('button');
         btn.id = 'btnTambahCapaianIndividu';
-        btn.className = 'px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center space-x-2';
         btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>Input Capaian Individu</span>';
         btn.onclick = () => openInputCapaianIndividuModal();
-        toolbar.appendChild(btn);
+
+        if (toolbar) {
+            // Jika toolbar ditemukan — sisipkan inline
+            btn.className = 'px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md';
+            toolbar.appendChild(btn);
+        } else {
+            // FALLBACK: Floating button di pojok kanan bawah
+            btn.className = 'fixed bottom-6 right-24 z-[80] px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-xs font-bold flex items-center space-x-2 shadow-2xl border-2 border-white';
+            document.body.appendChild(btn);
+        }
     }
 
     // ---------- Modal Input Capaian Individu ----------
