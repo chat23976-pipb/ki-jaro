@@ -1890,14 +1890,22 @@ function triggerGoogleLogin() {
          }
      }
 
-     function logout() {
+      function logout() {
+         // 1. Hapus semua data sesi user
          currentUser = null;
          if (idleTimer) clearTimeout(idleTimer);
          localStorage.removeItem('ki_jaro_user');
          localStorage.removeItem('ki_jaro_last_active');
          sessionStorage.clear();
-         renderLogin();
+         
+         // 2. Tampilkan pesan (opsional)
          showToast('Anda telah keluar sistem.', 'info');
+         
+         // 3. Paksa halaman untuk refresh bersih setelah 500 milidetik
+         // (500ms memberikan waktu toast muncul sebentar, atau bisa langsung 0)
+         setTimeout(() => {
+             window.location.reload();
+         }, 500);
      }
 
      // Fungsi Buka / Simpan Edit Profil & Password Mandiri (Fase 1 Poin 6)
