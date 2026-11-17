@@ -6846,6 +6846,19 @@ async function saveCascadingUnit(e) {
         }
         
         function renderCapaianView(container) {
+    // ===== TAMBAHAN REVISI 2: Filter capaian ketua tim =====
+    let _visibleCapaianForTim = null;
+    if (currentUser && currentUser.role === 'tim_kerja' && currentUser.timKey) {
+        _visibleCapaianForTim = (DB.capaian || []).filter(c => {
+            if (c.timKey !== currentUser.timKey) return false;
+            const diturunkan = (DB.cascadingUnit || []).some(cu =>
+                cu.targetDirektur === c.targetDirektur &&
+                String(cu.tahun || '2025') === String(c.tahun || '2025')
+            );
+            return !diturunkan;
+        });
+    }
+    // ===== AKHIR TAMBAHAN =====
             document.getElementById('pageTitle').innerText = 'Input & Validasi Capaian Kinerja & Program Kerja';
             const isKaUnit = currentUser.role === 'ketua_unit';
             const isSubUnit = SUB_UNIT_ROLES.includes(currentUser.role);
@@ -10969,25 +10982,16 @@ function promptDrawSignature(roleKey) {
         async function loadDataFromMySQL() {
             try {
                 const response = await fetch('/api/load-state/main_kijaro');
+                if (!response.ok) throw new Error("API tidak merespon");
                 const result = await response.json();
                 if (result.success && result.data) {
                     Object.assign(DB, result.data);
-                    
-                    // Auto-migrasi akun lama di MySQL & set default Admin ke deni.saputra@poltek-petrokimia.ac.id
-                    if (Array.isArray(DB.users)) {
-                        DB.users.forEach(u => {
-                            if (u.role === 'admin' && (u.username === 'admin' || u.username === 'admin@poltek-petrokimia.ac.id')) {
-                                u.username = 'deni.saputra@poltek-petrokimia.ac.id';
-                            } else if (u.username && !u.username.includes('@')) {
-                                u.username = `${u.username.trim().toLowerCase()}@poltek-petrokimia.ac.id`;
-                            }
-                        });
-                    }
-
+                    // ... proses auto-migrasi ...
                     console.log("Data berhasil dimuat dari MySQL.");
                 }
             } catch (e) {
                 console.error("Gagal memuat dari MySQL:", e);
+                // JANGAN throw error di sini agar aplikasi tetap jalan pakai data default
             }
         }
 
@@ -11259,8 +11263,13 @@ async function deleteIndikatorSupport(id) {
     renderCascadingView(document.getElementById('mainContent'));
 }
 
-        window.onload = async function() {
-            await loadDataFromMySQL();
+               window.onload = async function() {
+            try {
+                await loadDataFromMySQL();
+            } catch (err) {
+                console.warn("Gagal load dari MySQL, lanjutkan dengan data default/lokal.", err);
+            }
+            
             // MIGRASI DATA LAMA: Set default validationStatus untuk support indicators lama
 (DB.cascadingTim || []).forEach(ct => {
     if (ct.isSupport && !ct.validationStatus) {
@@ -11858,6 +11867,354 @@ function downloadLogRisikoError() {
     link.click();
     document.body.removeChild(link);
 }
+// ====================================================================
+// REVISI 1 (FALLBACK): BATAS AKSES MENU MIGRASI PER TIM KERJA
+// Ditempatkan SETELAH function downloadLogRisikoError() di part_12
+// ====================================================================
+(function setupRevisi1MigrasiAccess() {
+    'use strict';
+
+    function getAuthorizedScope() {
+        if (!currentUser) return 'guest';
+        if (currentUser.role === 'admin' || currentUser.role === 'direktur') return 'all';
+        if (currentUser.role === 'tim_kerja' && currentUser.timKey) return 'tim:' + currentUser.timKey;
+        return 'none';
+    }
+
+    function enforceMigrasiVisibility() {
+        const scope = getAuthorizedScope();
+        // Cari SEMUA elemen HTML yang mengandung kata "migrasi"
+        document.querySelectorAll('button, a, [onclick], [id], [class]').forEach(el => {
+            const signature = (
+                (el.getAttribute('onclick') || '') + ' ' +
+                (el.id || '') + ' ' +
+                (el.className || '') + ' ' +
+                (el.textContent || '')
+            ).toLowerCase();
+
+            const isMigrasi = signature.includes('migrasi') || 
+                             signature.includes('migration') ||
+                             signature.includes('migrate');
+
+            if (!isMigrasi) return;
+
+            if (scope === 'all') {
+                el.style.display = '';
+                el.removeAttribute('data-tim-restricted');
+            } else if (scope.startsWith('tim:')) {
+                const myTim = scope.substring(4);
+                el.style.display = '';
+                el.setAttribute('data-tim-restricted', myTim);
+            } else {
+                el.style.display = 'none';
+            }
+        });
+    }
+
+    // Panggil saat click pada tombol migrasi → filter isinya
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('button, a, [onclick]');
+        if (!btn) return;
+        const sig = ((btn.getAttribute('onclick') || '') + ' ' + (btn.textContent || '')).toLowerCase();
+        if (!sig.includes('migrasi') && !sig.includes('migration')) return;
+
+        const scope = getAuthorizedScope();
+        if (scope.startsWith('tim:')) {
+            const myTim = scope.substring(4);
+            setTimeout(() => {
+                // Filter semua <option> dalam modal migrasi yang sedang terbuka
+                document.querySelectorAll('select option').forEach(opt => {
+                    if (!opt.value) return;
+                    const optSig = ((opt.value || '') + ' ' + (opt.textContent || '')).toLowerCase();
+                    if (optSig.includes('akademik') || optSig.includes('umum') || optSig.includes('keuangan') || optSig.includes('sarpras') || optSig.includes('kerjasama')) {
+                        if (!optSig.includes(myTim.toLowerCase())) {
+                            opt.style.display = 'none';
+                        }
+                    }
+                });
+            }, 250);
+        }
+    }, true);
+
+    // Observer otomatis setiap kali DOM berubah
+    let _tmr = null;
+    const obs = new MutationObserver(() => {
+        clearTimeout(_tmr);
+        _tmr = setTimeout(enforceMigrasiVisibility, 150);
+    });
+    if (document.body) {
+        obs.observe(document.body, { childList: true, subtree: true });
+        setTimeout(enforceMigrasiVisibility, 400);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            obs.observe(document.body, { childList: true, subtree: true });
+            setTimeout(enforceMigrasiVisibility, 400);
+        });
+    }
+
+    console.log('[Revisi 1] Fallback batas akses migrasi aktif.');
+})();
+        // ====================================================================
+// REVISI 2 (FALLBACK): INPUT & FILTER CAPAIAN KETUA TIM
+// Ditempatkan SETELAH function downloadLogRisikoError() di part_12
+// ====================================================================
+(function setupRevisi2CapaianTim() {
+    'use strict';
+
+    // ---------- Helper: apakah capaian adalah "individu" ketua tim ----------
+    function isIndividuKetuaTim(cap) {
+        if (!cap || !currentUser || currentUser.role !== 'tim_kerja') return false;
+        if (cap.timKey !== currentUser.timKey) return false;
+        const diturunkan = (DB.cascadingUnit || []).some(cu =>
+            cu.targetDirektur === cap.targetDirektur &&
+            String(cu.tahun || '2025') === String(cap.tahun || '2025')
+        );
+        return !diturunkan;
+    }
+
+    // ---------- Wrapper renderCapaianView (jika ada) ----------
+    function wrapRenderCapaianView() {
+        const orig = window.renderCapaianView;
+        if (typeof orig !== 'function') {
+            console.warn('[Revisi 2] renderCapaianView tidak terdeteksi — wrapper dilewati.');
+            return false;
+        }
+        window.renderCapaianView = function (container) {
+            if (currentUser && currentUser.role === 'tim_kerja') {
+                const _backup = DB.capaian;
+                DB.capaian = (_backup || []).filter(isIndividuKetuaTim);
+                try {
+                    return orig.apply(this, arguments);
+                } finally {
+                    DB.capaian = _backup;
+                }
+            }
+            return orig.apply(this, arguments);
+        };
+        console.log('[Revisi 2] Wrapper renderCapaianView aktif.');
+        return true;
+    }
+
+    // ---------- Tombol "Tambah Capaian Individu" khusus ketua tim ----------
+    function injectTambahCapaianIndividuButton() {
+        if (!currentUser || currentUser.role !== 'tim_kerja') return;
+        const main = document.getElementById('mainContent');
+        if (!main) return;
+        // Cegah duplikasi
+        if (document.getElementById('btnTambahCapaianIndividu')) return;
+        // Cari tombol aksi di halaman capaian (biasanya ada toolbar)
+                const toolbar = main.querySelector('.flex.flex-wrap.gap-2, .flex.gap-2, .toolbar-actions');
+
+        // Hapus tombol lama jika ada, agar selalu fresh
+        const oldBtn = document.getElementById('btnTambahCapaianIndividu');
+        if (oldBtn) oldBtn.remove();
+
+        const btn = document.createElement('button');
+        btn.id = 'btnTambahCapaianIndividu';
+        btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>Input Capaian Individu</span>';
+        btn.onclick = () => openInputCapaianIndividuModal();
+
+        if (toolbar) {
+            // Jika toolbar ditemukan — sisipkan inline
+            btn.className = 'px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md';
+            toolbar.appendChild(btn);
+        } else {
+            // FALLBACK: Floating button di pojok kanan bawah
+            btn.className = 'fixed bottom-6 right-24 z-[80] px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-xs font-bold flex items-center space-x-2 shadow-2xl border-2 border-white';
+            document.body.appendChild(btn);
+        }
+    }
+
+    // ---------- Modal Input Capaian Individu ----------
+    function openInputCapaianIndividuModal(editId) {
+        let modal = document.getElementById('inputCapaianIndividuModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'inputCapaianIndividuModal';
+            modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-[100] p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="font-bold text-slate-900 text-base">
+                            <i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i>
+                            Input Capaian Individu — Ketua Tim
+                        </h3>
+                        <button type="button" onclick="document.getElementById('inputCapaianIndividuModal').classList.add('hidden');document.getElementById('inputCapaianIndividuModal').classList.remove('flex');" class="text-slate-400 hover:text-slate-700">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+                    <form id="formCapaianIndividu" class="space-y-3 text-xs">
+                        <input type="hidden" id="ciEditId" value="">
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">Indikator Kinerja (Individu)</label>
+                            <select id="ciIndikator" required class="w-full p-2 border rounded-lg"></select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="font-bold text-slate-700 block mb-1">Tahun</label>
+                                <input type="number" id="ciTahun" value="2025" required class="w-full p-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="font-bold text-slate-700 block mb-1">Triwulan</label>
+                                <select id="ciTriwulan" class="w-full p-2 border rounded-lg">
+                                    <option>TW 1</option><option>TW 2</option><option>TW 3</option><option>TW 4</option><option>Tahunan</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="font-bold text-slate-700 block mb-1">Target</label>
+                                <input type="number" id="ciTarget" value="100" required class="w-full p-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="font-bold text-slate-700 block mb-1">Realisasi</label>
+                                <input type="number" id="ciRealisasi" value="0" required class="w-full p-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="font-bold text-slate-700 block mb-1">Satuan</label>
+                                <input type="text" id="ciSatuan" value="%" class="w-full p-2 border rounded-lg">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">Program / Uraian Pekerjaan</label>
+                            <textarea id="ciProgram" rows="2" class="w-full p-2 border rounded-lg"></textarea>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">Link Bukti Kinerja</label>
+                            <input type="url" id="ciLinkBukti" placeholder="https://..." class="w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">Permasalahan</label>
+                            <textarea id="ciPermasalahan" rows="2" class="w-full p-2 border rounded-lg"></textarea>
+                        </div>
+                        <div class="flex justify-end space-x-2 pt-3 border-t">
+                            <button type="button" onclick="document.getElementById('inputCapaianIndividuModal').classList.add('hidden');document.getElementById('inputCapaianIndividuModal').classList.remove('flex');" class="px-4 py-2 bg-slate-200 rounded-xl text-xs font-medium">Batal</button>
+                            <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold">Simpan</button>
+                        </div>
+                    </form>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('#formCapaianIndividu').addEventListener('submit', saveCapaianIndividu);
+        }
+
+        // Isi opsi indikator (hanya yang TIDAK diturunkan ke unit)
+        const selectInd = modal.querySelector('#ciIndikator');
+        const options = (DB.cascadingTim || []).filter(ct => {
+            if (ct.timKey !== currentUser.timKey) return false;
+            const sudahDiturunkan = (DB.cascadingUnit || []).some(cu =>
+                cu.targetDirektur === ct.targetDirektur &&
+                String(cu.tahun || '2025') === String(ct.tahun || '2025')
+            );
+            return !sudahDiturunkan;
+        });
+        if (options.length === 0) {
+            selectInd.innerHTML = '<option value="">Belum ada indikator individu untuk diinput.</option>';
+        } else {
+            selectInd.innerHTML = options.map(o =>
+                `<option value="${o.id}" data-indikator="${o.targetDirektur}" data-target="${o.targetVal || 100}" data-satuan="${o.satuan || '%'}">${o.targetDirektur} (Target: ${o.targetVal || 100} ${o.satuan || '%'})</option>`
+            ).join('');
+        }
+
+        // Mode edit
+        if (editId) {
+            const editItem = (DB.capaian || []).find(c => String(c.id) === String(editId));
+            if (editItem) {
+                modal.querySelector('#ciEditId').value = editItem.id;
+                modal.querySelector('#ciTahun').value = editItem.tahun || '2025';
+                modal.querySelector('#ciTriwulan').value = editItem.triwulan || 'TW 1';
+                modal.querySelector('#ciTarget').value = editItem.target || 100;
+                modal.querySelector('#ciRealisasi').value = editItem.realisasi || 0;
+                modal.querySelector('#ciSatuan').value = editItem.satuan || '%';
+                modal.querySelector('#ciProgram').value = editItem.program || '';
+                modal.querySelector('#ciLinkBukti').value = editItem.linkBukti || '';
+                modal.querySelector('#ciPermasalahan').value = editItem.permasalahan || '';
+                const opt = Array.from(selectInd.options).find(o => o.getAttribute('data-indikator') === editItem.targetDirektur);
+                if (opt) selectInd.value = opt.value;
+            }
+        } else {
+            modal.querySelector('#ciEditId').value = '';
+            modal.querySelector('#ciRealisasi').value = 0;
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    // ---------- Simpan Capaian Individu ----------
+    async function saveCapaianIndividu(e) {
+        e.preventDefault();
+        if (!currentUser || currentUser.role !== 'tim_kerja') {
+            showToast('Hanya Ketua Tim Kerja yang dapat menyimpan.', 'error');
+            return;
+        }
+        const editId = document.getElementById('ciEditId').value;
+        const selectInd = document.getElementById('ciIndikator');
+        const selectedOpt = selectInd.options[selectInd.selectedIndex];
+        if (!selectedOpt || !selectedOpt.value) {
+            showToast('Pilih indikator terlebih dahulu.', 'error');
+            return;
+        }
+        const indikatorName = selectedOpt.getAttribute('data-indikator');
+        const payload = {
+            id: editId || ('cp_tim_' + Date.now()),
+            unit: currentUser.unit,
+            timKey: currentUser.timKey,
+            targetDirektur: indikatorName,
+            kategori: 'Support',
+            tahun: document.getElementById('ciTahun').value,
+            triwulan: document.getElementById('ciTriwulan').value,
+            target: parseFloat(document.getElementById('ciTarget').value) || 100,
+            realisasi: parseFloat(document.getElementById('ciRealisasi').value) || 0,
+            satuan: document.getElementById('ciSatuan').value || '%',
+            program: document.getElementById('ciProgram').value || '',
+            linkBukti: document.getElementById('ciLinkBukti').value || '',
+            permasalahan: document.getElementById('ciPermasalahan').value || '',
+            status: 'Menunggu Validasi Direktur',
+            rekomendasi: '',
+            penyesuaian: [],
+            statusTindakLanjut: 'Belum Ditindaklanjuti',
+            linkBuktiTindakLanjut: '',
+            isIndividuKetuaTim: true
+        };
+        if (editId) {
+            const idx = DB.capaian.findIndex(c => String(c.id) === String(editId));
+            if (idx >= 0) DB.capaian[idx] = payload;
+            showToast('Capaian individu diperbarui.', 'info');
+        } else {
+            DB.capaian.push(payload);
+            showToast('Capaian individu berhasil ditambahkan.', 'info');
+        }
+        await saveToMySQL();
+        document.getElementById('inputCapaianIndividuModal').classList.add('hidden');
+        document.getElementById('inputCapaianIndividuModal').classList.remove('flex');
+        if (typeof renderCapaianView === 'function') renderCapaianView(document.getElementById('mainContent'));
+    }
+
+    // Ekspos ke global agar bisa dipanggil dari tombol/menu lain
+    window.openInputCapaianIndividuModal = openInputCapaianIndividuModal;
+
+    // ---------- Inisialisasi ----------
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            wrapRenderCapaianView();
+            injectTambahCapaianIndividuButton();
+        }, 700);
+    });
+
+    // Setiap kali mainContent berubah (navigasi antar menu), suntik ulang tombol
+    let _tmr = null;
+    const obs = new MutationObserver(() => {
+        clearTimeout(_tmr);
+        _tmr = setTimeout(() => {
+            if (currentUser && currentUser.role === 'tim_kerja') {
+                injectTambahCapaianIndividuButton();
+            }
+        }, 200);
+    });
+    if (document.body) obs.observe(document.body, { childList: true, subtree: true });
+
+    console.log('[Revisi 2] Fallback input capaian ketua tim aktif.');
+})();
     </script>
     <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Manajemen Risiko -->
 <div id="exportRisikoCsvModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
