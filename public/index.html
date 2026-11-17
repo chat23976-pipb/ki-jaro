@@ -1891,21 +1891,13 @@ function triggerGoogleLogin() {
      }
 
       function logout() {
-         // 1. Hapus semua data sesi user
          currentUser = null;
          if (idleTimer) clearTimeout(idleTimer);
          localStorage.removeItem('ki_jaro_user');
          localStorage.removeItem('ki_jaro_last_active');
          sessionStorage.clear();
-         
-         // 2. Tampilkan pesan (opsional)
+         renderLogin();
          showToast('Anda telah keluar sistem.', 'info');
-         
-         // 3. Paksa halaman untuk refresh bersih setelah 500 milidetik
-         // (500ms memberikan waktu toast muncul sebentar, atau bisa langsung 0)
-         setTimeout(() => {
-             window.location.reload();
-         }, 500);
      }
 
      // Fungsi Buka / Simpan Edit Profil & Password Mandiri (Fase 1 Poin 6)
@@ -10990,16 +10982,25 @@ function promptDrawSignature(roleKey) {
         async function loadDataFromMySQL() {
             try {
                 const response = await fetch('/api/load-state/main_kijaro');
-                if (!response.ok) throw new Error("API tidak merespon");
                 const result = await response.json();
                 if (result.success && result.data) {
                     Object.assign(DB, result.data);
-                    // ... proses auto-migrasi ...
+                    
+                    // Auto-migrasi akun lama di MySQL & set default Admin ke deni.saputra@poltek-petrokimia.ac.id
+                    if (Array.isArray(DB.users)) {
+                        DB.users.forEach(u => {
+                            if (u.role === 'admin' && (u.username === 'admin' || u.username === 'admin@poltek-petrokimia.ac.id')) {
+                                u.username = 'deni.saputra@poltek-petrokimia.ac.id';
+                            } else if (u.username && !u.username.includes('@')) {
+                                u.username = `${u.username.trim().toLowerCase()}@poltek-petrokimia.ac.id`;
+                            }
+                        });
+                    }
+
                     console.log("Data berhasil dimuat dari MySQL.");
                 }
             } catch (e) {
                 console.error("Gagal memuat dari MySQL:", e);
-                // JANGAN throw error di sini agar aplikasi tetap jalan pakai data default
             }
         }
 
