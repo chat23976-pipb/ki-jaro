@@ -1890,7 +1890,7 @@ function triggerGoogleLogin() {
          }
      }
 
-     function logout() {
+      function logout() {
          currentUser = null;
          if (idleTimer) clearTimeout(idleTimer);
          localStorage.removeItem('ki_jaro_user');
@@ -6845,6 +6845,19 @@ async function saveCascadingUnit(e) {
         }
         
         function renderCapaianView(container) {
+    // ===== TAMBAHAN REVISI 2: Filter capaian ketua tim =====
+    let _visibleCapaianForTim = null;
+    if (currentUser && currentUser.role === 'tim_kerja' && currentUser.timKey) {
+        _visibleCapaianForTim = (DB.capaian || []).filter(c => {
+            if (c.timKey !== currentUser.timKey) return false;
+            const diturunkan = (DB.cascadingUnit || []).some(cu =>
+                cu.targetDirektur === c.targetDirektur &&
+                String(cu.tahun || '2025') === String(c.tahun || '2025')
+            );
+            return !diturunkan;
+        });
+    }
+    // ===== AKHIR TAMBAHAN =====
             document.getElementById('pageTitle').innerText = 'Input & Validasi Capaian Kinerja & Program Kerja';
             const isKaUnit = currentUser.role === 'ketua_unit';
             const isSubUnit = SUB_UNIT_ROLES.includes(currentUser.role);
@@ -10037,6 +10050,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 realisasiNum: realValNum,
                 satuan: satuanStr,
                 uraianKegiatan: capObj ? (capObj.uraianPekerjaan || capObj.program) : 'Melaksanakan program kerja sesuai target indikator yang dicascadingkan',
+                linkBukti: capObj ? (capObj.linkBukti || '') : '',
                 targetText: `Target output yang dihasilkan ${targetValNum} ${satuanStr}`,
                 waktuPelaksanaan: `Pelaksanaan kegiatan selama 12 bulan yaitu bulan Januari sampai dengan Desember ${yr}`,
                 hasilKegiatan: capObj ? `Hasil kegiatan yang dicapai adalah ${realValNum} ${satuanStr} (${capObj.program})` : `Realisasi capaian ${realValNum} ${satuanStr}`,
@@ -10139,28 +10153,48 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             }
 
             const modal = document.getElementById('assessSkpTimModal');
+            injectSignatureModeUI('assessSkpTimModal', 'ketuaTim');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
 
         async function submitAssessSKPTim(decision) {
-            const skpId = document.getElementById('assessSkpTimId').value;
-            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
-            if (!skp) return;
-
-            if (decision === 'Ditolak') {
-                skp.status = 'Ditolak';
+        const skpId = document.getElementById('assessSkpTimId').value;
+        const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
+        if (!skp) return;
+    
+        if (decision === 'Ditolak') {
+            skp.status = 'Ditolak';
+        } else {
+            // Ambil pilihan mode TTD
+            const sigModeEl = document.querySelector('input[name="skp_ketuaTim_sigMode"]:checked');
+            const sigMode = sigModeEl ? sigModeEl.value : 'qr';
+            skp.sigModeKetuaTim = sigMode;
+    
+            if (sigMode === 'manual') {
+                const dataUrl = (window._tempSigData && window._tempSigData['ketuaTim']) || null;
+                if (!dataUrl) {
+                    showToast('Anda memilih TTD manual. Silakan gambar tanda tangan terlebih dahulu!', 'error');
+                    return;
+                }
+                skp.signatureKetuaTim = dataUrl;
             } else {
-                skp.nilaiTimKinerja = document.getElementById('assessSkpTimRating').value;
-                skp.saranKetuaTim = document.getElementById('assessSkpTimNote').value.trim() || 'Dilanjutkan dan ditingkatkan pada periode berikutnya';
-                skp.status = 'Menunggu Direktur';
+                skp.signatureKetuaTim = null;
             }
-            recordAuditLog('Validasi SKP Tahap 1', 'Laporan SKP', `Ketua Tim Kerja menilai SKP ${skp.requesterName}: ${skp.nilaiTimKinerja} (${skp.status})`);
-            await saveToMySQL();
-            document.getElementById('assessSkpTimModal').classList.add('hidden');
-            showToast(`Status SKP diperbarui menjadi: ${skp.status}`);
-            renderLaporanView(document.getElementById('mainContent'));
+    
+            skp.nilaiTimKinerja = document.getElementById('assessSkpTimRating').value;
+            skp.saranKetuaTim = document.getElementById('assessSkpTimNote').value.trim() || 'Dilanjutkan dan ditingkatkan pada periode berikutnya';
+            skp.status = 'Menunggu Direktur';
         }
+        window._tempSigData = window._tempSigData || {};
+        window._tempSigData['ketuaTim'] = null;
+    
+        recordAuditLog('Validasi SKP Tahap 1', 'Laporan SKP', `Ketua Tim Kerja menilai SKP ${skp.requesterName}: ${skp.nilaiTimKinerja} (${skp.status})`);
+        await saveToMySQL();
+        document.getElementById('assessSkpTimModal').classList.add('hidden');
+        showToast(`Status SKP diperbarui menjadi: ${skp.status}`);
+        renderLaporanView(document.getElementById('mainContent'));
+    }
 
         function openAssessSKPDirModal(skpId) {
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
@@ -10244,6 +10278,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             }
 
             const modal = document.getElementById('assessSkpDirModal');
+            injectSignatureModeUI('assessSkpDirModal', 'direktur');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
@@ -10255,16 +10290,34 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             if (decision === 'Ditolak') {
                 skp.status = 'Ditolak';
             } else {
-                skp.nilaiFinalKinerja = document.getElementById('assessSkpDirRating').value;
-                skp.nilaiPerilakuDirektur = ''; // Dihapus sesuai permintaan
-                skp.catatanDirektur = document.getElementById('assessSkpDirNote').value.trim();
-                skp.status = 'Disetujui';
+    // Ambil pilihan mode TTD Direktur
+    const sigModeEl = document.querySelector('input[name="skp_direktur_sigMode"]:checked');
+    const sigMode = sigModeEl ? sigModeEl.value : 'qr';
+    skp.sigModeDirektur = sigMode;
 
-                const timestamp = new Date().toISOString();
-                skp.hashDirektur = generateSimpleDocHash(`DIR|${skp.id}|${skp.dirName}|${skp.dirNip}|${skp.nilaiFinalKinerja}|${timestamp}`);
-                skp.hashKetuaTim = generateSimpleDocHash(`TIM|${skp.id}|${skp.timName}|${skp.timNip}|${skp.nilaiTimKinerja}|${timestamp}`);
-                skp.hashPenyusun = generateSimpleDocHash(`USR|${skp.id}|${skp.userName}|${skp.userNip}|${skp.indikator}|${timestamp}`);
-            }
+    if (sigMode === 'manual') {
+        const dataUrl = (window._tempSigData && window._tempSigData['direktur']) || null;
+        if (!dataUrl) {
+            showToast('Anda memilih TTD manual. Silakan gambar tanda tangan terlebih dahulu!', 'error');
+            return;
+        }
+        skp.signatureDirektur = dataUrl;
+    } else {
+        skp.signatureDirektur = null;
+    }
+
+    skp.nilaiFinalKinerja = document.getElementById('assessSkpDirRating').value;
+    skp.nilaiPerilakuDirektur = '';
+    skp.catatanDirektur = document.getElementById('assessSkpDirNote').value.trim();
+    skp.status = 'Disetujui';
+
+    const timestamp = new Date().toISOString();
+    skp.hashDirektur = generateSimpleDocHash(`DIR|${skp.id}|${skp.dirName}|${skp.dirNip}|${skp.nilaiFinalKinerja}|${timestamp}`);
+    skp.hashKetuaTim = generateSimpleDocHash(`TIM|${skp.id}|${skp.timName}|${skp.timNip}|${skp.nilaiTimKinerja}|${timestamp}`);
+    skp.hashPenyusun = generateSimpleDocHash(`USR|${skp.id}|${skp.userName}|${skp.userNip}|${skp.indikator}|${timestamp}`);
+}
+window._tempSigData = window._tempSigData || {};
+window._tempSigData['direktur'] = null;
 
             recordAuditLog('Persetujuan Final SKP (Direktur)', 'Laporan SKP', `Direktur menyetujui final SKP ${skp.requesterName} (Capaian Kinerja: ${skp.nilaiFinalKinerja})`);
             await saveToMySQL();
@@ -10272,7 +10325,174 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             showToast(`SKP ${skp.status}! QR Code Hash Digital telah diterbitkan.`);
             renderLaporanView(document.getElementById('mainContent'));
         }
+// ===================== SIGNATURE CANVAS SYSTEM =====================
+let _sigCanvasCtx = null;
+let _sigCallback = null;
+let _sigDrawing = false;
 
+function _ensureSignatureModal() {
+    let modal = document.getElementById('signatureCanvasModal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'signatureCanvasModal';
+    modal.className = 'fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center z-[200] p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-900 text-base">
+                    <i class="fa-solid fa-signature text-blue-600 mr-2"></i>
+                    Tanda Tangan Manual — <span id="sigModalRoleLabel" class="text-blue-700"></span>
+                </h3>
+                <button type="button" onclick="closeSignatureCanvasModal(false)" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500">Gambar tanda tangan Anda pada kotak di bawah menggunakan mouse / touch screen.</p>
+            <div class="border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 p-2">
+                <canvas id="sigCanvas" width="700" height="220" class="w-full touch-none cursor-crosshair bg-white rounded-lg"></canvas>
+            </div>
+            <div class="flex justify-between items-center pt-2">
+                <button type="button" onclick="clearSignatureCanvas()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-medium text-xs">
+                    <i class="fa-solid fa-eraser mr-1"></i> Hapus
+                </button>
+                <div class="flex space-x-2">
+                    <button type="button" onclick="closeSignatureCanvasModal(false)" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
+                    <button type="button" onclick="closeSignatureCanvasModal(true)" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-xs">
+                        <i class="fa-solid fa-check mr-1"></i> Simpan Tanda Tangan
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+
+    const canvas = modal.querySelector('#sigCanvas');
+    _sigCanvasCtx = canvas.getContext('2d');
+    _sigCanvasCtx.lineWidth = 2.5;
+    _sigCanvasCtx.lineCap = 'round';
+    _sigCanvasCtx.lineJoin = 'round';
+    _sigCanvasCtx.strokeStyle = '#1e293b';
+
+    const getPos = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
+    };
+    const startDraw = (e) => { e.preventDefault(); _sigDrawing = true; const p = getPos(e); _sigCanvasCtx.beginPath(); _sigCanvasCtx.moveTo(p.x, p.y); };
+    const draw = (e) => { if (!_sigDrawing) return; e.preventDefault(); const p = getPos(e); _sigCanvasCtx.lineTo(p.x, p.y); _sigCanvasCtx.stroke(); };
+    const stopDraw = () => { _sigDrawing = false; };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+    return modal;
+}
+
+function openSignatureCanvasModal(roleLabel, callback) {
+    _sigCallback = callback;
+    const modal = _ensureSignatureModal();
+    const canvas = modal.querySelector('#sigCanvas');
+    _sigCanvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+    _sigDrawing = false;
+    document.getElementById('sigModalRoleLabel').innerText = roleLabel;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function clearSignatureCanvas() {
+    const canvas = document.getElementById('sigCanvas');
+    if (canvas && _sigCanvasCtx) _sigCanvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function closeSignatureCanvasModal(confirm) {
+    const modal = document.getElementById('signatureCanvasModal');
+    let dataUrl = null;
+    if (confirm) {
+        const canvas = document.getElementById('sigCanvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let hasInk = false;
+            for (let i = 3; i < px.length; i += 4) { if (px[i] > 0) { hasInk = true; break; } }
+            if (!hasInk) { showToast('Tanda tangan masih kosong. Gambar dulu, ya!', 'error'); return; }
+            dataUrl = canvas.toDataURL('image/png');
+        }
+    }
+    if (modal) { modal.classList.remove('flex'); modal.classList.add('hidden'); }
+    if (_sigCallback) { const cb = _sigCallback; _sigCallback = null; cb(dataUrl); }
+}
+
+// Suntik UI pilihan metode TTD ke dalam modal penilaian
+function injectSignatureModeUI(modalId, roleKey) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    if (modal.querySelector('#sigModeUI_' + roleKey)) return;
+
+    const container = document.createElement('div');
+    container.id = 'sigModeUI_' + roleKey;
+    container.className = 'bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2 my-3';
+    container.innerHTML = `
+        <label class="text-xs font-bold text-blue-950 block">
+            <i class="fa-solid fa-signature mr-1"></i> Metode Tanda Tangan
+        </label>
+        <div class="flex space-x-4 text-xs">
+            <label class="flex items-center space-x-1.5 cursor-pointer">
+                <input type="radio" name="skp_${roleKey}_sigMode" value="qr" checked class="rounded">
+                <span><i class="fa-solid fa-qrcode mr-1"></i> QR Code (Otomatis)</span>
+            </label>
+            <label class="flex items-center space-x-1.5 cursor-pointer">
+                <input type="radio" name="skp_${roleKey}_sigMode" value="manual" class="rounded">
+                <span><i class="fa-solid fa-pen-nib mr-1"></i> Tanda Tangan Manual</span>
+            </label>
+        </div>
+        <div id="sigPreview_${roleKey}" class="hidden mt-2 p-2 bg-white rounded-lg border text-center">
+            <p class="text-[10px] text-slate-500 mb-1">Preview tanda tangan:</p>
+            <img id="sigImg_${roleKey}" class="max-h-16 mx-auto" alt="Tanda tangan">
+        </div>
+        <button type="button" id="btnDraw_${roleKey}" onclick="promptDrawSignature('${roleKey}')"
+            class="hidden w-full mt-2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold">
+            <i class="fa-solid fa-pen mr-1"></i> Gambar Tanda Tangan Sekarang
+        </button>
+    `;
+    // Sisipkan sebelum tombol aksi (biasanya di akhir form/modal)
+    const actionRow = modal.querySelector('.flex.justify-end.space-x-2, .flex.justify-end, .modal-actions');
+    if (actionRow) actionRow.parentNode.insertBefore(container, actionRow);
+    else modal.appendChild(container);
+
+    // Simpan data sementara
+    window._tempSigData = window._tempSigData || {};
+    container.querySelectorAll('input[name="skp_' + roleKey + '_sigMode"]').forEach(r => {
+        r.addEventListener('change', () => {
+            const isManual = r.value === 'manual' && r.checked;
+            document.getElementById('btnDraw_' + roleKey).classList.toggle('hidden', !isManual);
+            if (!isManual) document.getElementById('sigPreview_' + roleKey).classList.add('hidden');
+        });
+    });
+}
+
+function promptDrawSignature(roleKey) {
+    const roleLabels = { 'direktur': 'Direktur', 'ketuaTim': 'Ketua Tim Kerja', 'penyusun': 'Penyusun Laporan' };
+    openSignatureCanvasModal(roleLabels[roleKey] || roleKey, (dataUrl) => {
+        if (!dataUrl) return;
+        window._tempSigData = window._tempSigData || {};
+        window._tempSigData[roleKey] = dataUrl;
+        const previewDiv = document.getElementById('sigPreview_' + roleKey);
+        const img = document.getElementById('sigImg_' + roleKey);
+        if (previewDiv && img) {
+            img.src = dataUrl;
+            previewDiv.classList.remove('hidden');
+        }
+        showToast('Tanda tangan tersimpan (sementara).');
+    });
+}
+// ==================== END SIGNATURE CANVAS SYSTEM ====================
         // REVISI 12: Cetak Laporan SKP Tanpa Border Tabel + Penanda Halaman Otomatis (Halaman 1 dari 2 & Halaman 2 dari 2)
         function previewAndPrintSKP(skpId) {
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
@@ -10328,6 +10548,15 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
     <td class="pb-1.5"></td>
     <td class="pb-1.5">
         ${sanitizeHTML(skp.hasilKegiatan || '-')}<br>
+        ${(() => {
+            let linkUrl = skp.linkBukti;
+            if (!linkUrl && skp.capaianId) {
+                const capTmp = (DB.capaian || []).find(c => String(c.id) === String(skp.capaianId));
+                if (capTmp && capTmp.linkBukti) linkUrl = capTmp.linkBukti;
+            }
+            if (!linkUrl) return '';
+            return `<span class="block my-1">Link Bukti Kinerja: <a href="${sanitizeHTML(linkUrl)}" target="_blank" class="text-blue-700 underline break-all">${sanitizeHTML(linkUrl)}</a></span>`;
+        })()}
         <span class="font-bold text-emerald-800">Predikat Capaian Kinerja: ${sanitizeHTML(skp.nilaiFinalKinerja || 'Sesuai Ekspektasi')}</span>
     </td>
 </tr>
@@ -10349,36 +10578,39 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                         </table>
 
                         <div class="pt-2">
-                            <p class="text-xs mb-2">${sanitizeHTML(skp.tanggalKota)}</p>
-                            <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-4 text-xs text-center pt-2">
-                                <div class="flex flex-col items-center">
-                                    <p class="font-semibold">Pejabat Penilai,</p>
-                                    <p class="font-bold mb-1">Direktur</p>
-                                    <div id="qrSignDirektur" class="p-1 bg-white rounded-lg my-1"></div>
-                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashDirektur)}</span>
-                                    <p class="font-bold underline">${sanitizeHTML(skp.dirName)}</p>
-                                    <p>NIP. ${sanitizeHTML(skp.dirNip)}</p>
-                                </div>
-                                ${!skp.isKetuaTimRequest ? `
-                                <div class="flex flex-col items-center">
-                                    <p class="font-semibold">Mengetahui,</p>
-                                    <p class="font-bold mb-1">Ketua Tim Kerja</p>
-                                    <div id="qrSignKetuaTim" class="p-1 bg-white rounded-lg my-1"></div>
-                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashKetuaTim)}</span>
-                                    <p class="font-bold underline">${sanitizeHTML(skp.timName)}</p>
-                                    <p>NIP. ${sanitizeHTML(skp.timNip)}</p>
-                                </div>
-                                ` : ''}
-                                <div class="flex flex-col items-center">
-                                    <p class="font-semibold">Yang membuat,</p>
-                                    <p class="font-bold mb-1">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
-                                    <div id="qrSignPenyusun" class="p-1 bg-white rounded-lg my-1"></div>
-                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashPenyusun)}</span>
-                                    <p class="font-bold underline">${sanitizeHTML(skp.userName)}</p>
-                                    <p>NIP. ${sanitizeHTML(skp.userNip)}</p>
-                                </div>
+                        <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-4 text-xs text-center pt-2">
+                            <!-- KIRI: Yang Membuat / Penyusun -->
+                            <div class="flex flex-col items-center">
+                                <p class="font-semibold">Yang membuat,</p>
+                                <p class="font-bold mb-1">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
+                                <div id="qrSignPenyusun" class="p-1 bg-white rounded-lg my-1"></div>
+                                <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashPenyusun)}</span>
+                                <p class="font-bold underline">${sanitizeHTML(skp.userName)}</p>
+                                <p>NIP. ${sanitizeHTML(skp.userNip)}</p>
+                            </div>
+                            ${!skp.isKetuaTimRequest ? `
+                            <!-- TENGAH: Mengetahui / Ketua Tim Kerja -->
+                            <div class="flex flex-col items-center">
+                                <p class="font-semibold">Mengetahui,</p>
+                                <p class="font-bold mb-1">Ketua Tim Kerja</p>
+                                <div id="qrSignKetuaTim" class="p-1 bg-white rounded-lg my-1"></div>
+                                <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashKetuaTim)}</span>
+                                <p class="font-bold underline">${sanitizeHTML(skp.timName)}</p>
+                                <p>NIP. ${sanitizeHTML(skp.timNip)}</p>
+                            </div>
+                            ` : ''}
+                            <!-- KANAN: Pejabat Penilai / Direktur + Tanggal & Kota -->
+                            <div class="flex flex-col items-center">
+                                <p class="text-xs mb-1 self-end pr-2">${sanitizeHTML(skp.tanggalKota)}</p>
+                                <p class="font-semibold">Pejabat Penilai,</p>
+                                <p class="font-bold mb-1">Direktur</p>
+                                <div id="qrSignDirektur" class="p-1 bg-white rounded-lg my-1"></div>
+                                <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashDirektur)}</span>
+                                <p class="font-bold underline">${sanitizeHTML(skp.dirName)}</p>
+                                <p>NIP. ${sanitizeHTML(skp.dirNip)}</p>
                             </div>
                         </div>
+                    </div>
 
                         <div class="text-right text-[11px] font-bold text-slate-500 pt-2">
                             ${useTwoPages ? 'Halaman 2 dari 2' : 'Halaman 1 dari 1'}
@@ -10388,46 +10620,46 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             `;
 
            setTimeout(() => {
-            if (typeof QRCode !== 'undefined') {
-                // 1. QR Code Direktur
-                const elDir = document.getElementById('qrSignDirektur');
-                if (elDir) {
-                    elDir.innerHTML = "";
-                    const textDir = `VALIDASI DIREKTUR: ${skp.dirName || '-'} | NIP: ${skp.dirNip || '-'} | Periode: ${skp.triwulan} ${skp.tahun} | Hasil: ${skp.nilaiFinalKinerja || 'Sesuai Ekspektasi'} | Hash: ${skp.hashDirektur || '-'}`;
-                    new QRCode(elDir, { 
-                        text: textDir, 
-                        width: 75, 
-                        height: 75,
-                        correctLevel: QRCode.CorrectLevel.L
-                    });
+    const renderSig = (elId, modeKey, sigData, qrText, altLabel) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.innerHTML = '';
+        if (modeKey === 'manual' && sigData) {
+            // Tampilkan gambar TTD manual
+            const img = document.createElement('img');
+            img.src = sigData;
+            img.className = 'max-h-[75px] mx-auto';
+            img.alt = altLabel;
+            el.appendChild(img);
+                } else if (typeof QRCode !== 'undefined') {
+                    // Tampilkan QR Code
+                    new QRCode(el, { text: qrText, width: 75, height: 75, correctLevel: QRCode.CorrectLevel.L });
                 }
-                
-                // 2. QR Code Ketua Tim Kerja (Jika Bukan Request Ketua Tim Sendiri)
-                const elTim = document.getElementById('qrSignKetuaTim');
-                if (elTim) {
-                    elTim.innerHTML = "";
-                    const textTim = `VALIDASI TIM KERJA: ${skp.timName || '-'} | NIP: ${skp.timNip || '-'} | Hash: ${skp.hashKetuaTim || '-'}`;
-                    new QRCode(elTim, { 
-                        text: textTim, 
-                        width: 75, 
-                        height: 75,
-                        correctLevel: QRCode.CorrectLevel.L
-                    });
-                }
-
-                // 3. QR Code Penyusun / Pembuat Laporan (DIPERBAIKI)
-                const elUsr = document.getElementById('qrSignPenyusun');
-                if (elUsr) {
-                    elUsr.innerHTML = "";
-                    const textUsr = `PENYUSUN LAPORAN: ${skp.userName || skp.requesterName || '-'} | NIP: ${skp.userNip || '-'} | Indikator: ${skp.indikator || '-'} | Hash: ${skp.hashPenyusun || '-'}`;
-                    new QRCode(elUsr, { 
-                        text: textUsr, 
-                        width: 75, 
-                        height: 75,
-                        correctLevel: QRCode.CorrectLevel.L
-                    });
-                }
-            }
+            };
+        
+            renderSig(
+                'qrSignDirektur',
+                skp.sigModeDirektur || 'qr',
+                skp.signatureDirektur,
+                `VALIDASI DIREKTUR: ${skp.dirName || '-'} | NIP: ${skp.dirNip || '-'} | Periode: ${skp.triwulan} ${skp.tahun} | Hasil: ${skp.nilaiFinalKinerja || 'Sesuai Ekspektasi'} | Hash: ${skp.hashDirektur || '-'}`,
+                'Tanda tangan Direktur'
+            );
+        
+            renderSig(
+                'qrSignKetuaTim',
+                skp.sigModeKetuaTim || 'qr',
+                skp.signatureKetuaTim,
+                `VALIDASI TIM KERJA: ${skp.timName || '-'} | NIP: ${skp.timNip || '-'} | Hash: ${skp.hashKetuaTim || '-'}`,
+                'Tanda tangan Ketua Tim'
+            );
+        
+            renderSig(
+                'qrSignPenyusun',
+                skp.sigModePenyusun || 'qr',
+                skp.signaturePenyusun,
+                `PENYUSUN LAPORAN: ${skp.userName || skp.requesterName || '-'} | NIP: ${skp.userNip || '-'} | Indikator: ${skp.indikator || '-'} | Hash: ${skp.hashPenyusun || '-'}`,
+                'Tanda tangan Penyusun'
+            );
         }, 120);
         area.scrollIntoView({ behavior: 'smooth' });
         }
@@ -11039,8 +11271,13 @@ async function deleteIndikatorSupport(id) {
     renderCascadingView(document.getElementById('mainContent'));
 }
 
-        window.onload = async function() {
-            await loadDataFromMySQL();
+               window.onload = async function() {
+            try {
+                await loadDataFromMySQL();
+            } catch (err) {
+                console.warn("Gagal load dari MySQL, lanjutkan dengan data default/lokal.", err);
+            }
+            
             // MIGRASI DATA LAMA: Set default validationStatus untuk support indicators lama
 (DB.cascadingTim || []).forEach(ct => {
     if (ct.isSupport && !ct.validationStatus) {
@@ -11500,11 +11737,11 @@ async function handleImportCapaian(event) {
             const finalSatuan = isUtama ? defaultSatuan : (satuanInput || defaultSatuan);
 
             const newCapaian = {
-                id: 'cp_imp_' + Date.now() + '_' + i,
-                unit: activeUnit,
-                timKey: timKeyRef,
-                parentTarget: selectedOpt ? selectedOpt.getAttribute('data-parenttarget') : null, // <-- TAMBAHKAN INI
-                targetDirektur: dirRef ? dirRef.target : indikator,
+            id: 'cp_imp_' + Date.now() + '_' + i,
+            unit: activeUnit,
+            timKey: timKeyRef,
+            parentTarget: ctMatch ? ctMatch.targetDirektur : (dirRef ? dirRef.target : null),
+            targetDirektur: dirRef ? dirRef.target : indikator,
                 kategori: isUtama ? 'Utama' : 'Support',
                 tahun: tahun,
                 program: program,
@@ -11638,6 +11875,271 @@ function downloadLogRisikoError() {
     link.click();
     document.body.removeChild(link);
 }
+// ====================================================================
+// REVISI 2 (FIXED): INPUT & FILTER CAPAIAN KETUA TIM
+// ====================================================================
+(function setupRevisi2CapaianTim() {
+    'use strict';
+
+    // 1. Fungsi Pembungkus Tabel (Agar Ketua Tim Hanya Lihat Individunya)
+    function wrapRenderCapaianView() {
+        const orig = window.renderCapaianView;
+        if (typeof orig !== 'function' || orig.__wrappedByRevisi2) return;
+
+        window.renderCapaianView = function (container) {
+            // HANYA untuk Ketua Tim Kerja
+            if (currentUser && currentUser.role === 'tim_kerja') {
+                const _backup = DB.capaian;
+                // Filter: Hanya tampilkan milik tim ini DAN yang belum diturunkan ke unit (Individu)
+                DB.capaian = (_backup || []).filter(c => {
+                    if (c.timKey !== currentUser.timKey) return false;
+                    const diturunkan = (DB.cascadingUnit || []).some(cu =>
+                        cu.targetDirektur === c.targetDirektur &&
+                        String(cu.tahun || '2025') === String(c.tahun || '2025')
+                    );
+                    return !diturunkan;
+                });
+                
+                try {
+                    return orig.apply(this, arguments);
+                } finally {
+                    DB.capaian = _backup; // Kembalikan data asli setelah render
+                }
+            }
+            return orig.apply(this, arguments);
+        };
+        window.renderCapaianView.__wrappedByRevisi2 = true;
+        console.log('[Revisi 2] Tabel capaian berhasil difilter untuk Ketua Tim.');
+    }
+
+    // 2. Fungsi Menyisipkan Tombol di Toolbar
+    function injectTambahCapaianIndividuButton() {
+        // Proteksi Ekstra: Jangan jalan kalau bukan Ketua Tim Kerja
+        if (!currentUser || currentUser.role !== 'tim_kerja') return;
+        if (document.getElementById('btnTambahCapaianIndividu')) return;
+
+        const main = document.getElementById('mainContent');
+        if (!main) return;
+
+        // Cari tombol "Template" atau "Import" untuk dijadikan patokan posisi
+        let targetBtn = null;
+        main.querySelectorAll('button').forEach(btn => {
+            if (btn.innerText.includes('Template') || btn.innerText.includes('Import')) {
+                targetBtn = btn;
+            }
+        });
+
+        // Jika tombol patokan tidak ada (karena loading dsb), tunggu sebentar
+        if (!targetBtn) return;
+
+        // Buat tombol baru
+        const btn = document.createElement('button');
+        btn.id = 'btnTambahCapaianIndividu';
+        btn.className = 'px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center space-x-2 shadow-sm ml-2';
+        btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>Input Capaian Individu</span>';
+        btn.onclick = () => openInputCapaianIndividuModal();
+
+        // Sisipkan tepat di sebelah kiri tombol "Template"
+        targetBtn.parentNode.insertBefore(btn, targetBtn);
+    }
+
+    // 3. Modal Input Capaian
+    function openInputCapaianIndividuModal(editId) {
+        if (currentUser.role !== 'tim_kerja') {
+            showToast('Akses ditolak: Hanya Ketua Tim Kerja.', 'error');
+            return;
+        }
+
+        let modal = document.getElementById('inputCapaianIndividuModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'inputCapaianIndividuModal';
+            modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-[100] p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="font-bold text-slate-900 text-base">
+                            <i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i>
+                            Input Capaian Individu — Ketua Tim
+                        </h3>
+                        <button type="button" onclick="document.getElementById('inputCapaianIndividuModal').classList.add('hidden');document.getElementById('inputCapaianIndividuModal').classList.remove('flex');" class="text-slate-400 hover:text-slate-700">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+                    <form id="formCapaianIndividu" class="space-y-3 text-xs">
+                        <input type="hidden" id="ciEditId" value="">
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">Indikator Kinerja (Individu)</label>
+                            <select id="ciIndikator" required class="w-full p-2 border rounded-lg"></select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="font-bold text-slate-700 block mb-1">Tahun</label>
+                                <input type="number" id="ciTahun" value="2025" required class="w-full p-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="font-bold text-slate-700 block mb-1">Triwulan</label>
+                                <select id="ciTriwulan" class="w-full p-2 border rounded-lg">
+                                    <option>TW 1</option><option>TW 2</option><option>TW 3</option><option>TW 4</option><option>Tahunan</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="font-bold text-slate-700 block mb-1">Target</label>
+                                <input type="number" id="ciTarget" value="100" required class="w-full p-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="font-bold text-slate-700 block mb-1">Realisasi</label>
+                                <input type="number" id="ciRealisasi" value="0" required class="w-full p-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="font-bold text-slate-700 block mb-1">Satuan</label>
+                                <input type="text" id="ciSatuan" value="%" class="w-full p-2 border rounded-lg">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">Program / Uraian Pekerjaan</label>
+                            <textarea id="ciProgram" rows="2" required class="w-full p-2 border rounded-lg"></textarea>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">Link Bukti Kinerja</label>
+                            <input type="url" id="ciLinkBukti" placeholder="https://..." class="w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">Permasalahan</label>
+                            <textarea id="ciPermasalahan" rows="2" class="w-full p-2 border rounded-lg"></textarea>
+                        </div>
+                        <div class="flex justify-end space-x-2 pt-3 border-t">
+                            <button type="button" onclick="document.getElementById('inputCapaianIndividuModal').classList.add('hidden');document.getElementById('inputCapaianIndividuModal').classList.remove('flex');" class="px-4 py-2 bg-slate-200 rounded-xl text-xs font-medium">Batal</button>
+                            <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold">Simpan</button>
+                        </div>
+                    </form>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('#formCapaianIndividu').addEventListener('submit', saveCapaianIndividu);
+        }
+
+        // Ambil indikator yang BELUM diturunkan ke unit
+        const selectInd = modal.querySelector('#ciIndikator');
+        const options = (DB.cascadingTim || []).filter(ct => {
+            if (ct.timKey !== currentUser.timKey) return false;
+            const sudahDiturunkan = (DB.cascadingUnit || []).some(cu =>
+                cu.targetDirektur === ct.targetDirektur &&
+                String(cu.tahun || '2025') === String(ct.tahun || '2025')
+            );
+            return !sudahDiturunkan;
+        });
+
+        if (options.length === 0) {
+            selectInd.innerHTML = '<option value="">Tidak ada indikator individu (semua sudah diturunkan ke unit).</option>';
+        } else {
+            selectInd.innerHTML = options.map(o =>
+                `<option value="${o.id}" data-indikator="${o.targetDirektur}" data-target="${o.targetVal || 100}" data-satuan="${o.satuan || '%'}">${o.targetDirektur} (Target: ${o.targetVal || 100} ${o.satuan || '%'})</option>`
+            ).join('');
+        }
+
+        // Mode Edit
+        if (editId) {
+            const editItem = (DB.capaian || []).find(c => String(c.id) === String(editId));
+            if (editItem) {
+                modal.querySelector('#ciEditId').value = editItem.id;
+                modal.querySelector('#ciTahun').value = editItem.tahun || '2025';
+                modal.querySelector('#ciTriwulan').value = editItem.triwulan || 'TW 1';
+                modal.querySelector('#ciTarget').value = editItem.target || 100;
+                modal.querySelector('#ciRealisasi').value = editItem.realisasi || 0;
+                modal.querySelector('#ciSatuan').value = editItem.satuan || '%';
+                modal.querySelector('#ciProgram').value = editItem.program || '';
+                modal.querySelector('#ciLinkBukti').value = editItem.linkBukti || '';
+                modal.querySelector('#ciPermasalahan').value = editItem.permasalahan || '';
+                const opt = Array.from(selectInd.options).find(o => o.getAttribute('data-indikator') === editItem.targetDirektur);
+                if (opt) selectInd.value = opt.value;
+            }
+        } else {
+            modal.querySelector('#ciEditId').value = '';
+            modal.querySelector('#ciRealisasi').value = 0;
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    // 4. Fungsi Simpan
+    async function saveCapaianIndividu(e) {
+        e.preventDefault();
+        if (!currentUser || currentUser.role !== 'tim_kerja') return;
+
+        const editId = document.getElementById('ciEditId').value;
+        const selectInd = document.getElementById('ciIndikator');
+        const selectedOpt = selectInd.options[selectInd.selectedIndex];
+        if (!selectedOpt || !selectedOpt.value) {
+            showToast('Pilih indikator terlebih dahulu.', 'error');
+            return;
+        }
+
+        const payload = {
+            id: editId || ('cp_tim_' + Date.now()),
+            unit: currentUser.unit,
+            timKey: currentUser.timKey,
+            targetDirektur: selectedOpt.getAttribute('data-indikator'),
+            kategori: 'Support', // Sebagai penanda ini bukan IKU Utama, melainkan individu
+            tahun: document.getElementById('ciTahun').value,
+            triwulan: document.getElementById('ciTriwulan').value,
+            target: parseFloat(document.getElementById('ciTarget').value) || 100,
+            realisasi: parseFloat(document.getElementById('ciRealisasi').value) || 0,
+            satuan: document.getElementById('ciSatuan').value || '%',
+            program: document.getElementById('ciProgram').value || '',
+            linkBukti: document.getElementById('ciLinkBukti').value || '',
+            permasalahan: document.getElementById('ciPermasalahan').value || '',
+            status: 'Menunggu Validasi Direktur', // Validasi oleh Direktur
+            rekomendasi: '',
+            penyesuaian: [],
+            statusTindakLanjut: 'Belum Ditindaklanjuti',
+            linkBuktiTindakLanjut: '',
+            isIndividuKetuaTim: true // Penanda khusus
+        };
+
+        if (editId) {
+            const idx = DB.capaian.findIndex(c => String(c.id) === String(editId));
+            if (idx >= 0) DB.capaian[idx] = payload;
+            showToast('Capaian individu diperbarui.', 'info');
+        } else {
+            DB.capaian.push(payload);
+            showToast('Capaian individu berhasil ditambahkan.', 'info');
+        }
+
+        await saveToMySQL();
+        document.getElementById('inputCapaianIndividuModal').classList.add('hidden');
+        document.getElementById('inputCapaianIndividuModal').classList.remove('flex');
+        if (typeof renderCapaianView === 'function') renderCapaianView(document.getElementById('mainContent'));
+    }
+
+    window.openInputCapaianIndividuModal = openInputCapaianIndividuModal;
+
+    // 5. Inisialisasi & Observer
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            wrapRenderCapaianView();
+            injectTambahCapaianIndividuButton();
+        }, 500);
+    });
+
+    let _tmr = null;
+    const obs = new MutationObserver(() => {
+        clearTimeout(_tmr);
+        _tmr = setTimeout(() => {
+            if (currentUser && currentUser.role === 'tim_kerja') {
+                injectTambahCapaianIndividuButton();
+            }
+        }, 150);
+    });
+    
+    if (document.body) {
+        obs.observe(document.body, { childList: true, subtree: true });
+    }
+
+    console.log('[Revisi 2 FIXED] Fallback input capaian ketua tim aktif.');
+})();
     </script>
     <!-- Modal Pop-up Pilihan Kolom Ekspor CSV Manajemen Risiko -->
 <div id="exportRisikoCsvModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
