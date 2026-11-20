@@ -5060,12 +5060,30 @@ let dashboardChartInstances = {};
             DB.cascadingTim.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
             DB.cascadingUnit.forEach(c => { if (!c.tahun) c.tahun = '2025'; });
 
+            const isTopLeader = isAdmin || isDirektur || currentUser.role === 'apip';
+            const userTimKey = currentUser.timKey;
+
             let filteredDir = [...DB.cascadingDirektur];
             if (filterCascadingTahun !== 'Semua') filteredDir = filteredDir.filter(c => String(c.tahun) === String(filterCascadingTahun));
+            // Level 1: Ketua Tim & Ketua Unit/Prodi/Subbag hanya melihat Tim Kerjanya sendiri (misal: Akademik saja)
+            if (!isTopLeader && userTimKey) {
+                filteredDir = filteredDir.filter(c => Array.isArray(c.timKeys) && c.timKeys.includes(userTimKey));
+            }
 
             let filteredTim = [...DB.cascadingTim];
             if (filterCascadingTahun !== 'Semua') filteredTim = filteredTim.filter(c => String(c.tahun) === String(filterCascadingTahun));
-            let filteredTimTable = (isKetuaTim ? filteredTim.filter(c => c.timKey === currentUser.timKey) : filteredTim).filter(c => !c.isSupport);
+            // Level 2: Batasi sesuai Tim Kerja masing-masing; untuk Ketua Unit sembunyikan indikator privat Ketua Tim yang tidak diturunkan
+            if (!isTopLeader && userTimKey) {
+                filteredTim = filteredTim.filter(c => c.timKey === userTimKey);
+            }
+            if (isKaUnit) {
+                filteredTim = filteredTim.filter(c => 
+                    c.isCascading !== false && 
+                    Array.isArray(c.unitTargets) && 
+                    c.unitTargets.length > 0
+                );
+            }
+            let filteredTimTable = filteredTim.filter(c => !c.isSupport);
 
             let filteredUnit = [...DB.cascadingUnit];
             if (filterCascadingTahun !== 'Semua') filteredUnit = filteredUnit.filter(c => String(c.tahun) === String(filterCascadingTahun));
@@ -5432,6 +5450,16 @@ let dashboardChartInstances = {};
             <input type="text" id="timIndikatorIndividu" required class="w-full p-2.5 bg-white border border-blue-400 rounded-xl text-xs font-bold text-blue-800" placeholder="Ketik nama indikator baru...">
         </div>
     </div>
+    <div class="grid grid-cols-2 gap-4 bg-blue-50/60 p-3 rounded-xl border border-blue-200">
+        <div>
+            <label class="block font-bold text-slate-700 mb-1 text-xs">Target Indikator Individu <span class="text-rose-500">*</span></label>
+            <input type="number" step="any" id="timTargetVal" required class="w-full p-2 bg-white border rounded-lg text-xs font-bold" placeholder="Contoh: 100">
+        </div>
+        <div>
+            <label class="block font-bold text-slate-700 mb-1 text-xs">Satuan <span class="text-rose-500">*</span></label>
+            <input type="text" id="timSatuan" required class="w-full p-2 bg-white border rounded-lg text-xs font-semibold" placeholder="Contoh: % / Dokumen">
+        </div>
+    </div>
                     <div class="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-xl border">
                         <div>
                             <label class="block font-bold text-slate-700 mb-1 text-xs">3. Jenis Indikator</label>
@@ -5498,6 +5526,16 @@ let dashboardChartInstances = {};
         <div>
             <label class="block font-semibold text-slate-700 mb-1 text-xs">2. Nama Indikator Kinerja Individu Staf</label>
             <input type="text" id="unitIndikatorIndividu" required class="w-full p-2.5 bg-white border border-emerald-400 rounded-xl text-xs font-bold text-emerald-800" placeholder="Ketik nama indikator baru...">
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-4 bg-emerald-50/60 p-3 rounded-xl border border-emerald-200">
+        <div>
+            <label class="block font-bold text-slate-700 mb-1 text-xs">Target Indikator Individu <span class="text-rose-500">*</span></label>
+            <input type="number" step="any" id="unitTargetVal" required class="w-full p-2 bg-white border rounded-lg text-xs font-bold" placeholder="Contoh: 100">
+        </div>
+        <div>
+            <label class="block font-bold text-slate-700 mb-1 text-xs">Satuan <span class="text-rose-500">*</span></label>
+            <input type="text" id="unitSatuan" required class="w-full p-2 bg-white border rounded-lg text-xs font-semibold" placeholder="Contoh: % / Kegiatan">
         </div>
     </div>
     
@@ -5958,29 +5996,40 @@ function handleDirRefChange() {
     }
     syncTimJenisIndikatorRule();
 }
-        function updateTimDirRefOptions(tahun) {
+        ffunction updateTimDirRefOptions(tahun, allowTargetOnEdit = null) {
             const sel = document.getElementById('timDirRef');
             if (!sel) return;
+            const modal = document.getElementById('cascadingTimModal');
+            const editTimKey = modal ? modal.getAttribute('data-edit-timkey') : null;
+            const activeTim = editTimKey || currentUser.timKey;
+
+            // Daftar indikator induk yang SUDAH dipakai oleh Tim ini pada Tahun terpilih
+            const usedTargets = (DB.cascadingTim || [])
+                .filter(ct => ct.timKey === activeTim && String(ct.tahun || '2025') === String(tahun))
+                .map(ct => ct.targetDirektur.toLowerCase());
+
             const matching = (DB.cascadingDirektur || []).filter(c => {
                 const matchTahun = String(c.tahun || '2025') === String(tahun);
-                const matchTim = currentUser.role === 'admin' ? true : (Array.isArray(c.timKeys) && c.timKeys.includes(currentUser.timKey));
-                return matchTahun && matchTim;
+                const matchTim = currentUser.role === 'admin' ? true : (Array.isArray(c.timKeys) && c.timKeys.includes(activeTim));
+                if (!matchTahun || !matchTim) return false;
+                if (allowTargetOnEdit && c.target === allowTargetOnEdit) return true;
+                return !usedTargets.includes(c.target.toLowerCase());
             });
 
             sel.innerHTML = matching.length === 0 
-                ? `<option value="">Belum ada indikator dari Direktur untuk tahun ${tahun}</option>` 
+                ? `<option value="">Semua indikator Direktur tahun ${tahun} sudah dicascading / belum tersedia</option>` 
                 : matching.map(c => {
-                    const isUtama = currentUser.timKey ? isTimUtamaInDir(c, currentUser.timKey) : true;
-                    const roleStatus = currentUser.timKey ? (isUtama ? ' [Status Tim Anda: ★ UTAMA]' : ' [Status Tim Anda: 🛡️ SUPPORT]') : '';
+                    const isUtama = activeTim ? isTimUtamaInDir(c, activeTim) : true;
+                    const roleStatus = activeTim ? (isUtama ? ' [Status Tim Anda: ★ UTAMA]' : ' [Status Tim Anda: 🛡️ SUPPORT]') : '';
                     return `<option value="${c.target}" data-isutama="${isUtama}" data-targetval="${c.targetVal !== undefined ? c.targetVal : 100}" data-satuan="${c.satuan || '%'}">${c.target} (Target: ${c.targetVal !== undefined ? c.targetVal : 100} ${c.satuan || '%'})${roleStatus}</option>`;
                 }).join('');
 
             sel.onchange = function() {
+                syncUnitRolesWithTimStatus();
+                handleDirRefChange();
+            };
             syncUnitRolesWithTimStatus();
             handleDirRefChange();
-        };
-        syncUnitRolesWithTimStatus();
-        handleDirRefChange();
         }
         
 
@@ -6343,7 +6392,7 @@ function toggleUnitRoleSelect(idx, isChecked) {
             `).join('');
         }
         function openEditCascadingTimModal(id) {
-            const item = DB.cascadingTim.find(x => x.id === id);
+            const item = DB.cascadingTim.find(x => String(x.id) === String(id));
             if (!item) return;
             openCascadingTimModal();
             const modal = document.getElementById('cascadingTimModal');
@@ -6352,8 +6401,27 @@ function toggleUnitRoleSelect(idx, isChecked) {
 
             renderTimUnitCheckboxes(item.timKey);
             document.getElementById('timTahunTarget').value = item.tahun || '2025';
-            updateTimDirRefOptions(item.tahun || '2025');
+            updateTimDirRefOptions(item.tahun || '2025', item.targetDirektur);
             document.getElementById('timDirRef').value = item.targetDirektur;
+
+            // Isi ulang Nama Indikator Individu, Target, Satuan, Jenis, & Status Cascading sesuai data tersimpan
+            if (document.getElementById('timIndikatorIndividu')) {
+                document.getElementById('timIndikatorIndividu').value = item.indikatorIndividu || item.targetDirektur || '';
+            }
+            if (document.getElementById('timTargetVal')) {
+                document.getElementById('timTargetVal').value = item.targetVal !== undefined ? item.targetVal : '';
+            }
+            if (document.getElementById('timSatuan')) {
+                document.getElementById('timSatuan').value = item.satuan || '';
+            }
+            if (document.getElementById('timJenisIndikator')) {
+                document.getElementById('timJenisIndikator').value = item.jenis || 'Utama';
+            }
+            if (document.getElementById('timIsCascading')) {
+                const cascVal = item.isCascading === false ? 'Tidak' : 'Ya';
+                document.getElementById('timIsCascading').value = cascVal;
+                if (typeof toggleTimCascadingUI === 'function') toggleTimCascadingUI(cascVal);
+            }
 
             // PENGISIAN KEMBALI RANGE EKSPEKTASI TIM KERJA YANG TERSIMPAN
             const rk = item.rangeKinerja || { tidakMencapai: '< 100%', mencapai: '100%', melebihi: '> 100%' };
@@ -6411,6 +6479,20 @@ async function saveCascadingTim(e) {
     if (!targetDirRef || !indikatorIndividu) return showToast('Data belum lengkap!', 'error');
 
     const activeTimKey = editTimKey || currentUser.timKey || 'Akademik';
+    const targetVal = parseFloat(document.getElementById('timTargetVal').value) || 0;
+    const satuan = document.getElementById('timSatuan').value.trim() || '%';
+
+    // Guard Anti-Duplikasi Indikator Induk pada Tahun & Tim yang sama
+    const isDuplicateTim = (DB.cascadingTim || []).some(ct =>
+        (!editId || String(ct.id) !== String(editId)) &&
+        ct.timKey === activeTimKey &&
+        String(ct.tahun || '2025') === String(tahun) &&
+        ct.targetDirektur.toLowerCase() === targetDirRef.toLowerCase()
+    );
+    if (isDuplicateTim) {
+        return showToast(`Peringatan: Indikator induk "${targetDirRef}" sudah pernah diinput pada tahun ${tahun}! Tidak dapat menyimpan data ganda.`, 'error');
+    }
+
     const dirRefObj = DB.cascadingDirektur.find(cd => cd.target === targetDirRef && String(cd.tahun || '2025') === tahun);
 
     // VALIDASI: Wajib ada 1 Utama jika Tim ini berstatus Utama di Direktur
@@ -6449,7 +6531,7 @@ async function saveCascadingTim(e) {
     }
 
     const payload = {
-        tahun, targetDirektur: targetDirRef, indikatorIndividu, jenis, isCascading, timKey: activeTimKey,
+        tahun, targetDirektur: targetDirRef, indikatorIndividu, targetVal, satuan, jenis, isCascading, timKey: activeTimKey,
         unitTargets: chosenUnits, unitRoles: unitRoles,
         rangeKinerja: {
             tidakMencapai: document.getElementById('timRangeTidak').value.trim(),
@@ -6500,26 +6582,32 @@ function handleUnitRefChange() {
             return opt.getAttribute('data-isutama') === 'true';
         }
 
-        function updateUnitCascRefOptions(tahun) {
+function updateUnitCascRefOptions(tahun, allowTargetOnEdit = null) {
             const sel = document.getElementById('unitCascRef');
             if (!sel) return;
             const modal = document.getElementById('cascadingUnitModal');
             const editUnit = modal ? modal.getAttribute('data-edit-unit') : null;
             const activeUnit = editUnit || currentUser.unit;
 
+            const usedTargetsUnit = (DB.cascadingUnit || [])
+                .filter(cu => cu.unit === activeUnit && String(cu.tahun || '2025') === String(tahun))
+                .map(cu => (cu.targetDirektur || '').toLowerCase());
+
             const matching = (DB.cascadingTim || []).filter(ct => {
                 const matchTahun = String(ct.tahun || '2025') === String(tahun);
                 const matchUnit = currentUser.role === 'admin' ? true : (Array.isArray(ct.unitTargets) && ct.unitTargets.includes(activeUnit));
-                return matchTahun && matchUnit;
+                if (!matchTahun || !matchUnit) return false;
+                if (allowTargetOnEdit && ct.targetDirektur === allowTargetOnEdit) return true;
+                return !usedTargetsUnit.includes(ct.targetDirektur.toLowerCase());
             });
 
             sel.innerHTML = matching.length === 0
-                ? `<option value="">Belum ada indikator dari Tim Kerja untuk Unit ${sanitizeHTML(activeUnit)} di tahun ${tahun}</option>`
+                ? `<option value="">Semua indikator dari Tim Kerja tahun ${tahun} sudah diinput / belum tersedia</option>`
                 : matching.map(ct => {
                     const cd = DB.cascadingDirektur.find(x => x.target === ct.targetDirektur && String(x.tahun || '2025') === String(tahun)) || DB.cascadingDirektur.find(x => x.target === ct.targetDirektur);
                     const isUtama = cd ? (isTimUtamaInDir(cd, ct.timKey) && isUnitUtamaInTim(ct, activeUnit)) : isUnitUtamaInTim(ct, activeUnit);
                     const statusLbl = isUtama ? '[Status Unit Anda: ★ UTAMA]' : '[Status Unit Anda: 🛡️ SUPPORT]';
-                    return `<option value="${ct.targetDirektur}" data-isutama="${isUtama}" data-timkey="${ct.timKey}">${ct.targetDirektur} ${statusLbl}</option>`;
+                    return `<option value="${ct.targetDirektur}" data-timid="${ct.id}" data-isutama="${isUtama}" data-timkey="${ct.timKey}">${ct.indikatorIndividu || ct.targetDirektur} ${statusLbl}</option>`;
                 }).join('');
 
             syncSubUnitRolesWithUnitStatus();
@@ -6631,7 +6719,7 @@ function handleUnitRefChange() {
 
         function openEditCascadingUnitModal(id) {
             if (!requireWriteAccess(['ketua_unit', 'admin'])) return;
-            const item = (DB.cascadingUnit || []).find(x => x.id === id);
+            const item = (DB.cascadingUnit || []).find(x => String(x.id) === String(id));
             if (!item) return;
             openCascadingUnitModal();
             const modal = document.getElementById('cascadingUnitModal');
@@ -6639,10 +6727,29 @@ function handleUnitRefChange() {
             modal.setAttribute('data-edit-unit', item.unit);
 
             renderUnitSubCheckboxes(item.unit);
-            document.getElementById('unitCascTahun').value = item.tahun || '2025';
+            if (document.getElementById('unitCascTahun')) document.getElementById('unitCascTahun').value = item.tahun || '2025';
             document.getElementById('unitCascAggMode').value = item.aggregationMode || 'rata-rata';
-            updateUnitCascRefOptions(item.tahun || '2025');
+            updateUnitCascRefOptions(item.tahun || '2025', item.targetDirektur);
             document.getElementById('unitCascRef').value = item.targetDirektur;
+
+            // Isi ulang Nama Indikator Individu Staf, Target, Satuan, Jenis, & Status Cascading sesuai data tersimpan
+            if (document.getElementById('unitIndikatorIndividu')) {
+                document.getElementById('unitIndikatorIndividu').value = item.indikatorIndividu || item.targetDirektur || '';
+            }
+            if (document.getElementById('unitTargetVal')) {
+                document.getElementById('unitTargetVal').value = item.targetVal !== undefined ? item.targetVal : '';
+            }
+            if (document.getElementById('unitSatuan')) {
+                document.getElementById('unitSatuan').value = item.satuan || '';
+            }
+            if (document.getElementById('unitJenisIndikator')) {
+                document.getElementById('unitJenisIndikator').value = item.jenis || 'Utama';
+            }
+            if (document.getElementById('unitIsCascading')) {
+                const cascVal = item.isCascading === false ? 'Tidak' : 'Ya';
+                document.getElementById('unitIsCascading').value = cascVal;
+                if (typeof toggleUnitCascadingUI === 'function') toggleUnitCascadingUI(cascVal);
+            }
 
             document.querySelectorAll('input[name="subUnitCheck"]').forEach((chk, idx) => {
                 const sKey = chk.value;
@@ -6663,16 +6770,32 @@ async function saveCascadingUnit(e) {
     const editId = modal.getAttribute('data-edit-id');
     const editUnit = modal.getAttribute('data-edit-unit');
     const activeUnit = editUnit || currentUser.unit;
-    const tahun = document.getElementById('unitCascTahun').value;
-    const parentTimId = document.getElementById('unitCascRef').value; 
+    const tahun = document.getElementById('unitCascTahun') ? document.getElementById('unitCascTahun').value : '2025';
+    const selRef = document.getElementById('unitCascRef');
+    const selectedOpt = selRef.options[selRef.selectedIndex];
+    const targetDirVal = selRef.value;
+    const parentTimId = selectedOpt ? (selectedOpt.getAttribute('data-timid') || targetDirVal) : targetDirVal;
     const indikatorIndividu = document.getElementById('unitIndikatorIndividu').value.trim();
+    const targetVal = parseFloat(document.getElementById('unitTargetVal').value) || 0;
+    const satuan = document.getElementById('unitSatuan').value.trim() || '%';
     const jenis = document.getElementById('unitJenisIndikator').value;
     const isCascading = document.getElementById('unitIsCascading').value === 'Ya';
     const aggMode = document.getElementById('unitCascAggMode').value;
 
-    if (!parentTimId || !indikatorIndividu) return showToast('Data belum lengkap!', 'error');
+    if (!targetDirVal || !indikatorIndividu) return showToast('Data belum lengkap!', 'error');
 
-    const parentTimObj = DB.cascadingTim.find(ct => String(ct.id) === String(parentTimId));
+    // Guard Anti-Duplikasi pada Tahun & Unit yang sama
+    const isDupUnit = (DB.cascadingUnit || []).some(cu =>
+        (!editId || String(cu.id) !== String(editId)) &&
+        cu.unit === activeUnit &&
+        String(cu.tahun || '2025') === String(tahun) &&
+        (cu.targetDirektur || '').toLowerCase() === targetDirVal.toLowerCase()
+    );
+    if (isDupUnit) {
+        return showToast(`Peringatan: Indikator induk "${targetDirVal}" sudah pernah diinput pada tahun ${tahun}! Tidak dapat menyimpan data ganda.`, 'error');
+    }
+
+    const parentTimObj = DB.cascadingTim.find(ct => String(ct.id) === String(parentTimId) || (ct.targetDirektur === targetDirVal && String(ct.tahun || '2025') === String(tahun)));
     const isUnitUtamaInTim = parentTimObj ? (parentTimObj.unitRoles && parentTimObj.unitRoles[activeUnit] === 'Utama') : false;
     
     // VALIDASI: Wajib ada 1 Utama jika Unit ini berstatus Utama di Tim
@@ -7432,7 +7555,7 @@ function rebuildCapaianIndikatorOptions(year) {
         document.getElementById('editCapaianId').value = '';
         document.getElementById('inputProgram').value = '';
         document.getElementById('inputUraianPekerjaan').value = '';
-        document.getElementById('inputRealisasi').value = '85';
+        document.getElementById('inputRealisasi').value = '';
         document.getElementById('inputLinkBukti').value = '';
         document.getElementById('inputPermasalahan').value = '';
         const defaultYear = (filterCapaianTahun && filterCapaianTahun !== 'Semua') ? filterCapaianTahun : '2025';
@@ -11967,39 +12090,240 @@ function downloadLogRisikoError() {
                             <i class="fa-solid fa-xmark text-lg"></i>
                         </button>
                     </div>
+                   // Helper untuk memperbarui dropdown Indikator Individu sesuai Tahun & Triwulan yang dipilih
+    function refreshDropdownCapaianIndividu(editTargetIndikator = null) {
+        const selectInd = document.getElementById('ciIndikator');
+        const tahunVal = String(document.getElementById('ciTahun').value || '').trim();
+        const twVal = String(document.getElementById('ciTriwulan').value || 'TW 1').trim();
+
+        if (!tahunVal) {
+            selectInd.innerHTML = '<option value="">-- Isi Tahun Terlebih Dahulu --</option>';
+            return;
+        }
+
+        // Ambil indikator milik Tim ini pada Tahun tersebut yang TIDAK diturunkan ke unit
+        const options = (DB.cascadingTim || []).filter(ct => {
+            if (ct.timKey !== currentUser.timKey) return false;
+            if (String(ct.tahun || '2025') !== tahunVal) return false;
+
+            // Cek apakah sudah diturunkan ke unit/prodi/subbag
+            const sudahDiturunkan = (DB.cascadingUnit || []).some(cu =>
+                cu.targetDirektur === ct.targetDirektur &&
+                String(cu.tahun || '2025') === tahunVal
+            ) || (Array.isArray(ct.unitTargets) && ct.unitTargets.length > 0);
+            if (sudahDiturunkan) return false;
+
+            // Jika sedang mode Edit indikator ini, tetap tampilkan di dropdown
+            if (editTargetIndikator && ct.targetDirektur === editTargetIndikator) return true;
+
+            // Sembunyikan jika sudah pernah diinput capaiannya pada Tahun & Triwulan yang sama
+            const sudahDiinput = (DB.capaian || []).some(c =>
+                c.timKey === currentUser.timKey &&
+                c.targetDirektur === ct.targetDirektur &&
+                String(c.tahun || '2025') === tahunVal &&
+                String(c.triwulan || '').toLowerCase() === twVal.toLowerCase()
+            );
+            return !sudahDiinput;
+        });
+
+        if (options.length === 0) {
+            selectInd.innerHTML = `<option value="">-- Tidak ada indikator individu tersisa untuk Tahun ${tahunVal} (${twVal}) --</option>`;
+        } else {
+            selectInd.innerHTML = '<option value="">-- Pilih Indikator Kinerja Individu --</option>' + options.map(o =>
+                `<option value="${o.id}" data-indikator="${o.targetDirektur}" data-target="${o.targetVal !== undefined ? o.targetVal : ''}" data-satuan="${o.satuan || ''}">${o.targetDirektur} ${o.targetVal ? `(Target: ${o.targetVal} ${o.satuan || ''})` : ''}</option>`
+            ).join('');
+        }
+    }
+
+    function openInputCapaianIndividuModal(editId) {
+        if (currentUser.role !== 'tim_kerja') {
+            showToast('Akses ditolak: Hanya Ketua Tim Kerja.', 'error');
+            return;
+        }
+
+        let modal = document.getElementById('inputCapaianIndividuModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'inputCapaianIndividuModal';
+            modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-[100] p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="font-bold text-slate-900 text-base">
+                            <i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i>
+                            Input Capaian Individu — Ketua Tim
+                        </h3>
+                        <button type="button" onclick="document.getElementById('inputCapaianIndividuModal').classList.add('hidden');document.getElementById('inputCapaianIndividuModal').classList.remove('flex');" class="text-slate-400 hover:text-slate-700">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
                     <form id="formCapaianIndividu" class="space-y-3 text-xs">
                         <input type="hidden" id="ciEditId" value="">
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">Indikator Kinerja (Individu)</label>
-                            <select id="ciIndikator" required class="w-full p-2 border rounded-lg"></select>
-                        </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="font-bold text-slate-700 block mb-1">Tahun</label>
-                                <input type="number" id="ciTahun" value="2025" required class="w-full p-2 border rounded-lg">
+                                <label class="font-bold text-slate-700 block mb-1">1. Tahun <span class="text-rose-500">*</span></label>
+                                <input type="number" id="ciTahun" placeholder="Contoh: 2025" required class="w-full p-2 border rounded-lg">
                             </div>
                             <div>
-                                <label class="font-bold text-slate-700 block mb-1">Triwulan</label>
+                                <label class="font-bold text-slate-700 block mb-1">2. Triwulan <span class="text-rose-500">*</span></label>
                                 <select id="ciTriwulan" class="w-full p-2 border rounded-lg">
                                     <option>TW 1</option><option>TW 2</option><option>TW 3</option><option>TW 4</option><option>Tahunan</option>
                                 </select>
                             </div>
                         </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">3. Indikator Kinerja Individu (Belum Diturunkan) <span class="text-rose-500">*</span></label>
+                            <select id="ciIndikator" required class="w-full p-2 border rounded-lg bg-slate-50"></select>
+                        </div>
                         <div class="grid grid-cols-3 gap-3">
                             <div>
                                 <label class="font-bold text-slate-700 block mb-1">Target</label>
-                                <input type="number" id="ciTarget" value="100" required class="w-full p-2 border rounded-lg">
+                                <input type="number" step="any" id="ciTarget" placeholder="Kosong" required class="w-full p-2 border rounded-lg">
                             </div>
                             <div>
                                 <label class="font-bold text-slate-700 block mb-1">Realisasi</label>
-                                <input type="number" id="ciRealisasi" value="0" required class="w-full p-2 border rounded-lg">
+                                <input type="number" step="any" id="ciRealisasi" placeholder="Kosong" required class="w-full p-2 border rounded-lg">
                             </div>
                             <div>
                                 <label class="font-bold text-slate-700 block mb-1">Satuan</label>
-                                <input type="text" id="ciSatuan" value="%" class="w-full p-2 border rounded-lg">
+                                <input type="text" id="ciSatuan" placeholder="%/Dok" class="w-full p-2 border rounded-lg">
                             </div>
                         </div>
                         <div>
+                            <label class="font-bold text-slate-700 block mb-1">Program / Uraian Pekerjaan</label>
+                            <textarea id="ciProgram" rows="2" required class="w-full p-2 border rounded-lg"></textarea>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">Link Bukti Kinerja</label>
+                            <input type="url" id="ciLinkBukti" placeholder="https://..." class="w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">Permasalahan</label>
+                            <textarea id="ciPermasalahan" rows="2" class="w-full p-2 border rounded-lg"></textarea>
+                        </div>
+                        <div class="flex justify-end space-x-2 pt-3 border-t">
+                            <button type="button" onclick="document.getElementById('inputCapaianIndividuModal').classList.add('hidden');document.getElementById('inputCapaianIndividuModal').classList.remove('flex');" class="px-4 py-2 bg-slate-200 rounded-xl text-xs font-medium">Batal</button>
+                            <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold">Simpan</button>
+                        </div>
+                    </form>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('#formCapaianIndividu').addEventListener('submit', saveCapaianIndividu);
+            modal.querySelector('#ciTahun').addEventListener('input', () => refreshDropdownCapaianIndividu());
+            modal.querySelector('#ciTriwulan').addEventListener('change', () => refreshDropdownCapaianIndividu());
+            modal.querySelector('#ciIndikator').addEventListener('change', function() {
+                const opt = this.options[this.selectedIndex];
+                if (opt && opt.value) {
+                    const t = opt.getAttribute('data-target');
+                    const s = opt.getAttribute('data-satuan');
+                    if (t !== '') document.getElementById('ciTarget').value = t;
+                    if (s !== '') document.getElementById('ciSatuan').value = s;
+                }
+            });
+        }
+
+        const selectInd = modal.querySelector('#ciIndikator');
+
+        if (editId) {
+            const editItem = (DB.capaian || []).find(c => String(c.id) === String(editId));
+            if (editItem) {
+                modal.querySelector('#ciEditId').value = editItem.id;
+                modal.querySelector('#ciTahun').value = editItem.tahun || '2025';
+                modal.querySelector('#ciTriwulan').value = editItem.triwulan || 'TW 1';
+                refreshDropdownCapaianIndividu(editItem.targetDirektur);
+                const opt = Array.from(selectInd.options).find(o => o.getAttribute('data-indikator') === editItem.targetDirektur);
+                if (opt) selectInd.value = opt.value;
+                modal.querySelector('#ciTarget').value = editItem.target !== undefined ? editItem.target : '';
+                modal.querySelector('#ciRealisasi').value = editItem.realisasi !== undefined ? editItem.realisasi : '';
+                modal.querySelector('#ciSatuan').value = editItem.satuan || '';
+                modal.querySelector('#ciProgram').value = editItem.program || '';
+                modal.querySelector('#ciLinkBukti').value = editItem.linkBukti || '';
+                modal.querySelector('#ciPermasalahan').value = editItem.permasalahan || '';
+            }
+        } else {
+            // Mode Tambah: Kosongkan default form agar bersih
+            modal.querySelector('#ciEditId').value = '';
+            modal.querySelector('#ciTahun').value = new Date().getFullYear() || '2025';
+            modal.querySelector('#ciTriwulan').value = 'TW 1';
+            refreshDropdownCapaianIndividu();
+            modal.querySelector('#ciTarget').value = '';
+            modal.querySelector('#ciRealisasi').value = '';
+            modal.querySelector('#ciSatuan').value = '';
+            modal.querySelector('#ciProgram').value = '';
+            modal.querySelector('#ciLinkBukti').value = '';
+            modal.querySelector('#ciPermasalahan').value = '';
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    async function saveCapaianIndividu(e) {
+        e.preventDefault();
+        if (!currentUser || currentUser.role !== 'tim_kerja') return;
+
+        const editId = document.getElementById('ciEditId').value;
+        const selectInd = document.getElementById('ciIndikator');
+        const selectedOpt = selectInd.options[selectInd.selectedIndex];
+        if (!selectedOpt || !selectedOpt.value) {
+            showToast('Pilih indikator individu yang tersedia terlebih dahulu.', 'error');
+            return;
+        }
+
+        const indikatorNama = selectedOpt.getAttribute('data-indikator');
+        const tahunVal = String(document.getElementById('ciTahun').value).trim();
+        const twVal = String(document.getElementById('ciTriwulan').value).trim();
+
+        // Guard Anti-Duplikasi sebelum simpan
+        const isDuplicate = (DB.capaian || []).some(c =>
+            String(c.id) !== String(editId) &&
+            c.timKey === currentUser.timKey &&
+            c.targetDirektur === indikatorNama &&
+            String(c.tahun || '2025') === tahunVal &&
+            String(c.triwulan || '').toLowerCase() === twVal.toLowerCase()
+        );
+        if (isDuplicate) {
+            showToast(`Peringatan: Capaian untuk "${indikatorNama}" pada ${twVal} Tahun ${tahunVal} sudah pernah diinput!`, 'error');
+            return;
+        }
+
+        const payload = {
+            id: editId || ('cp_tim_' + Date.now()),
+            unit: currentUser.unit,
+            timKey: currentUser.timKey,
+            targetDirektur: indikatorNama,
+            kategori: 'Support',
+            tahun: tahunVal,
+            triwulan: twVal,
+            target: parseFloat(document.getElementById('ciTarget').value) || 0,
+            realisasi: parseFloat(document.getElementById('ciRealisasi').value) || 0,
+            satuan: document.getElementById('ciSatuan').value.trim() || '%',
+            program: sanitizeHTML(document.getElementById('ciProgram').value || ''),
+            linkBukti: document.getElementById('ciLinkBukti').value.trim() || '',
+            permasalahan: sanitizeHTML(document.getElementById('ciPermasalahan').value || ''),
+            status: 'Menunggu Validasi Direktur',
+            rekomendasi: '',
+            penyesuaian: [],
+            statusTindakLanjut: 'Belum Ditindaklanjuti',
+            linkBuktiTindakLanjut: '',
+            isIndividuKetuaTim: true
+        };
+
+        if (editId) {
+            const idx = DB.capaian.findIndex(c => String(c.id) === String(editId));
+            if (idx >= 0) DB.capaian[idx] = payload;
+            showToast('Capaian individu berhasil diperbarui.', 'info');
+        } else {
+            DB.capaian.push(payload);
+            showToast('Capaian individu berhasil ditambahkan.');
+        }
+
+        await saveToMySQL();
+        document.getElementById('inputCapaianIndividuModal').classList.add('hidden');
+        document.getElementById('inputCapaianIndividuModal').classList.remove('flex');
+        if (typeof renderCapaianView === 'function') renderCapaianView(document.getElementById('mainContent'));
+    }                        
+ <div>
                             <label class="font-bold text-slate-700 block mb-1">Program / Uraian Pekerjaan</label>
                             <textarea id="ciProgram" rows="2" required class="w-full p-2 border rounded-lg"></textarea>
                         </div>
