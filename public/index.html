@@ -12085,22 +12085,18 @@ function downloadLogRisikoError() {
             return;
         }
 
-        // Ambil indikator milik Tim ini pada Tahun tersebut yang TIDAK diturunkan ke unit
         const options = (DB.cascadingTim || []).filter(ct => {
             if (ct.timKey !== currentUser.timKey) return false;
             if (String(ct.tahun || '2025') !== tahunVal) return false;
 
-            // Cek apakah sudah diturunkan ke unit/prodi/subbag
             const sudahDiturunkan = (DB.cascadingUnit || []).some(cu =>
                 cu.targetDirektur === ct.targetDirektur &&
                 String(cu.tahun || '2025') === tahunVal
             ) || (Array.isArray(ct.unitTargets) && ct.unitTargets.length > 0);
             if (sudahDiturunkan) return false;
 
-            // Jika sedang mode Edit indikator ini, tetap tampilkan di dropdown
             if (editTargetIndikator && ct.targetDirektur === editTargetIndikator) return true;
 
-            // Sembunyikan jika sudah pernah diinput capaiannya pada Tahun & Triwulan yang sama
             const sudahDiinput = (DB.capaian || []).some(c =>
                 c.timKey === currentUser.timKey &&
                 c.targetDirektur === ct.targetDirektur &&
@@ -12131,82 +12127,82 @@ function downloadLogRisikoError() {
             modal = document.createElement('div');
             modal.id = 'inputCapaianIndividuModal';
             modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-[100] p-4';
-            modal.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
-                    <div class="flex justify-between items-center border-b pb-3">
-                        <h3 class="font-bold text-slate-900 text-base">
-                            <i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i>
-                            Input Capaian Individu — Ketua Tim
-                        </h3>
-                        <button type="button" onclick="document.getElementById('inputCapaianIndividuModal').classList.add('hidden');document.getElementById('inputCapaianIndividuModal').classList.remove('flex');" class="text-slate-400 hover:text-slate-700">
-                            <i class="fa-solid fa-xmark text-lg"></i>
-                        </button>
-                    </div>
-                    <form id="formCapaianIndividu" class="space-y-3 text-xs">
-                        <input type="hidden" id="ciEditId" value="">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="font-bold text-slate-700 block mb-1">1. Tahun <span class="text-rose-500">*</span></label>
-                                <input type="number" id="ciTahun" placeholder="Contoh: 2025" required class="w-full p-2 border rounded-lg">
-                            </div>
-                            <div>
-                                <label class="font-bold text-slate-700 block mb-1">2. Triwulan <span class="text-rose-500">*</span></label>
-                                <select id="ciTriwulan" class="w-full p-2 border rounded-lg">
-                                    <option>TW 1</option><option>TW 2</option><option>TW 3</option><option>TW 4</option><option>Tahunan</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">3. Indikator Kinerja Individu (Belum Diturunkan) <span class="text-rose-500">*</span></label>
-                            <select id="ciIndikator" required class="w-full p-2 border rounded-lg bg-slate-50"></select>
-                        </div>
-                        <div class="grid grid-cols-3 gap-3">
-                            <div>
-                                <label class="font-bold text-slate-700 block mb-1">Target</label>
-                                <input type="number" step="any" id="ciTarget" placeholder="Kosong" required class="w-full p-2 border rounded-lg">
-                            </div>
-                            <div>
-                                <label class="font-bold text-slate-700 block mb-1">Realisasi</label>
-                                <input type="number" step="any" id="ciRealisasi" placeholder="Kosong" required class="w-full p-2 border rounded-lg">
-                            </div>
-                            <div>
-                                <label class="font-bold text-slate-700 block mb-1">Satuan</label>
-                                <input type="text" id="ciSatuan" placeholder="%/Dok" class="w-full p-2 border rounded-lg">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">Program / Uraian Pekerjaan</label>
-                            <textarea id="ciProgram" rows="2" required class="w-full p-2 border rounded-lg"></textarea>
-                        </div>
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">Link Bukti Kinerja</label>
-                            <input type="url" id="ciLinkBukti" placeholder="https://..." class="w-full p-2 border rounded-lg">
-                        </div>
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">Permasalahan</label>
-                            <textarea id="ciPermasalahan" rows="2" class="w-full p-2 border rounded-lg"></textarea>
-                        </div>
-                        <div class="flex justify-end space-x-2 pt-3 border-t">
-                            <button type="button" onclick="document.getElementById('inputCapaianIndividuModal').classList.add('hidden');document.getElementById('inputCapaianIndividuModal').classList.remove('flex');" class="px-4 py-2 bg-slate-200 rounded-xl text-xs font-medium">Batal</button>
-                            <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold">Simpan</button>
-                        </div>
-                    </form>
-                </div>`;
+            modal.innerHTML = [
+                '<div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">',
+                    '<div class="flex justify-between items-center border-b pb-3">',
+                        '<h3 class="font-bold text-slate-900 text-base">',
+                            '<i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i>',
+                            'Input Capaian Individu — Ketua Tim',
+                        '</h3>',
+                        '<button type="button" onclick="document.getElementById(\'inputCapaianIndividuModal\').classList.add(\'hidden\');document.getElementById(\'inputCapaianIndividuModal\').classList.remove(\'flex\');" class="text-slate-400 hover:text-slate-700">',
+                            '<i class="fa-solid fa-xmark text-lg"></i>',
+                        '</button>',
+                    '</div>',
+                    '<form id="formCapaianIndividu" class="space-y-3 text-xs">',
+                        '<input type="hidden" id="ciEditId" value="">',
+                        '<div class="grid grid-cols-2 gap-3">',
+                            '<div>',
+                                '<label class="font-bold text-slate-700 block mb-1">1. Tahun <span class="text-rose-500">*</span></label>',
+                                '<input type="number" id="ciTahun" placeholder="Contoh: 2025" required class="w-full p-2 border rounded-lg">',
+                            '</div>',
+                            '<div>',
+                                '<label class="font-bold text-slate-700 block mb-1">2. Triwulan <span class="text-rose-500">*</span></label>',
+                                '<select id="ciTriwulan" class="w-full p-2 border rounded-lg">',
+                                    '<option>TW 1</option><option>TW 2</option><option>TW 3</option><option>TW 4</option><option>Tahunan</option>',
+                                '</select>',
+                            '</div>',
+                        '</div>',
+                        '<div>',
+                            '<label class="font-bold text-slate-700 block mb-1">3. Indikator Kinerja Individu (Belum Diturunkan) <span class="text-rose-500">*</span></label>',
+                            '<select id="ciIndikator" required class="w-full p-2 border rounded-lg bg-slate-50"></select>',
+                        '</div>',
+                        '<div class="grid grid-cols-3 gap-3">',
+                            '<div>',
+                                '<label class="font-bold text-slate-700 block mb-1">Target</label>',
+                                '<input type="number" step="any" id="ciTarget" placeholder="Kosong" required class="w-full p-2 border rounded-lg">',
+                            '</div>',
+                            '<div>',
+                                '<label class="font-bold text-slate-700 block mb-1">Realisasi</label>',
+                                '<input type="number" step="any" id="ciRealisasi" placeholder="Kosong" required class="w-full p-2 border rounded-lg">',
+                            '</div>',
+                            '<div>',
+                                '<label class="font-bold text-slate-700 block mb-1">Satuan</label>',
+                                '<input type="text" id="ciSatuan" placeholder="%/Dok" class="w-full p-2 border rounded-lg">',
+                            '</div>',
+                        '</div>',
+                        '<div>',
+                            '<label class="font-bold text-slate-700 block mb-1">Program / Uraian Pekerjaan</label>',
+                            '<textarea id="ciProgram" rows="2" required class="w-full p-2 border rounded-lg"></textarea>',
+                        '</div>',
+                        '<div>',
+                            '<label class="font-bold text-slate-700 block mb-1">Link Bukti Kinerja</label>',
+                            '<input type="url" id="ciLinkBukti" placeholder="https://..." class="w-full p-2 border rounded-lg">',
+                        '</div>',
+                        '<div>',
+                            '<label class="font-bold text-slate-700 block mb-1">Permasalahan</label>',
+                            '<textarea id="ciPermasalahan" rows="2" class="w-full p-2 border rounded-lg"></textarea>',
+                        '</div>',
+                        '<div class="flex justify-end space-x-2 pt-3 border-t">',
+                            '<button type="button" onclick="document.getElementById(\'inputCapaianIndividuModal\').classList.add(\'hidden\');document.getElementById(\'inputCapaianIndividuModal\').classList.remove(\'flex\');" class="px-4 py-2 bg-slate-200 rounded-xl text-xs font-medium">Batal</button>',
+                            '<button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold">Simpan</button>',
+                        '</div>',
+                    '</form>',
+                '</div>'
+            ].join('');
             document.body.appendChild(modal);
             modal.querySelector('#formCapaianIndividu').addEventListener('submit', saveCapaianIndividu);
-            modal.querySelector('#ciTahun').addEventListener('input', () => refreshDropdownCapaianIndividu());
-            modal.querySelector('#ciTriwulan').addEventListener('change', () => refreshDropdownCapaianIndividu());
+            modal.querySelector('#ciTahun').addEventListener('input', function() { refreshDropdownCapaianIndividu(); });
+            modal.querySelector('#ciTriwulan').addEventListener('change', function() { refreshDropdownCapaianIndividu(); });
             modal.querySelector('#ciIndikator').addEventListener('change', function() {
-                const opt = this.options[this.selectedIndex];
+                var opt = this.options[this.selectedIndex];
                 if (opt && opt.value) {
-                    const t = opt.getAttribute('data-target');
-                    const s = opt.getAttribute('data-satuan');
+                    var t = opt.getAttribute('data-target');
+                    var s = opt.getAttribute('data-satuan');
                     if (t !== '') document.getElementById('ciTarget').value = t;
                     if (s !== '') document.getElementById('ciSatuan').value = s;
                 }
             });
         }
-
         const selectInd = modal.querySelector('#ciIndikator');
 
         if (editId) {
