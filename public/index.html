@@ -12304,28 +12304,6 @@ function downloadLogRisikoError() {
         document.getElementById('inputCapaianIndividuModal').classList.remove('flex');
         if (typeof renderCapaianView === 'function') renderCapaianView(document.getElementById('mainContent'));
     }                        
- <div>
-                            <label class="font-bold text-slate-700 block mb-1">Program / Uraian Pekerjaan</label>
-                            <textarea id="ciProgram" rows="2" required class="w-full p-2 border rounded-lg"></textarea>
-                        </div>
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">Link Bukti Kinerja</label>
-                            <input type="url" id="ciLinkBukti" placeholder="https://..." class="w-full p-2 border rounded-lg">
-                        </div>
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">Permasalahan</label>
-                            <textarea id="ciPermasalahan" rows="2" class="w-full p-2 border rounded-lg"></textarea>
-                        </div>
-                        <div class="flex justify-end space-x-2 pt-3 border-t">
-                            <button type="button" onclick="document.getElementById('inputCapaianIndividuModal').classList.add('hidden');document.getElementById('inputCapaianIndividuModal').classList.remove('flex');" class="px-4 py-2 bg-slate-200 rounded-xl text-xs font-medium">Batal</button>
-                            <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold">Simpan</button>
-                        </div>
-                    </form>
-                </div>`;
-            document.body.appendChild(modal);
-            modal.querySelector('#formCapaianIndividu').addEventListener('submit', saveCapaianIndividu);
-        }
-
         // Ambil indikator yang BELUM diturunkan ke unit
         const selectInd = modal.querySelector('#ciIndikator');
         const options = (DB.cascadingTim || []).filter(ct => {
