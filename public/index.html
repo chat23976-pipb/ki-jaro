@@ -12127,11 +12127,12 @@ function downloadLogRisikoError() {
         });
 
         if (options.length === 0) {
-            selectInd.innerHTML = <option value="">-- Tidak ada indikator individu tersisa untuk Tahun ${tahunVal} (${twVal}) --</option>;
+            selectInd.innerHTML = '<option value="">-- Tidak ada indikator individu tersisa untuk Tahun ' + tahunVal + ' (' + twVal + ') --</option>';
         } else {
-            selectInd.innerHTML =  <option value="">-- Pilih Indikator Kinerja Individu --</option> + options.map(o =>
-                <option value="${o.id}" data-indikator="${o.targetDirektur}" data-target="${o.targetVal !== undefined ? o.targetVal : ''}" data-satuan="${o.satuan || ''}">${o.targetDirektur} ${o.targetVal ? `(Target: ${o.targetVal} ${o.satuan || ''})` : ''}</option>`
-            ).join('');
+            selectInd.innerHTML = '<option value="">-- Pilih Indikator Kinerja Individu --</option>' + options.map(function(o) {
+                var targetInfo = o.targetVal ? ' (Target: ' + o.targetVal + ' ' + (o.satuan || '') + ')' : '';
+                return '<option value="' + o.id + '" data-indikator="' + o.targetDirektur + '" data-target="' + (o.targetVal !== undefined ? o.targetVal : '') + '" data-satuan="' + (o.satuan || '') + '">' + o.targetDirektur + targetInfo + '</option>';
+            }).join('');
         }
     }
 
