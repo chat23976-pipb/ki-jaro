@@ -5048,11 +5048,7 @@ let dashboardChartInstances = {};
             const isDirektur = currentUser.role === 'direktur';
             const isKetuaTim = currentUser.role === 'tim_kerja';
             const isKaUnit = currentUser.role === 'ketua_unit';
-
-            if (SUB_UNIT_ROLES.includes(currentUser.role)) {
-                container.innerHTML = `<div class="p-8 text-center bg-white rounded-2xl shadow-sm border"><p class="text-slate-500">Menu pengaturan Cascading hanya untuk Pimpinan, Ketua Tim Kerja, dan Ketua Unit/Prodi/Subbag.</p></div>`;
-                return;
-            }
+            const isSubUnit = SUB_UNIT_ROLES.includes(currentUser.role);
 
             if (typeof filterCascadingTahun === 'undefined') window.filterCascadingTahun = 'Semua';
             if (!Array.isArray(DB.cascadingUnit)) DB.cascadingUnit = [];
@@ -5076,7 +5072,7 @@ let dashboardChartInstances = {};
             if (!isTopLeader && userTimKey) {
                 filteredTim = filteredTim.filter(c => c.timKey === userTimKey);
             }
-            if (isKaUnit) {
+            if (isKaUnit || isSubUnit) {
                 filteredTim = filteredTim.filter(c => 
                     c.isCascading !== false && 
                     Array.isArray(c.unitTargets) && 
@@ -5087,7 +5083,23 @@ let dashboardChartInstances = {};
 
             let filteredUnit = [...DB.cascadingUnit];
             if (filterCascadingTahun !== 'Semua') filteredUnit = filteredUnit.filter(c => String(c.tahun) === String(filterCascadingTahun));
-            let filteredUnitTable = (isKaUnit ? filteredUnit.filter(c => c.unit === currentUser.unit) : filteredUnit).filter(c => !c.isSupport);
+            if (!isTopLeader && userTimKey) {
+                filteredUnit = filteredUnit.filter(c => {
+                    const parentTim = (DB.cascadingTim || []).find(ct => String(ct.id) === String(c.parentTimId) || ct.targetDirektur === c.targetDirektur);
+                    return parentTim ? parentTim.timKey === userTimKey : true;
+                });
+            }
+            let filteredUnitTable = (isKaUnit || isSubUnit ? filteredUnit.filter(c => c.unit === currentUser.unit) : filteredUnit).filter(c => !c.isSupport);
+
+            if (!Array.isArray(DB.cascadingSubUnit)) DB.cascadingSubUnit = [];
+            let filteredSubUnit = DB.cascadingSubUnit.filter(s => {
+                const matchThn = filterCascadingTahun === 'Semua' || String(s.tahun || '2025') === String(filterCascadingTahun);
+                if (!matchThn) return false;
+                if (isTopLeader) return true;
+                if (isKetuaTim) return s.timKey === userTimKey;
+                if (isKaUnit) return s.unit === currentUser.unit;
+                return s.username === currentUser.username || s.roleKey === currentUser.role;
+            });
 
             const canMigrate = (isAdmin || isDirektur || isKetuaTim || isKaUnit) && !isPureViewer();
 
@@ -5411,8 +5423,115 @@ let dashboardChartInstances = {};
                                             ` : ''}
                                         </tr>
                                     `).join('')}
+                               </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Bagian 4: Input Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu Staf (Dosen / Tendik / Sekretaris / Kalab / Koordinator) -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden">
+                        <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-user-pen text-indigo-600 mr-2"></i> 4. Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu Staf</h3>
+                                <p class="text-xs text-slate-500">Pelaksana (Dosen / Tendik / Sekretaris / Kalab / Koordinator) menginput RHK & Indikator Individu berdasarkan cascading dari Ketua Prodi / Subbag / Unit.</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                ${(isSubUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingSubUnitModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Input RHK & Indikator Individu</span></button>` : ''}
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                        <th class="p-4">Pelaksana & Unit</th>
+                                        <th class="p-4">Tahun</th>
+                                        <th class="p-4">Indikator dari Ketua Unit / Prodi / Subbag</th>
+                                        <th class="p-4">RHK & Indikator Individu Staf</th>
+                                        <th class="p-4 text-center">Target & Satuan</th>
+                                        <th class="p-4 text-center">Jenis</th>
+                                        ${(isSubUnit || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${filteredSubUnit.length === 0 ? `<tr><td colspan="7" class="p-6 text-center text-slate-400">Belum ada input RHK & Indikator Individu Staf pada tahun ${filterCascadingTahun}.</td></tr>` : filteredSubUnit.map(su => `
+                                        <tr class="hover:bg-slate-50 transition-all">
+                                            <td class="p-4 font-bold text-slate-900">${sanitizeHTML(su.namaPelaksana)}<span class="block text-[11px] font-normal text-slate-500">${sanitizeHTML(su.unit)}</span></td>
+                                            <td class="p-4 font-bold text-indigo-700">${su.tahun || '2025'}</td>
+                                            <td class="p-4 text-xs text-slate-600">${sanitizeHTML(su.indikatorUnitRef)}</td>
+                                            <td class="p-4">
+                                                <span class="block text-xs font-bold text-indigo-800">RHK: ${sanitizeHTML(su.rencanaHasilKinerja)}</span>
+                                                <span class="block font-bold text-slate-900 text-sm mt-0.5">${sanitizeHTML(su.indikatorIndividu)}</span>
+                                            </td>
+                                            <td class="p-4 text-center font-bold text-emerald-700">${su.targetVal} ${sanitizeHTML(su.satuan)}</td>
+                                            <td class="p-4 text-center">
+                                                <span class="px-2.5 py-1 rounded-full text-xs font-bold ${su.jenis === 'Utama' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 border'}">${su.jenis === 'Utama' ? '★ Utama' : '🛡️ Support'}</span>
+                                            </td>
+                                            ${(isSubUnit || isAdmin) && !isPureViewer() ? `
+                                                <td class="p-4 text-center space-x-1">
+                                                    <button onclick="openEditCascadingSubUnitModal('${su.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="deleteCascadingSubUnit('${su.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                </td>
+                                            ` : ''}
+                                        </tr>
+                                    `).join('')}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- Modal Input RHK & Indikator Individu Staf (Dosen / Tendik / Sekretaris / Kalab / Koordinator) -->
+                    <div id="cascadingSubUnitModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 border border-slate-100 my-8">
+                            <div class="flex justify-between items-center border-b pb-3">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base">Input Rencana Hasil Kerja & Indikator Individu</h3>
+                                    <p class="text-[11px] text-slate-500">Berdasarkan indikator yang dicascading oleh Ketua Prodi / Subbag / Unit Anda</p>
+                                </div>
+                                <button type="button" onclick="closeCascadingSubUnitModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            </div>
+                            <form onsubmit="saveCascadingSubUnit(event)" class="space-y-3.5 text-xs">
+                                <input type="hidden" id="subUnitEditId" value="">
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Pilih Tahun <span class="text-rose-500">*</span></label>
+                                    <select id="subUnitTahun" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold" onchange="updateSubUnitRefOptions(this.value)">
+                                        <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">1. Pilih Indikator dari Ketua Prodi / Subbag / Unit <span class="text-rose-500">*</span></label>
+                                    <select id="subUnitUnitRef" required class="w-full p-2.5 bg-slate-50 border rounded-xl font-semibold" onchange="handleSubUnitRefChange()"></select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">2. Rencana Hasil Kerja (RHK) Individu <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="subUnitRhk" required class="w-full p-2.5 bg-white border border-indigo-300 rounded-xl font-semibold" placeholder="Ketik Rencana Hasil Kerja Anda...">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">3. Nama Indikator Kinerja Individu Staf <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="subUnitIndikatorIndividu" required class="w-full p-2.5 bg-white border border-emerald-400 rounded-xl font-bold text-emerald-900" placeholder="Ketik Nama Indikator Kinerja Individu...">
+                                </div>
+                                <div class="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border">
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">4. Jenis Indikator</label>
+                                        <input type="text" id="subUnitJenisDisplay" readonly class="w-full p-2 bg-slate-200/70 border rounded-lg font-extrabold text-slate-800 cursor-not-allowed">
+                                        <input type="hidden" id="subUnitJenisVal" value="Utama">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">Target Individu <span class="text-rose-500">*</span></label>
+                                        <input type="number" step="any" id="subUnitTargetVal" required class="w-full p-2 bg-white border rounded-lg font-bold">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">Satuan <span class="text-rose-500">*</span></label>
+                                        <input type="text" id="subUnitSatuan" required class="w-full p-2 bg-white border rounded-lg font-semibold">
+                                    </div>
+                                </div>
+                                <p id="subUnitLockHint" class="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200 hidden">
+                                    <i class="fa-solid fa-lock mr-1"></i> Indikator ini berstatus <strong>★ Utama</strong>: Jenis, Target, dan Satuan otomatis dikunci mengikuti ketetapan Ketua Prodi / Subbag / Unit.
+                                </p>
+                                <div class="flex justify-end space-x-2 pt-2 border-t">
+                                    <button type="button" onclick="closeCascadingSubUnitModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-semibold">Batal</button>
+                                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow">Simpan Indikator</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
 
@@ -5597,14 +5716,26 @@ let dashboardChartInstances = {};
                             <button type="button" onclick="closeCascadingUnitModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
                         <form onsubmit="saveCascadingUnit(event)" class="space-y-4 text-sm">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+        <label class="block font-semibold text-slate-700 mb-1 text-xs">Pilih Tahun <span class="text-rose-500">*</span></label>
+        <select id="unitCascTahun" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs" onchange="updateUnitCascRefOptions(this.value)">
+            <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+        </select>
+    </div>
+    <div class="space-y-3">
         <div>
-            <label class="block font-semibold text-slate-700 mb-1 text-xs">1. Pilih Indikator dari Tim Kerja (Induk)</label>
-            <select id="unitCascRef" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" onchange="handleUnitRefChange()"></select>
+            <label class="block font-semibold text-slate-700 mb-1 text-xs">1. Pilih Indikator dari Direktur (Induk yang Dicascading ke Unit Anda) <span class="text-rose-500">*</span></label>
+            <select id="unitCascDirRef" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold" onchange="updateUnitRhkFromTimOptions()"></select>
         </div>
-        <div>
-            <label class="block font-semibold text-slate-700 mb-1 text-xs">2. Nama Indikator Kinerja Individu Staf</label>
-            <input type="text" id="unitIndikatorIndividu" required class="w-full p-2.5 bg-white border border-emerald-400 rounded-xl text-xs font-bold text-emerald-800" placeholder="Ketik nama indikator baru...">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">2. Rencana Hasil Kinerja (RHK dari Ketua Tim Kerja) <span class="text-rose-500">*</span></label>
+                <select id="unitCascRef" required class="w-full p-2.5 bg-indigo-50/70 border border-indigo-300 rounded-xl text-xs font-bold text-indigo-900" onchange="handleUnitRefChange()"></select>
+            </div>
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">3. Nama Indikator Kinerja Individu Staf <span class="text-rose-500">*</span></label>
+                <input type="text" id="unitIndikatorIndividu" required class="w-full p-2.5 bg-white border border-emerald-400 rounded-xl text-xs font-bold text-emerald-800" placeholder="Ketik nama indikator baru...">
+            </div>
         </div>
     </div>
     <div class="grid grid-cols-2 gap-4 bg-emerald-50/60 p-3 rounded-xl border border-emerald-200">
@@ -6668,39 +6799,81 @@ function handleUnitRefChange() {
             return opt.getAttribute('data-isutama') === 'true';
         }
 
-function updateUnitCascRefOptions(tahun, allowTargetOnEdit = null) {
-            const sel = document.getElementById('unitCascRef');
-            if (!sel) return;
+function updateUnitCascRefOptions(tahun, allowTargetOnEdit = null, allowParentTimIdOnEdit = null) {
+            const dirSel = document.getElementById('unitCascDirRef');
+            if (!dirSel) return;
             const modal = document.getElementById('cascadingUnitModal');
             const editUnit = modal ? modal.getAttribute('data-edit-unit') : null;
             const activeUnit = editUnit || currentUser.unit;
 
-            const usedTargetsUnit = (DB.cascadingUnit || [])
-                .filter(cu => cu.unit === activeUnit && String(cu.tahun || '2025') === String(tahun))
-                .map(cu => (cu.targetDirektur || '').toLowerCase());
-
-            const matching = (DB.cascadingTim || []).filter(ct => {
+            // Ambil semua cascadingTim yang diturunkan ke Unit ini pada tahun terpilih
+            const matchingTim = (DB.cascadingTim || []).filter(ct => {
                 const matchTahun = String(ct.tahun || '2025') === String(tahun);
                 const matchUnit = currentUser.role === 'admin' ? true : (Array.isArray(ct.unitTargets) && ct.unitTargets.includes(activeUnit));
-                if (!matchTahun || !matchUnit) return false;
-                if (allowTargetOnEdit && ct.targetDirektur === allowTargetOnEdit) return true;
-                return !usedTargetsUnit.includes(ct.targetDirektur.toLowerCase());
+                return matchTahun && matchUnit;
             });
 
-            sel.innerHTML = matching.length === 0
-                ? `<option value="">Semua indikator dari Tim Kerja tahun ${tahun} sudah diinput / belum tersedia</option>`
-                : matching.map(ct => {
-                    const cd = DB.cascadingDirektur.find(x => x.target === ct.targetDirektur && String(x.tahun || '2025') === String(tahun)) || DB.cascadingDirektur.find(x => x.target === ct.targetDirektur);
-                    const isUtama = cd ? (isTimUtamaInDir(cd, ct.timKey) && isUnitUtamaInTim(ct, activeUnit)) : isUnitUtamaInTim(ct, activeUnit);
-                    const statusLbl = isUtama ? '[Status Unit Anda: ★ UTAMA]' : '[Status Unit Anda: 🛡️ SUPPORT]';
-                    const rhkText = ct.rencanaHasilKinerja ? `RHK Tim: ${ct.rencanaHasilKinerja} | ` : '';
-                    const ikkText = ct.indikatorIndividu ? `IKK Tim: ${ct.indikatorIndividu} | ` : '';
-                    return `<option value="${ct.targetDirektur}" data-timid="${ct.id}" data-rhk="${sanitizeHTML(ct.rencanaHasilKinerja || '')}" data-isutama="${isUtama}" data-timkey="${ct.timKey}">${rhkText}${ikkText}Induk Direktur: ${ct.targetDirektur} ${statusLbl}</option>`;
-                }).join('');
+            // Kelompokkan unik berdasarkan Indikator Direktur (Induk)
+            const uniqueDirTargets = [...new Set(matchingTim.map(ct => ct.targetDirektur))];
 
-            syncSubUnitRolesWithUnitStatus();
+            dirSel.innerHTML = uniqueDirTargets.length === 0
+                ? `<option value="">Belum ada indikator dari Tim Kerja untuk Unit ${sanitizeHTML(activeUnit)} di tahun ${tahun}</option>`
+                : uniqueDirTargets.map(tDir => `<option value="${sanitizeHTML(tDir)}">${sanitizeHTML(tDir)}</option>`).join('');
+
+            if (allowTargetOnEdit && uniqueDirTargets.includes(allowTargetOnEdit)) {
+                dirSel.value = allowTargetOnEdit;
+            }
+
+            updateUnitRhkFromTimOptions(allowParentTimIdOnEdit);
         }
 
+        function updateUnitRhkFromTimOptions(allowParentTimIdOnEdit = null) {
+            const dirSel = document.getElementById('unitCascDirRef');
+            const rhkSel = document.getElementById('unitCascRef');
+            if (!dirSel || !rhkSel) return;
+
+            const modal = document.getElementById('cascadingUnitModal');
+            const editUnit = modal ? modal.getAttribute('data-edit-unit') : null;
+            const activeUnit = editUnit || currentUser.unit;
+            const tahun = document.getElementById('unitCascTahun') ? document.getElementById('unitCascTahun').value : '2025';
+            const selectedDirTarget = dirSel.value;
+
+            const matchingRhk = (DB.cascadingTim || []).filter(ct => {
+                const matchTahun = String(ct.tahun || '2025') === String(tahun);
+                const matchUnit = currentUser.role === 'admin' ? true : (Array.isArray(ct.unitTargets) && ct.unitTargets.includes(activeUnit));
+                return matchTahun && matchUnit && ct.targetDirektur === selectedDirTarget;
+            });
+
+            rhkSel.innerHTML = matchingRhk.length === 0
+                ? `<option value="">-- Tidak ada RHK Ketua Tim untuk indikator ini --</option>`
+                : matchingRhk.map(ct => {
+                    const cd = DB.cascadingDirektur.find(x => x.target === ct.targetDirektur && String(x.tahun || '2025') === String(tahun)) || DB.cascadingDirektur.find(x => x.target === ct.targetDirektur);
+                    const isUtama = cd ? (isTimUtamaInDir(cd, ct.timKey) && isUnitUtamaInTim(ct, activeUnit)) : isUnitUtamaInTim(ct, activeUnit);
+                    const statusLbl = isUtama ? ' [★ UTAMA]' : ' [🛡️ SUPPORT]';
+                    const labelRhk = ct.rencanaHasilKinerja
+                        ? `${ct.rencanaHasilKinerja} (IKK Tim: ${ct.indikatorIndividu || '-'})`
+                        : `${ct.indikatorIndividu || ct.targetDirektur}`;
+                    return `<option value="${ct.id}" data-dirtarget="${sanitizeHTML(ct.targetDirektur)}" data-rhk="${sanitizeHTML(ct.rencanaHasilKinerja || ct.indikatorIndividu || '')}" data-targetval="${ct.targetVal !== undefined ? ct.targetVal : ''}" data-satuan="${sanitizeHTML(ct.satuan || '')}" data-isutama="${isUtama}" data-timkey="${ct.timKey}">${sanitizeHTML(labelRhk)}${statusLbl}</option>`;
+                }).join('');
+
+            if (allowParentTimIdOnEdit) {
+                rhkSel.value = allowParentTimIdOnEdit;
+            }
+            handleUnitRefChange();
+            if (typeof syncSubUnitRolesWithUnitStatus === 'function') syncSubUnitRolesWithUnitStatus();
+        }
+
+        function handleUnitRefChange() {
+            const rhkSel = document.getElementById('unitCascRef');
+            if (!rhkSel || rhkSel.selectedIndex < 0) return;
+            const opt = rhkSel.options[rhkSel.selectedIndex];
+            if (!opt || !opt.value) return;
+            const isUtama = opt.getAttribute('data-isutama') === 'true';
+            const jenisSel = document.getElementById('unitJenisIndikator');
+            if (jenisSel) {
+                jenisSel.value = isUtama ? 'Utama' : 'Support';
+            }
+        }
         function renderUnitSubCheckboxes(targetUnit) {
             const container = document.getElementById('unitSubCheckContainer');
             if (!container) return;
@@ -6850,7 +7023,171 @@ function updateUnitCascRefOptions(tahun, allowTargetOnEdit = null) {
                 }
             });
         }
+function openCascadingSubUnitModal() {
+            const modal = document.getElementById('cascadingSubUnitModal');
+            if (!modal) return;
+            document.getElementById('subUnitEditId').value = '';
+            document.getElementById('subUnitRhk').value = '';
+            document.getElementById('subUnitIndikatorIndividu').value = '';
+            const yrEl = document.getElementById('subUnitTahun');
+            if (yrEl) updateSubUnitRefOptions(yrEl.value);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
 
+        function closeCascadingSubUnitModal() {
+            const modal = document.getElementById('cascadingSubUnitModal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function updateSubUnitRefOptions(tahun) {
+            const sel = document.getElementById('subUnitUnitRef');
+            if (!sel) return;
+
+            const matching = (DB.cascadingUnit || []).filter(cu => {
+                if (String(cu.tahun || '2025') !== String(tahun)) return false;
+                if (currentUser.role === 'admin') return true;
+                if (cu.unit !== currentUser.unit) return false;
+                const targets = Array.isArray(cu.subTargets) ? cu.subTargets : [];
+                return targets.includes(currentUser.username) || targets.includes(currentUser.role);
+            });
+
+            sel.innerHTML = matching.length === 0
+                ? `<option value="">Belum ada indikator yang dicascading ke Anda pada tahun ${tahun}</option>`
+                : matching.map(cu => {
+                    const isUtama = cu.jenis === 'Utama' && (isSubRoleUtamaInUnit(cu, currentUser.username) || isSubRoleUtamaInUnit(cu, currentUser.role));
+                    const lblJenis = isUtama ? '★ Utama' : '🛡️ Support';
+                    const namaIndUnit = cu.indikatorIndividu || cu.targetDirektur;
+                    return `<option value="${cu.id}" data-indikatorunit="${sanitizeHTML(namaIndUnit)}" data-targetdir="${sanitizeHTML(cu.targetDirektur)}" data-targetval="${cu.targetVal !== undefined ? cu.targetVal : 100}" data-satuan="${sanitizeHTML(cu.satuan || '%')}" data-isutama="${isUtama}">${sanitizeHTML(namaIndUnit)} [${lblJenis}]</option>`;
+                }).join('');
+
+            handleSubUnitRefChange();
+        }
+
+        function handleSubUnitRefChange() {
+            const sel = document.getElementById('subUnitUnitRef');
+            const jenisDisplay = document.getElementById('subUnitJenisDisplay');
+            const jenisVal = document.getElementById('subUnitJenisVal');
+            const targetInput = document.getElementById('subUnitTargetVal');
+            const satuanInput = document.getElementById('subUnitSatuan');
+            const lockHint = document.getElementById('subUnitLockHint');
+            if (!sel || sel.selectedIndex < 0) return;
+
+            const opt = sel.options[sel.selectedIndex];
+            if (!opt || !opt.value) return;
+
+            const isUtama = opt.getAttribute('data-isutama') === 'true';
+            const defTarget = opt.getAttribute('data-targetval') || '';
+            const defSatuan = opt.getAttribute('data-satuan') || '';
+
+            jenisVal.value = isUtama ? 'Utama' : 'Support';
+            jenisDisplay.value = isUtama ? '★ Utama (Terkunci)' : '🛡️ Support';
+            targetInput.value = defTarget;
+            satuanInput.value = defSatuan;
+
+            if (isUtama) {
+                // Jika Utama: Target & Satuan otomatis mengikuti Ketua Unit dan terkunci (tidak bisa diganti)
+                targetInput.readOnly = true;
+                satuanInput.readOnly = true;
+                targetInput.classList.add('bg-slate-200/70', 'cursor-not-allowed');
+                satuanInput.classList.add('bg-slate-200/70', 'cursor-not-allowed');
+                if (lockHint) lockHint.classList.remove('hidden');
+            } else {
+                // Jika Support: Target & Satuan tetap diisi default namun boleh diubah oleh staf
+                targetInput.readOnly = false;
+                satuanInput.readOnly = false;
+                targetInput.classList.remove('bg-slate-200/70', 'cursor-not-allowed');
+                satuanInput.classList.remove('bg-slate-200/70', 'cursor-not-allowed');
+                if (lockHint) lockHint.classList.add('hidden');
+            }
+        }
+
+        async function saveCascadingSubUnit(e) {
+            e.preventDefault();
+            const editId = document.getElementById('subUnitEditId').value;
+            const tahun = document.getElementById('subUnitTahun').value;
+            const sel = document.getElementById('subUnitUnitRef');
+            const opt = sel.options[sel.selectedIndex];
+            if (!opt || !opt.value) return showToast('Pilih indikator dari Ketua Unit / Prodi / Subbag terlebih dahulu!', 'error');
+
+            const parentUnitId = opt.value;
+            const indikatorUnitRef = opt.getAttribute('data-indikatorunit') || '';
+            const targetDirektur = opt.getAttribute('data-targetdir') || '';
+            const rencanaHasilKinerja = document.getElementById('subUnitRhk').value.trim();
+            const indikatorIndividu = document.getElementById('subUnitIndikatorIndividu').value.trim();
+            const jenis = document.getElementById('subUnitJenisVal').value;
+            const targetVal = parseFloat(document.getElementById('subUnitTargetVal').value) || 0;
+            const satuan = document.getElementById('subUnitSatuan').value.trim() || '%';
+
+            if (!Array.isArray(DB.cascadingSubUnit)) DB.cascadingSubUnit = [];
+
+            const isDup = DB.cascadingSubUnit.some(s =>
+                (!editId || String(s.id) !== String(editId)) &&
+                s.username === currentUser.username &&
+                String(s.tahun || '2025') === String(tahun) &&
+                String(s.parentUnitId) === String(parentUnitId) &&
+                (s.indikatorIndividu || '').trim().toLowerCase() === indikatorIndividu.toLowerCase()
+            );
+            if (isDup) return showToast('Peringatan: Indikator individu dengan RHK & Tahun yang sama sudah ada!', 'error');
+
+            const payload = {
+                tahun,
+                parentUnitId,
+                targetDirektur,
+                indikatorUnitRef,
+                rencanaHasilKinerja,
+                indikatorIndividu,
+                jenis,
+                targetVal,
+                satuan,
+                unit: currentUser.unit,
+                timKey: currentUser.timKey || 'Akademik',
+                username: currentUser.username,
+                roleKey: currentUser.role,
+                namaPelaksana: currentUser.name
+            };
+
+            if (editId) {
+                const idx = DB.cascadingSubUnit.findIndex(x => String(x.id) === String(editId));
+                if (idx !== -1) DB.cascadingSubUnit[idx] = { ...DB.cascadingSubUnit[idx], ...payload };
+                showToast('Indikator individu berhasil diperbarui!');
+            } else {
+                DB.cascadingSubUnit.push({ id: 'csu_' + Date.now(), ...payload });
+                showToast('RHK & Indikator individu berhasil disimpan!');
+            }
+
+            await saveToMySQL();
+            closeCascadingSubUnitModal();
+            renderCascadingView(document.getElementById('mainContent'));
+        }
+
+        function openEditCascadingSubUnitModal(id) {
+            const item = (DB.cascadingSubUnit || []).find(x => String(x.id) === String(id));
+            if (!item) return;
+            openCascadingSubUnitModal();
+            document.getElementById('subUnitEditId').value = item.id;
+            document.getElementById('subUnitTahun').value = item.tahun || '2025';
+            updateSubUnitRefOptions(item.tahun || '2025');
+            document.getElementById('subUnitUnitRef').value = item.parentUnitId;
+            handleSubUnitRefChange();
+            document.getElementById('subUnitRhk').value = item.rencanaHasilKinerja || '';
+            document.getElementById('subUnitIndikatorIndividu').value = item.indikatorIndividu || '';
+            if (item.jenis !== 'Utama') {
+                document.getElementById('subUnitTargetVal').value = item.targetVal;
+                document.getElementById('subUnitSatuan').value = item.satuan;
+            }
+        }
+
+        async function deleteCascadingSubUnit(id) {
+            if (!confirm('Hapus RHK & Indikator Individu ini?')) return;
+            DB.cascadingSubUnit = (DB.cascadingSubUnit || []).filter(x => String(x.id) !== String(id));
+            await saveToMySQL();
+            showToast('Data berhasil dihapus.');
+            renderCascadingView(document.getElementById('mainContent'));
+        }
+        
 async function saveCascadingUnit(e) {
     e.preventDefault();
     if (!requireWriteAccess(['ketua_unit', 'admin'])) return;
@@ -6861,8 +7198,8 @@ async function saveCascadingUnit(e) {
     const tahun = document.getElementById('unitCascTahun') ? document.getElementById('unitCascTahun').value : '2025';
     const selRef = document.getElementById('unitCascRef');
     const selectedOpt = selRef.options[selRef.selectedIndex];
-    const targetDirVal = selRef.value;
-    const parentTimId = selectedOpt ? (selectedOpt.getAttribute('data-timid') || targetDirVal) : targetDirVal;
+    const parentTimId = selRef.value;
+    const targetDirVal = document.getElementById('unitCascDirRef') ? document.getElementById('unitCascDirRef').value : (selectedOpt ? selectedOpt.getAttribute('data-dirtarget') : '');
     const indikatorIndividu = document.getElementById('unitIndikatorIndividu').value.trim();
     const targetVal = parseFloat(document.getElementById('unitTargetVal').value) || 0;
     const satuan = document.getElementById('unitSatuan').value.trim() || '%';
@@ -6870,20 +7207,21 @@ async function saveCascadingUnit(e) {
     const isCascading = document.getElementById('unitIsCascading').value === 'Ya';
     const aggMode = document.getElementById('unitCascAggMode').value;
 
-    if (!targetDirVal || !indikatorIndividu) return showToast('Data belum lengkap!', 'error');
+    if (!parentTimId || !targetDirVal || !indikatorIndividu) return showToast('Data belum lengkap!', 'error');
 
-    // Guard Anti-Duplikasi pada Tahun & Unit yang sama
-    const isDupUnit = (DB.cascadingUnit || []).some(cu =>
-        (!editId || String(cu.id) !== String(editId)) &&
-        cu.unit === activeUnit &&
-        String(cu.tahun || '2025') === String(tahun) &&
-        (cu.targetDirektur || '').toLowerCase() === targetDirVal.toLowerCase()
-    );
+    // Guard Anti-Duplikasi: Tahun + Induk Direktur + RHK Tim + Nama Indikator Individu Staf sama persis
+    const isDupUnit = (DB.cascadingUnit || []).some(cu => {
+        if (editId && String(cu.id) === String(editId)) return false;
+        return cu.unit === activeUnit &&
+            String(cu.tahun || '2025') === String(tahun) &&
+            String(cu.parentTimId || '') === String(parentTimId) &&
+            (cu.indikatorIndividu || '').trim().toLowerCase() === indikatorIndividu.trim().toLowerCase();
+    });
     if (isDupUnit) {
-        return showToast(`Peringatan: Indikator induk "${targetDirVal}" sudah pernah diinput pada tahun ${tahun}! Tidak dapat menyimpan data ganda.`, 'error');
+        return showToast(`Peringatan: Indikator individu "${indikatorIndividu}" pada RHK & Tahun ${tahun} sudah ada!`, 'error');
     }
 
-    const parentTimObj = DB.cascadingTim.find(ct => String(ct.id) === String(parentTimId) || (ct.targetDirektur === targetDirVal && String(ct.tahun || '2025') === String(tahun)));
+    const parentTimObj = DB.cascadingTim.find(ct => String(ct.id) === String(parentTimId)) || DB.cascadingTim.find(ct => ct.targetDirektur === targetDirVal && String(ct.tahun || '2025') === String(tahun));
     const isUnitUtamaInTim = parentTimObj ? (parentTimObj.unitRoles && parentTimObj.unitRoles[activeUnit] === 'Utama') : false;
     
     // VALIDASI: Wajib ada 1 Utama jika Unit ini berstatus Utama di Tim
