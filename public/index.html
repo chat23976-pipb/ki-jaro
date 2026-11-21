@@ -1391,9 +1391,28 @@ let landingChartInstance = null;
                         <button onclick="closeLoginModal()" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 text-lg">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
-                        <div class="mb-6 text-center">
+                        <div class="mb-5 text-center">
                             <h3 class="text-2xl font-black text-slate-900 tracking-tight">Welcome To Ki-Jaro</h3>
                             <p class="text-xs font-medium text-slate-500 mt-1">Masukkan kredensial akun Ki-Jaro Anda</p>
+                        </div>
+
+                        <!-- LOGIN CEPAT SEMENTARA (FASE DEVELOPMENT) -->
+                        <div class="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-2xl space-y-2">
+                            <label class="block text-[10px] font-black text-amber-900 uppercase tracking-wider">
+                                <i class="fa-solid fa-bolt text-amber-600 mr-1"></i>Login Cepat (Mode Development)
+                            </label>
+                            <div class="flex space-x-2">
+                                <select id="quickDevLoginSelect" class="flex-1 p-2.5 bg-white border border-amber-300 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-amber-500">
+                                    <option value="">-- Pilih Akun / Role untuk Masuk Cepat --</option>
+                                    ${(DB.users || []).map(u => {
+                                        const rLabels = getUserRoles(u).map(r => ROLE_LABELS[r] || r).join(' + ');
+                                        return `<option value="${u.username}">${sanitizeHTML(u.name)} — ${sanitizeHTML(rLabels)}${u.unit ? ' (' + sanitizeHTML(u.unit) + ')' : ''}</option>`;
+                                    }).join('')}
+                                </select>
+                                <button type="button" onclick="handleQuickDevLogin()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow-xs shrink-0">
+                                    Masuk
+                                </button>
+                            </div>
                         </div>
 
 <!-- Tombol Utama Login via Google SSO -->
@@ -1470,6 +1489,23 @@ let landingChartInstance = null;
                 modal.classList.add('hidden');
             }
         }
+
+        function handleQuickDevLogin() {
+            const sel = document.getElementById('quickDevLoginSelect');
+            if (!sel || !sel.value) {
+                showToast('Pilih akun terlebih dahulu pada dropdown Login Cepat!', 'error');
+                return;
+            }
+            const found = (DB.users || []).find(u => u.username === sel.value);
+            if (!found) {
+                showToast('Akun tidak ditemukan di database.', 'error');
+                return;
+            }
+            closeLoginModal();
+            if (typeof resetLoginRateLimit === 'function') resetLoginRateLimit();
+            completeUserLoginFlow(found, `Login Cepat Berhasil sebagai ${found.name}!`);
+        }
+        window.handleQuickDevLogin = handleQuickDevLogin;
 
         // =========================================================================
         // KONFIGURASI GOOGLE SSO (@poltek-petrokimia.ac.id) & VERIFIKASI DB ADMIN
@@ -5123,20 +5159,32 @@ let dashboardChartInstances = {};
             const sbTimUmum = dirTahunList.filter(c => Array.isArray(c.timKeys) && c.timKeys.includes('Umum dan Keuangan')).length;
             const sbTimKemahasiswaan = dirTahunList.filter(c => Array.isArray(c.timKeys) && c.timKeys.includes('Kemahasiswaan dan Kerjasama')).length;
 
-            const renstraTier4List = (DB.renstra || []).filter(r => r.tier === 'Tier 4' || r.indikator);
-            const unCascadedDir = renstraTier4List.filter(r => {
-                const namaInd = (r.indikator || r.target || '').trim();
+            const renstraTier4List = (DB.renstraIndikatorKinerja || []);
+            const unCascadedDir = renstraTier4List.filter(ik => {
+                const namaInd = (ik.namaIndikator || '').trim();
                 if (!namaInd) return false;
                 return !dirTahunList.some(cd => (cd.target || '').trim().toLowerCase() === namaInd.toLowerCase());
             });
 
-            // --- SCOREBOARD & MONITORING LEVEL 2 (Ketua Tim -> Unit/Prodi/Subbag) ---
+            // --- SCOREBOARD & MONITORING LEVEL 2 (Ketua Tim -> Unit/Prodi/Subbag under dia) ---
             const activeTimForSb = userTimKey || 'Akademik';
-            const unitsUnderTim = (DB.units || []).filter(u => u.timKey === activeTimForSb).map(u => u.name);
+            let unitsUnderTim = Array.from(new Set(
+                (DB.users || [])
+                    .filter(u => getUserRoles(u).includes('ketua_unit') && u.timKey === activeTimForSb && u.unit)
+                    .map(u => u.unit)
+            ));
+            if (unitsUnderTim.length === 0) {
+                const fallbackTimUnits = {
+                    'Akademik': ['Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'SPM'],
+                    'Umum dan Keuangan': ['Subbag Umum dan Keuangan', 'Transformasi Industri Digital 4.0'],
+                    'Kemahasiswaan dan Kerjasama': ['CDC', 'Inkubator Bisnis', 'PMB', 'Subbag Akademik Kemahasiswaan dan Kerjasama']
+                };
+                unitsUnderTim = fallbackTimUnits[activeTimForSb] || [];
+            }
             const timTahunList = (DB.cascadingTim || []).filter(ct => String(ct.tahun || '2025') === monTahun && ct.timKey === activeTimForSb);
             const sbUnitsCount = unitsUnderTim.map(uName => ({
                 unit: uName,
-                count: timTahunList.filter(ct => Array.isArray(ct.unitTargets) && ct.unitTargets.includes(uName)).length
+                count: timTahunList.filter(ct => Array.isArray(ct.unitTargets) && ct.unitTargets.some(t => isSameUnit(t, uName))).length
             }));
 
             const dirAssignedToTim = (DB.cascadingDirektur || []).filter(cd =>
@@ -5425,7 +5473,7 @@ let dashboardChartInstances = {};
                             <div class="p-3.5 max-h-80 overflow-y-auto space-y-2 text-xs">
                                 ${unCascadedDir.length === 0
                                     ? `<div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-emerald-800 font-bold"><i class="fa-solid fa-circle-check text-emerald-600 block text-lg mb-1"></i>Semua indikator sudah dicascadingkan</div>`
-                                    : unCascadedDir.map((r, idx) => `<div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium leading-snug"><span class="font-bold text-amber-700 mr-1">${idx + 1}.</span>${sanitizeHTML(r.indikator || r.target)}</div>`).join('')
+                                   : unCascadedDir.map((ik, idx) => `<div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium leading-snug"><span class="font-bold text-amber-700 mr-1">${idx + 1}.</span>${ik.kodeIndikator ? `<span class="font-bold text-slate-900">${sanitizeHTML(ik.kodeIndikator)}</span> - ` : ''}${sanitizeHTML(ik.namaIndikator)}</div>`).join('')
                                 }
                             </div>
                         </div>
@@ -7073,25 +7121,41 @@ function updateUnitCascRefOptions(tahun, allowTargetOnEdit = null, allowParentTi
         function renderUnitSubCheckboxes(targetUnit) {
             const container = document.getElementById('unitSubCheckContainer');
             if (!container) return;
-            const activeUnit = targetUnit || currentUser.unit;
+            const activeUnit = targetUnit || currentUser.unit || '';
             const hdr = document.getElementById('modalUnitHeaderLabel');
             if (hdr) hdr.innerText = activeUnit;
 
-            // Cari user di DB.users yang berada di unit ini dan memiliki role level bawah, ditambah daftar jabatan fungsional standar
-            const unitUsers = DB.users.filter(u => {
+            const normU = (u) => String(u || '').toLowerCase().replace(/\s+/g, ' ').trim();
+            const matchU = (a, b) => {
+                const x = normU(a), y = normU(b);
+                return x && y && (x === y || x.includes(y) || y.includes(x));
+            };
+            const activeTim = currentUser.timKey || '';
+
+            // Hanya tampilkan akun riil yang terdaftar di Manajemen Pejabat & Hak Akses (DB.users) di bawah Unit & Tim Kerja tersebut
+            const unitUsers = (DB.users || []).filter(u => {
                 const rList = getUserRoles(u);
                 const hasSubRole = rList.some(r => SUB_UNIT_ROLES.includes(r));
-                return hasSubRole && (!activeUnit || u.unit === activeUnit || currentUser.role === 'admin');
+                if (!hasSubRole) return false;
+                if (activeUnit && !matchU(u.unit, activeUnit)) return false;
+                if (currentUser.role !== 'admin' && activeTim && u.timKey && u.timKey !== activeTim) return false;
+                return true;
             });
 
-            const items = [];
-            unitUsers.forEach(u => {
-                items.push({ key: u.username, label: `${u.name} (${u.roles ? u.roles.map(r => ROLE_LABELS[r] || r).join(', ') : (ROLE_LABELS[u.role] || u.role)})` });
-            });
+            if (unitUsers.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300">Belum ada akun pelaksana (Sekretaris / Kalab / Koordinator / Dosen / Tendik) yang terdaftar pada unit <strong>${sanitizeHTML(activeUnit)}</strong> di Manajemen Pejabat & Hak Akses.</div>`;
+                return;
+            }
 
-            // Tambahkan jabatan struktural/fungsional standar di bawah unit jika belum ada akun spesifiknya
-            SUB_UNIT_ROLES.forEach(rKey => {
-                items.push({ key: `${rKey}_${activeUnit}`, label: `${ROLE_LABELS[rKey]} - ${activeUnit}` });
+            const items = unitUsers.map(u => {
+                const subRoleLabels = getUserRoles(u)
+                    .filter(r => SUB_UNIT_ROLES.includes(r))
+                    .map(r => ROLE_LABELS[r] || r)
+                    .join(', ');
+                return {
+                    key: u.username,
+                    label: `${u.name} — ${subRoleLabels} (${u.unit || activeUnit})`
+                };
             });
 
             container.innerHTML = items.map((item, idx) => `
