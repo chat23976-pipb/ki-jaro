@@ -7834,6 +7834,160 @@ async function saveCascadingUnit(e) {
                         </div>
                     </div>
 
+                    ${(() => {
+                        const capTahun = (typeof filterCapaianTahun !== 'undefined' && filterCapaianTahun !== 'Semua') ? String(filterCapaianTahun) : '2025';
+                        const normU = (u) => String(u || '').toLowerCase().replace(/\s+/g, ' ').trim();
+                        const matchU = (a, b) => {
+                            const x = normU(a), y = normU(b);
+                            return x && y && (x === y || x.includes(y) || y.includes(x));
+                        };
+                        const userRoles = typeof getUserRoles === 'function' ? getUserRoles(currentUser) : [currentUser.role];
+
+                        // Kumpulkan daftar Indikator & RHK yang menjadi tanggung jawab user aktif pada tahun terpilih
+                        let myResponsibilities = [];
+                        if (isSubUnit) {
+                            myResponsibilities = (DB.cascadingSubUnit || [])
+                                .filter(su => String(su.tahun || '2025') === capTahun && (su.username === currentUser.username || userRoles.includes(su.roleKey)))
+                                .map(su => ({
+                                    refId: su.id,
+                                    owner: su.namaPelaksana || currentUser.name,
+                                    unit: su.unit,
+                                    rhk: su.rencanaHasilKinerja || '-',
+                                    indikator: su.indikatorIndividu || su.indikatorUnitRef,
+                                    targetDirektur: su.targetDirektur || su.indikatorUnitRef,
+                                    target: Number(su.targetVal) || 100,
+                                    satuan: su.satuan || '%',
+                                    jenis: su.jenis || 'Utama'
+                                }));
+                        } else if (isKaUnit) {
+                            myResponsibilities = (DB.cascadingUnit || [])
+                                .filter(cu => String(cu.tahun || '2025') === capTahun && matchU(cu.unit, currentUser.unit))
+                                .map(cu => ({
+                                    refId: cu.id,
+                                    owner: cu.unit,
+                                    unit: cu.unit,
+                                    rhk: cu.rencanaHasilKinerja || '-',
+                                    indikator: cu.indikatorIndividu || cu.targetDirektur,
+                                    targetDirektur: cu.targetDirektur,
+                                    target: Number(cu.targetVal) || 100,
+                                    satuan: cu.satuan || '%',
+                                    jenis: cu.jenis || 'Utama'
+                                }));
+                        } else if (isKetuaTim) {
+                            myResponsibilities = (DB.cascadingTim || [])
+                                .filter(ct => String(ct.tahun || '2025') === capTahun && ct.timKey === currentUser.timKey)
+                                .map(ct => ({
+                                    refId: ct.id,
+                                    owner: ct.timKey,
+                                    unit: ct.timKey,
+                                    rhk: ct.rencanaHasilKinerja || '-',
+                                    indikator: ct.indikatorIndividu || ct.targetDirektur,
+                                    targetDirektur: ct.targetDirektur,
+                                    target: Number(ct.targetVal) || 100,
+                                    satuan: ct.satuan || '%',
+                                    jenis: ct.jenis || 'Utama'
+                                }));
+                        } else {
+                            myResponsibilities = (DB.cascadingDirektur || [])
+                                .filter(cd => String(cd.tahun || '2025') === capTahun)
+                                .map(cd => ({
+                                    refId: cd.id,
+                                    owner: (cd.timKeys || []).join(', ') || 'Institusi',
+                                    unit: (cd.timKeys || []).join(', ') || 'Institusi',
+                                    rhk: '-',
+                                    indikator: cd.target,
+                                    targetDirektur: cd.target,
+                                    target: Number(cd.targetVal) || 100,
+                                    satuan: cd.satuan || '%',
+                                    jenis: 'Utama'
+                                }));
+                        }
+
+                        // Petakan laporan capaian per TW 1 - TW 4 untuk tiap tanggung jawab
+                        const capTahunData = (DB.capaian || []).filter(c => String(c.tahun || '2025') === capTahun);
+                        const twList = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+
+                        const monitoredRows = myResponsibilities.map(item => {
+                            const matchedCaps = capTahunData.filter(c => {
+                                if (isSubUnit) {
+                                    return (String(c.subUnitRefId || '') === String(item.refId) ||
+                                        String(c.indikatorIndividuStaf || c.targetDirektur || '').trim().toLowerCase() === String(item.indikator || '').trim().toLowerCase()) &&
+                                        String(c.inputByUsername || '').toLowerCase() === String(currentUser.username || '').toLowerCase();
+                                } else if (isKaUnit) {
+                                    return matchU(c.unit, item.unit) &&
+                                        (String(c.targetDirektur || '').trim().toLowerCase() === String(item.targetDirektur || '').trim().toLowerCase() ||
+                                         String(c.indikatorIndividuStaf || '').trim().toLowerCase() === String(item.indikator || '').trim().toLowerCase());
+                                } else if (isKetuaTim) {
+                                    return c.timKey === currentUser.timKey &&
+                                        String(c.targetDirektur || '').trim().toLowerCase() === String(item.targetDirektur || '').trim().toLowerCase();
+                                }
+                                return String(c.targetDirektur || '').trim().toLowerCase() === String(item.targetDirektur || '').trim().toLowerCase();
+                            });
+
+                            const twMap = {};
+                            twList.forEach(tw => {
+                                const foundTw = matchedCaps.filter(c => String(c.triwulan || '').trim().toUpperCase() === tw);
+                                if (foundTw.length > 0) {
+                                    const avgReal = foundTw.reduce((acc, cur) => acc + (Number(cur.realisasi) || 0), 0) / foundTw.length;
+                                    const allValid = foundTw.every(c => c.status === 'Valid');
+                                    twMap[tw] = { reported: true, realisasi: Number(avgReal.toFixed(2)), valid: allValid, count: foundTw.length };
+                                } else {
+                                    twMap[tw] = { reported: false, realisasi: 0, valid: false, count: 0 };
+                                }
+                            });
+
+                            const reportedTwCount = twList.filter(tw => twMap[tw].reported).length;
+                            const latestReal = reportedTwCount > 0
+                                ? Math.max(...twList.filter(tw => twMap[tw].reported).map(tw => twMap[tw].realisasi))
+                                : 0;
+                            const pctCapaian = item.target > 0 ? Number(((latestReal / item.target) * 100).toFixed(1)) : 0;
+                            const isTercapai = reportedTwCount > 0 && pctCapaian >= 100;
+
+                            return { ...item, twMap, reportedTwCount, latestReal, pctCapaian, isTercapai };
+                        });
+
+                        const totalTanggungJawab = monitoredRows.length;
+                        const totalTercapai = monitoredRows.filter(r => r.isTercapai).length;
+                        const totalBelumTercapai = totalTanggungJawab - totalTercapai;
+                        const totalBelumDilaporkanSamaSekali = monitoredRows.filter(r => r.reportedTwCount === 0).length;
+
+                        window.__capaianMonitorCache = { capTahun, monitoredRows, twList };
+
+                        return `
+                        <!-- SCOREBOARD TANGGUNG JAWAB USER -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+                            <div class="bg-white border border-blue-200 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-500 uppercase">Tanggung Jawab (${capTahun})</p>
+                                    <p class="text-2xl font-black text-blue-700 mt-0.5">${totalTanggungJawab} <span class="text-xs font-semibold text-slate-500">Indikator</span></p>
+                                </div>
+                                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-bullseye"></i></div>
+                            </div>
+                            <div class="bg-white border border-emerald-200 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-500 uppercase">Sudah Tercapai (&ge;100%)</p>
+                                    <p class="text-2xl font-black text-emerald-700 mt-0.5">${totalTercapai} <span class="text-xs font-semibold text-slate-500">Indikator</span></p>
+                                </div>
+                                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-circle-check"></i></div>
+                            </div>
+                            <div class="bg-white border border-rose-200 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-500 uppercase">Belum Tercapai (&lt;100%)</p>
+                                    <p class="text-2xl font-black text-rose-600 mt-0.5">${totalBelumTercapai} <span class="text-xs font-semibold text-slate-500">Indikator</span></p>
+                                </div>
+                                <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            </div>
+                            <div class="bg-white border border-amber-200 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-500 uppercase">Belum Dilaporkan</p>
+                                    <p class="text-2xl font-black text-amber-600 mt-0.5">${totalBelumDilaporkanSamaSekali} <span class="text-xs font-semibold text-slate-500">Indikator</span></p>
+                                </div>
+                                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center"><i class="fa-solid fa-clock"></i></div>
+                            </div>
+                        </div>
+                        `;
+                    })()}
+
                     <!-- Tabel dengan Sorting Header -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="px-4 py-2.5 bg-slate-50 border-b text-xs text-slate-500 flex justify-between items-center">
@@ -7960,9 +8114,99 @@ async function saveCascadingUnit(e) {
                                         </tr>
                                     `; }).join('')}
                                 </tbody>
-                            </table>
+                           </table>
                         </div>
                     </div>
+
+                    <!-- TABEL MONITORING PELAPORAN INDIKATOR & RHK PER TRIWULAN + TABEL EWS BELUM TERCAPAI -->
+                    ${(() => {
+                        const cache = window.__capaianMonitorCache || { capTahun: '2025', monitoredRows: [], twList: ['TW 1', 'TW 2', 'TW 3', 'TW 4'] };
+                        const rows = cache.monitoredRows || [];
+                        const ewsRows = rows.filter(r => !r.isTercapai);
+
+                        return `
+                        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
+                            <!-- 2/3 Lebar: Monitoring Kelengkapan Pelaporan RHK & Indikator per Triwulan -->
+                            <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden">
+                                <div class="p-5 bg-indigo-50/70 border-b border-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div>
+                                        <h3 class="font-bold text-indigo-950 text-sm"><i class="fa-solid fa-table-list text-indigo-600 mr-2"></i>Monitoring Pelaporan Indikator & RHK per Triwulan (${cache.capTahun})</h3>
+                                        <p class="text-[11px] text-slate-600">Memantau RHK & Indikator Kinerja Individu mana yang <strong>sudah dilaporkan</strong> vs <strong>belum dilaporkan</strong> di tiap triwulan.</p>
+                                    </div>
+                                    <span class="px-3 py-1 bg-indigo-600 text-white rounded-full text-[11px] font-bold self-start sm:self-auto">${rows.length} Indikator Dipantau</span>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                                                <th class="p-3.5">RHK & Indikator Kinerja Individu</th>
+                                                <th class="p-3.5 text-center">Target</th>
+                                                <th class="p-3.5 text-center">TW 1</th>
+                                                <th class="p-3.5 text-center">TW 2</th>
+                                                <th class="p-3.5 text-center">TW 3</th>
+                                                <th class="p-3.5 text-center">TW 4</th>
+                                                <th class="p-3.5 text-center">Kelengkapan</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100">
+                                            ${rows.length === 0
+                                                ? `<tr><td colspan="7" class="p-6 text-center text-slate-400">Belum ada RHK / Indikator yang ditugaskan pada tahun ${cache.capTahun}.</td></tr>`
+                                                : rows.map(r => `
+                                                    <tr class="hover:bg-slate-50/80">
+                                                        <td class="p-3.5">
+                                                            ${r.rhk && r.rhk !== '-' ? `<span class="block text-[10px] font-bold text-indigo-700">RHK: ${sanitizeHTML(r.rhk)}</span>` : ''}
+                                                            <span class="font-bold text-slate-900 block">${sanitizeHTML(r.indikator)}</span>
+                                                            <span class="text-[10px] text-slate-400">${sanitizeHTML(r.owner)} • ${r.jenis}</span>
+                                                        </td>
+                                                        <td class="p-3.5 text-center font-bold text-primary-700">${r.target} ${sanitizeHTML(r.satuan)}</td>
+                                                        ${cache.twList.map(tw => {
+                                                            const cell = r.twMap[tw];
+                                                            return cell && cell.reported
+                                                                ? `<td class="p-3.5 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${cell.valid ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}" title="Realisasi: ${cell.realisasi}"><i class="fa-solid fa-check mr-1"></i>${cell.realisasi}</span></td>`
+                                                                : `<td class="p-3.5 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-600 border border-rose-200">Belum</span></td>`;
+                                                        }).join('')}
+                                                        <td class="p-3.5 text-center font-black ${r.reportedTwCount === 4 ? 'text-emerald-700' : 'text-amber-700'}">${r.reportedTwCount}/4 TW</td>
+                                                    </tr>
+                                                `).join('')
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- 1/3 Lebar: Tabel Early Warning System (EWS) Indikator Belum Tercapai -->
+                            <div class="xl:col-span-1 bg-white rounded-2xl shadow-sm border border-rose-200 overflow-hidden">
+                                <div class="p-5 bg-rose-50 border-b border-rose-200 flex items-center justify-between">
+                                    <div>
+                                        <h3 class="font-bold text-rose-950 text-sm"><i class="fa-solid fa-bell text-rose-600 mr-1.5 animate-pulse"></i>Early Warning System (EWS)</h3>
+                                        <p class="text-[11px] text-rose-700">Daftar indikator yang <strong>belum tercapai</strong> (&lt;100% dari target ${cache.capTahun}).</p>
+                                    </div>
+                                    <span class="px-2.5 py-1 bg-rose-600 text-white rounded-full text-xs font-black">${ewsRows.length}</span>
+                                </div>
+                                <div class="p-4 max-h-[420px] overflow-y-auto space-y-2.5 text-xs">
+                                    ${ewsRows.length === 0
+                                        ? `<div class="p-6 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-emerald-800 font-bold"><i class="fa-solid fa-award text-emerald-600 text-2xl block mb-1.5"></i>Seluruh indikator tanggung jawab Anda sudah tercapai!</div>`
+                                        : ewsRows.map((e, i) => `
+                                            <div class="p-3 rounded-xl border ${e.reportedTwCount === 0 ? 'bg-amber-50/70 border-amber-200' : 'bg-rose-50/60 border-rose-200'} space-y-1">
+                                                <div class="flex items-start justify-between gap-2">
+                                                    <span class="font-bold text-slate-900 leading-snug">${i + 1}. ${sanitizeHTML(e.indikator)}</span>
+                                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${e.reportedTwCount === 0 ? 'bg-amber-200 text-amber-900' : 'bg-rose-600 text-white'}">
+                                                        ${e.reportedTwCount === 0 ? 'Belum Lapor' : e.pctCapaian + '%'}
+                                                    </span>
+                                                </div>
+                                                ${e.rhk && e.rhk !== '-' ? `<p class="text-[10px] text-indigo-700 font-semibold">RHK: ${sanitizeHTML(e.rhk)}</p>` : ''}
+                                                <div class="flex items-center justify-between text-[11px] text-slate-600 pt-1 border-t border-slate-200/70">
+                                                    <span>Target: <strong>${e.target} ${sanitizeHTML(e.satuan)}</strong></span>
+                                                    <span>Realisasi Maks: <strong class="text-rose-700">${e.latestReal} ${sanitizeHTML(e.satuan)}</strong></span>
+                                                </div>
+                                            </div>
+                                        `).join('')
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    })()}
                 </div>
 
                 <!-- Modal Input / Edit Capaian -->
@@ -8496,31 +8740,62 @@ function rebuildCapaianIndikatorOptions(year) {
 }
         function closeCapaianModal() { document.getElementById('capaianModal').classList.remove('flex'); document.getElementById('capaianModal').classList.add('hidden'); }
 
-        function openValidateProdiModal(id) {
-            if (isPureViewer()) return;
+        window.openValidateProdiModal = function(id) {
+            if (typeof isPureViewer === 'function' && isPureViewer()) return;
             const c = (DB.capaian || []).find(x => String(x.id) === String(id));
-            if (!c) return;
-            const modal = document.getElementById('validateProdiModal');
-            if (!modal) return;
-            document.getElementById('validateProdiCapaianId').value = c.id;
-            document.getElementById('vpPelaksanaText').innerText = `${c.inputByName || '-'} (${ROLE_LABELS[c.inputByRole] || c.inputByRole || ''})`;
-            document.getElementById('vpProgramText').innerText = `${c.indikatorIndividuStaf || c.targetDirektur} — ${c.program}`;
-            document.getElementById('vpCapaianText').innerText = `${c.target} / ${c.realisasi} ${c.satuan || '%'}`;
-            document.getElementById('validateProdiStatusChoice').value = (c.statusProdi === 'Tidak Valid') ? 'Tidak Valid' : 'Valid';
-            document.getElementById('validateProdiComment').value = c.catatanProdi || '';
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
+            if (!c) {
+                showToast('Data capaian tidak ditemukan.', 'error');
+                return;
+            }
+            let modal = document.getElementById('validateProdiModalDynamic');
+            if (modal) modal.remove();
 
-        function closeValidateProdiModal() {
-            const modal = document.getElementById('validateProdiModal');
-            if (!modal) return;
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
+            modal = document.createElement('div');
+            modal.id = 'validateProdiModalDynamic';
+            modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[999] p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-check-double text-indigo-600 mr-1.5"></i>Validasi Tahap 1 (Ketua Prodi / Subbag / Unit)</h3>
+                        <button type="button" onclick="closeValidateProdiModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    </div>
+                    <input type="hidden" id="validateProdiCapaianId" value="${c.id}">
+                    <div class="space-y-3.5 text-sm">
+                        <div class="bg-slate-50 p-3 rounded-xl border text-xs space-y-1">
+                            <p><span class="text-slate-500">Pelaksana:</span> <strong class="text-slate-800">${sanitizeHTML(c.inputByName || '-')} (${sanitizeHTML(ROLE_LABELS[c.inputByRole] || c.inputByRole || '')})</strong></p>
+                            <p><span class="text-slate-500">Indikator / Program:</span> <strong class="text-indigo-800">${sanitizeHTML(c.indikatorIndividuStaf || c.targetDirektur)} — ${sanitizeHTML(c.program)}</strong></p>
+                            <p><span class="text-slate-500">Target / Realisasi:</span> <strong class="text-emerald-700">${c.target} / ${c.realisasi} ${sanitizeHTML(c.satuan || '%')}</strong></p>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Keputusan Validasi Unit</label>
+                            <select id="validateProdiStatusChoice" class="w-full p-3 bg-slate-50 border rounded-xl font-bold">
+                                <option value="Valid" class="text-emerald-700" ${c.statusProdi !== 'Tidak Valid' ? 'selected' : ''}>Valid (Lanjut & Naik ke Ketua Tim Kerja)</option>
+                                <option value="Tidak Valid" class="text-rose-700" ${c.statusProdi === 'Tidak Valid' ? 'selected' : ''}>Tidak Valid (Kembalikan ke Pelaksana)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Catatan Ketua Unit / Prodi / Subbag</label>
+                            <textarea id="validateProdiComment" rows="3" class="w-full p-3 bg-slate-50 border rounded-xl text-xs" placeholder="Catatan verifikasi atau arahan perbaikan...">${sanitizeHTML(c.catatanProdi || '')}</textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-2 border-t">
+                        <button type="button" onclick="closeValidateProdiModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
+                        <button type="button" onclick="submitValidationProdi()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow">Simpan & Lanjutkan</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        };
 
-        async function submitValidationProdi() {
-            if (isPureViewer()) return;
+        window.closeValidateProdiModal = function() {
+            const modal = document.getElementById('validateProdiModalDynamic');
+            if (modal) modal.remove();
+            const oldModal = document.getElementById('validateProdiModal');
+            if (oldModal) { oldModal.classList.add('hidden'); oldModal.classList.remove('flex'); }
+        };
+
+        window.submitValidationProdi = async function() {
+            if (typeof isPureViewer === 'function' && isPureViewer()) return;
             const id = document.getElementById('validateProdiCapaianId').value;
             const st = document.getElementById('validateProdiStatusChoice').value;
             const note = sanitizeHTML(document.getElementById('validateProdiComment').value.trim());
@@ -8531,20 +8806,18 @@ function rebuildCapaianIndikatorOptions(year) {
             DB.capaian[idx].catatanProdi = note;
             if (st === 'Tidak Valid') {
                 DB.capaian[idx].status = 'Tidak Valid';
-                if (note) DB.capaian[idx].rekomendasi = `[Catatan Unit] ${note}`;
-            } else if (DB.capaian[idx].status === 'Tidak Valid') {
+                if (note) DB.capaian[idx].rekomendasi = `[Catatan Ketua Unit] ${note}`;
+            } else {
+                // Validasi Tahap 1 lolos -> lanjut naik ke Ketua Tim Kerja (Tahap 2)
                 DB.capaian[idx].status = 'Menunggu Validasi';
             }
 
             await syncToGoogleSheets('Validasi Unit (Tahap 1)', DB.capaian[idx]);
             await saveToMySQL();
             closeValidateProdiModal();
-            showToast(`Validasi Tahap 1 Unit disimpan (${st})!`);
+            showToast(st === 'Valid' ? 'Validasi Unit berhasil! Data diteruskan ke Ketua Tim Kerja.' : 'Capaian dikembalikan ke pelaksana (Tidak Valid).');
             renderCapaianView(document.getElementById('mainContent'));
-        }
-        window.openValidateProdiModal = openValidateProdiModal;
-        window.closeValidateProdiModal = closeValidateProdiModal;
-        window.submitValidationProdi = submitValidationProdi;
+        };
         
 async function saveCapaian(e) {
             e.preventDefault();
