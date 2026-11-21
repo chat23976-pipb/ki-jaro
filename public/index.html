@@ -5115,6 +5115,71 @@ let dashboardChartInstances = {};
             });
 
             const canMigrate = (isAdmin || isDirektur || isKetuaTim || isKaUnit) && !isPureViewer();
+            const monTahun = filterCascadingTahun === 'Semua' ? '2025' : String(filterCascadingTahun);
+
+            // --- SCOREBOARD & MONITORING LEVEL 1 (Direktur -> Tim Kerja) ---
+            const dirTahunList = (DB.cascadingDirektur || []).filter(c => String(c.tahun || '2025') === monTahun);
+            const sbTimAkademik = dirTahunList.filter(c => Array.isArray(c.timKeys) && c.timKeys.includes('Akademik')).length;
+            const sbTimUmum = dirTahunList.filter(c => Array.isArray(c.timKeys) && c.timKeys.includes('Umum dan Keuangan')).length;
+            const sbTimKemahasiswaan = dirTahunList.filter(c => Array.isArray(c.timKeys) && c.timKeys.includes('Kemahasiswaan dan Kerjasama')).length;
+
+            const renstraTier4List = (DB.renstra || []).filter(r => r.tier === 'Tier 4' || r.indikator);
+            const unCascadedDir = renstraTier4List.filter(r => {
+                const namaInd = (r.indikator || r.target || '').trim();
+                if (!namaInd) return false;
+                return !dirTahunList.some(cd => (cd.target || '').trim().toLowerCase() === namaInd.toLowerCase());
+            });
+
+            // --- SCOREBOARD & MONITORING LEVEL 2 (Ketua Tim -> Unit/Prodi/Subbag) ---
+            const activeTimForSb = userTimKey || 'Akademik';
+            const unitsUnderTim = (DB.units || []).filter(u => u.timKey === activeTimForSb).map(u => u.name);
+            const timTahunList = (DB.cascadingTim || []).filter(ct => String(ct.tahun || '2025') === monTahun && ct.timKey === activeTimForSb);
+            const sbUnitsCount = unitsUnderTim.map(uName => ({
+                unit: uName,
+                count: timTahunList.filter(ct => Array.isArray(ct.unitTargets) && ct.unitTargets.includes(uName)).length
+            }));
+
+            const dirAssignedToTim = (DB.cascadingDirektur || []).filter(cd =>
+                String(cd.tahun || '2025') === monTahun &&
+                Array.isArray(cd.timKeys) && cd.timKeys.includes(activeTimForSb)
+            );
+            const unCascadedTim = dirAssignedToTim.filter(cd =>
+                !timTahunList.some(ct => (ct.targetDirektur || '').trim().toLowerCase() === (cd.target || '').trim().toLowerCase())
+            );
+
+            // --- SCOREBOARD & MONITORING LEVEL 3 (Ketua Unit/Prodi/Subbag -> Staf) ---
+            const activeUnitForSb = currentUser.unit || '';
+            const unitTahunList = (DB.cascadingUnit || []).filter(cu => String(cu.tahun || '2025') === monTahun && isSameUnit(cu.unit, activeUnitForSb));
+            const stafUnderUnit = (DB.users || []).filter(u => isSameUnit(u.unit, activeUnitForSb) && SUB_UNIT_ROLES.includes(u.role));
+            const sbStafCount = stafUnderUnit.map(st => ({
+                name: st.name,
+                roleLabel: ROLE_LABELS[st.role] || st.role,
+                count: unitTahunList.filter(cu => Array.isArray(cu.subTargets) && (cu.subTargets.includes(st.username) || cu.subTargets.includes(st.role))).length
+            }));
+
+            const timAssignedToUnit = (DB.cascadingTim || []).filter(ct =>
+                String(ct.tahun || '2025') === monTahun &&
+                ct.isCascading !== false &&
+                Array.isArray(ct.unitTargets) && ct.unitTargets.some(u => isSameUnit(u, activeUnitForSb))
+            );
+            const unCascadedUnit = timAssignedToUnit.filter(ct =>
+                !unitTahunList.some(cu => String(cu.parentTimId || '') === String(ct.id) || (cu.targetDirektur || '').trim().toLowerCase() === (ct.targetDirektur || '').trim().toLowerCase())
+            );
+
+            // --- MONITORING LEVEL 4 (Staf: RHK dari Ketua Unit yang belum diinput RHK & IKK Individunya) ---
+            const subUnitTahunList = (DB.cascadingSubUnit || []).filter(su =>
+                String(su.tahun || '2025') === monTahun &&
+                (su.username === currentUser.username || userAllRoles.includes(su.roleKey))
+            );
+            const unitAssignedToMe = (DB.cascadingUnit || []).filter(cu =>
+                String(cu.tahun || '2025') === monTahun &&
+                cu.isCascading !== false &&
+                isSameUnit(cu.unit, currentUser.unit) &&
+                Array.isArray(cu.subTargets) && (cu.subTargets.includes(currentUser.username) || userAllRoles.some(r => cu.subTargets.includes(r)))
+            );
+            const unCascadedSubUnit = unitAssignedToMe.filter(cu =>
+                !subUnitTahunList.some(su => String(su.parentUnitId || '') === String(cu.id))
+            );
 
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
@@ -5246,252 +5311,370 @@ let dashboardChartInstances = {};
                         </div>
                     </div>
 
-                    <!-- Bagian 1: Cascading Direktur ke Ketua Tim Kerja (Level 1) -->
-                    <!-- REVISI 2, 3, 4: CROSSCUTTING EXPLORER (SANKEY, CHORD KOLABORASI, MATRIKS BOBOT) -->
-                     <div class="${getStrategyThemeStyles().outer} rounded-3xl shadow-2xl border p-6 lg:p-8 space-y-6 transition-all duration-300">
-                     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-                         <div>
-                             <h3 class="text-lg font-black text-white tracking-tight">Crosscutting Explorer — Keterkaitan Lintas Unit & Indikator</h3>
-                             <p class="text-xs text-slate-400">Visualisasi aliran kontribusi Program/Unit &rarr; IKK Tim Kerja &rarr; IKU Direktur (Otomatis dari inputan Cascading)</p>
-                         </div>
-                         <div class="flex flex-wrap items-center gap-2">
-                             <button type="button" id="btnTabCC_sankey" onclick="switchCrosscuttingTab('sankey')" class="px-4 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-slate-950 shadow-md transition-all">1. Sankey Flow Diagram</button>
-                             <button type="button" id="btnTabCC_chord" onclick="switchCrosscuttingTab('chord')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">2. Chord Kolaborasi Unit</button>
-                                                          <button type="button" id="btnTabCC_matrix" onclick="switchCrosscuttingTab('matrix')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">3. Heatmap Matriks Bobot</button>
-                             <button type="button" onclick="toggleCrosscuttingChart = !toggleCrosscuttingChart; renderCascadingView(document.getElementById('mainContent'));" class="px-3 py-2 rounded-xl text-xs font-bold bg-white/20 hover:bg-white/30 text-current transition-all border border-current/20 ml-2">
-                                 <i class="fa-solid ${toggleCrosscuttingChart ? 'fa-eye-slash' : 'fa-eye'} mr-1"></i> ${toggleCrosscuttingChart ? 'Sembunyikan' : 'Tampilkan'}
-                             </button>
-                         </div>
-                     </div>
-                     <div id="crosscuttingExplorerBody" class="${toggleCrosscuttingChart ? '' : 'hidden'} min-h-[380px]"></div>
-                 </div>
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <!-- CROSSCUTTING EXPLORER -->
+                    <div class="${getStrategyThemeStyles().outer} rounded-3xl shadow-2xl border p-6 lg:p-8 space-y-6 transition-all duration-300">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                             <div>
-                                                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-primary-600 mr-2"></i> 1. Cascading Direktur ke Ketua Tim Kerja (Level 1)</h3>
-                                <p class="text-xs text-slate-500">Direktur memilih tahun dan Indikator Kinerja dari Renstra untuk diturunkan ke Ketua Tim Kerja.</p>
+                                <h3 class="text-lg font-black text-white tracking-tight">Crosscutting Explorer — Keterkaitan Lintas Unit & Indikator</h3>
+                                <p class="text-xs text-slate-400">Visualisasi aliran kontribusi Program/Unit &rarr; IKK Tim Kerja &rarr; IKU Direktur (Otomatis dari inputan Cascading)</p>
                             </div>
-                            <div class="flex items-center space-x-3">
-                                <button type="button" onclick="toggleCascLevel1 = !toggleCascLevel1; renderCascadingView(document.getElementById('mainContent'));" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow flex items-center space-x-1.5 border border-slate-300">
-                                    <i class="fa-solid ${toggleCascLevel1 ? 'fa-eye-slash' : 'fa-eye'}"></i>
-                                    <span>${toggleCascLevel1 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" id="btnTabCC_sankey" onclick="switchCrosscuttingTab('sankey')" class="px-4 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-slate-950 shadow-md transition-all">1. Sankey Flow Diagram</button>
+                                <button type="button" id="btnTabCC_chord" onclick="switchCrosscuttingTab('chord')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">2. Chord Kolaborasi Unit</button>
+                                <button type="button" id="btnTabCC_matrix" onclick="switchCrosscuttingTab('matrix')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">3. Heatmap Matriks Bobot</button>
+                                <button type="button" onclick="toggleCrosscuttingChart = !toggleCrosscuttingChart; renderCascadingView(document.getElementById('mainContent'));" class="px-3 py-2 rounded-xl text-xs font-bold bg-white/20 hover:bg-white/30 text-current transition-all border border-current/20 ml-2">
+                                    <i class="fa-solid ${toggleCrosscuttingChart ? 'fa-eye-slash' : 'fa-eye'} mr-1"></i> ${toggleCrosscuttingChart ? 'Sembunyikan' : 'Tampilkan'}
                                 </button>
-                        
-                                ${(isDirektur || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingDirModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1"><i class="fa-solid fa-plus mr-1"></i><span>Tambah Cascading Direktur</span></button>` : ''}
                             </div>
                         </div>
-                        <div class="${toggleCascLevel1 ? '' : 'hidden'} overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-sm">
-                                <thead>
-                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                        <th class="p-4">Tahun & Sasaran Kinerja (Renstra)</th>
-                                        <th class="p-4 text-center">Target</th>
-                                        <th class="p-4 text-center">Satuan</th>
-                                        <th class="p-4 text-center">Pagu Anggaran (Renstra)</th>
-                                        <th class="p-4">Tim Kerja Terpilih</th>
-                                        ${(isDirektur || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    ${filteredDir.length === 0 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data cascading dari Direktur untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredDir.map((c) => `
-                                        <tr class="hover:bg-slate-50 transition-all">
-                                            <td class="p-4">
-                                                <span class="px-2 py-0.5 bg-blue-50 text-primary-700 font-semibold text-xs rounded mr-2">Tahun: ${c.tahun || '2025'}</span>
-                                                <span class="font-semibold text-slate-900">${c.target}</span>
-                                            </td>
-                                            <td class="p-4 text-center font-bold text-primary-700">${c.targetVal !== undefined ? c.targetVal : 100}</td>
-                                            <td class="p-4 text-center"><span class="px-2.5 py-1 bg-slate-100 rounded text-xs font-semibold">${c.satuan || '%'}</span></td>
-                                            <td class="p-4 text-center font-bold text-emerald-700">Rp ${Number(c.anggaran || 0).toLocaleString('id-ID')}</td>
-                                            <td class="p-4">
-                                                <div class="flex flex-wrap gap-1.5">
-                                                    ${c.timKeys.map(t => {
-                                                        const isUtama = isTimUtamaInDir(c, t);
-                                                        return `<span class="px-2.5 py-1 ${isUtama ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-300'} font-bold text-xs rounded-full flex items-center space-x-1"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i><span>${t} (${isUtama ? 'Utama' : 'Support'})</span></span>`;
-                                                    }).join('')}
-                                                </div>
-                                            </td>
-                                            ${(isDirektur || isAdmin) && !isPureViewer() ? `
-                                                <td class="p-4 text-center space-x-1">
-                                                    <button onclick="openEditCascadingDirModal('${c.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="confirmDeleteCascadingDir('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                                                </td>
-                                            ` : ''}
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
+                        <div id="crosscuttingExplorerBody" class="${toggleCrosscuttingChart ? '' : 'hidden'} min-h-[380px]"></div>
                     </div>
-                    
-                    <!-- Bagian 2: Cascading Ketua Tim Kerja ke Unit / Prodi (Level 2) -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+                    <!-- SCOREBOARD LEVEL 1 (Jumlah Indikator Direktur ke Masing-masing Tim Kerja) -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white border border-blue-200 rounded-2xl p-4 shadow-xs flex items-center justify-between">
                             <div>
-                                                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-network-wired text-primary-600 mr-2"></i> 2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag (Level 2)</h3>
-                                <p class="text-xs text-slate-500">Ketua Tim Kerja menurunkan indikator ke unit/prodi/subbag di bawah koordinasinya.</p>
+                                <p class="text-[11px] font-bold text-slate-500 uppercase">Tim Kerja Akademik (${monTahun})</p>
+                                <p class="text-2xl font-black text-blue-700 mt-0.5">${sbTimAkademik} <span class="text-xs font-semibold text-slate-500">Indikator</span></p>
                             </div>
-                            <div class="flex items-center space-x-3">
-                                <button type="button" onclick="toggleCascLevel2 = !toggleCascLevel2; renderCascadingView(document.getElementById('mainContent'));" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow flex items-center space-x-1.5 border border-slate-300">
-                                    <i class="fa-solid ${toggleCascLevel2 ? 'fa-eye-slash' : 'fa-eye'}"></i>
-                                    <span>${toggleCascLevel2 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
-                                </button>
-                                                            <div class="flex items-center space-x-2">
-                                
-                                ${(isKetuaTim || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
-                            </div>
-                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-graduation-cap"></i></div>
                         </div>
-                        <div class="${toggleCascLevel2 ? '' : 'hidden'} overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-sm">
-                                <thead>
-                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                        <th class="p-4">Tim Kerja Pelaksana</th>
-                                        <th class="p-4">Tahun</th>
-                                        <th class="p-4">Indikator Rujukan (Dari Direktur)</th>
-                                        <th class="p-4">Unit / Prodi / Subbag Tujuan</th>
-                                        ${(isKetuaTim || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    ${filteredTimTable.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan ${isKetuaTim ? 'untuk Tim Kerja ' + currentUser.timKey + ' ' : ''}pada tahun ${filterCascadingTahun}.</td></tr>` : filteredTimTable.map((c) => `
-                                        <tr class="hover:bg-slate-50 transition-all">
-                                            <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
-                                            <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
-                                            <td class="p-4">
-                                            <span class="block text-xs text-slate-500 mb-1">Induk: ${sanitizeHTML(c.targetDirektur)}</span>
-                                            <span class="block font-bold text-blue-800 text-sm">${sanitizeHTML(c.indikatorIndividu || c.targetDirektur)}</span>
-                                            <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${c.jenis === 'Utama' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}">${c.jenis || 'Support'}</span>
-                                            ${c.isCascading === false ? '<span class="ml-1 inline-block mt-1 px-2 py-0.5 bg-rose-100 text-rose-700 text-[10px] font-bold rounded">Berhenti di Tim</span>' : ''}
-                                        </td>
-                                            <td class="p-4">
-                                                <div class="flex flex-wrap gap-1.5">
-                                                    ${c.unitTargets.map(u => {
-                                                        const isUtama = isUnitUtamaInTim(c, u);
-                                                        return `<span class="px-2.5 py-1 ${isUtama ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-300'} text-xs rounded-full font-bold flex items-center space-x-1"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i><span>${u} (${isUtama ? 'Utama' : 'Support'})</span></span>`;
-                                                    }).join('')}
-                                                </div>
-                                            </td>
-                                            ${(isKetuaTim || isAdmin) && !isPureViewer() ? `
-                                                <td class="p-4 text-center space-x-1">
-                                                    <button onclick="openEditCascadingTimModal('${c.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="confirmDeleteCascadingTim('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                                                </td>
-                                            ` : ''}
-                                        </tr>
-                                    `).join('')}
-                                                               </tbody>
-                            </table>
+                        <div class="bg-white border border-emerald-200 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] font-bold text-slate-500 uppercase">Umum dan Keuangan (${monTahun})</p>
+                                <p class="text-2xl font-black text-emerald-700 mt-0.5">${sbTimUmum} <span class="text-xs font-semibold text-slate-500">Indikator</span></p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-coins"></i></div>
+                        </div>
+                        <div class="bg-white border border-purple-200 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] font-bold text-slate-500 uppercase">Kemahasiswaan & Kerjasama (${monTahun})</p>
+                                <p class="text-2xl font-black text-purple-700 mt-0.5">${sbTimKemahasiswaan} <span class="text-xs font-semibold text-slate-500">Indikator</span></p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center"><i class="fa-solid fa-handshake"></i></div>
                         </div>
                     </div>
 
-                    <!-- Bagian 3: Cascading Ketua Unit / Prodi / Subbag ke Staf Hilir (Level 3) -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-users-gear text-emerald-600 mr-2"></i> 3. Cascading Ketua Unit / Prodi / Subbag ke Dosen / Tendik / Sekretaris / Kalab / Koordinator (Level 3)</h3>
-                                <p class="text-xs text-slate-500">Penurunan indikator paling hilir ke pelaksana operasional. Hanya role berstatus <strong>★ Utama</strong> yang masuk ke Dashboard.</p>
+                    <!-- Bagian 1 (3/4) + Monitoring Belum Dicascading Direktur (1/4) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
+                        <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-sitemap text-primary-600 mr-2"></i> 1. Cascading Direktur ke Ketua Tim Kerja (Level 1)</h3>
+                                    <p class="text-xs text-slate-500">Direktur memilih tahun dan Indikator Kinerja dari Renstra untuk diturunkan ke Ketua Tim Kerja.</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <button type="button" onclick="toggleCascLevel1 = !toggleCascLevel1; renderCascadingView(document.getElementById('mainContent'));" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow flex items-center space-x-1.5 border border-slate-300">
+                                        <i class="fa-solid ${toggleCascLevel1 ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                        <span>${toggleCascLevel1 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
+                                    </button>
+                                    ${(isDirektur || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingDirModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow flex items-center space-x-1"><i class="fa-solid fa-plus mr-1"></i><span>Tambah Cascading Direktur</span></button>` : ''}
+                                </div>
                             </div>
-                            <div class="flex items-center space-x-3">
-                                ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingUnitModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Staf</span></button>` : ''}
+                            <div class="${toggleCascLevel1 ? '' : 'hidden'} overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-sm">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                            <th class="p-4">Tahun & Sasaran Kinerja (Renstra)</th>
+                                            <th class="p-4 text-center">Target</th>
+                                            <th class="p-4 text-center">Satuan</th>
+                                            <th class="p-4 text-center">Pagu Anggaran (Renstra)</th>
+                                            <th class="p-4">Tim Kerja Terpilih</th>
+                                            ${(isDirektur || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        ${filteredDir.length === 0 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data cascading dari Direktur untuk tahun ${filterCascadingTahun}.</td></tr>` : filteredDir.map((c) => `
+                                            <tr class="hover:bg-slate-50 transition-all">
+                                                <td class="p-4">
+                                                    <span class="px-2 py-0.5 bg-blue-50 text-primary-700 font-semibold text-xs rounded mr-2">Tahun: ${c.tahun || '2025'}</span>
+                                                    <span class="font-semibold text-slate-900">${c.target}</span>
+                                                </td>
+                                                <td class="p-4 text-center font-bold text-primary-700">${c.targetVal !== undefined ? c.targetVal : 100}</td>
+                                                <td class="p-4 text-center"><span class="px-2.5 py-1 bg-slate-100 rounded text-xs font-semibold">${c.satuan || '%'}</span></td>
+                                                <td class="p-4 text-center font-bold text-emerald-700">Rp ${Number(c.anggaran || 0).toLocaleString('id-ID')}</td>
+                                                <td class="p-4">
+                                                    <div class="flex flex-wrap gap-1.5">
+                                                        ${c.timKeys.map(t => {
+                                                            const isUtama = isTimUtamaInDir(c, t);
+                                                            return `<span class="px-2.5 py-1 ${isUtama ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-300'} font-bold text-xs rounded-full flex items-center space-x-1"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i><span>${t} (${isUtama ? 'Utama' : 'Support'})</span></span>`;
+                                                        }).join('')}
+                                                    </div>
+                                                </td>
+                                                ${(isDirektur || isAdmin) && !isPureViewer() ? `
+                                                    <td class="p-4 text-center space-x-1">
+                                                        <button onclick="openEditCascadingDirModal('${c.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="confirmDeleteCascadingDir('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                    </td>
+                                                ` : ''}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-sm">
-                                <thead>
-                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                        <th class="p-4">Unit / Prodi / Subbag</th>
-                                        <th class="p-4">Tahun</th>
-                                        <th class="p-4">Indikator Terintervensi & Indikator Individu Staf</th>
-                                        <th class="p-4">Pelaksana Tujuan (Utama vs Support)</th>
-                                        ${(isKaUnit || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    ${filteredUnitTable.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading Level 3 pada tahun ${filterCascadingTahun}.</td></tr>` : filteredUnitTable.map((cu) => `
-                                        <tr class="hover:bg-slate-50 transition-all">
-                                            <td class="p-4"><span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-semibold text-xs rounded-full">${sanitizeHTML(cu.unit)}</span></td>
-                                            <td class="p-4 font-bold text-emerald-700">${cu.tahun || '2025'}</td>
-                                            <td class="p-4">
-                                                ${cu.rencanaHasilKinerja ? `<span class="block text-[11px] text-indigo-600 font-semibold">RHK Tim: ${sanitizeHTML(cu.rencanaHasilKinerja)}</span>` : ''}
-                                                <span class="block text-xs text-slate-500 mb-1">Induk Direktur: ${sanitizeHTML(cu.targetDirektur)}</span>
-                                                <span class="block font-bold text-emerald-900 text-sm">${sanitizeHTML(cu.indikatorIndividu || cu.targetDirektur)}</span>
-                                                <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${cu.jenis === 'Utama' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">${cu.jenis || 'Utama'}</span>
-                                                ${cu.isCascading === false ? '<span class="ml-1 inline-block mt-1 px-2 py-0.5 bg-rose-100 text-rose-700 text-[10px] font-bold rounded">Berhenti di Ketua Unit</span>' : ''}
-                                            </td>
-                                            <td class="p-4">
-                                                <div class="flex flex-wrap gap-1.5">
-                                                    ${(cu.subTargets || []).length === 0 ? '<span class="text-xs text-slate-400 italic">Dikerjakan langsung Ketua Unit</span>' : (cu.subTargets || []).map(st => {
-                                                        const isUtama = isSubRoleUtamaInUnit(cu, st);
-                                                        const usr = DB.users.find(u => u.username === st);
-                                                        const lbl = usr ? `${usr.name} (${ROLE_LABELS[usr.role] || usr.role})` : (ROLE_LABELS[st] || st);
-                                                        return `<span class="px-2.5 py-1 ${isUtama ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-300'} text-xs rounded-full font-bold flex items-center space-x-1"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i><span>${sanitizeHTML(lbl)} (${isUtama ? 'Utama' : 'Support'})</span></span>`;
-                                                    }).join('')}
-                                                </div>
-                                            </td>
-                                            ${(isKaUnit || isAdmin) && !isPureViewer() ? `
-                                                <td class="p-4 text-center space-x-1">
-                                                    <button onclick="openEditCascadingUnitModal('${cu.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="confirmDeleteCascadingUnit('${cu.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                                                </td>
-                                            ` : ''}
-                                        </tr>
-                                    `).join('')}
-                               </tbody>
-                            </table>
+
+                        <!-- Monitoring 1/4 Level 1 -->
+                        <div class="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
+                            <div class="p-4 bg-amber-50 border-b border-amber-200">
+                                <h4 class="font-bold text-amber-900 text-xs flex items-center justify-between">
+                                    <span><i class="fa-solid fa-hourglass-half mr-1.5"></i>Belum Dicascading (${monTahun})</span>
+                                    <span class="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-black">${unCascadedDir.length}</span>
+                                </h4>
+                            </div>
+                            <div class="p-3.5 max-h-80 overflow-y-auto space-y-2 text-xs">
+                                ${unCascadedDir.length === 0
+                                    ? `<div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-emerald-800 font-bold"><i class="fa-solid fa-circle-check text-emerald-600 block text-lg mb-1"></i>Semua indikator sudah dicascadingkan</div>`
+                                    : unCascadedDir.map((r, idx) => `<div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium leading-snug"><span class="font-bold text-amber-700 mr-1">${idx + 1}.</span>${sanitizeHTML(r.indikator || r.target)}</div>`).join('')
+                                }
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Bagian 4: Input Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu Staf (Dosen / Tendik / Sekretaris / Kalab / Koordinator) -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden">
-                        <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-user-pen text-indigo-600 mr-2"></i> 4. Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu Staf</h3>
-                                <p class="text-xs text-slate-500">Pelaksana (Dosen / Tendik / Sekretaris / Kalab / Koordinator) menginput RHK & Indikator Individu berdasarkan cascading dari Ketua Prodi / Subbag / Unit.</p>
+                    <!-- SCOREBOARD LEVEL 2 (Khusus Tim Kerja User yang Aktif) -->
+                    ${(isKetuaTim || isAdmin) && sbUnitsCount.length > 0 ? `
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        ${sbUnitsCount.map(u => `
+                            <div class="bg-white border border-indigo-200 rounded-2xl p-3.5 shadow-xs">
+                                <p class="text-[11px] font-bold text-slate-500 truncate" title="${sanitizeHTML(u.unit)}">${sanitizeHTML(u.unit)}</p>
+                                <p class="text-xl font-black text-indigo-700 mt-0.5">${u.count} <span class="text-[11px] font-semibold text-slate-500">RHK (${monTahun})</span></p>
                             </div>
-                            <div class="flex items-center space-x-3">
-                                ${(isSubUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingSubUnitModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Input RHK & Indikator Individu</span></button>` : ''}
+                        `).join('')}
+                    </div>` : ''}
+
+                    <!-- Bagian 2 (3/4) + Monitoring Belum Dicascading Ketua Tim (1/4) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
+                        <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-network-wired text-primary-600 mr-2"></i> 2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag (Level 2)</h3>
+                                    <p class="text-xs text-slate-500">Ketua Tim Kerja menurunkan indikator ke unit/prodi/subbag di bawah koordinasinya.</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <button type="button" onclick="toggleCascLevel2 = !toggleCascLevel2; renderCascadingView(document.getElementById('mainContent'));" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow flex items-center space-x-1.5 border border-slate-300">
+                                        <i class="fa-solid ${toggleCascLevel2 ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                        <span>${toggleCascLevel2 ? 'Sembunyikan Tabel' : 'Tampilkan Tabel'}</span>
+                                    </button>
+                                    <div class="flex items-center space-x-2">
+                                        ${(isKetuaTim || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingTimModal()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Unit</span></button>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="${toggleCascLevel2 ? '' : 'hidden'} overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-sm">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                            <th class="p-4">Tim Kerja Pelaksana</th>
+                                            <th class="p-4">Tahun</th>
+                                            <th class="p-4">Indikator Rujukan (Dari Direktur)</th>
+                                            <th class="p-4">Unit / Prodi / Subbag Tujuan</th>
+                                            ${(isKetuaTim || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        ${filteredTimTable.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading lanjutan ${isKetuaTim ? 'untuk Tim Kerja ' + currentUser.timKey + ' ' : ''}pada tahun ${filterCascadingTahun}.</td></tr>` : filteredTimTable.map((c) => `
+                                            <tr class="hover:bg-slate-50 transition-all">
+                                                <td class="p-4"><span class="px-2.5 py-1 bg-purple-50 text-purple-700 font-semibold text-xs rounded-full">${c.timKey}</span></td>
+                                                <td class="p-4 font-bold text-primary-700">${c.tahun || '2025'}</td>
+                                                <td class="p-4">
+                                                    <span class="block text-xs text-slate-500 mb-1">Induk: ${sanitizeHTML(c.targetDirektur)}</span>
+                                                    <span class="block font-bold text-blue-800 text-sm">${sanitizeHTML(c.indikatorIndividu || c.targetDirektur)}</span>
+                                                    <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${c.jenis === 'Utama' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}">${c.jenis || 'Support'}</span>
+                                                    ${c.isCascading === false ? '<span class="ml-1 inline-block mt-1 px-2 py-0.5 bg-rose-100 text-rose-700 text-[10px] font-bold rounded">Berhenti di Tim</span>' : ''}
+                                                </td>
+                                                <td class="p-4">
+                                                    <div class="flex flex-wrap gap-1.5">
+                                                        ${c.unitTargets.map(u => {
+                                                            const isUtama = isUnitUtamaInTim(c, u);
+                                                            return `<span class="px-2.5 py-1 ${isUtama ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-300'} text-xs rounded-full font-bold flex items-center space-x-1"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i><span>${u} (${isUtama ? 'Utama' : 'Support'})</span></span>`;
+                                                        }).join('')}
+                                                    </div>
+                                                </td>
+                                                ${(isKetuaTim || isAdmin) && !isPureViewer() ? `
+                                                    <td class="p-4 text-center space-x-1">
+                                                        <button onclick="openEditCascadingTimModal('${c.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="confirmDeleteCascadingTim('${c.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                    </td>
+                                                ` : ''}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-sm">
-                                <thead>
-                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                        <th class="p-4">Pelaksana & Unit</th>
-                                        <th class="p-4">Tahun</th>
-                                        <th class="p-4">Indikator dari Ketua Unit / Prodi / Subbag</th>
-                                        <th class="p-4">RHK & Indikator Individu Staf</th>
-                                        <th class="p-4 text-center">Target & Satuan</th>
-                                        <th class="p-4 text-center">Jenis</th>
-                                        ${(isSubUnit || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    ${filteredSubUnit.length === 0 ? `<tr><td colspan="7" class="p-6 text-center text-slate-400">Belum ada input RHK & Indikator Individu Staf pada tahun ${filterCascadingTahun}.</td></tr>` : filteredSubUnit.map(su => `
-                                        <tr class="hover:bg-slate-50 transition-all">
-                                            <td class="p-4 font-bold text-slate-900">${sanitizeHTML(su.namaPelaksana)}<span class="block text-[11px] font-normal text-slate-500">${sanitizeHTML(su.unit)}</span></td>
-                                            <td class="p-4 font-bold text-indigo-700">${su.tahun || '2025'}</td>
-                                            <td class="p-4 text-xs text-slate-600">${sanitizeHTML(su.indikatorUnitRef)}</td>
-                                            <td class="p-4">
-                                                <span class="block text-xs font-bold text-indigo-800">RHK: ${sanitizeHTML(su.rencanaHasilKinerja)}</span>
-                                                <span class="block font-bold text-slate-900 text-sm mt-0.5">${sanitizeHTML(su.indikatorIndividu)}</span>
-                                            </td>
-                                            <td class="p-4 text-center font-bold text-emerald-700">${su.targetVal} ${sanitizeHTML(su.satuan)}</td>
-                                            <td class="p-4 text-center">
-                                                <span class="px-2.5 py-1 rounded-full text-xs font-bold ${su.jenis === 'Utama' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 border'}">${su.jenis === 'Utama' ? '★ Utama' : '🛡️ Support'}</span>
-                                            </td>
-                                            ${(isSubUnit || isAdmin) && !isPureViewer() ? `
-                                                <td class="p-4 text-center space-x-1">
-                                                    <button onclick="openEditCascadingSubUnitModal('${su.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                                    <button onclick="deleteCascadingSubUnit('${su.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                                                </td>
-                                            ` : ''}
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+
+                        <!-- Monitoring 1/4 Level 2 -->
+                        <div class="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden">
+                            <div class="p-4 bg-indigo-50 border-b border-indigo-200">
+                                <h4 class="font-bold text-indigo-900 text-xs flex items-center justify-between">
+                                    <span><i class="fa-solid fa-hourglass-half mr-1.5"></i>Belum Dicascading Tim (${monTahun})</span>
+                                    <span class="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-900 text-[10px] font-black">${unCascadedTim.length}</span>
+                                </h4>
+                            </div>
+                            <div class="p-3.5 max-h-80 overflow-y-auto space-y-2 text-xs">
+                                ${unCascadedTim.length === 0
+                                    ? `<div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-emerald-800 font-bold"><i class="fa-solid fa-circle-check text-emerald-600 block text-lg mb-1"></i>Semua indikator sudah dicascadingkan</div>`
+                                    : unCascadedTim.map((cd, idx) => `<div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium leading-snug"><span class="font-bold text-indigo-700 mr-1">${idx + 1}.</span>${sanitizeHTML(cd.target)}</div>`).join('')
+                                }
+                            </div>
                         </div>
                     </div>
 
+                    <!-- SCOREBOARD LEVEL 3 (Jumlah RHK diturunkan ke Staf under Ketua Unit) -->
+                    ${(isKaUnit || isAdmin) && sbStafCount.length > 0 ? `
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        ${sbStafCount.map(s => `
+                            <div class="bg-white border border-emerald-200 rounded-2xl p-3.5 shadow-xs">
+                                <p class="text-[11px] font-bold text-slate-700 truncate">${sanitizeHTML(s.name)}</p>
+                                <p class="text-[10px] text-slate-400">${sanitizeHTML(s.roleLabel)}</p>
+                                <p class="text-xl font-black text-emerald-700 mt-0.5">${s.count} <span class="text-[11px] font-semibold text-slate-500">RHK (${monTahun})</span></p>
+                            </div>
+                        `).join('')}
+                    </div>` : ''}
+
+                    <!-- Bagian 3 (3/4) + Monitoring RHK Tim Belum Dicascading ke Staf (1/4) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
+                        <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-users-gear text-emerald-600 mr-2"></i> 3. Cascading Ketua Unit / Prodi / Subbag ke Dosen / Tendik / Sekretaris / Kalab / Koordinator (Level 3)</h3>
+                                    <p class="text-xs text-slate-500">Penurunan indikator paling hilir ke pelaksana operasional. Hanya role berstatus <strong>★ Utama</strong> yang masuk ke Dashboard.</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingUnitModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Staf</span></button>` : ''}
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-sm">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                            <th class="p-4">Unit / Prodi / Subbag</th>
+                                            <th class="p-4">Tahun</th>
+                                            <th class="p-4">Indikator Terintervensi & Indikator Individu Staf</th>
+                                            <th class="p-4">Pelaksana Tujuan (Utama vs Support)</th>
+                                            ${(isKaUnit || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        ${filteredUnitTable.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading Level 3 pada tahun ${filterCascadingTahun}.</td></tr>` : filteredUnitTable.map((cu) => `
+                                            <tr class="hover:bg-slate-50 transition-all">
+                                                <td class="p-4"><span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-semibold text-xs rounded-full">${sanitizeHTML(cu.unit)}</span></td>
+                                                <td class="p-4 font-bold text-emerald-700">${cu.tahun || '2025'}</td>
+                                                <td class="p-4">
+                                                    ${cu.rencanaHasilKinerja ? `<span class="block text-[11px] text-indigo-600 font-semibold">RHK Tim: ${sanitizeHTML(cu.rencanaHasilKinerja)}</span>` : ''}
+                                                    <span class="block text-xs text-slate-500 mb-1">Induk Direktur: ${sanitizeHTML(cu.targetDirektur)}</span>
+                                                    <span class="block font-bold text-emerald-900 text-sm">${sanitizeHTML(cu.indikatorIndividu || cu.targetDirektur)}</span>
+                                                    <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${cu.jenis === 'Utama' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">${cu.jenis || 'Utama'}</span>
+                                                    ${cu.isCascading === false ? '<span class="ml-1 inline-block mt-1 px-2 py-0.5 bg-rose-100 text-rose-700 text-[10px] font-bold rounded">Berhenti di Ketua Unit</span>' : ''}
+                                                </td>
+                                                <td class="p-4">
+                                                    <div class="flex flex-wrap gap-1.5">
+                                                        ${(cu.subTargets || []).length === 0 ? '<span class="text-xs text-slate-400 italic">Dikerjakan langsung Ketua Unit</span>' : (cu.subTargets || []).map(st => {
+                                                            const isUtama = isSubRoleUtamaInUnit(cu, st);
+                                                            const usr = DB.users.find(u => u.username === st);
+                                                            const lbl = usr ? `${usr.name} (${ROLE_LABELS[usr.role] || usr.role})` : (ROLE_LABELS[st] || st);
+                                                            return `<span class="px-2.5 py-1 ${isUtama ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-300'} text-xs rounded-full font-bold flex items-center space-x-1"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i><span>${sanitizeHTML(lbl)} (${isUtama ? 'Utama' : 'Support'})</span></span>`;
+                                                        }).join('')}
+                                                    </div>
+                                                </td>
+                                                ${(isKaUnit || isAdmin) && !isPureViewer() ? `
+                                                    <td class="p-4 text-center space-x-1">
+                                                        <button onclick="openEditCascadingUnitModal('${cu.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="confirmDeleteCascadingUnit('${cu.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                    </td>
+                                                ` : ''}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Monitoring 1/4 Level 3 -->
+                        <div class="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-emerald-200 overflow-hidden">
+                            <div class="p-4 bg-emerald-50 border-b border-emerald-200">
+                                <h4 class="font-bold text-emerald-900 text-xs flex items-center justify-between">
+                                    <span><i class="fa-solid fa-hourglass-half mr-1.5"></i>RHK Tim Belum Dicascading (${monTahun})</span>
+                                    <span class="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 text-[10px] font-black">${unCascadedUnit.length}</span>
+                                </h4>
+                            </div>
+                            <div class="p-3.5 max-h-80 overflow-y-auto space-y-2 text-xs">
+                                ${unCascadedUnit.length === 0
+                                    ? `<div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-emerald-800 font-bold"><i class="fa-solid fa-circle-check text-emerald-600 block text-lg mb-1"></i>Semua indikator sudah dicascadingkan</div>`
+                                    : unCascadedUnit.map((ct, idx) => `<div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 leading-snug"><span class="font-bold text-emerald-700 block">RHK: ${sanitizeHTML(ct.rencanaHasilKinerja || ct.indikatorIndividu || '-')}</span><span class="text-[11px] text-slate-500">Induk: ${sanitizeHTML(ct.targetDirektur)}</span></div>`).join('')
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bagian 4 (3/4) + Monitoring RHK Unit Belum Diinput Staf (1/4) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
+                        <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden">
+                            <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-user-pen text-indigo-600 mr-2"></i> 4. Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu Staf</h3>
+                                    <p class="text-xs text-slate-500">Pelaksana (Dosen / Tendik / Sekretaris / Kalab / Koordinator) menginput RHK & Indikator Individu berdasarkan cascading dari Ketua Prodi / Subbag / Unit.</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    ${(isSubUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingSubUnitModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Input RHK & Indikator Individu</span></button>` : ''}
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-sm">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                            <th class="p-4">Pelaksana & Unit</th>
+                                            <th class="p-4">Tahun</th>
+                                            <th class="p-4">Indikator dari Ketua Unit / Prodi / Subbag</th>
+                                            <th class="p-4">RHK & Indikator Individu Staf</th>
+                                            <th class="p-4 text-center">Target & Satuan</th>
+                                            <th class="p-4 text-center">Jenis</th>
+                                            ${(isSubUnit || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        ${filteredSubUnit.length === 0 ? `<tr><td colspan="7" class="p-6 text-center text-slate-400">Belum ada input RHK & Indikator Individu Staf pada tahun ${filterCascadingTahun}.</td></tr>` : filteredSubUnit.map(su => `
+                                            <tr class="hover:bg-slate-50 transition-all">
+                                                <td class="p-4 font-bold text-slate-900">${sanitizeHTML(su.namaPelaksana)}<span class="block text-[11px] font-normal text-slate-500">${sanitizeHTML(su.unit)}</span></td>
+                                                <td class="p-4 font-bold text-indigo-700">${su.tahun || '2025'}</td>
+                                                <td class="p-4 text-xs text-slate-600">${sanitizeHTML(su.indikatorUnitRef)}</td>
+                                                <td class="p-4">
+                                                    <span class="block text-xs font-bold text-indigo-800">RHK: ${sanitizeHTML(su.rencanaHasilKinerja)}</span>
+                                                    <span class="block font-bold text-slate-900 text-sm mt-0.5">${sanitizeHTML(su.indikatorIndividu)}</span>
+                                                </td>
+                                                <td class="p-4 text-center font-bold text-emerald-700">${su.targetVal} ${sanitizeHTML(su.satuan)}</td>
+                                                <td class="p-4 text-center">
+                                                    <span class="px-2.5 py-1 rounded-full text-xs font-bold ${su.jenis === 'Utama' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 border'}">${su.jenis === 'Utama' ? '★ Utama' : '🛡️ Support'}</span>
+                                                </td>
+                                                ${(isSubUnit || isAdmin) && !isPureViewer() ? `
+                                                    <td class="p-4 text-center space-x-1">
+                                                        <button onclick="openEditCascadingSubUnitModal('${su.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="deleteCascadingSubUnit('${su.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                    </td>
+                                                ` : ''}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Monitoring 1/4 Bagian 4 (Staf) -->
+                        <div class="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-purple-200 overflow-hidden">
+                            <div class="p-4 bg-purple-50 border-b border-purple-200">
+                                <h4 class="font-bold text-purple-900 text-xs flex items-center justify-between">
+                                    <span><i class="fa-solid fa-hourglass-half mr-1.5"></i>Belum Diinput RHK Staf (${monTahun})</span>
+                                    <span class="px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 text-[10px] font-black">${unCascadedSubUnit.length}</span>
+                                </h4>
+                            </div>
+                            <div class="p-3.5 max-h-80 overflow-y-auto space-y-2 text-xs">
+                                ${unCascadedSubUnit.length === 0
+                                    ? `<div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-emerald-800 font-bold"><i class="fa-solid fa-circle-check text-emerald-600 block text-lg mb-1"></i>Semua indikator sudah dicascadingkan</div>`
+                                    : unCascadedSubUnit.map((cu, idx) => `<div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 leading-snug"><span class="font-bold text-purple-700 block">${idx + 1}. ${sanitizeHTML(cu.indikatorIndividu || cu.targetDirektur)}</span><span class="text-[11px] text-slate-500">Target: ${cu.targetVal} ${sanitizeHTML(cu.satuan || '%')} (${cu.jenis || 'Utama'})</span></div>`).join('')
+                                }
+                            </div>
+                        </div>
+                    </div>
                     <!-- Modal Input RHK & Indikator Individu Staf (Dosen / Tendik / Sekretaris / Kalab / Koordinator) -->
                     <div id="cascadingSubUnitModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
                         <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 border border-slate-100 my-8">
@@ -7889,6 +8072,39 @@ async function saveCascadingUnit(e) {
                         </div>
                     </div>
                 </div>
+
+                <!-- Modal Validasi Tahap 1 (Ketua Prodi / Subbag / Unit) -->
+                <div id="validateProdiModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-[90] p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-check-double text-indigo-600 mr-1.5"></i>Validasi Tahap 1 (Ketua Prodi / Subbag / Unit)</h3>
+                            <button type="button" onclick="closeValidateProdiModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <input type="hidden" id="validateProdiCapaianId">
+                        <div class="space-y-3.5 text-sm">
+                            <div class="bg-slate-50 p-3 rounded-xl border text-xs space-y-1">
+                                <p><span class="text-slate-500">Pelaksana:</span> <strong id="vpPelaksanaText" class="text-slate-800">-</strong></p>
+                                <p><span class="text-slate-500">Program / IKK:</span> <strong id="vpProgramText" class="text-indigo-800">-</strong></p>
+                                <p><span class="text-slate-500">Target / Realisasi:</span> <strong id="vpCapaianText" class="text-emerald-700">-</strong></p>
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Keputusan Validasi Unit</label>
+                                <select id="validateProdiStatusChoice" class="w-full p-3 bg-slate-50 border rounded-xl font-bold">
+                                    <option value="Valid" class="text-emerald-700">Valid (Teruskan ke Ketua Tim Kerja)</option>
+                                    <option value="Tidak Valid" class="text-rose-700">Tidak Valid (Kembalikan ke Staf)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Catatan Ketua Unit / Prodi / Subbag</label>
+                                <textarea id="validateProdiComment" rows="3" class="w-full p-3 bg-slate-50 border rounded-xl text-xs" placeholder="Catatan verifikasi atau alasan pengembalian..."></textarea>
+                            </div>
+                        </div>
+                        <div class="flex justify-end space-x-3 pt-2 border-t">
+                            <button type="button" onclick="closeValidateProdiModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
+                            <button type="button" onclick="submitValidationProdi()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow">Simpan Validasi Unit</button>
+                        </div>
+                    </div>
+                </div>
             `;
             
             setTimeout(() => {
@@ -8052,7 +8268,52 @@ function getAvailableCascadingForUser(user) {
 function rebuildCapaianIndikatorOptions(year) {
     const sel = document.getElementById('inputIndikatorRef');
     if (!sel) return;
-    const list = getAvailableCascadingForUser(currentUser).filter(item => String(item.tahun || '2025') === String(year));
+    let list = getAvailableCascadingForUser(currentUser).filter(item => String(item.tahun || '2025') === String(year));
+
+    // Khusus Ketua Unit/Prodi/Subbag: hanya tampilkan indikator yang BERHENTI di dia (tidak dicascading ke staf)
+    if (currentUser.role === 'ketua_unit') {
+        const normU = (u) => String(u || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const matchU = (a, b) => {
+            const x = normU(a), y = normU(b);
+            return x && y && (x === y || x.includes(y) || y.includes(x));
+        };
+        list = (DB.cascadingUnit || [])
+            .filter(cu =>
+                String(cu.tahun || '2025') === String(year) &&
+                matchU(cu.unit, currentUser.unit) &&
+                (cu.isCascading === false || !Array.isArray(cu.subTargets) || cu.subTargets.length === 0)
+            )
+            .map(cu => ({
+                id: cu.id,
+                targetDirektur: cu.indikatorIndividu || cu.targetDirektur,
+                parentTarget: cu.targetDirektur,
+                tahun: cu.tahun || '2025',
+                satuan: cu.satuan || '%',
+                targetVal: cu.targetVal !== undefined ? cu.targetVal : 100,
+                timKey: currentUser.timKey || 'Akademik',
+                isUtama: cu.jenis === 'Utama',
+                isSupport: cu.jenis !== 'Utama'
+            }));
+    } else if (currentUser.role === 'tim_kerja') {
+        // Khusus Ketua Tim Kerja: hanya tampilkan indikator yang BERHENTI di dia (tidak dicascading ke unit)
+        list = (DB.cascadingTim || [])
+            .filter(ct =>
+                String(ct.tahun || '2025') === String(year) &&
+                ct.timKey === currentUser.timKey &&
+                (ct.isCascading === false || !Array.isArray(ct.unitTargets) || ct.unitTargets.length === 0)
+            )
+            .map(ct => ({
+                id: ct.id,
+                targetDirektur: ct.indikatorIndividu || ct.targetDirektur,
+                parentTarget: ct.targetDirektur,
+                tahun: ct.tahun || '2025',
+                satuan: ct.satuan || '%',
+                targetVal: ct.targetVal !== undefined ? ct.targetVal : 100,
+                timKey: ct.timKey,
+                isUtama: ct.jenis === 'Utama',
+                isSupport: ct.jenis !== 'Utama'
+            }));
+    }
     if (list.length === 0) {
         sel.innerHTML = `<option value="">Tidak ada indikator ter-cascading untuk Tahun ${year}</option>`;
         return;
@@ -8170,6 +8431,56 @@ function rebuildCapaianIndikatorOptions(year) {
     }
 }
         function closeCapaianModal() { document.getElementById('capaianModal').classList.remove('flex'); document.getElementById('capaianModal').classList.add('hidden'); }
+
+        function openValidateProdiModal(id) {
+            if (isPureViewer()) return;
+            const c = (DB.capaian || []).find(x => String(x.id) === String(id));
+            if (!c) return;
+            const modal = document.getElementById('validateProdiModal');
+            if (!modal) return;
+            document.getElementById('validateProdiCapaianId').value = c.id;
+            document.getElementById('vpPelaksanaText').innerText = `${c.inputByName || '-'} (${ROLE_LABELS[c.inputByRole] || c.inputByRole || ''})`;
+            document.getElementById('vpProgramText').innerText = `${c.indikatorIndividuStaf || c.targetDirektur} — ${c.program}`;
+            document.getElementById('vpCapaianText').innerText = `${c.target} / ${c.realisasi} ${c.satuan || '%'}`;
+            document.getElementById('validateProdiStatusChoice').value = (c.statusProdi === 'Tidak Valid') ? 'Tidak Valid' : 'Valid';
+            document.getElementById('validateProdiComment').value = c.catatanProdi || '';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeValidateProdiModal() {
+            const modal = document.getElementById('validateProdiModal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function submitValidationProdi() {
+            if (isPureViewer()) return;
+            const id = document.getElementById('validateProdiCapaianId').value;
+            const st = document.getElementById('validateProdiStatusChoice').value;
+            const note = sanitizeHTML(document.getElementById('validateProdiComment').value.trim());
+            const idx = (DB.capaian || []).findIndex(x => String(x.id) === String(id));
+            if (idx === -1) return;
+
+            DB.capaian[idx].statusProdi = st;
+            DB.capaian[idx].catatanProdi = note;
+            if (st === 'Tidak Valid') {
+                DB.capaian[idx].status = 'Tidak Valid';
+                if (note) DB.capaian[idx].rekomendasi = `[Catatan Unit] ${note}`;
+            } else if (DB.capaian[idx].status === 'Tidak Valid') {
+                DB.capaian[idx].status = 'Menunggu Validasi';
+            }
+
+            await syncToGoogleSheets('Validasi Unit (Tahap 1)', DB.capaian[idx]);
+            await saveToMySQL();
+            closeValidateProdiModal();
+            showToast(`Validasi Tahap 1 Unit disimpan (${st})!`);
+            renderCapaianView(document.getElementById('mainContent'));
+        }
+        window.openValidateProdiModal = openValidateProdiModal;
+        window.closeValidateProdiModal = closeValidateProdiModal;
+        window.submitValidationProdi = submitValidationProdi;
         
 async function saveCapaian(e) {
             e.preventDefault();
