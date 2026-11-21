@@ -2060,12 +2060,10 @@ function renderDashboardLayout() {
                                 <i class="fa-solid fa-book-bookmark w-5 text-center"></i>
                                 <span class="sidebar-text">${currentUser.role === 'admin' ? 'Input & Manajemen Renstra' : 'View Renstra'}</span>
                             </a>
-                            ${!SUB_UNIT_ROLES.includes(currentUser.role) ? `
-                             <a href="javascript:void(0)" onclick="switchTab('cascading')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'cascading' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
+                            <a href="javascript:void(0)" onclick="switchTab('cascading')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'cascading' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                  <i class="fa-solid fa-sitemap w-5 text-center"></i>
                                  <span class="sidebar-text">Cascading & Crosscutting</span>
                              </a>
-                         ` : ''}
                              <a href="javascript:void(0)" onclick="switchTab('risiko')" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'risiko' ? 'bg-white text-blue-800 font-bold shadow-lg' : 'hover:bg-blue-600/60 text-white font-medium'}">
                                 <i class="fa-solid fa-triangle-exclamation w-5 text-center"></i>
                                 <span class="sidebar-text">Peta Risiko</span>
