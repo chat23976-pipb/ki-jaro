@@ -7064,7 +7064,7 @@ function openCascadingSubUnitModal() {
             handleSubUnitRefChange();
         }
 
-        function handleSubUnitRefChange() {
+function handleSubUnitRefChange() {
             const sel = document.getElementById('subUnitUnitRef');
             const jenisDisplay = document.getElementById('subUnitJenisDisplay');
             const jenisVal = document.getElementById('subUnitJenisVal');
@@ -7076,29 +7076,53 @@ function openCascadingSubUnitModal() {
             const opt = sel.options[sel.selectedIndex];
             if (!opt || !opt.value) return;
 
-            const isUtama = opt.getAttribute('data-isutama') === 'true';
+            const editId = document.getElementById('subUnitEditId') ? document.getElementById('subUnitEditId').value : '';
+            const tahun = document.getElementById('subUnitTahun') ? document.getElementById('subUnitTahun').value : '2025';
+            const parentUnitId = opt.value;
+            const isParentUtama = opt.getAttribute('data-isutama') === 'true';
             const defTarget = opt.getAttribute('data-targetval') || '';
             const defSatuan = opt.getAttribute('data-satuan') || '';
 
-            jenisVal.value = isUtama ? 'Utama' : 'Support';
-            jenisDisplay.value = isUtama ? '★ Utama (Terkunci)' : '🛡️ Support';
+            // Cek apakah user sudah memiliki minimal 1 entri Utama untuk indikator induk & tahun ini (selain item yang sedang diedit)
+            const hasExistingUtama = (DB.cascadingSubUnit || []).some(s =>
+                (!editId || String(s.id) !== String(editId)) &&
+                s.username === currentUser.username &&
+                String(s.tahun || '2025') === String(tahun) &&
+                String(s.parentUnitId) === String(parentUnitId) &&
+                s.jenis === 'Utama'
+            );
+
+            // Jika induknya Utama dan belum ada Utama yang diinput -> wajib Utama (Terkunci)
+            // Jika induknya Utama tapi sudah ada minimal 1 Utama -> entri berikutnya otomatis menjadi Support (Bisa ubah Target & Satuan)
+            const effectiveUtama = isParentUtama && !hasExistingUtama;
+
+            jenisVal.value = effectiveUtama ? 'Utama' : 'Support';
+            jenisDisplay.value = effectiveUtama ? '★ Utama (Terkunci)' : (isParentUtama ? '🛡️ Support (Turunan Ke-2+)' : '🛡️ Support');
             targetInput.value = defTarget;
             satuanInput.value = defSatuan;
 
-            if (isUtama) {
-                // Jika Utama: Target & Satuan otomatis mengikuti Ketua Unit dan terkunci (tidak bisa diganti)
+            if (effectiveUtama) {
                 targetInput.readOnly = true;
                 satuanInput.readOnly = true;
                 targetInput.classList.add('bg-slate-200/70', 'cursor-not-allowed');
                 satuanInput.classList.add('bg-slate-200/70', 'cursor-not-allowed');
-                if (lockHint) lockHint.classList.remove('hidden');
+                if (lockHint) {
+                    lockHint.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Indikator ini berstatus <strong>★ Utama</strong>: Jenis, Target, dan Satuan otomatis dikunci mengikuti ketetapan Ketua Prodi / Subbag / Unit.';
+                    lockHint.classList.remove('hidden');
+                }
             } else {
-                // Jika Support: Target & Satuan tetap diisi default namun boleh diubah oleh staf
                 targetInput.readOnly = false;
                 satuanInput.readOnly = false;
                 targetInput.classList.remove('bg-slate-200/70', 'cursor-not-allowed');
                 satuanInput.classList.remove('bg-slate-200/70', 'cursor-not-allowed');
-                if (lockHint) lockHint.classList.add('hidden');
+                if (lockHint) {
+                    if (isParentUtama && hasExistingUtama) {
+                        lockHint.innerHTML = '<i class="fa-solid fa-circle-info mr-1"></i> Indikator Utama untuk pilihan ini sudah diinput sebelumnya. Input tambahan ini otomatis berstatus <strong>🛡️ Support</strong> dengan RHK & Indikator berbeda, serta Target & Satuan dapat disesuaikan.';
+                        lockHint.classList.remove('hidden');
+                    } else {
+                        lockHint.classList.add('hidden');
+                    }
+                }
             }
         }
 
@@ -7126,10 +7150,10 @@ function openCascadingSubUnitModal() {
                 s.username === currentUser.username &&
                 String(s.tahun || '2025') === String(tahun) &&
                 String(s.parentUnitId) === String(parentUnitId) &&
+                (s.rencanaHasilKinerja || '').trim().toLowerCase() === rencanaHasilKinerja.toLowerCase() &&
                 (s.indikatorIndividu || '').trim().toLowerCase() === indikatorIndividu.toLowerCase()
             );
-            if (isDup) return showToast('Peringatan: Indikator individu dengan RHK & Tahun yang sama sudah ada!', 'error');
-
+            if (isDup) return showToast('Peringatan: Kombinasi Indikator Induk, RHK, dan Indikator Individu Staf pada tahun ini sudah ada!', 'error');
             const payload = {
                 tahun,
                 parentUnitId,
@@ -7556,6 +7580,7 @@ async function saveCascadingUnit(e) {
                                         if (c.isSubUnitInput) {
                                             const cuObj = (DB.cascadingUnit || []).find(cu => cu.unit === c.unit && cu.targetDirektur === c.targetDirektur && String(cu.tahun || '2025') === tahunCap);
                                             if (cuObj) isUtama = isUtama && isSubRoleUtamaInUnit(cuObj, c.inputByUsername);
+                                            if (c.isSupport) isUtama = false;
                                         }
 
                                         const canEditDelete = !isPureViewer() && c.status !== 'Valid' && (
@@ -7569,7 +7594,11 @@ async function saveCascadingUnit(e) {
                                                 <span class="font-semibold text-slate-800 block">${sanitizeHTML(c.unit)}</span>
                                                 ${c.inputByName ? `<span class="text-[10px] text-slate-500 block mt-0.5"><i class="fa-solid fa-user-tag mr-1"></i>${sanitizeHTML(c.inputByName)} (${ROLE_LABELS[c.inputByRole] || c.inputByRole})</span>` : ''}
                                             </td>
-                                            <td class="p-4 text-xs font-semibold text-primary-700">${sanitizeHTML(c.targetDirektur)}</td>
+                                            <td class="p-4 text-xs">
+                                                <span class="font-semibold text-primary-700 block">${sanitizeHTML(c.targetDirektur)}</span>
+                                                ${c.rencanaHasilKinerjaIndividu ? `<span class="block text-[11px] font-bold text-indigo-800 mt-1">RHK: ${sanitizeHTML(c.rencanaHasilKinerjaIndividu)}</span>` : ''}
+                                                ${c.indikatorIndividuStaf ? `<span class="block text-[11px] font-bold text-emerald-800">IKK Staf: ${sanitizeHTML(c.indikatorIndividuStaf)}</span>` : ''}
+                                            </td>
                                             <td class="p-4 text-center">
                                                 <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isUtama ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'}">
                                                     ${isUtama ? 'Utama' : 'Support'}
@@ -7669,7 +7698,7 @@ async function saveCascadingUnit(e) {
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1 text-xs">Pilih Indikator Kinerja yang Diintervensi</label>
                                 <select id="inputIndikatorRef" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" onchange="updateSatuanAndTargetRef(this)">
-                                                                                                            ${availableCascadingForInput.map(item => {
+                                    ${availableCascadingForInput.map(item => {
                                         let labelStatus = '';
                                         if (item.isSupport) {
                                             labelStatus = '(Support - Tambahan)';
@@ -7679,9 +7708,21 @@ async function saveCascadingUnit(e) {
                                             labelStatus = '(Support - Utama)';
                                         }
                                         return `
-                                        <option value="${item.targetDirektur}" data-tahun="${item.tahun}" data-satuan="${item.satuan}" data-targetval="${item.targetVal}" data-timkey="${item.timKey}" data-isutama="${item.isUtama}" data-issupport="${item.isSupport || false}">${item.targetDirektur} (Tahun: ${item.tahun} - ${labelStatus})</option>
+                                        <option value="${item.targetDirektur}" data-unitid="${item.id || ''}" data-tahun="${item.tahun}" data-satuan="${item.satuan}" data-targetval="${item.targetVal}" data-timkey="${item.timKey}" data-isutama="${item.isUtama}" data-issupport="${item.isSupport || false}">${item.targetDirektur} (Tahun: ${item.tahun} - ${labelStatus})</option>
                                     `}).join('')}
                                 </select>
+                                ${SUB_UNIT_ROLES.includes(currentUser.role) ? `
+                                <div id="capaianSubUnitWrapper" class="space-y-3 mt-3 p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl">
+                                    <div>
+                                        <label class="block font-bold text-indigo-900 mb-1 text-xs">2. Rencana Hasil Kerja (RHK) Individu <span class="text-rose-500">*</span></label>
+                                        <select id="inputRhkIndividuRef" class="w-full p-2.5 bg-white border border-indigo-300 rounded-xl text-xs font-semibold text-slate-800" onchange="handleCapaianRhkChange()"></select>
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-indigo-900 mb-1 text-xs">3. Nama Indikator Kinerja Individu Staf <span class="text-rose-500">*</span></label>
+                                        <select id="inputIndikatorIndividuRef" class="w-full p-2.5 bg-white border border-emerald-400 rounded-xl text-xs font-bold text-emerald-900" onchange="handleCapaianSubIndikatorChange()"></select>
+                                    </div>
+                                </div>
+                                ` : ''}
                                 <div class="p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs mt-2">
                                     <span class="font-semibold text-slate-700">Kategori Indikator:</span>
                                     <span id="badgeKategoriModal" class="px-3 py-0.5 bg-blue-600 text-white font-bold rounded-full text-[10px]">UTAMA</span>
@@ -7810,9 +7851,98 @@ async function saveCascadingUnit(e) {
             
             setTimeout(() => {
                 const sel = document.getElementById('inputIndikatorRef');
-                if (sel && sel.options.length > 0) updateSatuanAndTargetRef(sel);
-            }, 50);
+            if (sel && sel.options.length > 0) {
+                updateSatuanAndTargetRef(sel);
+                if (typeof syncCapaianSubUnitOptions === 'function') syncCapaianSubUnitOptions();
+            }
+        }, 50);
+    }
+
+   function syncCapaianSubUnitOptions(preserveExisting = false) {
+        const indSel = document.getElementById('inputIndikatorRef');
+        const rhkSel = document.getElementById('inputRhkIndividuRef');
+        if (!indSel || !rhkSel) return;
+
+        const opt = indSel.options[indSel.selectedIndex];
+        if (!opt) return;
+        const unitId = opt.getAttribute('data-unitid') || '';
+        const indText = opt.value || '';
+        const tahunSel = document.getElementById('inputTahunTarget');
+        const activeTahun = tahunSel ? tahunSel.value : (opt.getAttribute('data-tahun') || '2025');
+
+        const userSubs = (DB.cascadingSubUnit || []).filter(s => {
+            const matchUser = s.username === currentUser.username || s.roleKey === currentUser.role;
+            const matchThn = String(s.tahun || '2025') === String(activeTahun);
+            const matchParent = (unitId && String(s.parentUnitId) === String(unitId)) ||
+                (s.indikatorUnitRef || '').trim().toLowerCase() === indText.trim().toLowerCase();
+            return matchUser && matchThn && matchParent;
+        });
+
+        const uniqueRhks = [...new Set(userSubs.map(s => s.rencanaHasilKinerja).filter(Boolean))];
+        rhkSel.innerHTML = uniqueRhks.length === 0
+            ? `<option value="">-- Belum ada RHK Individu di Bagian 4 (Input dulu di menu Cascading) --</option>`
+            : uniqueRhks.map(r => `<option value="${sanitizeHTML(r)}">${sanitizeHTML(r)}</option>`).join('');
+
+        handleCapaianRhkChange();
+    }
+
+    function handleCapaianRhkChange() {handleCapaianRhkChange(preserveExisting);
+    }
+
+    function handleCapaianRhkChange(preserveExisting = false) {
+        const indSel = document.getElementById('inputIndikatorRef');
+        const rhkSel = document.getElementById('inputRhkIndividuRef');
+        const subIndSel = document.getElementById('inputIndikatorIndividuRef');
+        if (!indSel || !rhkSel || !subIndSel) return;
+
+        const opt = indSel.options[indSel.selectedIndex];
+        const unitId = opt ? (opt.getAttribute('data-unitid') || '') : '';
+        const indText = opt ? (opt.value || '') : '';
+        const tahunSel = document.getElementById('inputTahunTarget');
+        const activeTahun = tahunSel ? tahunSel.value : (opt ? opt.getAttribute('data-tahun') : '2025');
+        const chosenRhk = rhkSel.value;
+
+        const matchingSubs = (DB.cascadingSubUnit || []).filter(s => {
+            const matchUser = s.username === currentUser.username || s.roleKey === currentUser.role;
+            const matchThn = String(s.tahun || '2025') === String(activeTahun);
+            const matchParent = (unitId && String(s.parentUnitId) === String(unitId)) ||
+                (s.indikatorUnitRef || '').trim().toLowerCase() === indText.trim().toLowerCase();
+            return matchUser && matchThn && matchParent && s.rencanaHasilKinerja === chosenRhk;
+        });
+
+        subIndSel.innerHTML = matchingSubs.length === 0
+            ? `<option value="">-- Belum ada Indikator Individu Staf --</option>`
+            : matchingSubs.map(s => `<option value="${s.id}" data-nama="${sanitizeHTML(s.indikatorIndividu)}" data-rhk="${sanitizeHTML(s.rencanaHasilKinerja)}" data-targetval="${s.targetVal}" data-satuan="${sanitizeHTML(s.satuan)}" data-jenis="${s.jenis || 'Utama'}">${sanitizeHTML(s.indikatorIndividu)} [${s.jenis === 'Utama' ? '★ Utama' : '🛡️ Support'}]</option>`).join('');
+
+      handleCapaianSubIndikatorChange(preserveExisting);
+    }
+
+    function handleCapaianSubIndikatorChange(preserveExisting = false) {
+        const subIndSel = document.getElementById('inputIndikatorIndividuRef');
+        if (!subIndSel || subIndSel.selectedIndex < 0) return;
+        const opt = subIndSel.options[subIndSel.selectedIndex];
+        if (!opt || !opt.value) return;
+
+        const targetEl = document.getElementById('inputTarget');
+        const satuanEl = document.getElementById('inputSatuan');
+        const badgeEl = document.getElementById('badgeKategoriModal');
+
+        if (!preserveExisting) {
+            if (targetEl) targetEl.value = opt.getAttribute('data-targetval') || 100;
+            if (satuanEl) satuanEl.value = opt.getAttribute('data-satuan') || '%';
         }
+        const badgeEl = document.getElementById('badgeKategoriModal');
+
+        if (targetEl) targetEl.value = opt.getAttribute('data-targetval') || 100;
+        if (satuanEl) satuanEl.value = opt.getAttribute('data-satuan') || '%';
+        if (badgeEl) {
+            const isUtama = opt.getAttribute('data-jenis') === 'Utama';
+            badgeEl.innerText = isUtama ? 'UTAMA' : 'SUPPORT';
+            badgeEl.className = isUtama
+                ? 'px-3 py-0.5 bg-blue-600 text-white font-bold rounded-full text-[10px]'
+                : 'px-3 py-0.5 bg-slate-600 text-white font-bold rounded-full text-[10px]';
+        }
+    }
 
         async function confirmDeleteCapaian(id) {
             if (isPureViewer()) return;
@@ -7921,7 +8051,7 @@ function rebuildCapaianIndikatorOptions(year) {
                 targetEl.value = targetVal;
             }
 
-            if (isUtama) {
+           if (isUtama) {
                 satuanEl.readOnly = true;
                 targetEl.readOnly = true;
                 satuanEl.className = 'w-full p-2.5 bg-slate-100 border rounded-xl font-semibold text-slate-600 cursor-not-allowed text-xs';
@@ -7931,6 +8061,10 @@ function rebuildCapaianIndikatorOptions(year) {
                 targetEl.readOnly = false;
                 satuanEl.className = 'w-full p-2.5 bg-white border border-blue-400 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 text-xs';
                 targetEl.className = 'w-full p-2.5 bg-white border border-blue-400 rounded-xl font-bold text-primary-700 focus:ring-2 focus:ring-blue-500 text-xs';
+            }
+
+            if (typeof syncCapaianSubUnitOptions === 'function') {
+                syncCapaianSubUnitOptions(preserveExisting);
             }
         }
 
@@ -7958,12 +8092,22 @@ function rebuildCapaianIndikatorOptions(year) {
             const editYear = found.tahun || '2025';
             if (yrSel) yrSel.value = editYear;
             rebuildCapaianIndikatorOptions(editYear);
-            // Setelah rebuild, set value indikator
+            // Setelah rebuild, set value indikator beserta RHK & Indikator Individu Staf (jika mode edit staf)
             setTimeout(() => {
                 const sel2 = document.getElementById('inputIndikatorRef');
                 if (sel2) {
                     sel2.value = found.targetDirektur;
                     updateSatuanAndTargetRef(sel2, true);
+                    const rhkSel = document.getElementById('inputRhkIndividuRef');
+                    const subIndSel = document.getElementById('inputIndikatorIndividuRef');
+                    if (rhkSel && found.rencanaHasilKinerjaIndividu) {
+                        rhkSel.value = found.rencanaHasilKinerjaIndividu;
+                        if (typeof handleCapaianRhkChange === 'function') handleCapaianRhkChange();
+                    }
+                    if (subIndSel && found.subUnitRefId) {
+                        subIndSel.value = found.subUnitRefId;
+                        if (typeof handleCapaianSubIndikatorChange === 'function') handleCapaianSubIndikatorChange();
+                    }
                 }
             }, 30);
             document.getElementById('inputProgram').value = found.program || '';
@@ -8000,26 +8144,42 @@ async function saveCapaian(e) {
             const selectedOpt = selectEl.options[selectEl.selectedIndex];
             const tahunRef = document.getElementById('inputTahunTarget') ? document.getElementById('inputTahunTarget').value : (selectedOpt ? selectedOpt.getAttribute('data-tahun') : '2025');
             const timKeyRef = selectedOpt ? selectedOpt.getAttribute('data-timkey') : 'Akademik';
-                        const isSubInput = SUB_UNIT_ROLES.includes(currentUser.role);
-            const isSupport = selectedOpt ? selectedOpt.getAttribute('data-issupport') === 'true' : false;
-    // VALIDASI ANTI-DUPLIKASI: Cegah input lebih dari 1 kali untuk Indikator + Triwulan + Tahun yang sama pada Unit/Penginput yang sama
+            const isSubInput = SUB_UNIT_ROLES.includes(currentUser.role);
+            const rhkIndividuEl = document.getElementById('inputRhkIndividuRef');
+            const subIndEl = document.getElementById('inputIndikatorIndividuRef');
+            const subIndOpt = (subIndEl && subIndEl.selectedIndex >= 0) ? subIndEl.options[subIndEl.selectedIndex] : null;
+            const subUnitRefId = (subIndOpt && subIndOpt.value) ? subIndOpt.value : '';
+            const rhkIndividuVal = rhkIndividuEl ? rhkIndividuEl.value : '';
+            const indikatorIndividuStafVal = (subIndOpt && subIndOpt.value) ? (subIndOpt.getAttribute('data-nama') || '') : '';
+            const subJenisVal = (subIndOpt && subIndOpt.value) ? (subIndOpt.getAttribute('data-jenis') || 'Utama') : '';
+
+            if (isSubInput && (!rhkIndividuVal || !subUnitRefId)) {
+                showToast('Pilih Rencana Hasil Kerja (RHK) Individu dan Nama Indikator Kinerja Individu Staf terlebih dahulu (input dulu di menu Cascading Bagian 4 jika kosong)!', 'error');
+                return;
+            }
+
+            const isSupport = isSubInput && subJenisVal
+                ? (subJenisVal !== 'Utama')
+                : (selectedOpt ? selectedOpt.getAttribute('data-issupport') === 'true' : false);
+
+            // VALIDASI ANTI-DUPLIKASI: Cegah input lebih dari 1 kali untuk Indikator (+ RHK/IKK Staf) + Triwulan + Tahun yang sama
             const isDuplicate = (DB.capaian || []).some(c => {
                 if (!c) return false;
-                // Jika sedang mode edit, abaikan dirinya sendiri
                 if (editId && String(c.id) === String(editId)) return false;
 
                 const sameIndikator = String(c.targetDirektur || '').trim().toLowerCase() === String(targetDirRef || '').trim().toLowerCase();
                 const sameTriwulan = String(c.triwulan || '').trim().toUpperCase() === String(tw || '').trim().toUpperCase();
                 const sameTahun = String(c.tahun || '2025').trim() === String(tahunRef || '2025').trim();
+                const sameSubItem = !isSubInput || !subUnitRefId || String(c.subUnitRefId || '') === String(subUnitRefId);
                 const sameScope = isSubInput
-                    ? (String(c.inputByUsername || '').toLowerCase() === String(currentUser.username || '').toLowerCase())
+                    ? (String(c.inputByUsername || '').toLowerCase() === String(currentUser.username || '').toLowerCase() && sameSubItem)
                     : (String(c.unit || '').trim().toLowerCase() === String(currentUser.unit || '').trim().toLowerCase() && !c.isSubUnitInput);
 
                 return sameIndikator && sameTriwulan && sameTahun && sameScope;
             });
 
             if (isDuplicate) {
-                showToast(`Tidak dapat diinput karena capaian untuk indikator "${targetDirRef}" pada periode ${tw} Tahun ${tahunRef} sudah diinput sebelumnya!`, 'error');
+                showToast(`Tidak dapat diinput karena capaian untuk indikator "${indikatorIndividuStafVal || targetDirRef}" pada periode ${tw} Tahun ${tahunRef} sudah diinput sebelumnya!`, 'error');
                 return;
             }
 
@@ -8041,6 +8201,10 @@ async function saveCapaian(e) {
                     DB.capaian[idx].targetDirektur = targetDirRef;
                     DB.capaian[idx].tahun = tahunRef;
                     DB.capaian[idx].timKey = timKeyRef;
+                    DB.capaian[idx].isSupport = isSupport;
+                    DB.capaian[idx].subUnitRefId = subUnitRefId;
+                    DB.capaian[idx].rencanaHasilKinerjaIndividu = rhkIndividuVal;
+                    DB.capaian[idx].indikatorIndividuStaf = indikatorIndividuStafVal;
                     DB.capaian[idx].program = prog;
                     DB.capaian[idx].uraianPekerjaan = uraian;
                     DB.capaian[idx].triwulan = tw;
@@ -8053,14 +8217,16 @@ async function saveCapaian(e) {
                 }
                 showToast('Capaian kinerja berhasil diperbarui!');
             } else {
-                    const newCapaian = {
+                const newCapaian = {
                     id: 'cp_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
                     unit: currentUser.unit,
                     timKey: timKeyRef,
-                    parentTarget: selectedOpt ? selectedOpt.getAttribute('data-parenttarget') : null, // <-- TAMBAHKAN INI
-                    isSupport: isSupport, // GANTI isTambahan JADI isSupport
-                    targetDirektur: targetDirRef,
-                    tahun: tahunRef,
+                    parentTarget: selectedOpt ? selectedOpt.getAttribute('data-parenttarget') : null,
+                    isSupport: isSupport,
+                    subUnitRefId: subUnitRefId,
+                    rencanaHasilKinerjaIndividu: rhkIndividuVal,
+                    indikatorIndividuStaf: indikatorIndividuStafVal,
+                    targetDirektur: targetDirRef,                    tahun: tahunRef,
                     program: prog,
                     uraianPekerjaan: uraian,
                     triwulan: tw,
@@ -11316,39 +11482,39 @@ function promptDrawSignature(roleKey) {
                         </table>
 
                         <div class="pt-2">
-                        <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-4 text-xs text-center pt-2">
-                            <!-- KIRI: Yang Membuat / Penyusun -->
-                            <div class="flex flex-col items-center">
-                                <p class="font-semibold">Yang membuat,</p>
-                                <p class="font-bold mb-1">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
-                                <div id="qrSignPenyusun" class="p-1 bg-white rounded-lg my-1"></div>
-                                <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashPenyusun)}</span>
-                                <p class="font-bold underline">${sanitizeHTML(skp.userName)}</p>
-                                <p>NIP. ${sanitizeHTML(skp.userNip)}</p>
-                            </div>
-                            ${!skp.isKetuaTimRequest ? `
-                            <!-- TENGAH: Mengetahui / Ketua Tim Kerja -->
-                            <div class="flex flex-col items-center">
-                                <p class="font-semibold">Mengetahui,</p>
-                                <p class="font-bold mb-1">Ketua Tim Kerja</p>
-                                <div id="qrSignKetuaTim" class="p-1 bg-white rounded-lg my-1"></div>
-                                <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashKetuaTim)}</span>
-                                <p class="font-bold underline">${sanitizeHTML(skp.timName)}</p>
-                                <p>NIP. ${sanitizeHTML(skp.timNip)}</p>
-                            </div>
-                            ` : ''}
-                            <!-- KANAN: Pejabat Penilai / Direktur + Tanggal & Kota -->
-                            <div class="flex flex-col items-center">
-                                <p class="text-xs mb-1 self-end pr-2">${sanitizeHTML(skp.tanggalKota)}</p>
-                                <p class="font-semibold">Pejabat Penilai,</p>
-                                <p class="font-bold mb-1">Direktur</p>
-                                <div id="qrSignDirektur" class="p-1 bg-white rounded-lg my-1"></div>
-                                <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashDirektur)}</span>
-                                <p class="font-bold underline">${sanitizeHTML(skp.dirName)}</p>
-                                <p>NIP. ${sanitizeHTML(skp.dirNip)}</p>
+                            <div class="text-right text-xs mb-1 pr-4">${sanitizeHTML(skp.tanggalKota)}</div>
+                            <div class="grid ${skp.isKetuaTimRequest ? 'grid-cols-2' : 'grid-cols-3'} gap-4 text-xs text-center">
+                                <!-- KIRI: Yang Membuat / Penyusun -->
+                                <div class="flex flex-col items-center">
+                                    <p class="font-semibold">Yang membuat,</p>
+                                    <p class="font-bold mb-1">${skp.isKetuaTimRequest ? 'Ketua Tim Kerja' : 'Penyusun Laporan'}</p>
+                                    <div id="qrSignPenyusun" class="p-1 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashPenyusun)}</span>
+                                    <p class="font-bold underline">${sanitizeHTML(skp.userName)}</p>
+                                    <p>NIP. ${sanitizeHTML(skp.userNip)}</p>
+                                </div>
+                                ${!skp.isKetuaTimRequest ? `
+                                <!-- TENGAH: Mengetahui / Ketua Tim Kerja -->
+                                <div class="flex flex-col items-center">
+                                    <p class="font-semibold">Mengetahui,</p>
+                                    <p class="font-bold mb-1">Ketua Tim Kerja</p>
+                                    <div id="qrSignKetuaTim" class="p-1 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashKetuaTim)}</span>
+                                    <p class="font-bold underline">${sanitizeHTML(skp.timName)}</p>
+                                    <p>NIP. ${sanitizeHTML(skp.timNip)}</p>
+                                </div>
+                                ` : ''}
+                                <!-- KANAN: Pejabat Penilai / Direktur -->
+                                <div class="flex flex-col items-center">
+                                    <p class="font-semibold">Menyetujui,</p>
+                                    <p class="font-bold mb-1">Direktur</p>
+                                    <div id="qrSignDirektur" class="p-1 bg-white rounded-lg my-1"></div>
+                                    <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashDirektur)}</span>
+                                    <p class="font-bold underline">${sanitizeHTML(skp.dirName)}</p>
+                                    <p>NIP. ${sanitizeHTML(skp.dirNip)}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
                         <div class="text-right text-[11px] font-bold text-slate-500 pt-2">
                             ${useTwoPages ? 'Halaman 2 dari 2' : 'Halaman 1 dari 1'}
