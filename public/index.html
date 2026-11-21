@@ -12522,9 +12522,177 @@ function downloadLogRisikoError() {
         modal.classList.add('flex');
     }
 
+    // Helper untuk memperbarui dropdown Indikator Individu sesuai Tahun & Triwulan yang dipilih
+    function refreshDropdownCapaianIndividu(editTargetIndikator = null) {
+        const selectInd = document.getElementById('ciIndikator');
+        if (!selectInd) return;
+        const tahunVal = String(document.getElementById('ciTahun').value || '').trim();
+        const twVal = String(document.getElementById('ciTriwulan').value || 'TW 1').trim();
+
+        if (!tahunVal) {
+            selectInd.innerHTML = '<option value="">-- Isi Tahun Terlebih Dahulu --</option>';
+            return;
+        }
+
+        const options = (DB.cascadingTim || []).filter(ct => {
+            if (ct.timKey !== currentUser.timKey) return false;
+            if (String(ct.tahun || '2025') !== tahunVal) return false;
+
+            const sudahDiturunkan = (DB.cascadingUnit || []).some(cu =>
+                cu.targetDirektur === ct.targetDirektur &&
+                String(cu.tahun || '2025') === tahunVal
+            ) || (Array.isArray(ct.unitTargets) && ct.unitTargets.length > 0);
+            if (sudahDiturunkan) return false;
+
+            const namaInd = ct.indikatorIndividu || ct.targetDirektur;
+            if (editTargetIndikator && (namaInd === editTargetIndikator || ct.targetDirektur === editTargetIndikator)) return true;
+
+            const sudahDiinput = (DB.capaian || []).some(c =>
+                c.timKey === currentUser.timKey &&
+                (c.targetDirektur === namaInd || c.targetDirektur === ct.targetDirektur) &&
+                String(c.tahun || '2025') === tahunVal &&
+                String(c.triwulan || '').toLowerCase() === twVal.toLowerCase()
+            );
+            return !sudahDiinput;
+        });
+
+        if (options.length === 0) {
+            selectInd.innerHTML = '<option value="">-- Tidak ada indikator individu tersisa untuk Tahun ' + tahunVal + ' (' + twVal + ') --</option>';
+        } else {
+            selectInd.innerHTML = '<option value="">-- Pilih Indikator Kinerja Individu --</option>' + options.map(function(o) {
+                var namaInd = o.indikatorIndividu || o.targetDirektur;
+                var targetInfo = o.targetVal ? ' (Target: ' + o.targetVal + ' ' + (o.satuan || '') + ')' : '';
+                return '<option value="' + o.id + '" data-indikator="' + namaInd + '" data-target="' + (o.targetVal !== undefined ? o.targetVal : '') + '" data-satuan="' + (o.satuan || '') + '">' + namaInd + targetInfo + '</option>';
+            }).join('');
+        }
+    }
+
+    function openInputCapaianIndividuModal(editId) {
+        if (!currentUser || (currentUser.role !== 'tim_kerja' && currentUser.role !== 'admin')) {
+            showToast('Akses ditolak: Hanya Ketua Tim Kerja.', 'error');
+            return;
+        }
+
+        let modal = document.getElementById('inputCapaianIndividuModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'inputCapaianIndividuModal';
+            modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-[100] p-4';
+            modal.innerHTML = [
+                '<div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">',
+                    '<div class="flex justify-between items-center border-b pb-3">',
+                        '<h3 class="font-bold text-slate-900 text-base">',
+                            '<i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i>',
+                            'Input Capaian Individu — Ketua Tim',
+                        '</h3>',
+                        '<button type="button" onclick="document.getElementById(\'inputCapaianIndividuModal\').classList.add(\'hidden\');document.getElementById(\'inputCapaianIndividuModal\').classList.remove(\'flex\');" class="text-slate-400 hover:text-slate-700">',
+                            '<i class="fa-solid fa-xmark text-lg"></i>',
+                        '</button>',
+                    '</div>',
+                    '<form id="formCapaianIndividu" class="space-y-3 text-xs">',
+                        '<input type="hidden" id="ciEditId" value="">',
+                        '<div class="grid grid-cols-2 gap-3">',
+                            '<div>',
+                                '<label class="font-bold text-slate-700 block mb-1">1. Tahun <span class="text-rose-500">*</span></label>',
+                                '<input type="number" id="ciTahun" placeholder="Contoh: 2025" required class="w-full p-2 border rounded-lg">',
+                            '</div>',
+                            '<div>',
+                                '<label class="font-bold text-slate-700 block mb-1">2. Triwulan <span class="text-rose-500">*</span></label>',
+                                '<select id="ciTriwulan" class="w-full p-2 border rounded-lg">',
+                                    '<option>TW 1</option><option>TW 2</option><option>TW 3</option><option>TW 4</option><option>Tahunan</option>',
+                                '</select>',
+                            '</div>',
+                        '</div>',
+                        '<div>',
+                            '<label class="font-bold text-slate-700 block mb-1">3. Indikator Kinerja Individu (Belum Diturunkan) <span class="text-rose-500">*</span></label>',
+                            '<select id="ciIndikator" required class="w-full p-2 border rounded-lg bg-slate-50"></select>',
+                        '</div>',
+                        '<div class="grid grid-cols-3 gap-3">',
+                            '<div>',
+                                '<label class="font-bold text-slate-700 block mb-1">Target</label>',
+                                '<input type="number" step="any" id="ciTarget" placeholder="Kosong" required class="w-full p-2 border rounded-lg">',
+                            '</div>',
+                            '<div>',
+                                '<label class="font-bold text-slate-700 block mb-1">Realisasi</label>',
+                                '<input type="number" step="any" id="ciRealisasi" placeholder="Kosong" required class="w-full p-2 border rounded-lg">',
+                            '</div>',
+                            '<div>',
+                                '<label class="font-bold text-slate-700 block mb-1">Satuan</label>',
+                                '<input type="text" id="ciSatuan" placeholder="%/Dok" class="w-full p-2 border rounded-lg">',
+                            '</div>',
+                        '</div>',
+                        '<div>',
+                            '<label class="font-bold text-slate-700 block mb-1">Program / Uraian Pekerjaan</label>',
+                            '<textarea id="ciProgram" rows="2" required class="w-full p-2 border rounded-lg"></textarea>',
+                        '</div>',
+                        '<div>',
+                            '<label class="font-bold text-slate-700 block mb-1">Link Bukti Kinerja</label>',
+                            '<input type="url" id="ciLinkBukti" placeholder="https://..." class="w-full p-2 border rounded-lg">',
+                        '</div>',
+                        '<div>',
+                            '<label class="font-bold text-slate-700 block mb-1">Permasalahan</label>',
+                            '<textarea id="ciPermasalahan" rows="2" class="w-full p-2 border rounded-lg"></textarea>',
+                        '</div>',
+                        '<div class="flex justify-end space-x-2 pt-3 border-t">',
+                            '<button type="button" onclick="document.getElementById(\'inputCapaianIndividuModal\').classList.add(\'hidden\');document.getElementById(\'inputCapaianIndividuModal\').classList.remove(\'flex\');" class="px-4 py-2 bg-slate-200 rounded-xl text-xs font-medium">Batal</button>',
+                            '<button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold">Simpan</button>',
+                        '</div>',
+                    '</form>',
+                '</div>'
+            ].join('');
+            document.body.appendChild(modal);
+            modal.querySelector('#formCapaianIndividu').addEventListener('submit', saveCapaianIndividu);
+            modal.querySelector('#ciTahun').addEventListener('input', function() { refreshDropdownCapaianIndividu(); });
+            modal.querySelector('#ciTriwulan').addEventListener('change', function() { refreshDropdownCapaianIndividu(); });
+            modal.querySelector('#ciIndikator').addEventListener('change', function() {
+                var opt = this.options[this.selectedIndex];
+                if (opt && opt.value) {
+                    var t = opt.getAttribute('data-target');
+                    var s = opt.getAttribute('data-satuan');
+                    if (t !== '') document.getElementById('ciTarget').value = t;
+                    if (s !== '') document.getElementById('ciSatuan').value = s;
+                }
+            });
+        }
+
+        if (editId) {
+            const editItem = (DB.capaian || []).find(c => String(c.id) === String(editId));
+            if (editItem) {
+                modal.querySelector('#ciEditId').value = editItem.id;
+                modal.querySelector('#ciTahun').value = editItem.tahun || '2025';
+                modal.querySelector('#ciTriwulan').value = editItem.triwulan || 'TW 1';
+                refreshDropdownCapaianIndividu(editItem.targetDirektur);
+                modal.querySelector('#ciTarget').value = editItem.target !== undefined ? editItem.target : '';
+                modal.querySelector('#ciRealisasi').value = editItem.realisasi !== undefined ? editItem.realisasi : '';
+                modal.querySelector('#ciSatuan').value = editItem.satuan || '';
+                modal.querySelector('#ciProgram').value = editItem.program || '';
+                modal.querySelector('#ciLinkBukti').value = editItem.linkBukti || '';
+                modal.querySelector('#ciPermasalahan').value = editItem.permasalahan || '';
+                var selectInd = modal.querySelector('#ciIndikator');
+                var opt = Array.from(selectInd.options).find(o => o.getAttribute('data-indikator') === editItem.targetDirektur);
+                if (opt) selectInd.value = opt.value;
+            }
+        } else {
+            modal.querySelector('#ciEditId').value = '';
+            modal.querySelector('#ciTahun').value = (typeof filterCapaianTahun !== 'undefined' && filterCapaianTahun !== 'Semua') ? filterCapaianTahun : '2025';
+            modal.querySelector('#ciTriwulan').value = 'TW 1';
+            modal.querySelector('#ciTarget').value = '';
+            modal.querySelector('#ciRealisasi').value = '';
+            modal.querySelector('#ciSatuan').value = '';
+            modal.querySelector('#ciProgram').value = '';
+            modal.querySelector('#ciLinkBukti').value = '';
+            modal.querySelector('#ciPermasalahan').value = '';
+            refreshDropdownCapaianIndividu();
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    // 4. Fungsi Simpan
     async function saveCapaianIndividu(e) {
         e.preventDefault();
-        if (!currentUser || currentUser.role !== 'tim_kerja') return;
+        if (!currentUser || (currentUser.role !== 'tim_kerja' && currentUser.role !== 'admin')) return;
 
         const editId = document.getElementById('ciEditId').value;
         const selectInd = document.getElementById('ciIndikator');
@@ -12538,7 +12706,6 @@ function downloadLogRisikoError() {
         const tahunVal = String(document.getElementById('ciTahun').value).trim();
         const twVal = String(document.getElementById('ciTriwulan').value).trim();
 
-        // Guard Anti-Duplikasi sebelum simpan
         const isDuplicate = (DB.capaian || []).some(c =>
             String(c.id) !== String(editId) &&
             c.timKey === currentUser.timKey &&
@@ -12586,103 +12753,9 @@ function downloadLogRisikoError() {
         document.getElementById('inputCapaianIndividuModal').classList.add('hidden');
         document.getElementById('inputCapaianIndividuModal').classList.remove('flex');
         if (typeof renderCapaianView === 'function') renderCapaianView(document.getElementById('mainContent'));
-    }                        
-        // Ambil indikator yang BELUM diturunkan ke unit
-        const selectInd = modal.querySelector('#ciIndikator');
-        const options = (DB.cascadingTim || []).filter(ct => {
-            if (ct.timKey !== currentUser.timKey) return false;
-            const sudahDiturunkan = (DB.cascadingUnit || []).some(cu =>
-                cu.targetDirektur === ct.targetDirektur &&
-                String(cu.tahun || '2025') === String(ct.tahun || '2025')
-            );
-            return !sudahDiturunkan;
-        });
-
-        if (options.length === 0) {
-            selectInd.innerHTML = '<option value="">Tidak ada indikator individu (semua sudah diturunkan ke unit).</option>';
-        } else {
-            selectInd.innerHTML = options.map(o =>
-                `<option value="${o.id}" data-indikator="${o.targetDirektur}" data-target="${o.targetVal || 100}" data-satuan="${o.satuan || '%'}">${o.targetDirektur} (Target: ${o.targetVal || 100} ${o.satuan || '%'})</option>`
-            ).join('');
-        }
-
-        // Mode Edit
-        if (editId) {
-            const editItem = (DB.capaian || []).find(c => String(c.id) === String(editId));
-            if (editItem) {
-                modal.querySelector('#ciEditId').value = editItem.id;
-                modal.querySelector('#ciTahun').value = editItem.tahun || '2025';
-                modal.querySelector('#ciTriwulan').value = editItem.triwulan || 'TW 1';
-                modal.querySelector('#ciTarget').value = editItem.target || 100;
-                modal.querySelector('#ciRealisasi').value = editItem.realisasi || 0;
-                modal.querySelector('#ciSatuan').value = editItem.satuan || '%';
-                modal.querySelector('#ciProgram').value = editItem.program || '';
-                modal.querySelector('#ciLinkBukti').value = editItem.linkBukti || '';
-                modal.querySelector('#ciPermasalahan').value = editItem.permasalahan || '';
-                const opt = Array.from(selectInd.options).find(o => o.getAttribute('data-indikator') === editItem.targetDirektur);
-                if (opt) selectInd.value = opt.value;
-            }
-        } else {
-            modal.querySelector('#ciEditId').value = '';
-            modal.querySelector('#ciRealisasi').value = '';
-        }
-
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        }
-    };
-
-    // 4. Fungsi Simpan
-    async function saveCapaianIndividu(e) {        e.preventDefault();
-        if (!currentUser || currentUser.role !== 'tim_kerja') return;
-
-        const editId = document.getElementById('ciEditId').value;
-        const selectInd = document.getElementById('ciIndikator');
-        const selectedOpt = selectInd.options[selectInd.selectedIndex];
-        if (!selectedOpt || !selectedOpt.value) {
-            showToast('Pilih indikator terlebih dahulu.', 'error');
-            return;
-        }
-
-        const payload = {
-            id: editId || ('cp_tim_' + Date.now()),
-            unit: currentUser.unit,
-            timKey: currentUser.timKey,
-            targetDirektur: selectedOpt.getAttribute('data-indikator'),
-            kategori: 'Support', // Sebagai penanda ini bukan IKU Utama, melainkan individu
-            tahun: document.getElementById('ciTahun').value,
-            triwulan: document.getElementById('ciTriwulan').value,
-            target: parseFloat(document.getElementById('ciTarget').value) || 100,
-            realisasi: parseFloat(document.getElementById('ciRealisasi').value) || 0,
-            satuan: document.getElementById('ciSatuan').value || '%',
-            program: document.getElementById('ciProgram').value || '',
-            linkBukti: document.getElementById('ciLinkBukti').value || '',
-            permasalahan: document.getElementById('ciPermasalahan').value || '',
-            status: 'Menunggu Validasi Direktur', // Validasi oleh Direktur
-            rekomendasi: '',
-            penyesuaian: [],
-            statusTindakLanjut: 'Belum Ditindaklanjuti',
-            linkBuktiTindakLanjut: '',
-            isIndividuKetuaTim: true // Penanda khusus
-        };
-
-        if (editId) {
-            const idx = DB.capaian.findIndex(c => String(c.id) === String(editId));
-            if (idx >= 0) DB.capaian[idx] = payload;
-            showToast('Capaian individu diperbarui.', 'info');
-        } else {
-            DB.capaian.push(payload);
-            showToast('Capaian individu berhasil ditambahkan.', 'info');
-        }
-
-        await saveToMySQL();
-        document.getElementById('inputCapaianIndividuModal').classList.add('hidden');
-        document.getElementById('inputCapaianIndividuModal').classList.remove('flex');
-        if (typeof renderCapaianView === 'function') renderCapaianView(document.getElementById('mainContent'));
     }
 
     window.openInputCapaianIndividuModal = openInputCapaianIndividuModal;
-
     // 5. Inisialisasi & Observer
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
