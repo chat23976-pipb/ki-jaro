@@ -1032,7 +1032,7 @@ function findTimKeyForUnit(unitName) {
                 { id: 'u10', username: 'lsp@poltek-petrokimia.ac.id', password: '123', name: 'Ketua LSP', role: 'ketua_unit', unit: 'LSP', timKey: 'Kemahasiswaan dan Kerjasama' },
                 { id: 'u11', username: 'cdc@poltek-petrokimia.ac.id', password: '123', name: 'Kepala CDC', role: 'ketua_unit', unit: 'CDC', timKey: 'Kemahasiswaan dan Kerjasama' },
                 { id: 'u12', username: 'inkubator@poltek-petrokimia.ac.id', password: '123', name: 'Kepala Inkubator Bisnis', role: 'ketua_unit', unit: 'Inkubator Bisnis', timKey: 'Kemahasiswaan dan Kerjasama' },
-                { id: 'u13', username: 'transformasi@poltek-petrokimia.ac.id', password: '123', name: 'Kabid Transformasi Digital', role: 'ketua_unit', unit: 'Transformasi Digital 4.0', timKey: 'Umum dan Keuangan' },
+                { id: 'u13', username: 'transformasi@poltek-petrokimia.ac.id', password: '123', name: 'Kabid Transformasi Industri Digital 4.0', role: 'ketua_unit', unit: 'Transformasi Industri Digital 4.0', timKey: 'Umum dan Keuangan' },
                 { id: 'u14', username: 'spm@poltek-petrokimia.ac.id', password: '123', name: 'Kepala SPM', role: 'ketua_unit', unit: 'SPM', timKey: 'Akademik' },
                 { id: 'u15', username: 'pmb@poltek-petrokimia.ac.id', password: '123', name: 'Kepala PMB', role: 'ketua_unit', unit: 'PMB', timKey: 'Kemahasiswaan dan Kerjasama' },
                 { id: 'u16', username: 'subbag_umum@poltek-petrokimia.ac.id', password: '123', name: 'Kasubbag Umum & Keuangan', role: 'ketua_unit', unit: 'Subbag Umum dan Keuangan', timKey: 'Umum dan Keuangan' },
@@ -6586,7 +6586,7 @@ function toggleUnitRoleSelect(idx, isChecked) {
             if (allowedUnits.length === 0) {
                 allowedUnits = Array.isArray(DB.unitList) && DB.unitList.length > 0 
                     ? [...DB.unitList] 
-                    : ['Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'];
+                    : ['Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 'Inkubator Bisnis', 'Transformasi Industri Digital 4.0', 'SPM', 'PMB', 'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'];
             }
 
             if (allowedUnits.length === 0) {
@@ -9737,7 +9737,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
         function syncUnitListFromUsers() {
             const defaultUnits = [
                 'Prodi TMIP', 'Prodi TIIP', 'Prodi TPIP', 'UPPM', 'LSP', 'CDC', 
-                'Inkubator Bisnis', 'Transformasi Digital 4.0', 'SPM', 'PMB', 
+                'Inkubator Bisnis', 'Transformasi Industri Digital 4.0', 'SPM', 'PMB', 
                 'Subbag Umum dan Keuangan', 'Subbag Akademik Kemahasiswaan dan Kerjasama'
             ];
             const userUnits = DB.users
