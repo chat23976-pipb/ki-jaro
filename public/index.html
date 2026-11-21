@@ -5176,7 +5176,8 @@ let dashboardChartInstances = {};
                 if (!matchThn) return false;
                 if (isTopLeader) return true;
                 if (isKetuaTim) return s.timKey === userTimKey;
-                if (isKaUnit) return s.unit === currentUser.unit || s.requesterUsername === currentUser.username || canUserFinalAssessSKP(s); || s.roleKey === currentUser.role;
+                if (isKaUnit) return s.unit === currentUser.unit;
+                return s.username === currentUser.username || s.roleKey === currentUser.role;
             });
 
             const canMigrate = (isAdmin || isDirektur || isKetuaTim || isKaUnit) && !isPureViewer();
