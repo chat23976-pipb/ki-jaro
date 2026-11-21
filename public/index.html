@@ -8759,7 +8759,7 @@ function rebuildCapaianIndikatorOptions(year) {
                         <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-check-double text-indigo-600 mr-1.5"></i>Validasi Tahap 1 (Ketua Prodi / Subbag / Unit)</h3>
                         <button type="button" onclick="closeValidateProdiModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                     </div>
-                    <input type="hidden" id="validateProdiCapaianId" value="${c.id}">
+                    <input type="hidden" id="vpDynId" value="${c.id}">
                     <div class="space-y-3.5 text-sm">
                         <div class="bg-slate-50 p-3 rounded-xl border text-xs space-y-1">
                             <p><span class="text-slate-500">Pelaksana:</span> <strong class="text-slate-800">${sanitizeHTML(c.inputByName || '-')} (${sanitizeHTML(ROLE_LABELS[c.inputByRole] || c.inputByRole || '')})</strong></p>
@@ -8768,19 +8768,19 @@ function rebuildCapaianIndikatorOptions(year) {
                         </div>
                         <div>
                             <label class="block font-semibold text-slate-700 mb-1">Keputusan Validasi Unit</label>
-                            <select id="validateProdiStatusChoice" class="w-full p-3 bg-slate-50 border rounded-xl font-bold">
+                            <select id="vpDynStatus" class="w-full p-3 bg-slate-50 border rounded-xl font-bold">
                                 <option value="Valid" class="text-emerald-700" ${c.statusProdi !== 'Tidak Valid' ? 'selected' : ''}>Valid (Lanjut & Naik ke Ketua Tim Kerja)</option>
                                 <option value="Tidak Valid" class="text-rose-700" ${c.statusProdi === 'Tidak Valid' ? 'selected' : ''}>Tidak Valid (Kembalikan ke Pelaksana)</option>
                             </select>
                         </div>
                         <div>
                             <label class="block font-semibold text-slate-700 mb-1">Catatan Ketua Unit / Prodi / Subbag</label>
-                            <textarea id="validateProdiComment" rows="3" class="w-full p-3 bg-slate-50 border rounded-xl text-xs" placeholder="Catatan verifikasi atau arahan perbaikan...">${sanitizeHTML(c.catatanProdi || '')}</textarea>
+                            <textarea id="vpDynComment" rows="3" class="w-full p-3 bg-slate-50 border rounded-xl text-xs" placeholder="Catatan verifikasi atau arahan perbaikan...">${sanitizeHTML(c.catatanProdi || '')}</textarea>
                         </div>
                     </div>
                     <div class="flex justify-end space-x-3 pt-2 border-t">
                         <button type="button" onclick="closeValidateProdiModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
-                        <button type="button" onclick="submitValidationProdi()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow">Simpan & Lanjutkan</button>
+                        <button type="button" onclick="executeSaveValidasiUnit()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow">Simpan & Lanjutkan</button>
                     </div>
                 </div>
             `;
@@ -8794,29 +8794,46 @@ function rebuildCapaianIndikatorOptions(year) {
             if (oldModal) { oldModal.classList.add('hidden'); oldModal.classList.remove('flex'); }
         };
 
-        window.submitValidationProdi = async function() {
-            if (typeof isPureViewer === 'function' && isPureViewer()) return;
-            const id = document.getElementById('validateProdiCapaianId').value;
-            const st = document.getElementById('validateProdiStatusChoice').value;
-            const note = sanitizeHTML(document.getElementById('validateProdiComment').value.trim());
-            const idx = (DB.capaian || []).findIndex(x => String(x.id) === String(id));
-            if (idx === -1) return;
+        window.executeSaveValidasiUnit = async function() {
+            try {
+                if (typeof isPureViewer === 'function' && isPureViewer()) return;
+                const idEl = document.getElementById('vpDynId');
+                const stEl = document.getElementById('vpDynStatus');
+                const noteEl = document.getElementById('vpDynComment');
+                if (!idEl || !stEl) return;
 
-            DB.capaian[idx].statusProdi = st;
-            DB.capaian[idx].catatanProdi = note;
-            if (st === 'Tidak Valid') {
-                DB.capaian[idx].status = 'Tidak Valid';
-                if (note) DB.capaian[idx].rekomendasi = `[Catatan Ketua Unit] ${note}`;
-            } else {
-                // Validasi Tahap 1 lolos -> lanjut naik ke Ketua Tim Kerja (Tahap 2)
-                DB.capaian[idx].status = 'Menunggu Validasi';
+                const id = idEl.value;
+                const st = stEl.value;
+                const note = sanitizeHTML((noteEl ? noteEl.value : '').trim());
+                const idx = (DB.capaian || []).findIndex(x => String(x.id) === String(id));
+                if (idx === -1) {
+                    showToast('Data capaian tidak ditemukan.', 'error');
+                    return;
+                }
+
+                DB.capaian[idx].statusProdi = st;
+                DB.capaian[idx].catatanProdi = note;
+                if (st === 'Tidak Valid') {
+                    DB.capaian[idx].status = 'Tidak Valid';
+                    if (note) DB.capaian[idx].rekomendasi = `[Catatan Ketua Unit] ${note}`;
+                } else {
+                    DB.capaian[idx].status = 'Menunggu Validasi';
+                }
+
+                closeValidateProdiModal();
+                showToast(st === 'Valid' ? 'Validasi Unit berhasil! Data diteruskan ke Ketua Tim Kerja.' : 'Capaian dikembalikan ke pelaksana (Tidak Valid).');
+                renderCapaianView(document.getElementById('mainContent'));
+
+                if (typeof syncToGoogleSheets === 'function') {
+                    await syncToGoogleSheets('Validasi Unit (Tahap 1)', DB.capaian[idx]);
+                }
+                if (typeof saveToMySQL === 'function') {
+                    await saveToMySQL();
+                }
+            } catch (err) {
+                console.error('Error simpan validasi unit:', err);
+                showToast('Gagal menyimpan validasi: ' + err.message, 'error');
             }
-
-            await syncToGoogleSheets('Validasi Unit (Tahap 1)', DB.capaian[idx]);
-            await saveToMySQL();
-            closeValidateProdiModal();
-            showToast(st === 'Valid' ? 'Validasi Unit berhasil! Data diteruskan ke Ketua Tim Kerja.' : 'Capaian dikembalikan ke pelaksana (Tidak Valid).');
-            renderCapaianView(document.getElementById('mainContent'));
         };
         
 async function saveCapaian(e) {
