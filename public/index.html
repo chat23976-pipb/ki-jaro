@@ -5359,6 +5359,63 @@ let dashboardChartInstances = {};
                         </div>
                     </div>
 
+                    <!-- Bagian 3: Cascading Ketua Unit / Prodi / Subbag ke Staf Hilir (Level 3) -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base"><i class="fa-solid fa-users-gear text-emerald-600 mr-2"></i> 3. Cascading Ketua Unit / Prodi / Subbag ke Dosen / Tendik / Sekretaris / Kalab / Koordinator (Level 3)</h3>
+                                <p class="text-xs text-slate-500">Penurunan indikator paling hilir ke pelaksana operasional. Hanya role berstatus <strong>★ Utama</strong> yang masuk ke Dashboard.</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                ${(isKaUnit || isAdmin) && !isPureViewer() ? `<button onclick="openCascadingUnitModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2"><i class="fa-solid fa-plus"></i><span>Tambah Cascading ke Staf</span></button>` : ''}
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                                        <th class="p-4">Unit / Prodi / Subbag</th>
+                                        <th class="p-4">Tahun</th>
+                                        <th class="p-4">Indikator Terintervensi & Indikator Individu Staf</th>
+                                        <th class="p-4">Pelaksana Tujuan (Utama vs Support)</th>
+                                        ${(isKaUnit || isAdmin) && !isPureViewer() ? '<th class="p-4 text-center">Aksi</th>' : ''}
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${filteredUnitTable.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada cascading Level 3 pada tahun ${filterCascadingTahun}.</td></tr>` : filteredUnitTable.map((cu) => `
+                                        <tr class="hover:bg-slate-50 transition-all">
+                                            <td class="p-4"><span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-semibold text-xs rounded-full">${sanitizeHTML(cu.unit)}</span></td>
+                                            <td class="p-4 font-bold text-emerald-700">${cu.tahun || '2025'}</td>
+                                            <td class="p-4">
+                                                ${cu.rencanaHasilKinerja ? `<span class="block text-[11px] text-indigo-600 font-semibold">RHK Tim: ${sanitizeHTML(cu.rencanaHasilKinerja)}</span>` : ''}
+                                                <span class="block text-xs text-slate-500 mb-1">Induk Direktur: ${sanitizeHTML(cu.targetDirektur)}</span>
+                                                <span class="block font-bold text-emerald-900 text-sm">${sanitizeHTML(cu.indikatorIndividu || cu.targetDirektur)}</span>
+                                                <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${cu.jenis === 'Utama' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">${cu.jenis || 'Utama'}</span>
+                                                ${cu.isCascading === false ? '<span class="ml-1 inline-block mt-1 px-2 py-0.5 bg-rose-100 text-rose-700 text-[10px] font-bold rounded">Berhenti di Ketua Unit</span>' : ''}
+                                            </td>
+                                            <td class="p-4">
+                                                <div class="flex flex-wrap gap-1.5">
+                                                    ${(cu.subTargets || []).length === 0 ? '<span class="text-xs text-slate-400 italic">Dikerjakan langsung Ketua Unit</span>' : (cu.subTargets || []).map(st => {
+                                                        const isUtama = isSubRoleUtamaInUnit(cu, st);
+                                                        const usr = DB.users.find(u => u.username === st);
+                                                        const lbl = usr ? `${usr.name} (${ROLE_LABELS[usr.role] || usr.role})` : (ROLE_LABELS[st] || st);
+                                                        return `<span class="px-2.5 py-1 ${isUtama ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-300'} text-xs rounded-full font-bold flex items-center space-x-1"><i class="fa-solid ${isUtama ? 'fa-star text-amber-300' : 'fa-shield-halved'} mr-1 text-[10px]"></i><span>${sanitizeHTML(lbl)} (${isUtama ? 'Utama' : 'Support'})</span></span>`;
+                                                    }).join('')}
+                                                </div>
+                                            </td>
+                                            ${(isKaUnit || isAdmin) && !isPureViewer() ? `
+                                                <td class="p-4 text-center space-x-1">
+                                                    <button onclick="openEditCascadingUnitModal('${cu.id}')" class="p-1.5 bg-blue-100 hover:bg-blue-200 text-primary-700 rounded-lg text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                    <button onclick="confirmDeleteCascadingUnit('${cu.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                </td>
+                                            ` : ''}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 <!-- Modal Cascading Direktur (Level 1) -->
                 <div id="cascadingDirModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
@@ -5440,24 +5497,46 @@ let dashboardChartInstances = {};
         </select>
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+   <div class="space-y-3">
         <div>
-            <label class="block font-semibold text-slate-700 mb-1 text-xs">1. Pilih Indikator dari Direktur (Induk)</label>
+            <label class="block font-semibold text-slate-700 mb-1 text-xs">1. Pilih Indikator dari Direktur (Induk) <span class="text-rose-500">*</span></label>
             <select id="timDirRef" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" onchange="handleDirRefChange()"></select>
         </div>
-        <div>
-            <label class="block font-semibold text-slate-700 mb-1 text-xs">2. Nama Indikator Kinerja Individu</label>
-            <input type="text" id="timIndikatorIndividu" required class="w-full p-2.5 bg-white border border-blue-400 rounded-xl text-xs font-bold text-blue-800" placeholder="Ketik nama indikator baru...">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">2. Rencana Hasil Kinerja (RHK) <span class="text-rose-500">*</span></label>
+                <input type="text" id="timRencanaHasilKinerja" required class="w-full p-2.5 bg-white border border-indigo-400 rounded-xl text-xs font-semibold text-indigo-900" placeholder="Ketik Rencana Hasil Kinerja...">
+            </div>
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">3. Nama Indikator Kinerja Individu <span class="text-rose-500">*</span></label>
+                <input type="text" id="timIndikatorIndividu" required class="w-full p-2.5 bg-white border border-blue-400 rounded-xl text-xs font-bold text-blue-800" placeholder="Ketik nama indikator individu...">
+            </div>
         </div>
     </div>
-    <div class="grid grid-cols-2 gap-4 bg-blue-50/60 p-3 rounded-xl border border-blue-200">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-blue-50/60 p-3 rounded-xl border border-blue-200">
         <div>
-            <label class="block font-bold text-slate-700 mb-1 text-xs">Target Indikator Individu <span class="text-rose-500">*</span></label>
-            <input type="number" step="any" id="timTargetVal" required class="w-full p-2 bg-white border rounded-lg text-xs font-bold" placeholder="Contoh: 100">
+            <label class="block font-bold text-slate-700 mb-1 text-xs">Aspek <span class="text-rose-500">*</span></label>
+            <select id="timAspek" required class="w-full p-2 bg-white border rounded-lg text-xs font-semibold">
+                <option value="Kuantitas">Kuantitas</option>
+                <option value="Kualitas">Kualitas</option>
+                <option value="Biaya">Biaya</option>
+                <option value="Waktu">Waktu</option>
+            </select>
+        </div>
+        <div>
+            <label class="block font-bold text-slate-700 mb-1 text-xs">Polaritas <span class="text-rose-500">*</span></label>
+            <select id="timPolaritas" required class="w-full p-2 bg-white border rounded-lg text-xs font-semibold">
+                <option value="Maksimasi">Maksimasi</option>
+                <option value="Minimasi">Minimasi</option>
+            </select>
+        </div>
+        <div>
+            <label class="block font-bold text-slate-700 mb-1 text-xs">Target <span class="text-rose-500">*</span></label>
+            <input type="number" step="any" id="timTargetVal" required class="w-full p-2 bg-white border rounded-lg text-xs font-bold" placeholder="100">
         </div>
         <div>
             <label class="block font-bold text-slate-700 mb-1 text-xs">Satuan <span class="text-rose-500">*</span></label>
-            <input type="text" id="timSatuan" required class="w-full p-2 bg-white border rounded-lg text-xs font-semibold" placeholder="Contoh: % / Dokumen">
+            <input type="text" id="timSatuan" required class="w-full p-2 bg-white border rounded-lg text-xs font-semibold" placeholder="% / Dok">
         </div>
     </div>
                     <div class="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-xl border">
@@ -6003,17 +6082,10 @@ function handleDirRefChange() {
             const editTimKey = modal ? modal.getAttribute('data-edit-timkey') : null;
             const activeTim = editTimKey || currentUser.timKey;
 
-            // Daftar indikator induk yang SUDAH dipakai oleh Tim ini pada Tahun terpilih
-            const usedTargets = (DB.cascadingTim || [])
-                .filter(ct => ct.timKey === activeTim && String(ct.tahun || '2025') === String(tahun))
-                .map(ct => ct.targetDirektur.toLowerCase());
-
             const matching = (DB.cascadingDirektur || []).filter(c => {
                 const matchTahun = String(c.tahun || '2025') === String(tahun);
                 const matchTim = currentUser.role === 'admin' ? true : (Array.isArray(c.timKeys) && c.timKeys.includes(activeTim));
-                if (!matchTahun || !matchTim) return false;
-                if (allowTargetOnEdit && c.target === allowTargetOnEdit) return true;
-                return !usedTargets.includes(c.target.toLowerCase());
+                return matchTahun && matchTim;
             });
 
             sel.innerHTML = matching.length === 0 
@@ -6405,8 +6477,17 @@ function toggleUnitRoleSelect(idx, isChecked) {
             document.getElementById('timDirRef').value = item.targetDirektur;
 
             // Isi ulang Nama Indikator Individu, Target, Satuan, Jenis, & Status Cascading sesuai data tersimpan
+            if (document.getElementById('timRencanaHasilKinerja')) {
+                document.getElementById('timRencanaHasilKinerja').value = item.rencanaHasilKinerja || '';
+            }
             if (document.getElementById('timIndikatorIndividu')) {
                 document.getElementById('timIndikatorIndividu').value = item.indikatorIndividu || item.targetDirektur || '';
+            }
+            if (document.getElementById('timAspek')) {
+                document.getElementById('timAspek').value = item.aspek || 'Kuantitas';
+            }
+            if (document.getElementById('timPolaritas')) {
+                document.getElementById('timPolaritas').value = item.polaritas || 'Maksimasi';
             }
             if (document.getElementById('timTargetVal')) {
                 document.getElementById('timTargetVal').value = item.targetVal !== undefined ? item.targetVal : '';
@@ -6472,7 +6553,10 @@ async function saveCascadingTim(e) {
     const editTimKey = modal.getAttribute('data-edit-timkey');
     const tahun = document.getElementById('timTahunTarget').value;
     const targetDirRef = document.getElementById('timDirRef').value;
+    const rencanaHasilKinerja = document.getElementById('timRencanaHasilKinerja').value.trim();
     const indikatorIndividu = document.getElementById('timIndikatorIndividu').value.trim();
+    const aspek = document.getElementById('timAspek').value;
+    const polaritas = document.getElementById('timPolaritas').value;
     const jenis = document.getElementById('timJenisIndikator').value;
     const isCascading = document.getElementById('timIsCascading').value === 'Ya';
     
@@ -6482,15 +6566,17 @@ async function saveCascadingTim(e) {
     const targetVal = parseFloat(document.getElementById('timTargetVal').value) || 0;
     const satuan = document.getElementById('timSatuan').value.trim() || '%';
 
-    // Guard Anti-Duplikasi Indikator Induk pada Tahun & Tim yang sama
-    const isDuplicateTim = (DB.cascadingTim || []).some(ct =>
-        (!editId || String(ct.id) !== String(editId)) &&
-        ct.timKey === activeTimKey &&
-        String(ct.tahun || '2025') === String(tahun) &&
-        ct.targetDirektur.toLowerCase() === targetDirRef.toLowerCase()
-    );
+    // Guard Anti-Duplikasi: hanya ditolak jika Tahun, Induk Direktur, DAN Nama Indikator Individu sama persis (kecuali sedang Edit record ini sendiri)
+    const isDuplicateTim = (DB.cascadingTim || []).some(ct => {
+        if (editId && String(ct.id) === String(editId)) return false;
+        const sameTim = ct.timKey === activeTimKey;
+        const sameYear = String(ct.tahun || '2025') === String(tahun);
+        const sameParent = (ct.targetDirektur || '').trim().toLowerCase() === targetDirRef.trim().toLowerCase();
+        const sameIndividu = (ct.indikatorIndividu || '').trim().toLowerCase() === indikatorIndividu.trim().toLowerCase();
+        return sameTim && sameYear && sameParent && sameIndividu;
+    });
     if (isDuplicateTim) {
-        return showToast(`Peringatan: Indikator induk "${targetDirRef}" sudah pernah diinput pada tahun ${tahun}! Tidak dapat menyimpan data ganda.`, 'error');
+        return showToast(`Peringatan: Kombinasi Tahun ${tahun}, Indikator Induk, dan Indikator Individu "${indikatorIndividu}" sudah ada!`, 'error');
     }
 
     const dirRefObj = DB.cascadingDirektur.find(cd => cd.target === targetDirRef && String(cd.tahun || '2025') === tahun);
@@ -6531,7 +6617,7 @@ async function saveCascadingTim(e) {
     }
 
     const payload = {
-        tahun, targetDirektur: targetDirRef, indikatorIndividu, targetVal, satuan, jenis, isCascading, timKey: activeTimKey,
+        tahun, targetDirektur: targetDirRef, rencanaHasilKinerja, indikatorIndividu, aspek, polaritas, targetVal, satuan, jenis, isCascading, timKey: activeTimKey,
         unitTargets: chosenUnits, unitRoles: unitRoles,
         rangeKinerja: {
             tidakMencapai: document.getElementById('timRangeTidak').value.trim(),
@@ -6607,7 +6693,9 @@ function updateUnitCascRefOptions(tahun, allowTargetOnEdit = null) {
                     const cd = DB.cascadingDirektur.find(x => x.target === ct.targetDirektur && String(x.tahun || '2025') === String(tahun)) || DB.cascadingDirektur.find(x => x.target === ct.targetDirektur);
                     const isUtama = cd ? (isTimUtamaInDir(cd, ct.timKey) && isUnitUtamaInTim(ct, activeUnit)) : isUnitUtamaInTim(ct, activeUnit);
                     const statusLbl = isUtama ? '[Status Unit Anda: ★ UTAMA]' : '[Status Unit Anda: 🛡️ SUPPORT]';
-                    return `<option value="${ct.targetDirektur}" data-timid="${ct.id}" data-isutama="${isUtama}" data-timkey="${ct.timKey}">${ct.indikatorIndividu || ct.targetDirektur} ${statusLbl}</option>`;
+                    const rhkText = ct.rencanaHasilKinerja ? `RHK Tim: ${ct.rencanaHasilKinerja} | ` : '';
+                    const ikkText = ct.indikatorIndividu ? `IKK Tim: ${ct.indikatorIndividu} | ` : '';
+                    return `<option value="${ct.targetDirektur}" data-timid="${ct.id}" data-rhk="${sanitizeHTML(ct.rencanaHasilKinerja || '')}" data-isutama="${isUtama}" data-timkey="${ct.timKey}">${rhkText}${ikkText}Induk Direktur: ${ct.targetDirektur} ${statusLbl}</option>`;
                 }).join('');
 
             syncSubUnitRolesWithUnitStatus();
@@ -6828,8 +6916,9 @@ async function saveCascadingUnit(e) {
     }
 
     const payload = {
-        tahun, parentTimId, targetDirektur: parentTimObj ? parentTimObj.targetDirektur : '', 
-        indikatorIndividu, jenis, isCascading, unit: activeUnit,
+     tahun, parentTimId, targetDirektur: parentTimObj ? parentTimObj.targetDirektur : '',
+     rencanaHasilKinerja: parentTimObj ? (parentTimObj.rencanaHasilKinerja || '') : '',
+     indikatorIndividu, targetVal, satuan, jenis, isCascading, unit: activeUnit,
         subTargets: chosenSubs, subRoles: subRoles, aggregationMode: aggMode
     };
 
@@ -9443,6 +9532,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
 
             const isDirektur = currentUser.role === 'direktur';
             const isKetuaTim = currentUser.role === 'tim_kerja';
+            const isKaUnit = currentUser.role === 'ketua_unit';
             const isAdmin = currentUser.role === 'admin';
 
             const dirInfo = getAdminDirekturData();
@@ -9458,8 +9548,10 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             });
 
             const listSKP = DB.approvalSKP.filter(r => {
-                const matchRole = (isAdmin || isDirektur) ? true : (isKetuaTim ? (r.timKey === currentUser.timKey || r.requesterUsername === currentUser.username) : (r.requesterUsername === currentUser.username));
-                const matchThn = filterLapSkpTahun === 'Semua' || String(r.tahun || '2025') === String(filterLapSkpTahun);
+                const matchRole = (isAdmin || isDirektur) ? true
+                    : (isKetuaTim ? (r.timKey === currentUser.timKey || r.requesterUsername === currentUser.username)
+                    : (isKaUnit ? (r.unit === currentUser.unit || r.requesterUsername === currentUser.username)
+                    : (r.requesterUsername === currentUser.username)));                const matchThn = filterLapSkpTahun === 'Semua' || String(r.tahun || '2025') === String(filterLapSkpTahun);
                 const matchTw = filterLapSkpTw === 'Semua' || String(r.triwulan || '').trim().toUpperCase() === String(filterLapSkpTw).trim().toUpperCase();
                 return matchRole && matchThn && matchTw;
             });
@@ -9607,8 +9699,9 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y">
-                                        ${listSKP.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada request laporan SKP pada filter ini.</td></tr>` : listSKP.map(skp => {
+                                       ${listSKP.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada request laporan SKP pada filter ini.</td></tr>` : listSKP.map(skp => {
                                             const badgeCls = skp.status === 'Disetujui' ? 'bg-emerald-100 text-emerald-800' : skp.status === 'Ditolak' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
+                                            const canAssessUnit = (isKaUnit || isAdmin) && skp.isSubUnitRequest && skp.status === 'Menunggu Ketua Unit' && (isAdmin || skp.unit === currentUser.unit);
                                             const canAssessTim = (isKetuaTim || isAdmin) && !skp.isKetuaTimRequest && skp.status === 'Menunggu Ketua Tim Kerja';
                                             const canAssessDir = (isDirektur || isAdmin) && (skp.status === 'Menunggu Direktur' || skp.status === 'Disetujui');
 
@@ -9625,6 +9718,11 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                                         ${skp.nilaiPerilakuDirektur ? `<span class="block text-[10px] text-purple-700 font-bold">Perilaku: ${sanitizeHTML(skp.nilaiPerilakuDirektur)}</span>` : ''}
                                                     </td>
                                                     <td class="p-3 text-center space-y-1">
+                                                        ${canAssessUnit ? `
+                                                            <button onclick="openAssessSKPUnitModal('${skp.id}')" class="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold text-[10px] block w-full">
+                                                                <i class="fa-solid fa-user-check mr-1"></i>Validasi Ketua Unit/Prodi
+                                                            </button>
+                                                        ` : ''}
                                                         ${canAssessTim ? `
                                                             <button onclick="openAssessSKPTimModal('${skp.id}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[10px] block w-full">
                                                                 <i class="fa-solid fa-star-half-stroke mr-1"></i>Nilai & Validasi Tim
@@ -9802,11 +9900,44 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                 </div>
                             </div>
 
+                            <!-- Pilihan Tanda Tangan Manual vs QR Code untuk Pemohon / Penyusun -->
+                            <div id="reqSkpSignatureWrapper" class="pt-1"></div>
+
                             <div class="flex justify-end space-x-2 pt-2 border-t">
                                 <button type="button" onclick="document.getElementById('reqSKPModal').classList.add('hidden')" class="px-4 py-2 bg-slate-200 rounded-xl font-semibold">Batal</button>
                                 <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold shadow">Kirim Request Approval SKP</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+
+                <!-- MODAL VALIDASI & PENILAIAN SKP TAHAP 1 OLEH KETUA UNIT / PRODI / SUBBAG -->
+                <div id="assessSkpUnitModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <h3 class="font-bold text-slate-900 text-sm"><i class="fa-solid fa-user-check text-teal-600 mr-1.5"></i>Validasi & Penilaian SKP Tahap 1 (Ketua Unit / Prodi / Subbag)</h3>
+                            <button type="button" onclick="document.getElementById('assessSkpUnitModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <input type="hidden" id="assessSkpUnitId">
+                        <div id="assessSkpUnitInfoBox" class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs"></div>
+                        <div class="space-y-3 text-xs">
+                            <div>
+                                <label class="block font-bold mb-1">Rekomendasi Penilaian Hasil Kerja Bawahan</label>
+                                <select id="assessSkpUnitRating" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-teal-700">
+                                    <option value="Di Bawah Ekspektasi">Di Bawah Ekspektasi (Tidak Mencapai Ekspektasi)</option>
+                                    <option value="Sesuai Ekspektasi" selected>Sesuai Ekspektasi (Mencapai Ekspektasi)</option>
+                                    <option value="Di Atas Ekspektasi">Di Atas Ekspektasi (Melebihi Ekspektasi)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold mb-1">Catatan / Saran Ketua Unit / Prodi / Subbag</label>
+                                <textarea id="assessSkpUnitNote" rows="2" class="w-full p-2.5 bg-slate-50 border rounded-xl" placeholder="Masukkan catatan verifikasi untuk diteruskan ke Ketua Tim Kerja..."></textarea>
+                            </div>
+                        </div>
+                        <div class="flex justify-end space-x-2 pt-2 border-t">
+                            <button type="button" onclick="submitAssessSKPUnit('Ditolak')" class="px-4 py-2 bg-rose-100 text-rose-700 rounded-xl font-bold text-xs">Tolak</button>
+                            <button type="button" onclick="submitAssessSKPUnit('Teruskan')" class="px-5 py-2 bg-teal-600 text-white rounded-xl font-bold text-xs shadow">Setujui & Teruskan ke Ketua Tim Kerja</button>
+                        </div>
                     </div>
                 </div>
 
@@ -10080,6 +10211,7 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
         function openRequestSKPModal() {
             const modal = document.getElementById('reqSKPModal');
             if (!modal) return;
+            injectSignatureModeUI('reqSKPModal', 'penyusun');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             syncSelectedTimNip('skpTimName', 'skpTimNip');
@@ -10146,6 +10278,20 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             }
         }
 
+function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title, message) {
+            if (!Array.isArray(DB.notifications)) DB.notifications = [];
+            DB.notifications.unshift({
+                id: 'notif_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                targetRole: targetRole || '',
+                targetUnit: targetUnit || '',
+                targetTimKey: targetTimKey || '',
+                title: title,
+                message: message,
+                timestamp: new Date().toISOString(),
+                readBy: []
+            });
+        }
+
         async function submitRequestSKP(e) {
             e.preventDefault();
             const yr = document.getElementById('reqSkpTahun').value;
@@ -10156,13 +10302,33 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 return;
             }
 
+            // Validasi mode TTD Penyusun (QR vs Manual)
+            const sigModeEl = document.querySelector('input[name="skp_penyusun_sigMode"]:checked');
+            const sigModePenyusun = sigModeEl ? sigModeEl.value : 'qr';
+            let signaturePenyusun = null;
+            if (sigModePenyusun === 'manual') {
+                signaturePenyusun = (window._tempSigData && window._tempSigData['penyusun']) || null;
+                if (!signaturePenyusun) {
+                    showToast('Anda memilih TTD manual. Silakan gambar tanda tangan Anda terlebih dahulu!', 'error');
+                    return;
+                }
+            }
+
             const isKetuaTim = currentUser.role === 'tim_kerja';
+            const isSubUnit = typeof SUB_UNIT_ROLES !== 'undefined' && SUB_UNIT_ROLES.includes(currentUser.role);
             const capObj = DB.capaian.find(c => String(c.id) === String(capId));
             const indikatorName = capObj ? capObj.targetDirektur : capId.replace('casc_', '');
             const cdObj = (DB.cascadingDirektur || []).find(cd => cd.target === indikatorName && String(cd.tahun || '2025') === String(yr));
             const targetValNum = capObj ? capObj.target : (cdObj && cdObj.targetVal !== undefined ? cdObj.targetVal : 100);
             const realValNum = capObj ? capObj.realisasi : 0;
             const satuanStr = capObj ? (capObj.satuan || '%') : (cdObj ? (cdObj.satuan || '%') : '%');
+
+            // Tentukan status awal berdasarkan jenjang jabatan pemohon
+            let initialStatus = 'Menunggu Ketua Tim Kerja';
+            if (isKetuaTim) initialStatus = 'Menunggu Direktur';
+            else if (isSubUnit) initialStatus = 'Menunggu Ketua Unit';
+
+            const kaUnitUser = (DB.users || []).find(u => u.role === 'ketua_unit' && u.unit === currentUser.unit);
 
             const newSkp = {
                 id: 'skp_' + Date.now(),
@@ -10180,11 +10346,16 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 hasilKegiatan: capObj ? `Hasil kegiatan yang dicapai adalah ${realValNum} ${satuanStr} (${capObj.program})` : `Realisasi capaian ${realValNum} ${satuanStr}`,
                 permasalahan: capObj && capObj.permasalahan ? capObj.permasalahan : 'Tidak ada kendala signifikan',
                 saranKetuaTim: capObj && capObj.rekomendasi ? capObj.rekomendasi : '-',
+                saranKetuaUnit: '',
                 requesterUsername: currentUser.username,
                 requesterName: currentUser.name,
+                requesterRole: currentUser.role,
                 unit: currentUser.unit,
                 timKey: currentUser.timKey || 'Akademik',
                 isKetuaTimRequest: isKetuaTim,
+                isSubUnitRequest: isSubUnit,
+                kaUnitName: kaUnitUser ? kaUnitUser.name : '',
+                kaUnitNip: kaUnitUser ? (kaUnitUser.nip || '-') : '-',
                 tanggalKota: document.getElementById('reqSkpTanggalKota').value.trim(),
                 dirName: document.getElementById('skpDirName').value.trim(),
                 dirNip: document.getElementById('skpDirNip').value.trim(),
@@ -10192,20 +10363,123 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 timNip: document.getElementById('skpTimNip') ? document.getElementById('skpTimNip').value.trim() : (currentUser.nip || '-'),
                 userName: document.getElementById('skpUserName').value.trim(),
                 userNip: document.getElementById('skpUserNip').value.trim(),
-                status: isKetuaTim ? 'Menunggu Direktur' : 'Menunggu Ketua Tim Kerja',
+                sigModePenyusun: sigModePenyusun,
+                signaturePenyusun: signaturePenyusun,
+                status: initialStatus,
+                nilaiUnitKinerja: '',
                 nilaiTimKinerja: isKetuaTim ? 'Sesuai Ekspektasi' : '',
                 nilaiFinalKinerja: '',
                 nilaiPerilakuDirektur: '',
                 hashDirektur: '',
                 hashKetuaTim: '',
+                hashKetuaUnit: '',
                 hashPenyusun: ''
             };
 
             DB.approvalSKP.push(newSkp);
-            recordAuditLog('Request SKP', 'Laporan SKP', `${currentUser.name} mengajukan SKP indikator "${indikatorName}" (${tw} ${yr})`);
+
+            // Kirim Notifikasi ke Approver Tahap Pertama
+            if (isSubUnit) {
+                pushSkpWorkflowNotification('ketua_unit', currentUser.unit, currentUser.timKey, 'Validasi SKP Bawahan', `${currentUser.name} mengajukan SKP (${tw} ${yr}) menunggu validasi Ketua Unit/Prodi.`);
+            } else if (!isKetuaTim) {
+                pushSkpWorkflowNotification('tim_kerja', '', currentUser.timKey, 'Validasi SKP Unit', `${currentUser.name} (${currentUser.unit}) mengajukan SKP (${tw} ${yr}) menunggu penilaian Ketua Tim Kerja.`);
+            } else {
+                pushSkpWorkflowNotification('direktur', '', '', 'Persetujuan Final SKP', `Ketua Tim ${currentUser.timKey} mengajukan SKP (${tw} ${yr}) menunggu keputusan Direktur.`);
+            }
+
+            window._tempSigData = window._tempSigData || {};
+            window._tempSigData['penyusun'] = null;
+
+            recordAuditLog('Request SKP', 'Laporan SKP', `${currentUser.name} mengajukan SKP indikator "${indikatorName}" (${tw} ${yr}) -> ${initialStatus}`);
             await saveToMySQL();
             document.getElementById('reqSKPModal').classList.add('hidden');
-            showToast('Request Approval SKP berhasil diajukan!');
+            showToast(`Request Approval SKP berhasil diajukan (${initialStatus})!`);
+            renderLaporanView(document.getElementById('mainContent'));
+        }
+
+        function openAssessSKPUnitModal(skpId) {
+            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
+            if (!skp) return;
+            document.getElementById('assessSkpUnitId').value = skpId;
+            document.getElementById('assessSkpUnitRating').value = skp.nilaiUnitKinerja || 'Sesuai Ekspektasi';
+            document.getElementById('assessSkpUnitNote').value = skp.saranKetuaUnit || '';
+
+            const infoBox = document.getElementById('assessSkpUnitInfoBox');
+            if (infoBox) {
+                infoBox.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2 border-b pb-2">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Nama Staf / Dosen / Tendik Pemohon:</span>
+                            <strong class="text-slate-900">${sanitizeHTML(skp.requesterName)} (${sanitizeHTML(skp.unit || '-')})</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Periode SKP:</span>
+                            <strong class="text-teal-700">${sanitizeHTML(skp.triwulan)} — Tahun ${sanitizeHTML(skp.tahun)}</strong>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 block">Nama Indikator Kinerja:</span>
+                        <strong class="text-slate-900">${sanitizeHTML(skp.indikator)}</strong>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Target Indikator:</span>
+                            <strong class="text-blue-700 text-sm">${skp.targetNum} ${sanitizeHTML(skp.satuan || '%')}</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Realisasi Capaian:</span>
+                            <strong class="text-emerald-700 text-sm">${skp.realisasiNum} ${sanitizeHTML(skp.satuan || '%')}</strong>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const modal = document.getElementById('assessSkpUnitModal');
+            injectSignatureModeUI('assessSkpUnitModal', 'ketuaUnit');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        async function submitAssessSKPUnit(decision) {
+            const skpId = document.getElementById('assessSkpUnitId').value;
+            const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
+            if (!skp) return;
+
+            if (decision === 'Ditolak') {
+                skp.status = 'Ditolak';
+                pushSkpWorkflowNotification('', skp.unit, skp.timKey, 'SKP Ditolak Ketua Unit', `Pengajuan SKP "${skp.indikator}" milik ${skp.requesterName} ditolak oleh Ketua Unit/Prodi.`);
+            } else {
+                const sigModeEl = document.querySelector('input[name="skp_ketuaUnit_sigMode"]:checked');
+                const sigMode = sigModeEl ? sigModeEl.value : 'qr';
+                skp.sigModeKetuaUnit = sigMode;
+
+                if (sigMode === 'manual') {
+                    const dataUrl = (window._tempSigData && window._tempSigData['ketuaUnit']) || null;
+                    if (!dataUrl) {
+                        showToast('Anda memilih TTD manual. Silakan gambar tanda tangan terlebih dahulu!', 'error');
+                        return;
+                    }
+                    skp.signatureKetuaUnit = dataUrl;
+                } else {
+                    skp.signatureKetuaUnit = null;
+                }
+
+                skp.kaUnitName = currentUser.name;
+                skp.kaUnitNip = currentUser.nip || '-';
+                skp.nilaiUnitKinerja = document.getElementById('assessSkpUnitRating').value;
+                skp.saranKetuaUnit = document.getElementById('assessSkpUnitNote').value.trim();
+                skp.status = 'Menunggu Ketua Tim Kerja';
+
+                pushSkpWorkflowNotification('tim_kerja', '', skp.timKey, 'Validasi SKP Lanjutan', `SKP ${skp.requesterName} (${skp.unit}) telah diverifikasi Ketua Unit dan menunggu penilaian Ketua Tim Kerja.`);
+            }
+
+            window._tempSigData = window._tempSigData || {};
+            window._tempSigData['ketuaUnit'] = null;
+
+            recordAuditLog('Validasi SKP Ketua Unit', 'Laporan SKP', `Ketua Unit (${currentUser.name}) memvalidasi SKP ${skp.requesterName} -> ${skp.status}`);
+            await saveToMySQL();
+            document.getElementById('assessSkpUnitModal').classList.add('hidden');
+            showToast(`Status SKP diperbarui menjadi: ${skp.status}`);
             renderLaporanView(document.getElementById('mainContent'));
         }
 
@@ -10309,6 +10583,8 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             skp.nilaiTimKinerja = document.getElementById('assessSkpTimRating').value;
             skp.saranKetuaTim = document.getElementById('assessSkpTimNote').value.trim() || 'Dilanjutkan dan ditingkatkan pada periode berikutnya';
             skp.status = 'Menunggu Direktur';
+
+            pushSkpWorkflowNotification('direktur', '', skp.timKey, 'Persetujuan Final SKP', `SKP milik ${skp.requesterName} (${skp.unit || '-'}) telah divalidasi Ketua Tim Kerja dan menunggu keputusan Direktur.`);
         }
         window._tempSigData = window._tempSigData || {};
         window._tempSigData['ketuaTim'] = null;
@@ -10439,6 +10715,8 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
     skp.hashDirektur = generateSimpleDocHash(`DIR|${skp.id}|${skp.dirName}|${skp.dirNip}|${skp.nilaiFinalKinerja}|${timestamp}`);
     skp.hashKetuaTim = generateSimpleDocHash(`TIM|${skp.id}|${skp.timName}|${skp.timNip}|${skp.nilaiTimKinerja}|${timestamp}`);
     skp.hashPenyusun = generateSimpleDocHash(`USR|${skp.id}|${skp.userName}|${skp.userNip}|${skp.indikator}|${timestamp}`);
+
+    pushSkpWorkflowNotification('', skp.unit, skp.timKey, 'SKP Disetujui Final', `Laporan SKP indikator "${skp.indikator}" milik ${skp.requesterName} telah disetujui final oleh Direktur dan siap dicetak.`);
 }
 window._tempSigData = window._tempSigData || {};
 window._tempSigData['direktur'] = null;
@@ -12067,13 +12345,6 @@ function downloadLogRisikoError() {
         targetBtn.parentNode.insertBefore(btn, targetBtn);
     }
 
-    // 3. Modal Input Capaian
-    function openInputCapaianIndividuModal(editId) {
-        if (currentUser.role !== 'tim_kerja') {
-            showToast('Akses ditolak: Hanya Ketua Tim Kerja.', 'error');
-            return;
-        }
-
 // Helper untuk memperbarui dropdown Indikator Individu sesuai Tahun & Triwulan yang dipilih
     function refreshDropdownCapaianIndividu(editTargetIndikator = null) {
         const selectInd = document.getElementById('ciIndikator');
@@ -12116,8 +12387,8 @@ function downloadLogRisikoError() {
         }
     }
 
-    function openInputCapaianIndividuModal(editId) {
-        if (currentUser.role !== 'tim_kerja') {
+   window.openInputCapaianIndividuModal = function(editId = null) {
+        if (currentUser.role !== 'tim_kerja' && currentUser.role !== 'admin') {
             showToast('Akses ditolak: Hanya Ketua Tim Kerja.', 'error');
             return;
         }
@@ -12203,6 +12474,18 @@ function downloadLogRisikoError() {
                 }
             });
         }
+        modal.classList.remove('hidden');
+         modal.classList.add('flex');
+         document.getElementById('ciEditId').value = editId || '';
+         document.getElementById('ciTahun').value = (typeof filterCapaianTahun !== 'undefined' && filterCapaianTahun !== 'Semua') ? filterCapaianTahun : '2025';
+         document.getElementById('ciTriwulan').value = 'TW 1';
+         document.getElementById('ciTarget').value = '';
+         document.getElementById('ciRealisasi').value = '';
+         document.getElementById('ciSatuan').value = '';
+         document.getElementById('ciProgram').value = '';
+         document.getElementById('ciLinkBukti').value = '';
+         document.getElementById('ciPermasalahan').value = '';
+         refreshDropdownCapaianIndividu();
         const selectInd = modal.querySelector('#ciIndikator');
 
         if (editId) {
