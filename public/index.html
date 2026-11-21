@@ -919,23 +919,29 @@ function findTimKeyForUnit(unitName) {
         // Syarat Wajib: Status = Valid AND (Direktur -> Tim = Utama) AND (Tim -> Unit = Utama)
         function isCapaianUtamaForDashboard(capaianItem, cdObj = null) {
             if (!capaianItem) return false;
-            // 1. Wajib berstatus 'Valid'
+            // 1. Wajib sudah divalidasi akhir ('Valid') dan bukan tanda Support
             if (String(capaianItem.status || '').trim() !== 'Valid') return false;
             if (capaianItem.isSupport === true) return false;
+            if (String(capaianItem.jenis || '').trim().toLowerCase() === 'support') return false;
 
+            // Jika diinput oleh staf di bawah unit, wajib lolos validasi bertingkat Tahap 1 (Unit) terlebih dahulu
+            if (capaianItem.isSubUnitInput && String(capaianItem.statusProdi || '').trim() !== 'Valid') {
+                return false;
+            }
+
+            const norm = (v) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
             const tahun = String(capaianItem.tahun || '2025').trim();
-            const rawTarget = String(capaianItem.targetDirektur || '').trim().toLowerCase();
-            const parentTarget = String(capaianItem.parentTarget || '').trim().toLowerCase();
-            const unitName = String(capaianItem.unit || '').trim().toLowerCase();
+            const rawTarget = norm(capaianItem.targetDirektur);
+            const parentTarget = norm(capaianItem.parentTarget);
+            const unitName = norm(capaianItem.unit);
 
             // 2. Cari baris Cascading Tim Kerja (Level 2) yang menugaskan Unit ini
-            // Mencocokkan baik lewat nama indikator induk Direktur maupun nama indikator individu Tim
             const ctList = (DB.cascadingTim || []).filter(ct => {
                 if (!ct) return false;
-                const ctInduk = String(ct.targetDirektur || '').trim().toLowerCase();
-                const ctIndividu = String(ct.indikatorIndividu || ct.targetDirektur || '').trim().toLowerCase();
-                const matchName = (ctInduk === rawTarget) || (ctIndividu === rawTarget) || (parentTarget && ctInduk === parentTarget);
-                const matchUnit = Array.isArray(ct.unitTargets) && ct.unitTargets.some(u => String(u || '').trim().toLowerCase() === unitName);
+                const ctInduk = norm(ct.targetDirektur);
+                const ctIndividu = norm(ct.indikatorIndividu || ct.targetDirektur);
+                const matchName = (ctInduk === rawTarget) || (ctIndividu === rawTarget) || (parentTarget && (ctInduk === parentTarget || ctIndividu === parentTarget));
+                const matchUnit = Array.isArray(ct.unitTargets) && ct.unitTargets.some(u => norm(u) === unitName || norm(u).includes(unitName) || unitName.includes(norm(u)));
                 return matchName && matchUnit;
             });
 
@@ -943,54 +949,78 @@ function findTimKeyForUnit(unitName) {
             const activeCtList = ctYearMatched.length > 0 ? ctYearMatched : ctList;
             if (activeCtList.length === 0) return false;
 
-            // 3. Validasi rantai Utama: Direktur (Utama) -> Tim Kerja (Utama) -> Unit (Utama)
+            // 3. Validasi rantai Utama: Direktur (Utama) -> Tim Kerja (Utama) -> Unit/Prodi/Subbag (Utama)
             const validChainCt = activeCtList.find(ct => {
-                // Pastikan jenis indikator di level Ketua Tim bukan 'Support'
-                if (ct.jenis && String(ct.jenis).trim().toLowerCase() === 'support') return false;
+                if (ct.jenis && norm(ct.jenis) === 'support') return false;
 
-                // Cari indikator induk di Cascading Direktur (Level 1)
-                const ctIndukName = String(ct.targetDirektur || '').trim().toLowerCase();
+                const ctIndukName = norm(ct.targetDirektur);
                 const cd = cdObj || (DB.cascadingDirektur || []).find(x =>
-                    x &&
-                    String(x.target || '').trim().toLowerCase() === ctIndukName &&
-                    String(x.tahun || '2025').trim() === tahun
+                    x && norm(x.target) === ctIndukName && String(x.tahun || '2025').trim() === tahun
                 ) || (DB.cascadingDirektur || []).find(x =>
-                    x && String(x.target || '').trim().toLowerCase() === ctIndukName
+                    x && norm(x.target) === ctIndukName
                 );
 
                 if (!cd) return false;
 
-                // Syarat A: Pada level Direktur, Tim Kerja ini HARUS berstatus 'Utama'
-                if (!isTimUtamaInDir(cd, ct.timKey)) return false;
+                // Syarat A: Di Level 1 (Direktur -> Tim Kerja), Tim Kerja ini HARUS berstatus 'Utama'
+                if (typeof isTimUtamaInDir === 'function') {
+                    if (!isTimUtamaInDir(cd, ct.timKey)) return false;
+                } else if (cd.timRoles && typeof cd.timRoles === 'object') {
+                    const tRole = cd.timRoles[ct.timKey];
+                    if (tRole && norm(tRole) !== 'utama') return false;
+                }
 
-                // Syarat B: Pada level Ketua Tim, Unit/Prodi/Subbag ini HARUS berstatus 'Utama'
+                // Syarat B: Di Level 2 (Ketua Tim -> Unit/Prodi/Subbag), Unit ini HARUS berstatus 'Utama'
                 if (ct.unitRoles && typeof ct.unitRoles === 'object') {
-                    const matchedKey = Object.keys(ct.unitRoles).find(k => String(k).trim().toLowerCase() === unitName);
+                    const matchedKey = Object.keys(ct.unitRoles).find(k => norm(k) === unitName || norm(k).includes(unitName) || unitName.includes(norm(k)));
                     if (matchedKey) {
-                        return String(ct.unitRoles[matchedKey]).trim().toLowerCase() === 'utama';
+                        return norm(ct.unitRoles[matchedKey]) === 'utama';
                     }
                 }
-                return Array.isArray(ct.unitTargets) && String(ct.unitTargets[0] || '').trim().toLowerCase() === unitName;
+                return Array.isArray(ct.unitTargets) && norm(ct.unitTargets[0]) === unitName;
             });
 
             if (!validChainCt) return false;
 
-            // 4. Jika diinput oleh staf sub-unit, pastikan perannya juga Utama di Cascading Unit
+            // 4. Jika diinput oleh pelaksana sub-unit (Sekretaris/Kalab/Koordinator/Dosen/Tendik),
+            // pastikan di Cascading Level 3 (Unit -> Pelaksana) perannya juga 'Utama' (bukan Support)
             if (capaianItem.isSubUnitInput) {
-                const targetIndukLower = String(validChainCt.targetDirektur || rawTarget).trim().toLowerCase();
-                const cu = (DB.cascadingUnit || []).find(x =>
-                    x &&
-                    String(x.unit || '').trim().toLowerCase() === unitName &&
-                    String(x.targetDirektur || '').trim().toLowerCase() === targetIndukLower &&
-                    String(x.tahun || '2025').trim() === tahun
-                );
-                if (!cu) return false;
-                return isSubRoleUtamaInUnit(cu, capaianItem.inputByUsername);
+                const ctIndukLower = norm(validChainCt.targetDirektur);
+                const ctIndividuLower = norm(validChainCt.indikatorIndividu || validChainCt.targetDirektur);
+                const cuList = (DB.cascadingUnit || []).filter(x => {
+                    if (!x) return false;
+                    const matchU = norm(x.unit) === unitName || norm(x.unit).includes(unitName) || unitName.includes(norm(x.unit));
+                    const cuRef = norm(x.targetDirektur);
+                    const cuInd = norm(x.indikatorIndividu || x.targetDirektur);
+                    const matchInd = (cuRef === ctIndukLower) || (cuRef === ctIndividuLower) || (cuRef === rawTarget) || (cuInd === rawTarget) || (parentTarget && cuRef === parentTarget);
+                    return matchU && matchInd;
+                });
+
+                const cuYearMatched = cuList.filter(x => String(x.tahun || '2025').trim() === tahun);
+                const activeCu = (cuYearMatched.length > 0 ? cuYearMatched : cuList)[0];
+                if (!activeCu) return false;
+
+                if (activeCu.jenis && norm(activeCu.jenis) === 'support') return false;
+
+                const subUser = norm(capaianItem.inputByUsername);
+                const subRole = norm(capaianItem.inputByRole);
+                if (activeCu.subRoles && typeof activeCu.subRoles === 'object') {
+                    const sKey = Object.keys(activeCu.subRoles).find(k => {
+                        const nk = norm(k);
+                        return nk === subUser || nk.startsWith(subUser + '@') || subUser.startsWith(nk + '@') || (subRole && nk.startsWith(subRole + '_'));
+                    });
+                    if (sKey) {
+                        return norm(activeCu.subRoles[sKey]) === 'utama';
+                    }
+                }
+                if (typeof isSubRoleUtamaInUnit === 'function') {
+                    return isSubRoleUtamaInUnit(activeCu, capaianItem.inputByUsername);
+                }
+                return false;
             }
 
             return true;
         }
-
         // Helper Menghitung Realisasi Gabungan (Akumulatif / Rata-rata) pada Suatu Indikator & Triwulan
         async function submitValidation() {
             if (!requireWriteAccess(['tim_kerja', 'admin'])) return;
@@ -5146,8 +5176,7 @@ let dashboardChartInstances = {};
                 if (!matchThn) return false;
                 if (isTopLeader) return true;
                 if (isKetuaTim) return s.timKey === userTimKey;
-                if (isKaUnit) return s.unit === currentUser.unit;
-                return s.username === currentUser.username || s.roleKey === currentUser.role;
+                if (isKaUnit) return s.unit === currentUser.unit || s.requesterUsername === currentUser.username || canUserFinalAssessSKP(s); || s.roleKey === currentUser.role;
             });
 
             const canMigrate = (isAdmin || isDirektur || isKetuaTim || isKaUnit) && !isPureViewer();
@@ -7903,27 +7932,81 @@ async function saveCascadingUnit(e) {
                                 }));
                         }
 
-                        // Petakan laporan capaian per TW 1 - TW 4 untuk tiap tanggung jawab
+                        // Petakan laporan capaian per TW 1 - TW 4 untuk tiap tanggung jawab (mendukung akumulasi bottom-up jika dicascading)
                         const capTahunData = (DB.capaian || []).filter(c => String(c.tahun || '2025') === capTahun);
                         const twList = ['TW 1', 'TW 2', 'TW 3', 'TW 4'];
+                        const normTxt = (v) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
                         const monitoredRows = myResponsibilities.map(item => {
-                            const matchedCaps = capTahunData.filter(c => {
-                                if (isSubUnit) {
-                                    return (String(c.subUnitRefId || '') === String(item.refId) ||
-                                        String(c.indikatorIndividuStaf || c.targetDirektur || '').trim().toLowerCase() === String(item.indikator || '').trim().toLowerCase()) &&
-                                        String(c.inputByUsername || '').toLowerCase() === String(currentUser.username || '').toLowerCase();
-                                } else if (isKaUnit) {
-                                    return matchU(c.unit, item.unit) &&
-                                        (String(c.targetDirektur || '').trim().toLowerCase() === String(item.targetDirektur || '').trim().toLowerCase() ||
-                                         String(c.indikatorIndividuStaf || '').trim().toLowerCase() === String(item.indikator || '').trim().toLowerCase());
-                                } else if (isKetuaTim) {
-                                    return c.timKey === currentUser.timKey &&
-                                        String(c.targetDirektur || '').trim().toLowerCase() === String(item.targetDirektur || '').trim().toLowerCase();
-                                }
-                                return String(c.targetDirektur || '').trim().toLowerCase() === String(item.targetDirektur || '').trim().toLowerCase();
-                            });
+                            const itemIndNorm = normTxt(item.indikator);
+                            const itemDirNorm = normTxt(item.targetDirektur);
 
+                            // Cek apakah indikator ini diturunkan/dicascading lebih lanjut ke bawahan
+                            let downstreamSubList = [];
+                            let downstreamUnitList = [];
+                            if (isKaUnit) {
+                                downstreamSubList = (DB.cascadingSubUnit || []).filter(su =>
+                                    String(su.tahun || '2025') === capTahun &&
+                                    matchU(su.unit, item.unit) &&
+                                    (normTxt(su.indikatorUnitRef) === itemIndNorm || normTxt(su.targetDirektur) === itemDirNorm || normTxt(su.targetDirektur) === itemIndNorm)
+                                );
+                            } else if (isKetuaTim) {
+                                downstreamUnitList = (DB.cascadingUnit || []).filter(cu =>
+                                    String(cu.tahun || '2025') === capTahun &&
+                                    (normTxt(cu.targetDirektur) === itemDirNorm || normTxt(cu.targetDirektur) === itemIndNorm || normTxt(cu.indikatorIndividu) === itemIndNorm)
+                                );
+                                downstreamSubList = (DB.cascadingSubUnit || []).filter(su =>
+                                    String(su.tahun || '2025') === capTahun &&
+                                    (normTxt(su.targetDirektur) === itemDirNorm || normTxt(su.targetDirektur) === itemIndNorm || normTxt(su.indikatorUnitRef) === itemIndNorm)
+                                );
+                            }
+
+                            const isCascadedDown = (downstreamSubList.length > 0 || downstreamUnitList.length > 0);
+                            const downstreamNames = new Set([
+                                itemIndNorm,
+                                itemDirNorm,
+                                ...downstreamUnitList.map(cu => normTxt(cu.indikatorIndividu)),
+                                ...downstreamUnitList.map(cu => normTxt(cu.targetDirektur)),
+                                ...downstreamSubList.map(su => normTxt(su.indikatorIndividu)),
+                                ...downstreamSubList.map(su => normTxt(su.indikatorUnitRef)),
+                                ...downstreamSubList.map(su => normTxt(su.targetDirektur))
+                            ].filter(Boolean));
+                            const downstreamRefIds = new Set([
+                                String(item.refId),
+                                ...downstreamUnitList.map(cu => String(cu.id)),
+                                ...downstreamSubList.map(su => String(su.id))
+                            ]);
+
+                            const matchedCaps = capTahunData.filter(c => {
+                                const cTarget = normTxt(c.targetDirektur);
+                                const cParent = normTxt(c.parentTarget);
+                                const cStafInd = normTxt(c.indikatorIndividuStaf);
+                                const cSubRef = String(c.subUnitRefId || '');
+
+                                if (isSubUnit) {
+                                    return (cSubRef === String(item.refId) || cStafInd === itemIndNorm || cTarget === itemIndNorm) &&
+                                        normTxt(c.inputByUsername) === normTxt(currentUser.username);
+                                } else if (isKaUnit) {
+                                    if (!matchU(c.unit, item.unit)) return false;
+                                    if (isCascadedDown) {
+                                        // Akumulasi dari bawahan yang dicascading (atau input unit jika ada)
+                                        return downstreamRefIds.has(cSubRef) || downstreamNames.has(cTarget) || downstreamNames.has(cParent) || downstreamNames.has(cStafInd);
+                                    } else {
+                                        // Tidak dicascading -> cek input langsung Ketua Unit sendiri
+                                        return !c.isSubUnitInput && (cTarget === itemIndNorm || cTarget === itemDirNorm || cStafInd === itemIndNorm);
+                                    }
+                                } else if (isKetuaTim) {
+                                    if (c.timKey && c.timKey !== currentUser.timKey) return false;
+                                    if (isCascadedDown) {
+                                        // Akumulasi dari unit/staf di bawah tim yang dicascading
+                                        return downstreamRefIds.has(cSubRef) || downstreamNames.has(cTarget) || downstreamNames.has(cParent) || downstreamNames.has(cStafInd);
+                                    } else {
+                                        // Tidak dicascading -> cek input langsung Ketua Tim sendiri
+                                        return normTxt(c.inputByUsername) === normTxt(currentUser.username) && (cTarget === itemIndNorm || cTarget === itemDirNorm);
+                                    }
+                                }
+                                return downstreamNames.has(cTarget) || downstreamNames.has(cParent);
+                            });
                             const twMap = {};
                             twList.forEach(tw => {
                                 const foundTw = matchedCaps.filter(c => String(c.triwulan || '').trim().toUpperCase() === tw);
@@ -9082,6 +9165,12 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
 
         function renderRisikoView(container) {
             document.getElementById('pageTitle').innerText = 'Peta Risiko & Program Kerja (Sheet Realtime)';
+            // Bersihkan sisa tombol injeksi dari halaman Capaian Kinerja jika terbawa
+            setTimeout(() => {
+                document.querySelectorAll('button').forEach(btn => {
+                    if (btn.textContent && btn.textContent.includes('Input Capaian Individu')) btn.remove();
+                });
+            }, 30);
             const isKaUnit = currentUser.role === 'ketua_unit';
             const isKetuaTim = currentUser.role === 'tim_kerja';
 
@@ -10752,10 +10841,12 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             });
 
             const listSKP = DB.approvalSKP.filter(r => {
-                const matchRole = (isAdmin || isDirektur) ? true
+                const isDesignatedPejabat = typeof canUserFinalAssessSKP === 'function' && canUserFinalAssessSKP(r);
+                const matchRole = (isAdmin || isDirektur || isDesignatedPejabat) ? true
                     : (isKetuaTim ? (r.timKey === currentUser.timKey || r.requesterUsername === currentUser.username)
                     : (isKaUnit ? (r.unit === currentUser.unit || r.requesterUsername === currentUser.username)
-                    : (r.requesterUsername === currentUser.username)));                const matchThn = filterLapSkpTahun === 'Semua' || String(r.tahun || '2025') === String(filterLapSkpTahun);
+                    : (r.requesterUsername === currentUser.username)));
+                const matchThn = filterLapSkpTahun === 'Semua' || String(r.tahun || '2025') === String(filterLapSkpTahun);
                 const matchTw = filterLapSkpTw === 'Semua' || String(r.triwulan || '').trim().toUpperCase() === String(filterLapSkpTw).trim().toUpperCase();
                 return matchRole && matchThn && matchTw;
             });
@@ -10907,13 +10998,18 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                             const badgeCls = skp.status === 'Disetujui' ? 'bg-emerald-100 text-emerald-800' : skp.status === 'Ditolak' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
                                             const canAssessUnit = (isKaUnit || isAdmin) && skp.isSubUnitRequest && skp.status === 'Menunggu Ketua Unit' && (isAdmin || skp.unit === currentUser.unit);
                                             const canAssessTim = (isKetuaTim || isAdmin) && !skp.isKetuaTimRequest && skp.status === 'Menunggu Ketua Tim Kerja';
-                                            const canAssessDir = (isDirektur || isAdmin) && (skp.status === 'Menunggu Direktur' || skp.status === 'Disetujui');
+                                           const canAssessDir = (isDirektur || isAdmin) && (skp.status === 'Menunggu Direktur' || skp.status === 'Disetujui');
 
+                                            const isDesignatedPenilai = (typeof canUserFinalAssessSKP === 'function' ? canUserFinalAssessSKP(skp) : canAssessDir) && (skp.status === 'Menunggu Direktur' || skp.status === 'Disetujui');
+                                            const labelKeputusanFinal = (skp.pejabatPenilaiJabatan && skp.pejabatPenilaiJabatan !== 'Direktur')
+                                                ? 'Keputusan Pejabat Penilai'
+                                                : 'Keputusan Direktur';
                                             return `
                                                 <tr class="hover:bg-slate-50">
                                                     <td class="p-3">
                                                         <p class="font-bold text-slate-900">${sanitizeHTML(skp.requesterName)} <span class="text-[10px] text-slate-500">(${sanitizeHTML(skp.unit || '-')})</span></p>
                                                         <p class="text-[11px] text-primary-700 font-semibold mt-0.5">${sanitizeHTML(skp.indikator)}</p>
+                                                        ${skp.pejabatPenilaiJabatan && skp.pejabatPenilaiJabatan !== 'Direktur' ? `<p class="text-[10px] text-indigo-600 font-semibold mt-0.5"><i class="fa-solid fa-user-tie mr-1"></i>Pejabat Penilai: ${sanitizeHTML(skp.dirName)} (${sanitizeHTML(skp.pejabatPenilaiJabatan)})</p>` : ''}
                                                     </td>
                                                     <td class="p-3 text-center font-semibold">${sanitizeHTML(skp.triwulan)}<br><span class="text-[10px] text-slate-500">${sanitizeHTML(skp.tahun)}</span></td>
                                                     <td class="p-3 text-center space-y-1">
@@ -10932,12 +11028,11 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                                                 <i class="fa-solid fa-star-half-stroke mr-1"></i>Nilai & Validasi Tim
                                                             </button>
                                                         ` : ''}
-                                                        ${canAssessDir ? `
+                                                        ${isDesignatedPenilai ? `
                                                             <button onclick="openAssessSKPDirModal('${skp.id}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-[10px] block w-full">
-                                                                <i class="fa-solid fa-gavel mr-1"></i>Keputusan Direktur
+                                                                <i class="fa-solid fa-gavel mr-1"></i>${labelKeputusanFinal}
                                                             </button>
-                                                        ` : ''}
-                                                          ${skp.status === 'Disetujui' ? `
+                                                        ` : ''}                                                          ${skp.status === 'Disetujui' ? `
                                                             <button onclick="previewAndPrintSKP('${skp.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-xs block w-full">
                                                                 <i class="fa-solid fa-qrcode mr-1"></i>Cetak SKP (QR Hash)
                                                             </button>
@@ -11065,19 +11160,39 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                                 <input type="text" id="reqSkpTanggalKota" value="Serang, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}" required class="w-full p-2.5 bg-slate-50 border rounded-xl">
                             </div>
 
-                            <!-- REVISI 9: Pengaturan Nama & NIP Pejabat Penandatangan Otomatis dari Admin/Profil -->
-                            <div class="space-y-2.5 bg-slate-50 p-3.5 rounded-xl border">
-                                <p class="font-bold text-slate-700 text-[11px] uppercase">Pejabat Penandatangan (Otomatis Sesuai Database Admin & Profil)</p>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label class="block text-[10px] font-semibold">Nama Direktur (Fix dari Admin)</label>
-                                        <input type="text" id="skpDirName" value="${sanitizeHTML(dirInfo.name)}" readonly required class="w-full p-2 bg-slate-100 border rounded-lg font-semibold text-slate-700 cursor-not-allowed">
+                            <!-- REVISI 9: Pengaturan Nama & NIP Pejabat Penilai Otomatis dari Admin/Profil -->
+                            ${(() => {
+                                const uRoles = typeof getUserRoles === 'function' ? getUserRoles(currentUser) : [currentUser.role];
+                                const canChoosePenilai = uRoles.includes('tendik') || uRoles.includes('koordinator');
+                                const findPejabatByUnit = (kw) => (DB.users || []).find(u => getUserRoles(u).includes('ketua_unit') && String(u.unit || '').toLowerCase().includes(kw));
+                                const kasubbagAkademik = findPejabatByUnit('akademik') || { name: 'Kepala Subbag Administrasi Akademik Kemahasiswaan dan Kerjasama', nip: '-' };
+                                const kasubbagUmum = findPejabatByUnit('umum') || { name: 'Kepala Subbag Umum dan Keuangan', nip: '-' };
+                                const penilaiOptions = [
+                                    { jabatan: 'Direktur', name: dirInfo.name, nip: dirInfo.nip || '-' },
+                                    { jabatan: 'Kepala Subbag Administrasi Akademik Kemahasiswaan dan Kerjasama', name: kasubbagAkademik.name, nip: kasubbagAkademik.nip || '-' },
+                                    { jabatan: 'Kepala Subbag Umum dan Keuangan', name: kasubbagUmum.name, nip: kasubbagUmum.nip || '-' }
+                                ];
+                                return `
+                                <div class="space-y-2.5 bg-slate-50 p-3.5 rounded-xl border">
+                                    <p class="font-bold text-slate-700 text-[11px] uppercase">Pejabat Penandatangan (Otomatis Sesuai Database Admin & Profil)</p>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[10px] font-semibold">Nama Pejabat Penilai ${canChoosePenilai ? '(Pilih Pejabat Penilai)' : '(Fix dari Admin)'}</label>
+                                            ${canChoosePenilai ? `
+                                                <select id="skpDirName" onchange="syncSelectedPejabatPenilaiSKP()" required class="w-full p-2 bg-white border border-blue-300 rounded-lg font-semibold text-slate-800">
+                                                    ${penilaiOptions.map(opt => `<option value="${sanitizeHTML(opt.name)}" data-nip="${sanitizeHTML(opt.nip)}" data-jabatan="${sanitizeHTML(opt.jabatan)}">${sanitizeHTML(opt.name)} (${sanitizeHTML(opt.jabatan)})</option>`).join('')}
+                                                </select>
+                                            ` : `
+                                                <input type="text" id="skpDirName" value="${sanitizeHTML(dirInfo.name)}" readonly required class="w-full p-2 bg-slate-100 border rounded-lg font-semibold text-slate-700 cursor-not-allowed">
+                                            `}
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-semibold">NIP Pejabat Penilai ${canChoosePenilai ? '(Otomatis)' : '(Fix dari Admin)'}</label>
+                                            <input type="text" id="skpDirNip" value="${sanitizeHTML(dirInfo.nip || '-')}" readonly required class="w-full p-2 bg-slate-100 border rounded-lg font-mono text-slate-700 cursor-not-allowed">
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="block text-[10px] font-semibold">NIP Direktur (Fix dari Admin)</label>
-                                        <input type="text" id="skpDirNip" value="${sanitizeHTML(dirInfo.nip)}" readonly required class="w-full p-2 bg-slate-100 border rounded-lg font-mono text-slate-700 cursor-not-allowed">
-                                    </div>
-                                </div>
+                                `;
+                            })()}
                                 ${!isKetuaTim ? `
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
@@ -11236,6 +11351,16 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 renderLaporanView(document.getElementById('mainContent'));
             }
         }
+
+        window.syncSelectedPejabatPenilaiSKP = function() {
+            const sel = document.getElementById('skpDirName');
+            const nipEl = document.getElementById('skpDirNip');
+            if (!sel || !nipEl || sel.tagName !== 'SELECT') return;
+            const opt = sel.options[sel.selectedIndex];
+            if (opt) {
+                nipEl.value = opt.getAttribute('data-nip') || '-';
+            }
+        };
 
         function openRequestLaporanKinerjaModal() {
             const modal = document.getElementById('reqLapKinerjaModal');
@@ -11533,6 +11658,18 @@ function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title
             else if (isSubUnit) initialStatus = 'Menunggu Ketua Unit';
 
             const kaUnitUser = (DB.users || []).find(u => u.role === 'ketua_unit' && u.unit === currentUser.unit);
+            const dirSelEl = document.getElementById('skpDirName');
+            const pejabatPenilaiName = dirSelEl ? dirSelEl.value.trim() : '';
+            const pejabatPenilaiNip = document.getElementById('skpDirNip') ? document.getElementById('skpDirNip').value.trim() : '-';
+            let pejabatPenilaiJabatan = 'Direktur';
+            if (dirSelEl && dirSelEl.tagName === 'SELECT' && dirSelEl.options[dirSelEl.selectedIndex]) {
+                pejabatPenilaiJabatan = dirSelEl.options[dirSelEl.selectedIndex].getAttribute('data-jabatan') || 'Direktur';
+            }
+            const pejabatPenilaiUser = (DB.users || []).find(u =>
+                String(u.name || '').trim().toLowerCase() === pejabatPenilaiName.toLowerCase() ||
+                (pejabatPenilaiNip && pejabatPenilaiNip !== '-' && String(u.nip || '').trim() === pejabatPenilaiNip)
+            );
+            const pejabatPenilaiUsername = pejabatPenilaiUser ? pejabatPenilaiUser.username : '';
 
             const newSkp = {
                 id: 'skp_' + Date.now(),
@@ -11561,8 +11698,10 @@ function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title
                 kaUnitName: kaUnitUser ? kaUnitUser.name : '',
                 kaUnitNip: kaUnitUser ? (kaUnitUser.nip || '-') : '-',
                 tanggalKota: document.getElementById('reqSkpTanggalKota').value.trim(),
-                dirName: document.getElementById('skpDirName').value.trim(),
-                dirNip: document.getElementById('skpDirNip').value.trim(),
+                dirName: pejabatPenilaiName,
+                dirNip: pejabatPenilaiNip,
+                pejabatPenilaiJabatan: pejabatPenilaiJabatan,
+                pejabatPenilaiUsername: pejabatPenilaiUsername,
                 timName: document.getElementById('skpTimName') ? document.getElementById('skpTimName').value.trim() : currentUser.name,
                 timNip: document.getElementById('skpTimNip') ? document.getElementById('skpTimNip').value.trim() : (currentUser.nip || '-'),
                 userName: document.getElementById('skpUserName').value.trim(),
@@ -11587,6 +11726,9 @@ function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title
                 pushSkpWorkflowNotification('ketua_unit', currentUser.unit, currentUser.timKey, 'Validasi SKP Bawahan', `${currentUser.name} mengajukan SKP (${tw} ${yr}) menunggu validasi Ketua Unit/Prodi.`);
             } else if (!isKetuaTim) {
                 pushSkpWorkflowNotification('tim_kerja', '', currentUser.timKey, 'Validasi SKP Unit', `${currentUser.name} (${currentUser.unit}) mengajukan SKP (${tw} ${yr}) menunggu penilaian Ketua Tim Kerja.`);
+            } else if (pejabatPenilaiJabatan !== 'Direktur') {
+                const targetUnitPenilai = pejabatPenilaiUser ? pejabatPenilaiUser.unit : pejabatPenilaiJabatan;
+                pushSkpWorkflowNotification('ketua_unit', targetUnitPenilai, '', 'Persetujuan Final SKP (Pejabat Penilai)', `${currentUser.name} mengajukan SKP (${tw} ${yr}) menunggu keputusan ${pejabatPenilaiJabatan}.`);
             } else {
                 pushSkpWorkflowNotification('direktur', '', '', 'Persetujuan Final SKP', `Ketua Tim ${currentUser.timKey} mengajukan SKP (${tw} ${yr}) menunggu keputusan Direktur.`);
             }
@@ -11787,8 +11929,14 @@ function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title
             skp.nilaiTimKinerja = document.getElementById('assessSkpTimRating').value;
             skp.saranKetuaTim = document.getElementById('assessSkpTimNote').value.trim() || 'Dilanjutkan dan ditingkatkan pada periode berikutnya';
             skp.status = 'Menunggu Direktur';
-
-            pushSkpWorkflowNotification('direktur', '', skp.timKey, 'Persetujuan Final SKP', `SKP milik ${skp.requesterName} (${skp.unit || '-'}) telah divalidasi Ketua Tim Kerja dan menunggu keputusan Direktur.`);
+                const jabatanFinal = skp.pejabatPenilaiJabatan || 'Direktur';
+                if (jabatanFinal !== 'Direktur') {
+                    const penilaiObj = (DB.users || []).find(u => u.username === skp.pejabatPenilaiUsername || String(u.name || '').trim().toLowerCase() === String(skp.dirName || '').trim().toLowerCase());
+                    const unitPenilai = penilaiObj ? penilaiObj.unit : jabatanFinal;
+                    pushSkpWorkflowNotification('ketua_unit', unitPenilai, '', `Persetujuan Final SKP (${jabatanFinal})`, `SKP ${skp.requesterName} (${skp.unit}) telah dinilai Ketua Tim Kerja dan menunggu persetujuan final ${jabatanFinal}.`);
+                } else {
+                    pushSkpWorkflowNotification('direktur', '', '', 'Persetujuan Final SKP', `SKP ${skp.requesterName} (${skp.unit}) telah dinilai Ketua Tim Kerja dan menunggu persetujuan final Direktur.`);
+                }
         }
         window._tempSigData = window._tempSigData || {};
         window._tempSigData['ketuaTim'] = null;
@@ -11799,6 +11947,31 @@ function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title
         showToast(`Status SKP diperbarui menjadi: ${skp.status}`);
         renderLaporanView(document.getElementById('mainContent'));
     }
+
+        window.canUserFinalAssessSKP = function(skp) {
+            if (!skp || !currentUser) return false;
+            const roles = typeof getUserRoles === 'function' ? getUserRoles(currentUser) : [currentUser.role];
+            if (roles.includes('admin')) return true;
+
+            const jabatan = String(skp.pejabatPenilaiJabatan || 'Direktur').trim();
+            // Jika pejabat penilai adalah Direktur
+            if (jabatan === 'Direktur') {
+                return roles.includes('direktur');
+            }
+            // Jika pejabat penilai adalah Kepala Subbag Akademik / Umum
+            if (skp.pejabatPenilaiUsername && String(currentUser.username || '').toLowerCase() === String(skp.pejabatPenilaiUsername).toLowerCase()) {
+                return true;
+            }
+            if (skp.dirName && String(currentUser.name || '').trim().toLowerCase() === String(skp.dirName || '').trim().toLowerCase()) {
+                return true;
+            }
+            const uUnit = String(currentUser.unit || '').toLowerCase();
+            if (roles.includes('ketua_unit')) {
+                if (jabatan.toLowerCase().includes('akademik') && uUnit.includes('akademik')) return true;
+                if (jabatan.toLowerCase().includes('umum') && uUnit.includes('umum')) return true;
+            }
+            return false;
+        };
 
         function openAssessSKPDirModal(skpId) {
             const skp = (DB.approvalSKP || []).find(x => x.id === skpId);
@@ -11882,6 +12055,13 @@ function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title
             }
 
             const modal = document.getElementById('assessSkpDirModal');
+            if (modal) {
+                const titleEl = modal.querySelector('h3');
+                if (titleEl) {
+                    const jabModal = skp.pejabatPenilaiJabatan || 'Direktur';
+                    titleEl.innerText = `Keputusan Final Penilaian SKP (${jabModal})`;
+                }
+            }
             injectSignatureModeUI('assessSkpDirModal', 'direktur');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -11920,12 +12100,14 @@ function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title
     skp.hashKetuaTim = generateSimpleDocHash(`TIM|${skp.id}|${skp.timName}|${skp.timNip}|${skp.nilaiTimKinerja}|${timestamp}`);
     skp.hashPenyusun = generateSimpleDocHash(`USR|${skp.id}|${skp.userName}|${skp.userNip}|${skp.indikator}|${timestamp}`);
 
-    pushSkpWorkflowNotification('', skp.unit, skp.timKey, 'SKP Disetujui Final', `Laporan SKP indikator "${skp.indikator}" milik ${skp.requesterName} telah disetujui final oleh Direktur dan siap dicetak.`);
+    const jabatanPenilaiFinal = skp.pejabatPenilaiJabatan || 'Direktur';
+    pushSkpWorkflowNotification('', skp.unit, skp.timKey, 'SKP Disetujui Final', `Laporan SKP indikator "${skp.indikator}" milik ${skp.requesterName} telah disetujui final oleh ${jabatanPenilaiFinal} (${currentUser.name}) dan siap dicetak.`);
 }
 window._tempSigData = window._tempSigData || {};
 window._tempSigData['direktur'] = null;
 
-            recordAuditLog('Persetujuan Final SKP (Direktur)', 'Laporan SKP', `Direktur menyetujui final SKP ${skp.requesterName} (Capaian Kinerja: ${skp.nilaiFinalKinerja})`);
+            const jabatanLogFinal = skp.pejabatPenilaiJabatan || 'Direktur';
+            recordAuditLog(`Persetujuan Final SKP (${jabatanLogFinal})`, 'Laporan SKP', `${jabatanLogFinal} (${currentUser.name}) menyetujui final SKP ${skp.requesterName} (Capaian Kinerja: ${skp.nilaiFinalKinerja})`);
             await saveToMySQL();
             document.getElementById('assessSkpDirModal').classList.add('hidden');
             showToast(`SKP ${skp.status}! QR Code Hash Digital telah diterbitkan.`);
@@ -12179,7 +12361,7 @@ function promptDrawSignature(roleKey) {
                                 <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.permasalahan)}</td></tr>
 
                                 <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">VII.</td><td class="py-1 uppercase">SARAN DAN TINDAK LANJUT</td></tr>
-                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.saranKetuaTim)}${skp.catatanDirektur ? `<br><strong>Arahan Direktur:</strong> ${sanitizeHTML(skp.catatanDirektur)}` : ''}</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.saranKetuaTim)}${skp.catatanDirektur ? `<br><strong>Arahan ${sanitizeHTML(skp.pejabatPenilaiJabatan || 'Pejabat Penilai')}:</strong> ${sanitizeHTML(skp.catatanDirektur)}` : ''}</td></tr>
                             </tbody>
                         </table>
 
@@ -12206,10 +12388,10 @@ function promptDrawSignature(roleKey) {
                                     <p>NIP. ${sanitizeHTML(skp.timNip)}</p>
                                 </div>
                                 ` : ''}
-                                <!-- KANAN: Pejabat Penilai / Direktur -->
+                                <!-- KANAN: Pejabat Penilai -->
                                 <div class="flex flex-col items-center">
                                     <p class="font-semibold">Menyetujui,</p>
-                                    <p class="font-bold mb-1">Direktur</p>
+                                    <p class="font-bold mb-1">${sanitizeHTML(skp.pejabatPenilaiJabatan || 'Direktur')}</p>
                                     <div id="qrSignDirektur" class="p-1 bg-white rounded-lg my-1"></div>
                                     <span class="text-[8px] font-mono text-slate-500 mb-0.5">${sanitizeHTML(skp.hashDirektur)}</span>
                                     <p class="font-bold underline">${sanitizeHTML(skp.dirName)}</p>
@@ -12217,7 +12399,6 @@ function promptDrawSignature(roleKey) {
                                 </div>
                             </div>
                         </div>
-
                         <div class="text-right text-[11px] font-bold text-slate-500 pt-2">
                             ${useTwoPages ? 'Halaman 2 dari 2' : 'Halaman 1 dari 1'}
                         </div>
@@ -12247,8 +12428,8 @@ function promptDrawSignature(roleKey) {
                 'qrSignDirektur',
                 skp.sigModeDirektur || 'qr',
                 skp.signatureDirektur,
-                `VALIDASI DIREKTUR: ${skp.dirName || '-'} | NIP: ${skp.dirNip || '-'} | Periode: ${skp.triwulan} ${skp.tahun} | Hasil: ${skp.nilaiFinalKinerja || 'Sesuai Ekspektasi'} | Hash: ${skp.hashDirektur || '-'}`,
-                'Tanda tangan Direktur'
+                `VALIDASI ${(skp.pejabatPenilaiJabatan || 'DIREKTUR').toUpperCase()}: ${skp.dirName || '-'} | NIP: ${skp.dirNip || '-'} | Periode: ${skp.triwulan} ${skp.tahun} | Hasil: ${skp.nilaiFinalKinerja || 'Sesuai Ekspektasi'} | Hash: ${skp.hashDirektur || '-'}`,
+                `Tanda tangan ${skp.pejabatPenilaiJabatan || 'Pejabat Penilai'}`
             );
         
             renderSig(
