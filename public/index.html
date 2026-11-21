@@ -12624,7 +12624,7 @@ function downloadLogRisikoError() {
             }
         } else {
             modal.querySelector('#ciEditId').value = '';
-            modal.querySelector('#ciRealisasi').value = 0;
+            modal.querySelector('#ciRealisasi').value = '';
         }
 
         modal.classList.remove('hidden');
@@ -12632,8 +12632,7 @@ function downloadLogRisikoError() {
     };
 
     // 4. Fungsi Simpan
-    async function saveCapaianIndividu(e) {
-        e.preventDefault();
+    async function saveCapaianIndividu(e) {        e.preventDefault();
         if (!currentUser || currentUser.role !== 'tim_kerja') return;
 
         const editId = document.getElementById('ciEditId').value;
