@@ -7931,10 +7931,6 @@ async function saveCascadingUnit(e) {
             if (targetEl) targetEl.value = opt.getAttribute('data-targetval') || 100;
             if (satuanEl) satuanEl.value = opt.getAttribute('data-satuan') || '%';
         }
-        const badgeEl = document.getElementById('badgeKategoriModal');
-
-        if (targetEl) targetEl.value = opt.getAttribute('data-targetval') || 100;
-        if (satuanEl) satuanEl.value = opt.getAttribute('data-satuan') || '%';
         if (badgeEl) {
             const isUtama = opt.getAttribute('data-jenis') === 'Utama';
             badgeEl.innerText = isUtama ? 'UTAMA' : 'SUPPORT';
@@ -7943,7 +7939,6 @@ async function saveCascadingUnit(e) {
                 : 'px-3 py-0.5 bg-slate-600 text-white font-bold rounded-full text-[10px]';
         }
     }
-
         async function confirmDeleteCapaian(id) {
             if (isPureViewer()) return;
             const found = DB.capaian.find(c => String(c.id) === String(id));
