@@ -56,7 +56,7 @@
         return `Keputusan Menteri Perindustrian Nomor ${withoutNomorPrefix}`;
     }
 
-    function setSidebarMenuActive(isActive) {
+function setSidebarMenuActive(isActive) {
         const btn = document.getElementById(MENU_ID);
         if (!btn) return;
         if (isActive) {
@@ -64,7 +64,7 @@
             btn.classList.remove('text-blue-100', 'text-white', 'hover:bg-blue-700/50', 'hover:bg-white/10');
         } else {
             btn.classList.remove('bg-white', 'text-blue-700', 'text-indigo-700', 'font-bold', 'shadow');
-            btn.classList.add('text-blue-100', 'hover:bg-white/10');
+            btn.classList.add('text-white', 'hover:bg-white/10');
         }
     }
 
@@ -1083,9 +1083,10 @@
         const mainContainer = document.getElementById('mainContent') || document.querySelector('main > div:last-child') || document.querySelector('main');
         if (!mainContainer || !currentUser) return;
 
-        document.querySelectorAll('aside button, nav button, aside a, nav a').forEach(b => {
-            if (b.id !== MENU_ID) {
-                b.classList.remove('bg-white', 'text-blue-700', 'font-bold', 'shadow');
+document.querySelectorAll('aside button, nav button, aside a, nav a').forEach(b => {
+            if (b.id !== MENU_ID && !b.querySelector('.fa-bars')) {
+                b.classList.remove('bg-white', 'text-blue-700', 'text-indigo-700', 'font-bold', 'shadow');
+                b.classList.add('text-white');
             }
         });
         setSidebarMenuActive(true);
