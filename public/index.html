@@ -5871,111 +5871,117 @@ let dashboardChartInstances = {};
                     </div>
                 </div>
 
-                <!-- Modal Cascading Ketua Tim Kerja (Level 2) -->
-                <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-4 border border-slate-100">
-                        <div class="flex justify-between items-center border-b pb-4">
+<!-- Modal Cascading Ketua Tim Kerja (Level 2 - Responsif Melebar 2 Kolom) -->
+                <div id="cascadingTimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col border border-slate-100 my-auto">
+                        <div class="flex justify-between items-center border-b px-5 py-3.5 shrink-0">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base">Cascading Indikator oleh Ketua Tim Kerja (<span id="modalTimHeaderLabel">${currentUser.timKey || 'Semua Tim'}</span>)</h3>
+                                <h3 class="font-bold text-slate-900 text-sm sm:text-base">Cascading Indikator oleh Ketua Tim Kerja (<span id="modalTimHeaderLabel">${currentUser.timKey || 'Semua Tim'}</span>)</h3>
                                 <p class="text-[11px] text-slate-500">Menampilkan khusus Subbag / Prodi / Unit di bawah koordinasi Tim Kerja Anda</p>
                             </div>
-                            <button type="button" onclick="closeCascadingTimModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            <button type="button" onclick="closeCascadingTimModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
-                    <form onsubmit="saveCascadingTim(event)" class="space-y-4 text-sm">
-    <!-- TAMBAHKAN KEMBALI DROPDOWN TAHUN INI -->
-    <div>
-        <label class="block font-semibold text-slate-700 mb-1 text-xs">Pilih Tahun</label>
-        <select id="timTahunTarget" class="w-full p-2.5 bg-slate-50 border rounded-xl font-semibold text-xs" onchange="updateTimDirRefOptions(this.value)">
-            <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
-        </select>
-    </div>
-    
-   <div class="space-y-3">
-        <div>
-            <label class="block font-semibold text-slate-700 mb-1 text-xs">1. Pilih Indikator dari Direktur (Induk) <span class="text-rose-500">*</span></label>
-            <select id="timDirRef" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" onchange="handleDirRefChange()"></select>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-                <label class="block font-semibold text-slate-700 mb-1 text-xs">2. Rencana Hasil Kinerja (RHK) <span class="text-rose-500">*</span></label>
-                <input type="text" id="timRencanaHasilKinerja" required class="w-full p-2.5 bg-white border border-indigo-400 rounded-xl text-xs font-semibold text-indigo-900" placeholder="Ketik Rencana Hasil Kinerja...">
-            </div>
-            <div>
-                <label class="block font-semibold text-slate-700 mb-1 text-xs">3. Nama Indikator Kinerja Individu <span class="text-rose-500">*</span></label>
-                <input type="text" id="timIndikatorIndividu" required class="w-full p-2.5 bg-white border border-blue-400 rounded-xl text-xs font-bold text-blue-800" placeholder="Ketik nama indikator individu...">
-            </div>
-        </div>
-    </div>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-blue-50/60 p-3 rounded-xl border border-blue-200">
-        <div>
-            <label class="block font-bold text-slate-700 mb-1 text-xs">Aspek <span class="text-rose-500">*</span></label>
-            <select id="timAspek" required class="w-full p-2 bg-white border rounded-lg text-xs font-semibold">
-                <option value="Kuantitas">Kuantitas</option>
-                <option value="Kualitas">Kualitas</option>
-                <option value="Biaya">Biaya</option>
-                <option value="Waktu">Waktu</option>
-            </select>
-        </div>
-        <div>
-            <label class="block font-bold text-slate-700 mb-1 text-xs">Polaritas <span class="text-rose-500">*</span></label>
-            <select id="timPolaritas" required class="w-full p-2 bg-white border rounded-lg text-xs font-semibold">
-                <option value="Maksimasi">Maksimasi</option>
-                <option value="Minimasi">Minimasi</option>
-            </select>
-        </div>
-        <div>
-            <label class="block font-bold text-slate-700 mb-1 text-xs">Target <span class="text-rose-500">*</span></label>
-            <input type="number" step="any" id="timTargetVal" required class="w-full p-2 bg-white border rounded-lg text-xs font-bold" placeholder="100">
-        </div>
-        <div>
-            <label class="block font-bold text-slate-700 mb-1 text-xs">Satuan <span class="text-rose-500">*</span></label>
-            <input type="text" id="timSatuan" required class="w-full p-2 bg-white border rounded-lg text-xs font-semibold" placeholder="% / Dok">
-        </div>
-    </div>
-                    <div class="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-xl border">
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1 text-xs">3. Jenis Indikator</label>
-                            <select id="timJenisIndikator" class="w-full p-2.5 bg-white border rounded-xl font-bold text-xs">
-                                <option value="Utama">★ Utama (Masuk Dashboard)</option>
-                                <option value="Support">🛡️ Support (Pendukung)</option>
-                            </select>
-                            <p class="text-[10px] text-rose-600 mt-1 hidden" id="warnUtamaRule"><i class="fa-solid fa-triangle-exclamation"></i> Wajib ada min. 1 Utama</p>
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1 text-xs">4. Apakah Dicascading ke Unit?</label>
-                            <select id="timIsCascading" class="w-full p-2.5 bg-white border rounded-xl font-bold text-xs" onchange="toggleTimCascadingUI(this.value)">
-                                <option value="Ya">Ya, Turunkan ke Unit</option>
-                                <option value="Tidak">Tidak, Berhenti di Tim/Individu</option>
-                            </select>
-                        </div>
-                    </div>
-                
-                    <!-- KODE BARU SETELAH DIBUNGKUS -->
-<div id="timRangeWrapper">
-    <div class="bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-200 space-y-2 text-xs">
-        <label class="block font-bold text-indigo-900"><i class="fa-solid fa-scale-balanced mr-1"></i> Range Ekspektasi Kinerja</label>
-        <div class="grid grid-cols-3 gap-2">
-            <div><span class="text-[10px] font-bold text-rose-700 block">Tidak Mencapai</span><input type="text" id="timRangeTidak" required value="< 100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
-            <div><span class="text-[10px] font-bold text-emerald-700 block">Mencapai Ekspektasi</span><input type="text" id="timRangeMencapai" required value="100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
-            <div><span class="text-[10px] font-bold text-blue-700 block">Melebihi Ekspektasi</span><input type="text" id="timRangeMelebihi" required value="> 100%" class="w-full p-2 bg-white border rounded-lg text-xs font-semibold"></div>
-        </div>
-    </div>
-</div>
-<!-- SELESAI -->
-                
-                    <div id="timUnitWrapper">
-                        <div class="flex items-center justify-between mb-2">
-                            <label class="block font-semibold text-slate-700">Pilih Unit / Prodi / Subbag Tujuan</label>
-                            <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">★ Utama = Masuk Dashboard</span>
-                        </div>
-                        <div id="timUnitCheckContainer" class="space-y-2 bg-slate-50 p-3.5 rounded-xl border max-h-60 overflow-y-auto"></div>
-                    </div>
-                
-                    <div class="flex justify-end space-x-3 pt-2">
-                        <button type="button" onclick="closeCascadingTimModal()" class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Batal</button>
-                        <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold shadow-md text-xs">Simpan Cascading</button>
-                    </div>
-                </form>
+                        <form onsubmit="saveCascadingTim(event)" class="flex flex-col flex-1 overflow-hidden text-sm">
+                            <div class="p-4 sm:p-5 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4">
+                                <!-- KOLOM KIRI (7 kolom di layar besar): Identitas Indikator, Target, Jenis & Range -->
+                                <div class="lg:col-span-7 space-y-3">
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                        <div>
+                                            <label class="block font-semibold text-slate-700 mb-1 text-xs">Pilih Tahun</label>
+                                            <select id="timTahunTarget" class="w-full p-2 bg-slate-50 border rounded-xl font-semibold text-xs" onchange="updateTimDirRefOptions(this.value)">
+                                                <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                                            </select>
+                                        </div>
+                                        <div class="sm:col-span-2">
+                                            <label class="block font-semibold text-slate-700 mb-1 text-xs">1. Pilih Indikator dari Direktur (Induk) <span class="text-rose-500">*</span></label>
+                                            <select id="timDirRef" required class="w-full p-2 bg-slate-50 border rounded-xl text-xs" onchange="handleDirRefChange()"></select>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                        <div>
+                                            <label class="block font-semibold text-slate-700 mb-1 text-xs">2. Rencana Hasil Kinerja (RHK) <span class="text-rose-500">*</span></label>
+                                            <input type="text" id="timRencanaHasilKinerja" required class="w-full p-2 bg-white border border-indigo-400 rounded-xl text-xs font-semibold text-indigo-900" placeholder="Ketik Rencana Hasil Kinerja...">
+                                        </div>
+                                        <div>
+                                            <label class="block font-semibold text-slate-700 mb-1 text-xs">3. Nama Indikator Kinerja Individu <span class="text-rose-500">*</span></label>
+                                            <input type="text" id="timIndikatorIndividu" required class="w-full p-2 bg-white border border-blue-400 rounded-xl text-xs font-bold text-blue-800" placeholder="Ketik nama indikator individu...">
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-blue-50/60 p-2.5 rounded-xl border border-blue-200">
+                                        <div>
+                                            <label class="block font-bold text-slate-700 mb-1 text-[11px]">Aspek <span class="text-rose-500">*</span></label>
+                                            <select id="timAspek" required class="w-full p-1.5 bg-white border rounded-lg text-xs font-semibold">
+                                                <option value="Kuantitas">Kuantitas</option>
+                                                <option value="Kualitas">Kualitas</option>
+                                                <option value="Biaya">Biaya</option>
+                                                <option value="Waktu">Waktu</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block font-bold text-slate-700 mb-1 text-[11px]">Polaritas <span class="text-rose-500">*</span></label>
+                                            <select id="timPolaritas" required class="w-full p-1.5 bg-white border rounded-lg text-xs font-semibold">
+                                                <option value="Maksimasi">Maksimasi</option>
+                                                <option value="Minimasi">Minimasi</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block font-bold text-slate-700 mb-1 text-[11px]">Target <span class="text-rose-500">*</span></label>
+                                            <input type="number" step="any" id="timTargetVal" required class="w-full p-1.5 bg-white border rounded-lg text-xs font-bold" placeholder="100">
+                                        </div>
+                                        <div>
+                                            <label class="block font-bold text-slate-700 mb-1 text-[11px]">Satuan <span class="text-rose-500">*</span></label>
+                                            <input type="text" id="timSatuan" required class="w-full p-1.5 bg-white border rounded-lg text-xs font-semibold" placeholder="% / Dok">
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-50 p-2.5 rounded-xl border">
+                                        <div>
+                                            <label class="block font-bold text-slate-700 mb-1 text-[11px]">4. Jenis Indikator</label>
+                                            <select id="timJenisIndikator" class="w-full p-2 bg-white border rounded-xl font-bold text-xs">
+                                                <option value="Utama">★ Utama (Masuk Dashboard)</option>
+                                                <option value="Support">🛡️ Support (Pendukung)</option>
+                                            </select>
+                                            <p class="text-[10px] text-rose-600 mt-1 hidden" id="warnUtamaRule"><i class="fa-solid fa-triangle-exclamation"></i> Wajib ada min. 1 Utama</p>
+                                        </div>
+                                        <div>
+                                            <label class="block font-bold text-slate-700 mb-1 text-[11px]">5. Apakah Dicascading ke Unit?</label>
+                                            <select id="timIsCascading" class="w-full p-2 bg-white border rounded-xl font-bold text-xs" onchange="toggleTimCascadingUI(this.value)">
+                                                <option value="Ya">Ya, Turunkan ke Unit</option>
+                                                <option value="Tidak">Tidak, Berhenti di Tim/Individu</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div id="timRangeWrapper">
+                                        <div class="bg-indigo-50/70 p-2.5 rounded-xl border border-indigo-200 space-y-1.5 text-xs">
+                                            <label class="block font-bold text-indigo-900 text-[11px]"><i class="fa-solid fa-scale-balanced mr-1"></i> Range Ekspektasi Kinerja</label>
+                                            <div class="grid grid-cols-3 gap-2">
+                                                <div><span class="text-[10px] font-bold text-rose-700 block">Tidak Mencapai</span><input type="text" id="timRangeTidak" required value="< 100%" class="w-full p-1.5 bg-white border rounded-lg text-xs font-semibold"></div>
+                                                <div><span class="text-[10px] font-bold text-emerald-700 block">Mencapai Ekspektasi</span><input type="text" id="timRangeMencapai" required value="100%" class="w-full p-1.5 bg-white border rounded-lg text-xs font-semibold"></div>
+                                                <div><span class="text-[10px] font-bold text-blue-700 block">Melebihi Ekspektasi</span><input type="text" id="timRangeMelebihi" required value="> 100%" class="w-full p-1.5 bg-white border rounded-lg text-xs font-semibold"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- KOLOM KANAN (5 kolom di layar besar): Daftar Unit / Prodi / Subbag Tujuan -->
+                                <div id="timUnitWrapper" class="lg:col-span-5 flex flex-col">
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <label class="block font-semibold text-slate-700 text-xs">Pilih Unit / Prodi / Subbag Tujuan</label>
+                                        <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">★ Utama = Dashboard</span>
+                                    </div>
+                                    <div id="timUnitCheckContainer" class="space-y-2 bg-slate-50 p-3 rounded-xl border flex-1 max-h-[340px] overflow-y-auto"></div>
+                                </div>
+                            </div>
+
+                            <!-- FOOTER STICKY: Tombol Batal & Simpan selalu terlihat tanpa perlu zoom-out -->
+                            <div class="flex justify-end space-x-3 px-5 py-3 border-t bg-slate-50 rounded-b-2xl shrink-0">
+                                <button type="button" onclick="closeCascadingTimModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-semibold text-xs">Batal</button>
+                                <button type="submit" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold shadow-md text-xs">Simpan Cascading</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
@@ -6001,13 +6007,17 @@ let dashboardChartInstances = {};
             <label class="block font-semibold text-slate-700 mb-1 text-xs">1. Pilih Indikator dari Direktur (Induk yang Dicascading ke Unit Anda) <span class="text-rose-500">*</span></label>
             <select id="unitCascDirRef" required class="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold" onchange="updateUnitRhkFromTimOptions()"></select>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-                <label class="block font-semibold text-slate-700 mb-1 text-xs">2. Rencana Hasil Kinerja (RHK dari Ketua Tim Kerja) <span class="text-rose-500">*</span></label>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">2. RHK Induk (Dari Ketua Tim Kerja) <span class="text-rose-500">*</span></label>
                 <select id="unitCascRef" required class="w-full p-2.5 bg-indigo-50/70 border border-indigo-300 rounded-xl text-xs font-bold text-indigo-900" onchange="handleUnitRefChange()"></select>
             </div>
             <div>
-                <label class="block font-semibold text-slate-700 mb-1 text-xs">3. Nama Indikator Kinerja Individu Staf <span class="text-rose-500">*</span></label>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">3. Rencana Hasil Kinerja (RHK) Unit/Prodi <span class="text-rose-500">*</span></label>
+                <input type="text" id="unitRencanaHasilKinerja" required class="w-full p-2.5 bg-white border border-teal-400 rounded-xl text-xs font-semibold text-teal-900" placeholder="Ketik RHK Ketua Unit/Prodi...">
+            </div>
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-xs">4. Nama Indikator Kinerja Individu Staf <span class="text-rose-500">*</span></label>
                 <input type="text" id="unitIndikatorIndividu" required class="w-full p-2.5 bg-white border border-emerald-400 rounded-xl text-xs font-bold text-emerald-800" placeholder="Ketik nama indikator baru...">
             </div>
         </div>
@@ -7249,6 +7259,7 @@ function updateUnitCascRefOptions(tahun, allowTargetOnEdit = null, allowParentTi
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
+    if (document.getElementById('unitRencanaHasilKinerja')) document.getElementById('unitRencanaHasilKinerja').value = '';
     document.getElementById('unitIndikatorIndividu').value = '';
     document.getElementById('unitJenisIndikator').value = 'Utama';
     document.getElementById('unitIsCascading').value = 'Ya';
@@ -7375,11 +7386,21 @@ function openCascadingSubUnitModal() {
                 : matching.map(cu => {
                     const isUtama = cu.jenis === 'Utama' && (isSubRoleUtamaInUnit(cu, currentUser.username) || isSubRoleUtamaInUnit(cu, currentUser.role));
                     const lblJenis = isUtama ? '★ Utama' : '🛡️ Support';
+                    const rhkUnit = cu.rencanaHasilKinerja || '';
                     const namaIndUnit = cu.indikatorIndividu || cu.targetDirektur;
-                    return `<option value="${cu.id}" data-indikatorunit="${sanitizeHTML(namaIndUnit)}" data-targetdir="${sanitizeHTML(cu.targetDirektur)}" data-targetval="${cu.targetVal !== undefined ? cu.targetVal : 100}" data-satuan="${sanitizeHTML(cu.satuan || '%')}" data-isutama="${isUtama}">${sanitizeHTML(namaIndUnit)} [${lblJenis}]</option>`;
+                    const labelOption = rhkUnit
+                        ? `RHK Unit: ${rhkUnit} — Indikator: ${namaIndUnit} [${lblJenis}]`
+                        : `${namaIndUnit} [${lblJenis}]`;
+                    return `<option value="${cu.id}" data-rhkunit="${sanitizeHTML(rhkUnit)}" data-indikatorunit="${sanitizeHTML(namaIndUnit)}" data-targetdir="${sanitizeHTML(cu.targetDirektur)}" data-targetval="${cu.targetVal !== undefined ? cu.targetVal : 100}" data-satuan="${sanitizeHTML(cu.satuan || '%')}" data-isutama="${isUtama}">${sanitizeHTML(labelOption)}</option>`;
                 }).join('');
 
             handleSubUnitRefChange();
+            const subRhkInput = document.getElementById('subUnitRhk');
+            if (subRhkInput && sel.selectedIndex >= 0) {
+                const opt = sel.options[sel.selectedIndex];
+                const rhkUnitVal = opt ? (opt.getAttribute('data-rhkunit') || '') : '';
+                if (rhkUnitVal && !subRhkInput.value) subRhkInput.value = rhkUnitVal;
+            }
         }
 
 function handleSubUnitRefChange() {
@@ -7540,6 +7561,7 @@ async function saveCascadingUnit(e) {
     const selectedOpt = selRef.options[selRef.selectedIndex];
     const parentTimId = selRef.value;
     const targetDirVal = document.getElementById('unitCascDirRef') ? document.getElementById('unitCascDirRef').value : (selectedOpt ? selectedOpt.getAttribute('data-dirtarget') : '');
+    const unitRhkInput = document.getElementById('unitRencanaHasilKinerja') ? document.getElementById('unitRencanaHasilKinerja').value.trim() : '';
     const indikatorIndividu = document.getElementById('unitIndikatorIndividu').value.trim();
     const targetVal = parseFloat(document.getElementById('unitTargetVal').value) || 0;
     const satuan = document.getElementById('unitSatuan').value.trim() || '%';
@@ -7594,10 +7616,20 @@ async function saveCascadingUnit(e) {
     }
 
     const payload = {
-     tahun, parentTimId, targetDirektur: parentTimObj ? parentTimObj.targetDirektur : '',
-     rencanaHasilKinerja: parentTimObj ? (parentTimObj.rencanaHasilKinerja || '') : '',
-     indikatorIndividu, targetVal, satuan, jenis, isCascading, unit: activeUnit,
-        subTargets: chosenSubs, subRoles: subRoles, aggregationMode: aggMode
+        tahun,
+        parentTimId,
+        targetDirektur: parentTimObj ? parentTimObj.targetDirektur : '',
+        rhkTimInduk: parentTimObj ? (parentTimObj.rencanaHasilKinerja || '') : '',
+        rencanaHasilKinerja: unitRhkInput || (parentTimObj ? (parentTimObj.rencanaHasilKinerja || '') : ''),
+        indikatorIndividu,
+        targetVal,
+        satuan,
+        jenis,
+        isCascading,
+        unit: activeUnit,
+        subTargets: chosenSubs,
+        subRoles: subRoles,
+        aggregationMode: aggMode
     };
 
     if (!Array.isArray(DB.cascadingUnit)) DB.cascadingUnit = [];
@@ -9729,68 +9761,439 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
             `;
         }
 
-        function renderAdminView(container) {
+window.adminUserState = window.adminUserState || {
+            search: '',
+            timUnit: 'Semua',
+            role: 'Semua',
+            pageSize: 10,
+            page: 1,
+            sortCol: 'name',
+            sortDir: 'asc'
+        };
+
+        window.toggleAdminUserSort = function(col) {
+            const st = window.adminUserState;
+            if (st.sortCol === col) {
+                st.sortDir = st.sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                st.sortCol = col;
+                st.sortDir = 'asc';
+            }
+            renderAdminView(document.getElementById('mainContent'));
+        };
+
+        window.downloadUsersCsvTemplate = function() {
+            const header = 'name,username,password,roles,timKey,unit,nip';
+            const rows = [
+                '"Dr. Contoh Pejabat, M.T.","contoh.pejabat@poltek-petrokimia.ac.id","petro2025","ketua_unit;dosen","Akademik","Prodi TMIP","198501012015041001"',
+                '"Staf Contoh, S.Kom.","staf.contoh@poltek-petrokimia.ac.id","petro2025","tendik","Umum dan Keuangan","Subbag Umum dan Keuangan","199205102020121002"'
+            ];
+            const csv = [header, ...rows].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Template_Import_Pejabat_MultiRole.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+window.downloadImportUsersLogCSV = function(logRows) {
+            const header = 'Baris_CSV,Nama,Email_Username,Roles,Tim_Kerja,Unit,NIP,Status,Keterangan_Detail';
+            const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+            const lines = logRows.map(r => [
+                esc(r.rowNum),
+                esc(r.name),
+                esc(r.username),
+                esc(r.roles),
+                esc(r.timKey),
+                esc(r.unit),
+                esc(r.nip),
+                esc(r.status),
+                esc(r.reason)
+            ].join(','));
+            const csvContent = '\uFEFF' + [header, ...lines].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+            a.href = url;
+            a.download = `Log_Import_Pejabat_MultiRole_${ts}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        window.handleImportUsersCSV = async function(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const text = await file.text();
+            const rawLines = text.split(/\r?\n/);
+            const nonEmptyLines = rawLines.map((l, idx) => ({ text: l.trim(), lineNum: idx + 1 })).filter(x => x.text.length > 0);
+
+            if (nonEmptyLines.length < 2) {
+                downloadImportUsersLogCSV([{
+                    rowNum: 1,
+                    name: '-',
+                    username: '-',
+                    roles: '-',
+                    timKey: '-',
+                    unit: '-',
+                    nip: '-',
+                    status: 'GAGAL',
+                    reason: 'File CSV kosong atau tidak memiliki baris data di bawah header.'
+                }]);
+                showToast('Import gagal: File CSV kosong! File log CSV telah diunduh.', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            // Deteksi otomatis pemisah koma (,) atau titik koma (;) dari Excel Indonesia
+            const headerLine = nonEmptyLines[0].text;
+            const delimiter = (headerLine.split(';').length > headerLine.split(',').length) ? ';' : ',';
+
+            const parseCsvLine = (line) => {
+                const res = [];
+                let cur = '', inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const ch = line[i];
+                    if (ch === '"') {
+                        if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+                        else inQuotes = !inQuotes;
+                    } else if (ch === delimiter && !inQuotes) {
+                        res.push(cur.trim()); cur = '';
+                    } else {
+                        cur += ch;
+                    }
+                }
+                res.push(cur.trim());
+                return res;
+            };
+
+            const headers = parseCsvLine(headerLine).map(h => h.replace(/^\uFEFF/, '').toLowerCase());
+            const validRoleKeys = Object.keys(ROLE_LABELS || {});
+            const validTimList = Array.isArray(DB.timKerjaList) ? DB.timKerjaList : [];
+            const logRows = [];
+
+            // Validasi header wajib
+            const hasNameHeader = headers.some(h => ['name', 'nama', 'nama pejabat', 'nama lengkap'].includes(h));
+            const hasUserHeader = headers.some(h => ['username', 'email', 'email google'].includes(h));
+            if (!hasNameHeader || !hasUserHeader) {
+                downloadImportUsersLogCSV([{
+                    rowNum: 1,
+                    name: '-',
+                    username: '-',
+                    roles: '-',
+                    timKey: '-',
+                    unit: '-',
+                    nip: '-',
+                    status: 'GAGAL',
+                    reason: `Header CSV tidak sesuai template. Ditemukan: [${headers.join(' | ')}]. Wajib memiliki kolom "name" dan "username".`
+                }]);
+                showToast('Header CSV tidak sesuai template! Cek file log CSV yang diunduh.', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            let added = 0, updated = 0, failed = 0;
+
+            for (let i = 1; i < nonEmptyLines.length; i++) {
+                const { text: lineStr, lineNum } = nonEmptyLines[i];
+                const cols = parseCsvLine(lineStr);
+                const getCol = (names) => {
+                    const idx = headers.findIndex(h => names.includes(h));
+                    return idx >= 0 ? (cols[idx] || '').trim() : '';
+                };
+
+                const name = getCol(['name', 'nama', 'nama pejabat', 'nama lengkap']);
+                const username = getCol(['username', 'email', 'email google']).toLowerCase();
+                const password = getCol(['password', 'pass']) || 'petro2025';
+                const rawRoles = getCol(['roles', 'role', 'role akses']);
+                const timKey = getCol(['timkey', 'tim', 'tim kerja']) || 'Akademik';
+                const unit = getCol(['unit', 'unit terkait', 'prodi']) || '-';
+                const nip = getCol(['nip']) || '-';
+
+                const errors = [];
+                if (!name) errors.push('Kolom Nama kosong');
+                if (!username) errors.push('Kolom Email/Username kosong');
+                else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) errors.push(`Format email "${username}" tidak valid`);
+
+                const rolesArr = (rawRoles || 'tendik').split(/[;|,]+/).map(r => r.trim().toLowerCase()).filter(Boolean);
+                if (rolesArr.length === 0) {
+                    errors.push('Kolom Roles kosong');
+                } else if (validRoleKeys.length > 0) {
+                    const invalidRoles = rolesArr.filter(r => !validRoleKeys.includes(r));
+                    if (invalidRoles.length > 0) {
+                        errors.push(`Kode role tidak dikenali: "${invalidRoles.join(', ')}" (Gunakan: ${validRoleKeys.join(' / ')})`);
+                    }
+                }
+
+                if (validTimList.length > 0 && timKey && !validTimList.some(t => t.toLowerCase() === timKey.toLowerCase())) {
+                    errors.push(`Tim Kerja "${timKey}" tidak terdaftar (Pilihan: ${validTimList.join(' / ')})`);
+                }
+
+                if (errors.length > 0) {
+                    failed++;
+                    logRows.push({
+                        rowNum: lineNum,
+                        name: name || '(Kosong)',
+                        username: username || '(Kosong)',
+                        roles: rawRoles || '(Kosong)',
+                        timKey,
+                        unit,
+                        nip,
+                        status: 'GAGAL',
+                        reason: errors.join('; ')
+                    });
+                    continue;
+                }
+
+                const matchedTim = validTimList.find(t => t.toLowerCase() === timKey.toLowerCase()) || timKey;
+                const existIdx = DB.users.findIndex(u => String(u.username || '').toLowerCase() === username);
+                const userObj = {
+                    name,
+                    username,
+                    password,
+                    role: rolesArr[0],
+                    roles: rolesArr,
+                    timKey: matchedTim,
+                    unit,
+                    nip
+                };
+
+                if (existIdx >= 0) {
+                    DB.users[existIdx] = { ...DB.users[existIdx], ...userObj };
+                    updated++;
+                    logRows.push({
+                        rowNum: lineNum,
+                        name,
+                        username,
+                        roles: rolesArr.join(';'),
+                        timKey: matchedTim,
+                        unit,
+                        nip,
+                        status: 'BERHASIL (DIPERBARUI)',
+                        reason: 'Akun sudah ada dan data berhasil diperbarui.'
+                    });
+                } else {
+                    DB.users.push(userObj);
+                    added++;
+                    logRows.push({
+                        rowNum: lineNum,
+                        name,
+                        username,
+                        roles: rolesArr.join(';'),
+                        timKey: matchedTim,
+                        unit,
+                        nip,
+                        status: 'BERHASIL (DITAMBAHKAN)',
+                        reason: 'Akun baru berhasil ditambahkan.'
+                    });
+                }
+            }
+
+            event.target.value = '';
+            downloadImportUsersLogCSV(logRows);
+
+            if (added > 0 || updated > 0) {
+                recordAuditLog('Import CSV Pejabat & Multi-Role', 'Admin', `Import CSV selesai: ${added} ditambahkan, ${updated} diperbarui, ${failed} gagal.`);
+                await saveToMySQL();
+                renderAdminView(document.getElementById('mainContent'));
+            }
+
+            if (failed > 0 && (added > 0 || updated > 0)) {
+                showToast(`Import selesai: ${added} baru, ${updated} update, ${failed} gagal. File CSV Log diunduh.`, 'warning');
+            } else if (failed > 0) {
+                showToast(`Semua data gagal diimport (${failed} baris error). Periksa file CSV Log yang otomatis terunduh!`, 'error');
+            } else {
+                showToast(`Import berhasil 100%! (${added} baru, ${updated} diperbarui). File CSV Log diunduh.`);
+            }
+        };
+
+function renderAdminView(container) {
             if (!requireWriteAccess(['admin'])) {
                 container.innerHTML = `<div class="p-8 text-center bg-white rounded-2xl border"><p class="text-rose-600 font-bold">Akses Ditolak: Hanya Administrator yang dapat mengakses halaman ini.</p></div>`;
                 return;
             }
             document.getElementById('pageTitle').innerText = 'Manajemen Pejabat, Multi-Role & Hak Akses (Admin)';
+
+            const st = window.adminUserState;
+            const timUnitOptions = Array.from(new Set([
+                ...(DB.timKerjaList || []),
+                ...(DB.unitList || []),
+                ...DB.users.map(u => u.timKey).filter(Boolean),
+                ...DB.users.map(u => u.unit).filter(u => u && u !== '-')
+            ]));
+
+            // Pasang index asli DB.users sebelum filter/sort agar tombol edit/hapus/reset tetap akurat
+            let enrichedUsers = DB.users.map((u, origIdx) => {
+                const rolesArr = getUserRoles(u);
+                const v = getValidatorForUser(u);
+                return {
+                    u,
+                    origIdx,
+                    rolesArr,
+                    rolesText: rolesArr.map(r => ROLE_LABELS[r] || r).join(', '),
+                    timUnitText: `${u.timKey || '-'} / ${u.unit || '-'}`,
+                    validatorText: (!v || v.name === '-') ? 'Top Level' : v.name
+                };
+            });
+
+            if (st.search.trim()) {
+                const q = st.search.trim().toLowerCase();
+                enrichedUsers = enrichedUsers.filter(item =>
+                    String(item.u.name || '').toLowerCase().includes(q) ||
+                    String(item.u.username || '').toLowerCase().includes(q) ||
+                    String(item.u.nip || '').toLowerCase().includes(q) ||
+                    item.timUnitText.toLowerCase().includes(q)
+                );
+            }
+            if (st.timUnit !== 'Semua') {
+                enrichedUsers = enrichedUsers.filter(item =>
+                    String(item.u.timKey || '') === st.timUnit || String(item.u.unit || '') === st.timUnit
+                );
+            }
+            if (st.role !== 'Semua') {
+                enrichedUsers = enrichedUsers.filter(item => item.rolesArr.includes(st.role));
+            }
+
+            // Sorting header
+            enrichedUsers.sort((a, b) => {
+                let valA = '', valB = '';
+                if (st.sortCol === 'name') { valA = a.u.name || ''; valB = b.u.name || ''; }
+                else if (st.sortCol === 'username') { valA = a.u.username || ''; valB = b.u.username || ''; }
+                else if (st.sortCol === 'roles') { valA = a.rolesText; valB = b.rolesText; }
+                else if (st.sortCol === 'timUnit') { valA = a.timUnitText; valB = b.timUnitText; }
+                else if (st.sortCol === 'validator') { valA = a.validatorText; valB = b.validatorText; }
+                const cmp = String(valA).localeCompare(String(valB), 'id', { sensitivity: 'base' });
+                return st.sortDir === 'asc' ? cmp : -cmp;
+            });
+
+            const totalRows = enrichedUsers.length;
+            const totalPages = Math.max(1, Math.ceil(totalRows / st.pageSize));
+            if (st.page > totalPages) st.page = totalPages;
+            if (st.page < 1) st.page = 1;
+            const startIdx = (st.page - 1) * st.pageSize;
+            const pagedUsers = enrichedUsers.slice(startIdx, startIdx + st.pageSize);
+
+            const sortIcon = (col) => {
+                if (st.sortCol !== col) return '<i class="fa-solid fa-sort text-slate-300 ml-1"></i>';
+                return st.sortDir === 'asc'
+                    ? '<i class="fa-solid fa-sort-up text-primary-600 ml-1"></i>'
+                    : '<i class="fa-solid fa-sort-down text-primary-600 ml-1"></i>';
+            };
+
             container.innerHTML = `
                 <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div>
                             <h3 class="font-bold text-slate-900 text-base">Pengaturan Akun Pejabat, Staf & Multi-Role</h3>
                             <p class="text-xs text-slate-500">Mendukung Multi-Role (>1 role per akun) serta role Sekretaris, Kalab, Koordinator, Dosen, & Tendik</p>
                         </div>
-                        <button onclick="openUserModal('add')" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md flex items-center space-x-2">
-                            <i class="fa-solid fa-user-plus"></i>
-                            <span>Tambah User Baru</span>
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="downloadUsersCsvTemplate()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs border border-slate-300 flex items-center space-x-1.5">
+                                <i class="fa-solid fa-file-csv text-emerald-600"></i>
+                                <span>Template CSV</span>
+                            </button>
+                            <label class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow-sm flex items-center space-x-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-import"></i>
+                                <span>Import CSV</span>
+                                <input type="file" accept=".csv" onchange="handleImportUsersCSV(event)" class="hidden">
+                            </label>
+                            <button onclick="openUserModal('add')" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs shadow-md flex items-center space-x-1.5">
+                                <i class="fa-solid fa-user-plus"></i>
+                                <span>Tambah User Baru</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter Bar: Pencarian, Tim Kerja / Unit Terkait, Role Akses & Pageview -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end text-xs">
+                        <div class="lg:col-span-4">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Cari Nama / Email / NIP</label>
+                            <input type="text" value="${sanitizeHTML(st.search)}" oninput="window.adminUserState.search = this.value; window.adminUserState.page = 1; renderAdminView(document.getElementById('mainContent'));" placeholder="Ketik nama, email, atau NIP..." class="w-full p-2 bg-slate-50 border rounded-xl font-medium">
+                        </div>
+                        <div class="lg:col-span-3">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filter Tim Kerja / Unit Terkait</label>
+                            <select onchange="window.adminUserState.timUnit = this.value; window.adminUserState.page = 1; renderAdminView(document.getElementById('mainContent'));" class="w-full p-2 bg-slate-50 border rounded-xl font-bold text-slate-700">
+                                <option value="Semua" ${st.timUnit === 'Semua' ? 'selected' : ''}>Semua Tim & Unit</option>
+                                ${timUnitOptions.map(tu => `<option value="${sanitizeHTML(tu)}" ${st.timUnit === tu ? 'selected' : ''}>${sanitizeHTML(tu)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="lg:col-span-3">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filter Role Akses (Multi-Role)</label>
+                            <select onchange="window.adminUserState.role = this.value; window.adminUserState.page = 1; renderAdminView(document.getElementById('mainContent'));" class="w-full p-2 bg-slate-50 border rounded-xl font-bold text-slate-700">
+                                <option value="Semua" ${st.role === 'Semua' ? 'selected' : ''}>Semua Role</option>
+                                ${Object.entries(ROLE_LABELS).map(([rKey, rLabel]) => `<option value="${rKey}" ${st.role === rKey ? 'selected' : ''}>${rLabel}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="lg:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tampilkan Baris</label>
+                            <select onchange="window.adminUserState.pageSize = Number(this.value); window.adminUserState.page = 1; renderAdminView(document.getElementById('mainContent'));" class="w-full p-2 bg-slate-50 border rounded-xl font-bold text-slate-700">
+                                ${[5, 10, 25, 50, 100].map(sz => `<option value="${sz}" ${st.pageSize === sz ? 'selected' : ''}>${sz} Baris</option>`).join('')}
+                            </select>
+                        </div>
                     </div>
 
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <table class="w-full text-left border-collapse text-sm">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                                    <th class="p-4">Nama Pejabat / Pegawai</th>
-                                    <th class="p-4">Email Google (@poltek-petrokimia.ac.id)</th>
-                                    <th class="p-4">Role Akses (Multi-Role)</th>
-                                    <th class="p-4">Tim Kerja / Unit Terkait</th>
-                                    <th class="p-4">Atasan Langsung (Validator)</th>
-                                    <th class="p-4 text-center">Aksi (Edit / Hapus / Reset)</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                ${DB.users.map((u, idx) => {
-                                    const rolesArr = getUserRoles(u);
-                                    return `
-                                    <tr class="hover:bg-slate-50 transition-all">
-                                        <td class="p-4 font-semibold text-slate-900 flex items-center space-x-2.5">
-                                            ${renderUserAvatarHtml(u, 'w-8 h-8 text-xs', 'border border-blue-200')}
-                                            <span>${sanitizeHTML(u.name)}</span>
-                                        </td>
-                                        <td class="p-4 text-slate-600">${sanitizeHTML(u.username)}</td>
-                                        <td class="p-4">
-                                            <div class="flex flex-wrap gap-1">
-                                                ${rolesArr.map(r => `<span class="px-2.5 py-0.5 bg-blue-50 text-primary-700 border border-blue-200 text-[10px] font-bold rounded-full uppercase">${ROLE_LABELS[r] || r}</span>`).join('')}
-                                            </div>
-                                        </td>
-                                        <td class="p-4 text-xs">
-                                            ${(() => {
-                                const v = getValidatorForUser(u);
-                                if (!v || v.name === '-') return '<span class="text-slate-400 italic">Top Level</span>';
-                                return `<span class="font-semibold text-slate-800">${sanitizeHTML(v.name)}</span><span class="block text-[10px] text-indigo-600 font-semibold mt-0.5">${sanitizeHTML(ROLE_LABELS[v.role] || v.role)}</span>`;
-                            })()}
-                                </td>
-                                <td class="p-4 text-center space-x-1.5"> <!-- TAMBAHKAN BARIS INI -->
-                                    <button onclick="openUserModal('edit', ${idx})" class="px-2.5 py-1 bg-blue-100 hover:bg-blue-200 text-primary-700 text-xs font-semibold rounded-lg" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                                    <button onclick="confirmDeleteUser(${idx})" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-600 text-xs font-semibold rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                                    <button onclick="resetPassword(${idx})" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-semibold rounded-lg" title="Reset Pass"><i class="fa-solid fa-key"></i></button>
-                                </td>                                    
-                                </tr>
-                                `;}).join('')}
-                            </tbody>
-                        </table>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 select-none">
+                                        <th onclick="toggleAdminUserSort('name')" class="p-4 cursor-pointer hover:bg-slate-100">Nama Pejabat / Pegawai ${sortIcon('name')}</th>
+                                        <th onclick="toggleAdminUserSort('username')" class="p-4 cursor-pointer hover:bg-slate-100">Email Google (@poltek-petrokimia.ac.id) ${sortIcon('username')}</th>
+                                        <th onclick="toggleAdminUserSort('roles')" class="p-4 cursor-pointer hover:bg-slate-100">Role Akses (Multi-Role) ${sortIcon('roles')}</th>
+                                        <th onclick="toggleAdminUserSort('timUnit')" class="p-4 cursor-pointer hover:bg-slate-100">Tim Kerja / Unit Terkait ${sortIcon('timUnit')}</th>
+                                        <th onclick="toggleAdminUserSort('validator')" class="p-4 cursor-pointer hover:bg-slate-100">Atasan Langsung (Validator) ${sortIcon('validator')}</th>
+                                        <th class="p-4 text-center">Aksi (Edit / Hapus / Reset)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${pagedUsers.length === 0 ? `<tr><td colspan="6" class="p-8 text-center text-slate-400 text-xs">Tidak ada data pejabat / staf yang sesuai dengan filter.</td></tr>` : pagedUsers.map(({ u, origIdx, rolesArr }) => `
+                                        <tr class="hover:bg-slate-50 transition-all">
+                                            <td class="p-4 font-semibold text-slate-900 flex items-center space-x-2.5">
+                                                ${renderUserAvatarHtml(u, 'w-8 h-8 text-xs', 'border border-blue-200')}
+                                                <div>
+                                                    <span>${sanitizeHTML(u.name)}</span>
+                                                    ${u.nip && u.nip !== '-' ? `<span class="block text-[10px] font-mono text-slate-400">NIP. ${sanitizeHTML(u.nip)}</span>` : ''}
+                                                </div>
+                                            </td>
+                                            <td class="p-4 text-slate-600">${sanitizeHTML(u.username)}</td>
+                                            <td class="p-4">
+                                                <div class="flex flex-wrap gap-1">
+                                                    ${rolesArr.map(r => `<span class="px-2.5 py-0.5 bg-blue-50 text-primary-700 border border-blue-200 text-[10px] font-bold rounded-full uppercase">${ROLE_LABELS[r] || r}</span>`).join('')}
+                                                </div>
+                                            </td>
+                                            <td class="p-4 text-xs">
+                                                <span class="font-bold text-slate-800 block">${sanitizeHTML(u.timKey || '-')}</span>
+                                                <span class="text-slate-500">${sanitizeHTML(u.unit || '-')}</span>
+                                            </td>
+                                            <td class="p-4 text-xs">
+                                                ${(() => {
+                                                    const v = getValidatorForUser(u);
+                                                    if (!v || v.name === '-') return '<span class="text-slate-400 italic">Top Level</span>';
+                                                    return `<span class="font-semibold text-slate-800">${sanitizeHTML(v.name)}</span><span class="block text-[10px] text-indigo-600 font-semibold mt-0.5">${sanitizeHTML(ROLE_LABELS[v.role] || v.role)}</span>`;
+                                                })()}
+                                            </td>
+                                            <td class="p-4 text-center space-x-1.5 whitespace-nowrap">
+                                                <button onclick="openUserModal('edit', ${origIdx})" class="px-2.5 py-1 bg-blue-100 hover:bg-blue-200 text-primary-700 text-xs font-semibold rounded-lg" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                                <button onclick="confirmDeleteUser(${origIdx})" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-600 text-xs font-semibold rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                                <button onclick="resetPassword(${origIdx})" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-semibold rounded-lg" title="Reset Pass"><i class="fa-solid fa-key"></i></button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600">
+                            <span>Menampilkan <strong>${totalRows === 0 ? 0 : startIdx + 1}</strong> - <strong>${Math.min(startIdx + st.pageSize, totalRows)}</strong> dari <strong>${totalRows}</strong> akun</span>
+                            <div class="flex items-center space-x-1.5">
+                                <button onclick="window.adminUserState.page = Math.max(1, window.adminUserState.page - 1); renderAdminView(document.getElementById('mainContent'));" ${st.page <= 1 ? 'disabled' : ''} class="px-3 py-1 bg-white border rounded-lg font-semibold disabled:opacity-40">Sebelumnya</button>
+                                <span class="px-2 font-bold">Hal ${st.page} / ${totalPages}</span>
+                                <button onclick="window.adminUserState.page = Math.min(${totalPages}, window.adminUserState.page + 1); renderAdminView(document.getElementById('mainContent'));" ${st.page >= totalPages ? 'disabled' : ''} class="px-3 py-1 bg-white border rounded-lg font-semibold disabled:opacity-40">Berikutnya</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -10851,8 +11254,120 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                 return matchRole && matchThn && matchTw;
             });
 
+           const userRolesLap = typeof getUserRoles === 'function' ? getUserRoles(currentUser) : [currentUser.role];
+            const canSeeDirDirectSkp = userRolesLap.includes('admin') || userRolesLap.includes('direktur');
+
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
+                    ${canSeeDirDirectSkp ? `
+                    <!-- PANEL CETAK SKP KHUSUS DIREKTUR & ADMIN + MONITORING PELAPORAN PER TRIWULAN -->
+                    <div id="direkturDirectSkpPanel" class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch no-print">
+                        <!-- KOLOM KIRI (7 KOLOM): FORM PENGATURAN & TTD MANUAL DIREKTUR -->
+                        <div class="xl:col-span-7 bg-white rounded-2xl shadow-sm border-2 border-indigo-200 p-6 space-y-4 flex flex-col justify-between">                            <div class="border-b border-indigo-100 pb-3.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-extrabold uppercase">Khusus Direktur & Admin</span>
+                                    <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold">Tanpa Approval</span>
+                                </div>
+                                <h3 class="font-bold text-slate-900 text-base mt-1 flex items-center gap-2">
+                                    <i class="fa-solid fa-user-tie text-indigo-600"></i> Cetak SKP Khusus Direktur (Per Indikator)
+                                </h3>
+                                <p class="text-xs text-slate-500">Setiap cetakan otomatis tercatat pada log monitoring di samping. TTD Direktur menggunakan tanda tangan manual, sedangkan Pejabat Penilai dikosongkan untuk TTD basah di luar sistem.</p>
+                            </div>
+
+                            <form onsubmit="renderDirectDirekturSKPPreview(event)" class="space-y-3.5 text-xs">
+                                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">Tahun SKP</label>
+                                        <select id="dirDirectSkpTahun" onchange="populateDirDirectSkpIndicators(); renderDirekturSkpMonitoringTable();" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold">
+                                            <option value="2025">2025</option>
+                                            <option value="2026" selected>2026</option>
+                                            <option value="2027">2027</option>
+                                            <option value="2028">2028</option>
+                                            <option value="2029">2029</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">Triwulan</label>
+                                        <select id="dirDirectSkpTw" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold">
+                                            <option value="TW 1">Triwulan I (TW 1)</option>
+                                            <option value="TW 2">Triwulan II (TW 2)</option>
+                                            <option value="TW 3">Triwulan III (TW 3)</option>
+                                            <option value="TW 4">Triwulan IV (TW 4)</option>
+                                            <option value="Semua">Semua Triwulan (Jan - Des)</option>
+                                        </select>
+                                    </div>
+                                    <div class="sm:col-span-2">
+                                        <label class="block font-bold text-slate-700 mb-1">Pilih Indikator Kinerja Direktur yang Dicetak</label>
+                                        <select id="dirDirectSkpIndikator" required class="w-full p-2.5 bg-slate-50 border border-indigo-300 rounded-xl font-semibold text-slate-800"></select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">Tempat & Tanggal Cetak Laporan</label>
+                                        <input type="text" id="dirDirectSkpTanggalKota" value="Serang, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}" required class="w-full p-2 bg-white border rounded-lg font-medium">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">Jabatan Pejabat Penilai (Manual)</label>
+                                        <input type="text" id="dirDirectSkpPenilaiJabatan" value="Kepala BPSDMI" placeholder="Contoh: Kepala BPSDMI" class="w-full p-2 bg-white border rounded-lg font-semibold">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">Nama Pejabat Penilai (Input Manual)</label>
+                                        <input type="text" id="dirDirectSkpPenilaiName" value="" placeholder="Kosong / ketik nama pejabat penilai..." class="w-full p-2 bg-white border border-amber-300 rounded-lg font-semibold">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">NIP Pejabat Penilai (Input Manual)</label>
+                                        <input type="text" id="dirDirectSkpPenilaiNip" value="" placeholder="Kosong / ketik NIP pejabat penilai..." class="w-full p-2 bg-white border border-amber-300 rounded-lg font-mono">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">Penyusun (Direktur)</label>
+                                        <input type="text" id="dirDirectSkpPenyusunName" value="${sanitizeHTML(dirInfo.name)}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-semibold text-slate-700 cursor-not-allowed">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">NIP Direktur</label>
+                                        <input type="text" id="dirDirectSkpPenyusunNip" value="${sanitizeHTML(dirInfo.nip || '-')}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-mono text-slate-700 cursor-not-allowed">
+                                    </div>
+                                </div>
+
+                                <!-- AREA TANDA TANGAN MANUAL DIREKTUR (BUKAN QR CODE) -->
+                                <div class="bg-indigo-50/60 p-3.5 rounded-xl border border-indigo-200 space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <label class="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
+                                            <i class="fa-solid fa-signature text-indigo-600"></i> Tanda Tangan Manual Direktur (Wajib Digambar Sebelum Cetak)
+                                        </label>
+                                        <button type="button" onclick="clearDirManualSigPad()" class="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-lg text-[11px] font-bold">
+                                            <i class="fa-solid fa-eraser mr-1"></i>Hapus Goresan
+                                        </button>
+                                    </div>
+                                    <div class="bg-white border-2 border-dashed border-indigo-300 rounded-xl overflow-hidden">
+                                        <canvas id="dirDirectSigCanvas" width="520" height="120" class="w-full h-28 touch-none cursor-crosshair block"></canvas>
+                                    </div>
+                                    <p class="text-[10px] text-slate-500">Goreskan tanda tangan Direktur pada kotak di atas. Bagian Pejabat Penilai (Yang Menyetujui) akan dikosongkan pada dokumen cetak.</p>
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow flex items-center space-x-2">
+                                        <i class="fa-solid fa-print"></i><span>Simpan Log, Pratinjau & Cetak SKP Direktur</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- KOLOM KANAN (5 KOLOM): MONITORING PELAPORAN SKP DIREKTUR PER TRIWULAN -->
+                        <div class="xl:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between space-y-4">
+                            <div class="flex items-center justify-between border-b pb-3.5 shrink-0">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                                        <i class="fa-solid fa-clipboard-check text-emerald-600"></i> Monitoring SKP Direktur per Triwulan
+                                    </h3>
+                                    <p class="text-xs text-slate-500">Status pelaporan per indikator berdasarkan log cetakan SKP Direktur</p>
+                                </div>
+                            </div>
+                            <div id="dirDirectSkpMonitoringContainer" class="flex-1 flex flex-col justify-between space-y-3"></div>
+                        </div>
+                    </div>
+                    ` : ''}
+
                     <!-- 2 TABEL INFORMASI STATUS APPROVAL REQUEST DENGAN FILTER TAHUN & TRIWULAN (REVISI 11) -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start relative no-print">
                         
@@ -11330,6 +11845,11 @@ let limitRisikoRows = 10; // Default 10 baris untuk Peta Risiko
                     </div>
                 </div>
             `;
+            if (canSeeDirDirectSkp) {
+                if (typeof populateDirDirectSkpIndicators === 'function') populateDirDirectSkpIndicators();
+                if (typeof initDirManualSigPad === 'function') initDirManualSigPad();
+                if (typeof renderDirekturSkpMonitoringTable === 'function') renderDirekturSkpMonitoringTable();
+            }
         }
 
              async function deleteLaporanKinerja(id) {
@@ -12292,7 +12812,18 @@ function promptDrawSignature(roleKey) {
             const area = document.getElementById('printableArea');
             if (!area) return;
 
-            const twRomawi = skp.triwulan.includes('1') ? 'I' : skp.triwulan.includes('2') ? 'II' : skp.triwulan.includes('3') ? 'III' : 'IV';
+            const getWaktuPelaksanaanTriwulan = (twStr, thnStr) => {
+                const t = String(twStr || '').toUpperCase().trim();
+                const y = String(thnStr || '2025').trim();
+                if (t.includes('1')) return `Pelaksanaan kegiatan selama 3 bulan yaitu bulan Januari sampai dengan Maret ${y}`;
+                if (t.includes('2')) return `Pelaksanaan kegiatan selama 3 bulan yaitu bulan April sampai dengan Juni ${y}`;
+                if (t.includes('3')) return `Pelaksanaan kegiatan selama 3 bulan yaitu bulan Juli sampai dengan September ${y}`;
+                if (t.includes('4')) return `Pelaksanaan kegiatan selama 3 bulan yaitu bulan Oktober sampai dengan Desember ${y}`;
+                return `Pelaksanaan kegiatan selama 12 bulan yaitu bulan Januari sampai dengan Desember ${y}`;
+            };
+            const waktuPelaksanaanDisplay = getWaktuPelaksanaanTriwulan(skp.triwulan, skp.tahun);
+
+            const twRomawi = String(skp.triwulan || '').includes('1') ? 'I' : String(skp.triwulan || '').includes('2') ? 'II' : String(skp.triwulan || '').includes('3') ? 'III' : String(skp.triwulan || '').includes('4') ? 'IV' : 'I - IV';
             const totalTextLength = (skp.indikator || '').length + (skp.uraianKegiatan || '').length + (skp.hasilKegiatan || '').length + (skp.permasalahan || '').length + (skp.saranKetuaTim || '').length;
             
             // Default 1 halaman; hanya dibagi 2 halaman jika teks sangat panjang (> 1100 karakter)
@@ -12329,7 +12860,7 @@ function promptDrawSignature(roleKey) {
                                 <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.targetText)}</td></tr>
 
                                 <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">IV.</td><td class="py-1 uppercase">WAKTU PELAKSANAAN</td></tr>
-                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(skp.waktuPelaksanaan)}</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(waktuPelaksanaanDisplay)}</td></tr>
 
                                 <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">V.</td><td class="py-1 uppercase">HASIL KEGIATAN/PEKERJAAN</td></tr>
 <tr>
@@ -12764,6 +13295,609 @@ function promptDrawSignature(roleKey) {
             closeExportCapaianCsvModal();
             showToast('File CSV berhasil diunduh!');
         }
+        // =========================================================================
+        // REVISI 5 (UPDATE): CETAK SKP KHUSUS DIREKTUR (TTD MANUAL, TANPA QR/TTD PENILAI & LOG MONITORING)
+        // =========================================================================
+        window._dirManualSigHasStroke = false;
+
+        window.initDirManualSigPad = function() {
+            const canvas = document.getElementById('dirDirectSigCanvas');
+            if (!canvas || canvas.dataset.bound === '1') return;
+            canvas.dataset.bound = '1';
+            const ctx = canvas.getContext('2d');
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            let drawing = false;
+            const getPos = (ev) => {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                return {
+                    x: (clientX - rect.left) * (canvas.width / rect.width),
+                    y: (clientY - rect.top) * (canvas.height / rect.height)
+                };
+            };
+
+            const startDraw = (ev) => {
+                drawing = true;
+                window._dirManualSigHasStroke = true;
+                const p = getPos(ev);
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+            };
+            const moveDraw = (ev) => {
+                if (!drawing) return;
+                if (ev.cancelable) ev.preventDefault();
+                const p = getPos(ev);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+            };
+            const endDraw = () => { drawing = false; };
+
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', moveDraw);
+            window.addEventListener('mouseup', endDraw);
+            canvas.addEventListener('touchstart', startDraw, { passive: false });
+            canvas.addEventListener('touchmove', moveDraw, { passive: false });
+            canvas.addEventListener('touchend', endDraw);
+        };
+
+        window.clearDirManualSigPad = function() {
+            const canvas = document.getElementById('dirDirectSigCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            window._dirManualSigHasStroke = false;
+        };
+
+        window.getDirekturIndicatorsByYear = function(yr) {
+            const y = String(yr || '2025');
+            const dirList = (DB.cascadingDirektur || []).filter(cd => String(cd.tahun || '2025') === y);
+            const renstraList = (DB.renstraIndikatorKinerja || []);
+            let items = [];
+
+            if (dirList.length > 0) {
+                items = dirList.map(cd => ({
+                    nama: cd.target,
+                    target: cd.targetVal !== undefined ? cd.targetVal : 100,
+                    satuan: cd.satuan || '%'
+                }));
+            }
+            // Lengkapi juga dari Renstra Tier 4 jika belum masuk cascadingDirektur
+            renstraList.forEach(ik => {
+                if (ik.namaIndikator && !items.some(x => x.nama.trim().toLowerCase() === ik.namaIndikator.trim().toLowerCase())) {
+                    items.push({
+                        nama: ik.namaIndikator,
+                        target: ik['target' + y] !== undefined ? ik['target' + y] : 100,
+                        satuan: ik.satuan || '%'
+                    });
+                }
+            });
+
+            const uniqueMap = new Map();
+            items.forEach(it => {
+                if (it.nama && !uniqueMap.has(it.nama)) uniqueMap.set(it.nama, it);
+            });
+            return Array.from(uniqueMap.values());
+        };
+
+        window.populateDirDirectSkpIndicators = function() {
+            const yrEl = document.getElementById('dirDirectSkpTahun');
+            const selEl = document.getElementById('dirDirectSkpIndikator');
+            if (!yrEl || !selEl) return;
+            const yr = String(yrEl.value || '2025');
+            const uniqueItems = getDirekturIndicatorsByYear(yr);
+
+            if (uniqueItems.length === 0) {
+                selEl.innerHTML = `<option value="">-- Belum ada indikator kinerja Direktur pada Tahun ${yr} --</option>`;
+                return;
+            }
+
+            selEl.innerHTML = uniqueItems.map(it => `
+                <option value="${sanitizeHTML(it.nama)}" data-target="${it.target}" data-satuan="${sanitizeHTML(it.satuan)}">
+                    ${sanitizeHTML(it.nama)} (Target: ${it.target} ${sanitizeHTML(it.satuan)})
+                </option>
+            `).join('');
+        };
+
+window._dirSkpLogPage = 1;
+        window._dirSkpLogPageSize = 3;
+
+        window.setDirSkpLogPage = function(page) {
+            window._dirSkpLogPage = Math.max(1, Number(page) || 1);
+            renderDirekturSkpMonitoringTable();
+        };
+
+        window.setDirSkpLogPageSize = function(size) {
+            window._dirSkpLogPageSize = Math.max(1, Number(size) || 3);
+            window._dirSkpLogPage = 1;
+            renderDirekturSkpMonitoringTable();
+        };
+
+        window.renderDirekturSkpMonitoringTable = function() {
+            const cont = document.getElementById('dirDirectSkpMonitoringContainer');
+            if (!cont) return;
+            if (!Array.isArray(DB.direkturSkpLogs)) DB.direkturSkpLogs = [];
+
+            const yrEl = document.getElementById('dirDirectSkpTahun');
+            const yr = yrEl ? String(yrEl.value || '2025') : '2025';
+            const indicators = getDirekturIndicatorsByYear(yr);
+            const logsYear = DB.direkturSkpLogs.filter(l => String(l.tahun) === yr);
+            const isAdmin = currentUser && (getUserRoles(currentUser).includes('admin'));
+
+            const checkReported = (indName, twCode) => {
+                return logsYear.some(l =>
+                    String(l.indikator || '').trim().toLowerCase() === String(indName || '').trim().toLowerCase() &&
+                    String(l.triwulan || '').trim().toUpperCase() === twCode.toUpperCase()
+                );
+            };
+
+            const periodColumns = [
+                { code: 'TW 1', label: 'TW 1' },
+                { code: 'TW 2', label: 'TW 2' },
+                { code: 'TW 3', label: 'TW 3' },
+                { code: 'TW 4', label: 'TW 4' },
+                { code: 'SEMUA', label: 'Semua TW' }
+            ];
+
+            const totalInd = indicators.length;
+            const twSummary = periodColumns.map(p => {
+                const doneCount = indicators.filter(it => checkReported(it.nama, p.code)).length;
+                return { label: p.label, doneCount, totalInd };
+            });
+
+            // Pagination untuk Riwayat Log Cetakan SKP Direktur
+            const sortedLogs = logsYear.slice().reverse();
+            const pageSize = window._dirSkpLogPageSize || 3;
+            const totalLogs = sortedLogs.length;
+            const totalPages = Math.max(1, Math.ceil(totalLogs / pageSize));
+            if (window._dirSkpLogPage > totalPages) window._dirSkpLogPage = totalPages;
+            const currentPage = window._dirSkpLogPage;
+            const startIdx = (currentPage - 1) * pageSize;
+            const pagedLogs = sortedLogs.slice(startIdx, startIdx + pageSize);
+
+            cont.innerHTML = `
+                <div class="space-y-3">
+                    <!-- Ringkasan Progres per Triwulan & Semua Triwulan Tahun ${yr} (5 Kartu) -->
+                    <div class="grid grid-cols-5 gap-1.5 text-center">
+                        ${twSummary.map(s => `
+                            <div class="p-2 rounded-xl border ${s.totalInd > 0 && s.doneCount === s.totalInd ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}">
+                                <span class="block text-[9px] font-bold text-slate-500 truncate">${s.label}</span>
+                                <strong class="text-xs ${s.doneCount > 0 ? 'text-emerald-700' : 'text-slate-700'}">${s.doneCount}/${s.totalInd}</strong>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- Matriks Status Indikator Direktur per Triwulan & Semua Triwulan -->
+                    <div class="overflow-x-auto max-h-44 overflow-y-auto border rounded-xl">
+                        <table class="w-full text-left border-collapse text-[11px]">
+                            <thead class="bg-slate-50 text-slate-700 font-bold border-b sticky top-0">
+                                <tr>
+                                    <th class="p-2">Indikator Direktur (${yr})</th>
+                                    <th class="p-1.5 text-center">TW 1</th>
+                                    <th class="p-1.5 text-center">TW 2</th>
+                                    <th class="p-1.5 text-center">TW 3</th>
+                                    <th class="p-1.5 text-center">TW 4</th>
+                                    <th class="p-1.5 text-center whitespace-nowrap">Semua TW</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${indicators.length === 0 ? `<tr><td colspan="6" class="p-4 text-center text-slate-400">Belum ada indikator pada tahun ${yr}.</td></tr>` : indicators.map(it => `
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="p-2 font-semibold text-slate-800">${sanitizeHTML(it.nama)}</td>
+                                        ${periodColumns.map(p => {
+                                            const ok = checkReported(it.nama, p.code);
+                                            return `<td class="p-1.5 text-center">${ok
+                                                ? '<span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-bold text-[10px]">Sudah</span>'
+                                                : '<span class="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded font-semibold text-[10px]">Belum</span>'}</td>`;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Riwayat Log Cetakan SKP Direktur dengan Page Viewer -->
+                <div class="space-y-2 pt-1 flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-[11px] font-bold text-slate-700 uppercase">Riwayat Log Cetakan SKP Direktur (${totalLogs})</p>
+                        <div class="flex items-center gap-1.5 text-[10px] text-slate-600">
+                            <span>Tampil:</span>
+                            <select onchange="setDirSkpLogPageSize(this.value)" class="px-1.5 py-0.5 bg-slate-50 border border-slate-300 rounded font-bold text-slate-700">
+                                ${[3, 5, 10, 20].map(sz => `<option value="${sz}" ${pageSize === sz ? 'selected' : ''}>${sz}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-40 overflow-y-auto border rounded-xl">
+                        <table class="w-full text-left border-collapse text-[11px]">
+                            <thead class="bg-slate-50 text-slate-700 font-bold border-b sticky top-0">
+                                <tr>
+                                    <th class="p-2">Indikator & Periode</th>
+                                    <th class="p-2 text-center">Waktu Cetak</th>
+                                    <th class="p-2 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${pagedLogs.length === 0 ? `<tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Belum ada riwayat cetak SKP Direktur pada tahun ${yr}.</td></tr>` : pagedLogs.map(log => `
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="p-2">
+                                            <span class="font-bold text-slate-800 block line-clamp-1" title="${sanitizeHTML(log.indikator)}">${sanitizeHTML(log.indikator)}</span>
+                                            <span class="text-[10px] text-indigo-700 font-semibold">${sanitizeHTML(log.triwulan)} ${sanitizeHTML(log.tahun)}</span>
+                                        </td>
+                                        <td class="p-2 text-center text-[10px] text-slate-500 whitespace-nowrap">${sanitizeHTML(log.printedAtLabel || '-')}</td>
+                                        <td class="p-2 text-center space-x-1 whitespace-nowrap">
+                                            <button type="button" onclick="reprintDirekturSkpFromLog('${log.id}')" class="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded font-bold text-[10px]" title="Pratinjau & Cetak Ulang"><i class="fa-solid fa-print"></i></button>
+                                            ${isAdmin ? `<button type="button" onclick="deleteDirekturSkpLog('${log.id}')" class="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded font-bold text-[10px]" title="Hapus Log"><i class="fa-solid fa-trash"></i></button>` : ''}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Navigasi Halaman (Page Viewer) -->
+                    <div class="flex items-center justify-between pt-1 text-[10px] text-slate-600">
+                        <span>Menampilkan <strong>${totalLogs === 0 ? 0 : startIdx + 1}–${Math.min(startIdx + pageSize, totalLogs)}</strong> dari <strong>${totalLogs}</strong> log</span>
+                        <div class="flex items-center space-x-1">
+                            <button type="button" onclick="setDirSkpLogPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} class="px-2 py-1 rounded border font-bold ${currentPage <= 1 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white hover:bg-slate-100 text-slate-700'}">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <span class="px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded font-bold">Hal ${currentPage} / ${totalPages}</span>
+                            <button type="button" onclick="setDirSkpLogPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} class="px-2 py-1 rounded border font-bold ${currentPage >= totalPages ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white hover:bg-slate-100 text-slate-700'}">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        window.deleteDirekturSkpLog = async function(logId) {
+            if (!confirm('Hapus riwayat log cetak SKP Direktur ini?')) return;
+            DB.direkturSkpLogs = (DB.direkturSkpLogs || []).filter(x => String(x.id) !== String(logId));
+            await saveToMySQL();
+            renderDirekturSkpMonitoringTable();
+            showToast('Log cetak SKP Direktur berhasil dihapus.', 'info');
+        };
+
+        window.reprintDirekturSkpFromLog = function(logId) {
+            const log = (DB.direkturSkpLogs || []).find(x => String(x.id) === String(logId));
+            if (!log) return;
+            renderDirekturSkpDocument(log);
+        };
+
+        window.renderDirekturSkpDocument = function(docData) {
+            const previewBox = document.getElementById('printableArea') || document.getElementById('dirDirectSkpPreviewArea');
+            if (!previewBox) return;
+
+            const tUpper = String(docData.triwulan || '').toUpperCase().trim();
+            let waktuPelaksanaanDisplay = `Pelaksanaan kegiatan selama 12 bulan yaitu bulan Januari sampai dengan Desember ${docData.tahun}`;
+            let twRomawi = 'I - IV';
+            if (tUpper.includes('1')) {
+                waktuPelaksanaanDisplay = `Pelaksanaan kegiatan selama 3 bulan yaitu bulan Januari sampai dengan Maret ${docData.tahun}`;
+                twRomawi = 'I';
+            } else if (tUpper.includes('2')) {
+                waktuPelaksanaanDisplay = `Pelaksanaan kegiatan selama 3 bulan yaitu bulan April sampai dengan Juni ${docData.tahun}`;
+                twRomawi = 'II';
+            } else if (tUpper.includes('3')) {
+                waktuPelaksanaanDisplay = `Pelaksanaan kegiatan selama 3 bulan yaitu bulan Juli sampai dengan September ${docData.tahun}`;
+                twRomawi = 'III';
+            } else if (tUpper.includes('4')) {
+                waktuPelaksanaanDisplay = `Pelaksanaan kegiatan selama 3 bulan yaitu bulan Oktober sampai dengan Desember ${docData.tahun}`;
+                twRomawi = 'IV';
+            }
+
+            previewBox.classList.remove('hidden');
+            previewBox.innerHTML = `
+                <div class="space-y-4 text-slate-900 font-serif">
+                    <div class="flex items-center justify-between border-b pb-3 no-print font-sans">
+                        <span class="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-bold">
+                            <i class="fa-solid fa-file-signature mr-1"></i>Pratinjau SKP Direktur Siap Cetak (Tersimpan di Log Monitoring)
+                        </span>
+                        <button type="button" onclick="printDirectDirekturSKP()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow flex items-center space-x-2">
+                            <i class="fa-solid fa-print"></i><span>Cetak / Download SKP Direktur (PDF)</span>
+                        </button>
+                    </div>
+
+                    <div id="dirDirectSkpPrintSheet" class="space-y-3 p-4 sm:p-6 bg-white">
+                        <div class="text-center space-y-0.5">
+                            <h2 class="text-base font-bold uppercase tracking-wide">LAPORAN PELAKSANAAN KEGIATAN</h2>
+                            <h3 class="text-base font-bold uppercase tracking-wide">SASARAN KERJA PEGAWAI</h3>
+                            <p class="text-sm font-bold">TAHUN ${sanitizeHTML(docData.tahun)} — ${docData.triwulan === 'Semua' ? 'Triwulan I - IV (Tahunan)' : 'Triwulan ' + twRomawi}</p>
+                        </div>
+
+                        <table class="w-full skp-borderless-table text-xs">
+                            <tbody>
+                                <tr class="font-bold"><td class="py-1 pr-2 w-8 text-left align-top">I.</td><td class="py-1 uppercase">NAMA INDIKATOR KINERJA</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5 font-semibold">${sanitizeHTML(docData.indikator)}</td></tr>
+
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">II.</td><td class="py-1 uppercase">URAIAN KEGIATAN</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">Kegiatan yang dilakukan adalah sebagai berikut:<br>${sanitizeHTML(docData.uraianKegiatan)}</td></tr>
+
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">III.</td><td class="py-1 uppercase">TARGET KINERJA</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">Target output yang dihasilkan ${docData.targetVal} ${sanitizeHTML(docData.satuan)}</td></tr>
+
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">IV.</td><td class="py-1 uppercase">WAKTU PELAKSANAAN</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(waktuPelaksanaanDisplay)}</td></tr>
+
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">V.</td><td class="py-1 uppercase">HASIL KEGIATAN/PEKERJAAN</td></tr>
+                                <tr>
+                                    <td class="pb-1.5"></td>
+                                    <td class="pb-1.5">
+                                        Hasil kegiatan yang dicapai adalah ${docData.realisasiVal} ${sanitizeHTML(docData.satuan)} (dari ${docData.jumlahLaporan} laporan unit/tim terkait)
+                                    </td>
+                                </tr>
+
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">VI.</td><td class="py-1 uppercase">PERMASALAHAN YANG DIHADAPI</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(docData.permasalahan)}</td></tr>
+
+                                <tr class="font-bold"><td class="py-1 pr-2 text-left align-top">VII.</td><td class="py-1 uppercase">SARAN DAN TINDAK LANJUT</td></tr>
+                                <tr><td class="pb-1.5"></td><td class="pb-1.5">${sanitizeHTML(docData.saran)}</td></tr>
+                            </tbody>
+                        </table>
+
+                        <div class="pt-4">
+                            <div class="text-right text-xs mb-2 pr-4">${sanitizeHTML(docData.tanggalKota)}</div>
+                            <div class="grid grid-cols-2 gap-8 text-xs text-center">
+                                <!-- KIRI: Penyusun Laporan (Direktur - TTD Manual) -->
+                                <div class="flex flex-col items-center">
+                                    <p class="font-semibold">Yang membuat,</p>
+                                    <p class="font-bold mb-1">Direktur</p>
+                                    <div class="h-20 flex items-center justify-center my-1">
+                                        ${docData.signatureManualDir ? `<img src="${docData.signatureManualDir}" alt="TTD Direktur" class="max-h-20 mx-auto">` : ''}
+                                    </div>
+                                    <p class="font-bold underline">${sanitizeHTML(docData.penyusunName)}</p>
+                                    <p>NIP. ${sanitizeHTML(docData.penyusunNip)}</p>
+                                </div>
+                                <!-- KANAN: Pejabat Penilai (Dikosongkan TTD-nya karena ditandatangani di luar sistem) -->
+                                <div class="flex flex-col items-center">
+                                    <p class="font-semibold">Menyetujui,</p>
+                                    <p class="font-bold mb-1">${sanitizeHTML(docData.penilaiJabatan)}</p>
+                                    <div class="h-20 my-1"></div>
+                                    <p class="font-bold underline">${sanitizeHTML(docData.penilaiName)}</p>
+                                    <p>NIP. ${sanitizeHTML(docData.penilaiNip)}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right text-[11px] font-bold text-slate-500 pt-2">Halaman 1 dari 1</div>
+                    </div>
+                </div>
+            `;
+
+            previewBox.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        window.renderDirectDirekturSKPPreview = async function(e) {
+            if (e) e.preventDefault();
+            const yr = String(document.getElementById('dirDirectSkpTahun').value || '2025');
+            const tw = String(document.getElementById('dirDirectSkpTw').value || 'TW 1');
+            const indSel = document.getElementById('dirDirectSkpIndikator');
+            if (!indSel || !indSel.value) {
+                showToast('Pilih indikator kinerja Direktur terlebih dahulu!', 'error');
+                return;
+            }
+
+            if (!window._dirManualSigHasStroke) {
+                showToast('Silakan goreskan tanda tangan manual Direktur pada kotak tanda tangan terlebih dahulu!', 'error');
+                return;
+            }
+
+            const canvas = document.getElementById('dirDirectSigCanvas');
+            const signatureManualDir = canvas ? canvas.toDataURL('image/png') : '';
+
+            const opt = indSel.options[indSel.selectedIndex];
+            const indikatorName = indSel.value;
+            const targetVal = Number(opt.getAttribute('data-target')) || 100;
+            const satuanStr = opt.getAttribute('data-satuan') || '%';
+
+            const tanggalKota = document.getElementById('dirDirectSkpTanggalKota').value.trim();
+            const penilaiName = document.getElementById('dirDirectSkpPenilaiName').value.trim() || '........................................';
+            const penilaiNip = document.getElementById('dirDirectSkpPenilaiNip').value.trim() || '-';
+            const penilaiJabatan = document.getElementById('dirDirectSkpPenilaiJabatan').value.trim() || 'Pejabat Penilai Kinerja';
+            const penyusunName = document.getElementById('dirDirectSkpPenyusunName').value.trim();
+            const penyusunNip = document.getElementById('dirDirectSkpPenyusunNip').value.trim() || '-';
+
+            const matchingCaps = (DB.capaian || []).filter(c => {
+                const matchYr = String(c.tahun || '2025') === yr;
+                const matchInd = String(c.targetDirektur || '').trim().toLowerCase() === indikatorName.trim().toLowerCase();
+                const matchTw = tw === 'Semua' ? true : String(c.triwulan || '').trim().toUpperCase() === tw.trim().toUpperCase();
+                return matchYr && matchInd && matchTw;
+            });
+
+            const totalReal = matchingCaps.reduce((acc, c) => acc + (Number(c.realisasi) || 0), 0);
+            const avgReal = matchingCaps.length > 0 ? Number((totalReal / matchingCaps.length).toFixed(2)) : 0;
+            const uraianGabungan = matchingCaps.length > 0
+                ? Array.from(new Set(matchingCaps.map(c => c.uraianPekerjaan || c.program).filter(Boolean))).join('; ')
+                : 'Melaksanakan program dan kebijakan strategis Politeknik Industri Petrokimia Banten sesuai indikator kinerja Direktur.';
+            const kendalaGabungan = matchingCaps.length > 0
+                ? (Array.from(new Set(matchingCaps.map(c => c.permasalahan).filter(p => p && p !== '-'))).join('; ') || 'Tidak ada kendala signifikan')
+                : 'Tidak ada kendala signifikan';
+            const saranGabungan = matchingCaps.length > 0
+                ? (Array.from(new Set(matchingCaps.map(c => c.rekomendasi).filter(r => r && r !== '-'))).join('; ') || '-')
+                : '-';
+
+            if (!Array.isArray(DB.direkturSkpLogs)) DB.direkturSkpLogs = [];
+            const logEntry = {
+                id: 'dirskp_' + Date.now(),
+                tahun: yr,
+                triwulan: tw,
+                indikator: indikatorName,
+                targetVal,
+                satuan: satuanStr,
+                realisasiVal: avgReal,
+                jumlahLaporan: matchingCaps.length,
+                uraianKegiatan: uraianGabungan,
+                permasalahan: kendalaGabungan,
+                saran: saranGabungan,
+                tanggalKota,
+                penilaiJabatan,
+                penilaiName,
+                penilaiNip,
+                penyusunName,
+                penyusunNip,
+                signatureManualDir,
+                printedAt: new Date().toISOString(),
+                printedAtLabel: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            };
+
+            DB.direkturSkpLogs.push(logEntry);
+            recordAuditLog('Cetak SKP Direktur', 'Laporan SKP Direktur', `Direktur mencetak SKP indikator "${indikatorName}" (${tw} ${yr}).`);
+            await saveToMySQL();
+
+            renderDirekturSkpMonitoringTable();
+            renderDirekturSkpDocument(logEntry);
+            showToast('Log cetakan SKP Direktur tersimpan & pratinjau siap dicetak!');
+        };
+        window.printDirectDirekturSKP = function() {
+            const sheet = document.getElementById('dirDirectSkpPrintSheet');
+            if (!sheet) return;
+            const win = window.open('', '_blank', 'width=900,height=700');
+            if (!win) {
+                window.print();
+                return;
+            }
+            win.document.write(`
+                <html>
+                <head>
+                    <title>Cetak SKP Direktur</title>
+                    <script src="https://cdn.tailwindcss.com"><\/script>
+                    <style>
+                        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+                        body { font-family: "Times New Roman", Times, serif; padding: 24px; color: #0f172a; }
+                    </style>
+                </head>
+                <body>${sheet.innerHTML}</body>
+                </html>
+            `);
+            win.document.close();
+            setTimeout(() => { win.focus(); win.print(); }, 500);
+        };
+
+        // Auto-inject Panel Cetak SKP Khusus Direktur & Admin pada halaman Ekspor & Download PDF
+        (function initDirekturExportSkpInjector() {
+            const injectPanel = () => {
+                if (typeof currentUser === 'undefined' || !currentUser) return;
+                const roles = typeof getUserRoles === 'function' ? getUserRoles(currentUser) : [currentUser.role];
+                if (!roles.includes('admin') && !roles.includes('direktur')) return;
+
+                const pageTitleEl = document.getElementById('pageTitle');
+                const mainContent = document.getElementById('mainContent');
+                if (!pageTitleEl || !mainContent) return;
+
+                const titleTxt = (pageTitleEl.innerText || '').toLowerCase();
+                if (!titleTxt.includes('ekspor') && !titleTxt.includes('export') && !titleTxt.includes('download pdf')) return;
+                if (document.getElementById('direkturDirectSkpPanel')) return;
+
+                const dirInfo = typeof getAdminDirekturData === 'function'
+                    ? getAdminDirekturData()
+                    : { name: currentUser.name, nip: currentUser.nip || '-' };
+
+                const panel = document.createElement('div');
+                panel.id = 'direkturDirectSkpPanel';
+                panel.className = 'bg-white rounded-2xl shadow-sm border-2 border-indigo-200 p-6 space-y-5 mb-6 animate-fadeIn';
+                panel.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-100 pb-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-extrabold uppercase">Khusus Direktur & Admin</span>
+                                <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold">Tanpa Approval</span>
+                            </div>
+                            <h3 class="font-bold text-slate-900 text-base mt-1 flex items-center gap-2">
+                                <i class="fa-solid fa-user-tie text-indigo-600"></i> Cetak SKP Khusus Direktur (Per Indikator)
+                            </h3>
+                            <p class="text-xs text-slate-500">Pilih indikator kinerja Direktur dan atur pejabat penilai sebelum mencetak PDF tanpa alur pengajuan/approval.</p>
+                        </div>
+                    </div>
+
+                    <form onsubmit="renderDirectDirekturSKPPreview(event)" class="space-y-4 text-xs">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Tahun SKP</label>
+                                <select id="dirDirectSkpTahun" onchange="populateDirDirectSkpIndicators()" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold">
+                                    <option value="2025">2025</option>
+                                    <option value="2026" selected>2026</option>
+                                    <option value="2027">2027</option>
+                                    <option value="2028">2028</option>
+                                    <option value="2029">2029</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Triwulan</label>
+                                <select id="dirDirectSkpTw" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold">
+                                    <option value="TW 1">Triwulan I (TW 1)</option>
+                                    <option value="TW 2">Triwulan II (TW 2)</option>
+                                    <option value="TW 3">Triwulan III (TW 3)</option>
+                                    <option value="TW 4">Triwulan IV (TW 4)</option>
+                                    <option value="Semua">Semua Triwulan (Jan - Des)</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block font-bold text-slate-700 mb-1">Pilih Indikator Kinerja Direktur yang Dicetak</label>
+                                <select id="dirDirectSkpIndikator" required class="w-full p-2.5 bg-slate-50 border border-indigo-300 rounded-xl font-semibold text-slate-800"></select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Tempat & Tanggal Cetak Laporan</label>
+                                <input type="text" id="dirDirectSkpTanggalKota" value="Serang, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}" required class="w-full p-2 bg-white border rounded-lg font-medium">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Predikat Capaian Kinerja</label>
+                                <select id="dirDirectSkpPredikat" class="w-full p-2 bg-white border rounded-lg font-bold text-emerald-700">
+                                    <option value="Di Bawah Ekspektasi">Di Bawah Ekspektasi</option>
+                                    <option value="Sesuai Ekspektasi" selected>Sesuai Ekspektasi</option>
+                                    <option value="Di Atas Ekspektasi">Di Atas Ekspektasi</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Jabatan Pejabat Penilai (Manual)</label>
+                                <input type="text" id="dirDirectSkpPenilaiJabatan" value="Kepala BPSDMI" placeholder="Contoh: Kepala BPSDMI" class="w-full p-2 bg-white border rounded-lg font-semibold">
+                            </div>
+
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Nama Pejabat Penilai (Input Manual)</label>
+                                <input type="text" id="dirDirectSkpPenilaiName" value="" placeholder="Kosong / ketik nama pejabat penilai..." class="w-full p-2 bg-white border border-amber-300 rounded-lg font-semibold">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">NIP Pejabat Penilai (Input Manual)</label>
+                                <input type="text" id="dirDirectSkpPenilaiNip" value="" placeholder="Kosong / ketik NIP pejabat penilai..." class="w-full p-2 bg-white border border-amber-300 rounded-lg font-mono">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Penyusun (Direktur)</label>
+                                    <input type="text" id="dirDirectSkpPenyusunName" value="${sanitizeHTML(dirInfo.name)}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-semibold text-slate-700 cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">NIP Direktur</label>
+                                    <input type="text" id="dirDirectSkpPenyusunNip" value="${sanitizeHTML(dirInfo.nip || '-')}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-mono text-slate-700 cursor-not-allowed">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow flex items-center space-x-2">
+                                <i class="fa-solid fa-eye"></i><span>Tampilkan Pratinjau & Cetak SKP Direktur</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="dirDirectSkpPreviewArea" class="hidden border-t pt-5"></div>
+                `;
+
+                mainContent.prepend(panel);
+                populateDirDirectSkpIndicators();
+            };
+
+            const obs = new MutationObserver(() => injectPanel());
+            obs.observe(document.body, { childList: true, subtree: true });
+            setInterval(injectPanel, 800);
+        })();
+
         // === SINKRONISASI STABIL & LENGKAP KE MYSQL ===
         async function loadDataFromMySQL() {
             try {
