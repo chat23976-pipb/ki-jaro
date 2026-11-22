@@ -11255,8 +11255,102 @@ function renderAdminView(container) {
                 return matchRole && matchThn && matchTw;
             });
 
+           const userRolesLap = typeof getUserRoles === 'function' ? getUserRoles(currentUser) : [currentUser.role];
+            const canSeeDirDirectSkp = userRolesLap.includes('admin') || userRolesLap.includes('direktur');
+
             container.innerHTML = `
                 <div class="space-y-8 animate-fadeIn">
+                    ${canSeeDirDirectSkp ? `
+                    <!-- PANEL CETAK SKP KHUSUS DIREKTUR & ADMIN (TANPA APPROVAL) -->
+                    <div id="direkturDirectSkpPanel" class="bg-white rounded-2xl shadow-sm border-2 border-indigo-200 p-6 space-y-5 no-print">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-100 pb-4">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-extrabold uppercase">Khusus Direktur & Admin</span>
+                                    <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold">Tanpa Approval</span>
+                                </div>
+                                <h3 class="font-bold text-slate-900 text-base mt-1 flex items-center gap-2">
+                                    <i class="fa-solid fa-user-tie text-indigo-600"></i> Cetak SKP Khusus Direktur (Per Indikator)
+                                </h3>
+                                <p class="text-xs text-slate-500">Atur tahun, triwulan, indikator kinerja Direktur, serta nama & NIP Pejabat Penilai secara manual sebelum mencetak PDF (tanpa alur pengajuan/approval).</p>
+                            </div>
+                        </div>
+
+                        <form onsubmit="renderDirectDirekturSKPPreview(event)" class="space-y-4 text-xs">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Tahun SKP</label>
+                                    <select id="dirDirectSkpTahun" onchange="populateDirDirectSkpIndicators()" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold">
+                                        <option value="2025">2025</option>
+                                        <option value="2026" selected>2026</option>
+                                        <option value="2027">2027</option>
+                                        <option value="2028">2028</option>
+                                        <option value="2029">2029</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Triwulan</label>
+                                    <select id="dirDirectSkpTw" class="w-full p-2.5 bg-slate-50 border rounded-xl font-bold">
+                                        <option value="TW 1">Triwulan I (TW 1)</option>
+                                        <option value="TW 2">Triwulan II (TW 2)</option>
+                                        <option value="TW 3">Triwulan III (TW 3)</option>
+                                        <option value="TW 4">Triwulan IV (TW 4)</option>
+                                        <option value="Semua">Semua Triwulan (Jan - Des)</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block font-bold text-slate-700 mb-1">Pilih Indikator Kinerja Direktur yang Dicetak</label>
+                                    <select id="dirDirectSkpIndikator" required class="w-full p-2.5 bg-slate-50 border border-indigo-300 rounded-xl font-semibold text-slate-800"></select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Tempat & Tanggal Cetak Laporan</label>
+                                    <input type="text" id="dirDirectSkpTanggalKota" value="Serang, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}" required class="w-full p-2 bg-white border rounded-lg font-medium">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Predikat Capaian Kinerja</label>
+                                    <select id="dirDirectSkpPredikat" class="w-full p-2 bg-white border rounded-lg font-bold text-emerald-700">
+                                        <option value="Di Bawah Ekspektasi">Di Bawah Ekspektasi</option>
+                                        <option value="Sesuai Ekspektasi" selected>Sesuai Ekspektasi</option>
+                                        <option value="Di Atas Ekspektasi">Di Atas Ekspektasi</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Jabatan Pejabat Penilai (Manual)</label>
+                                    <input type="text" id="dirDirectSkpPenilaiJabatan" value="Kepala BPSDMI" placeholder="Contoh: Kepala BPSDMI" class="w-full p-2 bg-white border rounded-lg font-semibold">
+                                </div>
+
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Nama Pejabat Penilai (Input Manual)</label>
+                                    <input type="text" id="dirDirectSkpPenilaiName" value="" placeholder="Kosong / ketik nama pejabat penilai..." class="w-full p-2 bg-white border border-amber-300 rounded-lg font-semibold">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">NIP Pejabat Penilai (Input Manual)</label>
+                                    <input type="text" id="dirDirectSkpPenilaiNip" value="" placeholder="Kosong / ketik NIP pejabat penilai..." class="w-full p-2 bg-white border border-amber-300 rounded-lg font-mono">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">Penyusun (Direktur)</label>
+                                        <input type="text" id="dirDirectSkpPenyusunName" value="${sanitizeHTML(dirInfo.name)}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-semibold text-slate-700 cursor-not-allowed">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">NIP Direktur</label>
+                                        <input type="text" id="dirDirectSkpPenyusunNip" value="${sanitizeHTML(dirInfo.nip || '-')}" readonly class="w-full p-2 bg-slate-100 border rounded-lg font-mono text-slate-700 cursor-not-allowed">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end">
+                                <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow flex items-center space-x-2">
+                                    <i class="fa-solid fa-eye"></i><span>Tampilkan Pratinjau & Cetak SKP Direktur</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    ` : ''}
+
                     <!-- 2 TABEL INFORMASI STATUS APPROVAL REQUEST DENGAN FILTER TAHUN & TRIWULAN (REVISI 11) -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start relative no-print">
                         
@@ -11734,6 +11828,9 @@ function renderAdminView(container) {
                     </div>
                 </div>
             `;
+            if (canSeeDirDirectSkp && typeof populateDirDirectSkpIndicators === 'function') {
+                populateDirDirectSkpIndicators();
+            }
         }
 
              async function deleteLaporanKinerja(id) {
@@ -13287,7 +13384,7 @@ function promptDrawSignature(roleKey) {
             const hashPenyusun = generateSimpleDocHash(`SKP-DIR-USER|${penyusunName}|${indikatorName}|${tw}|${yr}`);
             const hashPenilai = generateSimpleDocHash(`SKP-DIR-PENILAI|${penilaiName}|${indikatorName}|${tw}|${yr}`);
 
-            const previewBox = document.getElementById('dirDirectSkpPreviewArea');
+            const previewBox = document.getElementById('printableArea') || document.getElementById('dirDirectSkpPreviewArea');
             if (!previewBox) return;
 
             previewBox.classList.remove('hidden');
