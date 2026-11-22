@@ -56,19 +56,70 @@
         return `Keputusan Menteri Perindustrian Nomor ${withoutNomorPrefix}`;
     }
 
-function setSidebarMenuActive(isActive) {
+function ensureSidebarStyleTag() {
+        if (document.getElementById('pkSidebarForceStyle')) return;
+        const st = document.createElement('style');
+        st.id = 'pkSidebarForceStyle';
+        st.textContent = `
+            #${MENU_ID}.pk-menu-active {
+                background-color: #ffffff !important;
+                color: #1d4ed8 !important;
+                font-weight: 700 !important;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+            }
+            #${MENU_ID}.pk-menu-active i,
+            #${MENU_ID}.pk-menu-active span {
+                color: #1d4ed8 !important;
+            }
+            #${MENU_ID}.pk-menu-inactive {
+                background-color: transparent !important;
+                color: #ffffff !important;
+            }
+            #${MENU_ID}.pk-menu-inactive:hover {
+                background-color: rgba(255, 255, 255, 0.12) !important;
+            }
+            #${MENU_ID}.pk-menu-inactive i,
+            #${MENU_ID}.pk-menu-inactive span {
+                color: #ffffff !important;
+            }
+        `;
+        document.head.appendChild(st);
+    }
+
+    function setSidebarMenuActive(isActive) {
+        ensureSidebarStyleTag();
         const btn = document.getElementById(MENU_ID);
         if (!btn) return;
         if (isActive) {
-            btn.classList.add('bg-white', 'text-blue-700', 'font-bold', 'shadow');
-            btn.classList.remove('text-blue-100', 'text-white', 'hover:bg-blue-700/50', 'hover:bg-white/10');
+            btn.classList.add('pk-menu-active');
+            btn.classList.remove('pk-menu-inactive');
         } else {
-            btn.classList.remove('bg-white', 'text-blue-700', 'text-indigo-700', 'font-bold', 'shadow');
-            btn.classList.add('text-white', 'hover:bg-white/10');
+            btn.classList.remove('pk-menu-active');
+            btn.classList.add('pk-menu-inactive');
         }
     }
 
+    function resetOtherSidebarButtons(makeWhite) {
+        const sidebarEl = document.querySelector('aside') || document.querySelector('nav');
+        if (!sidebarEl) return;
+        sidebarEl.querySelectorAll('button, a').forEach(b => {
+            if (b.id === MENU_ID || b.querySelector('.fa-bars')) return;
+            if (makeWhite) {
+                b.dataset.pkOverridden = '1';
+                b.style.setProperty('background-color', 'transparent', 'important');
+                b.style.setProperty('color', '#ffffff', 'important');
+                b.querySelectorAll('i, span').forEach(ch => ch.style.setProperty('color', '#ffffff', 'important'));
+            } else if (b.dataset.pkOverridden === '1') {
+                delete b.dataset.pkOverridden;
+                b.style.removeProperty('background-color');
+                b.style.removeProperty('color');
+                b.querySelectorAll('i, span').forEach(ch => ch.style.removeProperty('color'));
+            }
+        });
+    }
+
     function injectSidebarMenu() {
+        ensureSidebarStyleTag();
         if (document.getElementById(MENU_ID)) return;
         const buttons = Array.from(document.querySelectorAll('aside button, nav button, aside a, nav a'));
         const petaBtn = buttons.find(el => (el.textContent || '').trim().toLowerCase().includes('peta risiko'));
@@ -77,10 +128,16 @@ function setSidebarMenuActive(isActive) {
         const clone = petaBtn.cloneNode(true);
         clone.id = MENU_ID;
         clone.removeAttribute('onclick');
+        clone.removeAttribute('style');
+        // Bersihkan semua class warna latar & teks bawaan hasil kloning
+        clone.className = Array.from(clone.classList)
+            .filter(c => !c.startsWith('bg-') && !c.startsWith('text-') && c !== 'shadow' && c !== 'shadow-md' && c !== 'shadow-sm')
+            .join(' ');
         setSidebarMenuActive(false);
 
         const icon = clone.querySelector('i');
         if (icon) {
+            icon.removeAttribute('style');
             icon.className = 'fa-solid fa-file-contract w-5 text-center';
         }
         let replacedText = false;
@@ -92,7 +149,10 @@ function setSidebarMenuActive(isActive) {
         });
         if (!replacedText) {
             const span = clone.querySelector('span');
-            if (span) span.textContent = 'Dialog & Perjanjian Kinerja';
+            if (span) {
+                span.removeAttribute('style');
+                span.textContent = 'Dialog & Perjanjian Kinerja';
+            }
         }
 
         clone.addEventListener('click', function (e) {
@@ -106,8 +166,9 @@ function setSidebarMenuActive(isActive) {
 
     document.addEventListener('click', function (e) {
         const clickedSidebarBtn = e.target.closest('aside button, nav button, aside a, nav a');
-        if (clickedSidebarBtn && clickedSidebarBtn.id !== MENU_ID) {
+        if (clickedSidebarBtn && clickedSidebarBtn.id !== MENU_ID && !clickedSidebarBtn.querySelector('.fa-bars')) {
             setSidebarMenuActive(false);
+            resetOtherSidebarButtons(false);
         }
     }, true);
 
@@ -1083,12 +1144,7 @@ function setSidebarMenuActive(isActive) {
         const mainContainer = document.getElementById('mainContent') || document.querySelector('main > div:last-child') || document.querySelector('main');
         if (!mainContainer || !currentUser) return;
 
-document.querySelectorAll('aside button, nav button, aside a, nav a').forEach(b => {
-            if (b.id !== MENU_ID && !b.querySelector('.fa-bars')) {
-                b.classList.remove('bg-white', 'text-blue-700', 'text-indigo-700', 'font-bold', 'shadow');
-                b.classList.add('text-white');
-            }
-        });
+resetOtherSidebarButtons(true);
         setSidebarMenuActive(true);
 
         const pageTitleEl = document.querySelector('header h1, header h2');
