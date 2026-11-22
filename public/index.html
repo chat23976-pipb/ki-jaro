@@ -9799,16 +9799,61 @@ window.adminUserState = window.adminUserState || {
             URL.revokeObjectURL(url);
         };
 
+window.downloadImportUsersLogCSV = function(logRows) {
+            const header = 'Baris_CSV,Nama,Email_Username,Roles,Tim_Kerja,Unit,NIP,Status,Keterangan_Detail';
+            const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+            const lines = logRows.map(r => [
+                esc(r.rowNum),
+                esc(r.name),
+                esc(r.username),
+                esc(r.roles),
+                esc(r.timKey),
+                esc(r.unit),
+                esc(r.nip),
+                esc(r.status),
+                esc(r.reason)
+            ].join(','));
+            const csvContent = '\uFEFF' + [header, ...lines].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+            a.href = url;
+            a.download = `Log_Import_Pejabat_MultiRole_${ts}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
         window.handleImportUsersCSV = async function(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
             const text = await file.text();
-            const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-            if (lines.length < 2) {
-                showToast('File CSV kosong atau tidak sesuai template!', 'error');
+            const rawLines = text.split(/\r?\n/);
+            const nonEmptyLines = rawLines.map((l, idx) => ({ text: l.trim(), lineNum: idx + 1 })).filter(x => x.text.length > 0);
+
+            if (nonEmptyLines.length < 2) {
+                downloadImportUsersLogCSV([{
+                    rowNum: 1,
+                    name: '-',
+                    username: '-',
+                    roles: '-',
+                    timKey: '-',
+                    unit: '-',
+                    nip: '-',
+                    status: 'GAGAL',
+                    reason: 'File CSV kosong atau tidak memiliki baris data di bawah header.'
+                }]);
+                showToast('Import gagal: File CSV kosong! File log CSV telah diunduh.', 'error');
                 event.target.value = '';
                 return;
             }
+
+            // Deteksi otomatis pemisah koma (,) atau titik koma (;) dari Excel Indonesia
+            const headerLine = nonEmptyLines[0].text;
+            const delimiter = (headerLine.split(';').length > headerLine.split(',').length) ? ';' : ',';
+
             const parseCsvLine = (line) => {
                 const res = [];
                 let cur = '', inQuotes = false;
@@ -9817,7 +9862,7 @@ window.adminUserState = window.adminUserState || {
                     if (ch === '"') {
                         if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
                         else inQuotes = !inQuotes;
-                    } else if (ch === ',' && !inQuotes) {
+                    } else if (ch === delimiter && !inQuotes) {
                         res.push(cur.trim()); cur = '';
                     } else {
                         cur += ch;
@@ -9827,49 +9872,144 @@ window.adminUserState = window.adminUserState || {
                 return res;
             };
 
-            const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase());
-            let added = 0, updated = 0;
-            for (let i = 1; i < lines.length; i++) {
-                const cols = parseCsvLine(lines[i]);
+            const headers = parseCsvLine(headerLine).map(h => h.replace(/^\uFEFF/, '').toLowerCase());
+            const validRoleKeys = Object.keys(ROLE_LABELS || {});
+            const validTimList = Array.isArray(DB.timKerjaList) ? DB.timKerjaList : [];
+            const logRows = [];
+
+            // Validasi header wajib
+            const hasNameHeader = headers.some(h => ['name', 'nama', 'nama pejabat', 'nama lengkap'].includes(h));
+            const hasUserHeader = headers.some(h => ['username', 'email', 'email google'].includes(h));
+            if (!hasNameHeader || !hasUserHeader) {
+                downloadImportUsersLogCSV([{
+                    rowNum: 1,
+                    name: '-',
+                    username: '-',
+                    roles: '-',
+                    timKey: '-',
+                    unit: '-',
+                    nip: '-',
+                    status: 'GAGAL',
+                    reason: `Header CSV tidak sesuai template. Ditemukan: [${headers.join(' | ')}]. Wajib memiliki kolom "name" dan "username".`
+                }]);
+                showToast('Header CSV tidak sesuai template! Cek file log CSV yang diunduh.', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            let added = 0, updated = 0, failed = 0;
+
+            for (let i = 1; i < nonEmptyLines.length; i++) {
+                const { text: lineStr, lineNum } = nonEmptyLines[i];
+                const cols = parseCsvLine(lineStr);
                 const getCol = (names) => {
                     const idx = headers.findIndex(h => names.includes(h));
                     return idx >= 0 ? (cols[idx] || '').trim() : '';
                 };
+
                 const name = getCol(['name', 'nama', 'nama pejabat', 'nama lengkap']);
                 const username = getCol(['username', 'email', 'email google']).toLowerCase();
-                if (!name || !username) continue;
                 const password = getCol(['password', 'pass']) || 'petro2025';
-                const rawRoles = getCol(['roles', 'role', 'role akses']) || 'tendik';
-                const rolesArr = rawRoles.split(/[;|]+/).map(r => r.trim()).filter(Boolean);
+                const rawRoles = getCol(['roles', 'role', 'role akses']);
                 const timKey = getCol(['timkey', 'tim', 'tim kerja']) || 'Akademik';
                 const unit = getCol(['unit', 'unit terkait', 'prodi']) || '-';
                 const nip = getCol(['nip']) || '-';
 
+                const errors = [];
+                if (!name) errors.push('Kolom Nama kosong');
+                if (!username) errors.push('Kolom Email/Username kosong');
+                else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) errors.push(`Format email "${username}" tidak valid`);
+
+                const rolesArr = (rawRoles || 'tendik').split(/[;|,]+/).map(r => r.trim().toLowerCase()).filter(Boolean);
+                if (rolesArr.length === 0) {
+                    errors.push('Kolom Roles kosong');
+                } else if (validRoleKeys.length > 0) {
+                    const invalidRoles = rolesArr.filter(r => !validRoleKeys.includes(r));
+                    if (invalidRoles.length > 0) {
+                        errors.push(`Kode role tidak dikenali: "${invalidRoles.join(', ')}" (Gunakan: ${validRoleKeys.join(' / ')})`);
+                    }
+                }
+
+                if (validTimList.length > 0 && timKey && !validTimList.some(t => t.toLowerCase() === timKey.toLowerCase())) {
+                    errors.push(`Tim Kerja "${timKey}" tidak terdaftar (Pilihan: ${validTimList.join(' / ')})`);
+                }
+
+                if (errors.length > 0) {
+                    failed++;
+                    logRows.push({
+                        rowNum: lineNum,
+                        name: name || '(Kosong)',
+                        username: username || '(Kosong)',
+                        roles: rawRoles || '(Kosong)',
+                        timKey,
+                        unit,
+                        nip,
+                        status: 'GAGAL',
+                        reason: errors.join('; ')
+                    });
+                    continue;
+                }
+
+                const matchedTim = validTimList.find(t => t.toLowerCase() === timKey.toLowerCase()) || timKey;
                 const existIdx = DB.users.findIndex(u => String(u.username || '').toLowerCase() === username);
                 const userObj = {
                     name,
                     username,
                     password,
-                    role: rolesArr[0] || 'tendik',
-                    roles: rolesArr.length > 0 ? rolesArr : ['tendik'],
-                    timKey,
+                    role: rolesArr[0],
+                    roles: rolesArr,
+                    timKey: matchedTim,
                     unit,
                     nip
                 };
+
                 if (existIdx >= 0) {
                     DB.users[existIdx] = { ...DB.users[existIdx], ...userObj };
                     updated++;
+                    logRows.push({
+                        rowNum: lineNum,
+                        name,
+                        username,
+                        roles: rolesArr.join(';'),
+                        timKey: matchedTim,
+                        unit,
+                        nip,
+                        status: 'BERHASIL (DIPERBARUI)',
+                        reason: 'Akun sudah ada dan data berhasil diperbarui.'
+                    });
                 } else {
                     DB.users.push(userObj);
                     added++;
+                    logRows.push({
+                        rowNum: lineNum,
+                        name,
+                        username,
+                        roles: rolesArr.join(';'),
+                        timKey: matchedTim,
+                        unit,
+                        nip,
+                        status: 'BERHASIL (DITAMBAHKAN)',
+                        reason: 'Akun baru berhasil ditambahkan.'
+                    });
                 }
             }
 
             event.target.value = '';
-            recordAuditLog('Import CSV Pejabat & Multi-Role', 'Admin', `Import CSV selesai: ${added} ditambahkan, ${updated} diperbarui.`);
-            await saveToMySQL();
-            showToast(`Import CSV berhasil! ${added} user baru, ${updated} user diperbarui.`);
-            renderAdminView(document.getElementById('mainContent'));
+            downloadImportUsersLogCSV(logRows);
+
+            if (added > 0 || updated > 0) {
+                recordAuditLog('Import CSV Pejabat & Multi-Role', 'Admin', `Import CSV selesai: ${added} ditambahkan, ${updated} diperbarui, ${failed} gagal.`);
+                await saveToMySQL();
+                renderAdminView(document.getElementById('mainContent'));
+            }
+
+            if (failed > 0 && (added > 0 || updated > 0)) {
+                showToast(`Import selesai: ${added} baru, ${updated} update, ${failed} gagal. File CSV Log diunduh.`, 'warning');
+            } else if (failed > 0) {
+                showToast(`Semua data gagal diimport (${failed} baris error). Periksa file CSV Log yang otomatis terunduh!`, 'error');
+            } else {
+                showToast(`Import berhasil 100%! (${added} baru, ${updated} diperbarui). File CSV Log diunduh.`);
+            }
         };
 
 function renderAdminView(container) {
