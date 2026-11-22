@@ -3,11 +3,23 @@
 // =========================================================================
 (function () {
     const MENU_ID = 'menu-perjanjian-kinerja';
+    const LOGO_KEMENPERIN_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Logo_Kementerian_Perindustrian_Republik_Indonesia.png/240px-Logo_Kementerian_Perindustrian_Republik_Indonesia.png';
+    const JABATAN_OPTIONS = [
+        'Dosen',
+        'Tenaga Kependidikan',
+        'Direktur',
+        'Kasubbag Administrasi Akademik Kemahasiswaan dan Kerjasama',
+        'Kasubbag Umum dan Keuangan'
+    ];
+
     let _pkSigModePengusul = 'qr';
     let _pkSigHasStrokePengusul = false;
     let _pkSigModeDir = 'qr';
     let _pkSigHasStrokeDir = false;
     let _pkEditingId = null;
+    let _pkMonitorFilterYear = '2025';
+    let _pkMonitorFilterTim = 'ALL';
+    let _pkMonitorFilterStatus = 'ALL';
 
     function esc(str) {
         if (typeof sanitizeHTML === 'function') return sanitizeHTML(String(str ?? ''));
@@ -36,7 +48,26 @@
         };
     }
 
-    // Sisipkan tombol menu di sidebar tepat di bawah "Cascading & Crosscutting" dan di atas "Peta Risiko"
+    function formatSkPengangkatanFull(rawInput) {
+        const clean = String(rawInput || '').trim();
+        if (!clean) return 'Keputusan Menteri Perindustrian Nomor ... Tahun ...';
+        if (/^keputusan\s+menteri\s+perindustrian/i.test(clean)) return clean;
+        const withoutNomorPrefix = clean.replace(/^nomor\s+/i, '');
+        return `Keputusan Menteri Perindustrian Nomor ${withoutNomorPrefix}`;
+    }
+
+    function setSidebarMenuActive(isActive) {
+        const btn = document.getElementById(MENU_ID);
+        if (!btn) return;
+        if (isActive) {
+            btn.classList.add('bg-white', 'text-blue-700', 'font-bold', 'shadow');
+            btn.classList.remove('text-blue-100', 'text-white', 'hover:bg-blue-700/50', 'hover:bg-white/10');
+        } else {
+            btn.classList.remove('bg-white', 'text-blue-700', 'text-indigo-700', 'font-bold', 'shadow');
+            btn.classList.add('text-blue-100', 'hover:bg-white/10');
+        }
+    }
+
     function injectSidebarMenu() {
         if (document.getElementById(MENU_ID)) return;
         const buttons = Array.from(document.querySelectorAll('aside button, nav button, aside a, nav a'));
@@ -46,13 +77,12 @@
         const clone = petaBtn.cloneNode(true);
         clone.id = MENU_ID;
         clone.removeAttribute('onclick');
-        clone.classList.remove('bg-white', 'text-blue-700', 'text-indigo-700', 'font-bold', 'shadow');
+        setSidebarMenuActive(false);
 
         const icon = clone.querySelector('i');
         if (icon) {
             icon.className = 'fa-solid fa-file-contract w-5 text-center';
         }
-        // Ganti teks label menu tanpa merusak elemen ikon
         let replacedText = false;
         clone.childNodes.forEach(node => {
             if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0) {
@@ -74,74 +104,109 @@
         petaBtn.parentNode.insertBefore(clone, petaBtn);
     }
 
-    // Ambil daftar RHK & IKI user dari data Cascading pada tahun tertentu
+    document.addEventListener('click', function (e) {
+        const clickedSidebarBtn = e.target.closest('aside button, nav button, aside a, nav a');
+        if (clickedSidebarBtn && clickedSidebarBtn.id !== MENU_ID) {
+            setSidebarMenuActive(false);
+        }
+    }, true);
+
+    // Pemindaian menyeluruh data RHK & IKI dari seluruh struktur Cascading di DB (Level 1, Level 2, Level 3)
     function collectUserRhkIki(user, tahun) {
-        const yr = String(tahun || '2026');
+        const yr = String(tahun || '2025').trim();
         const roles = getRoles(user);
         const isKetuaTim = roles.includes('tim_kerja');
         const isKetuaUnit = roles.includes('ketua_unit');
+        const userTimNorm = String(user.timKey || user.tim || '').trim().toLowerCase();
+        const userUnitNorm = String(user.unit || '').trim().toLowerCase();
+        const userNameNorm = String(user.name || '').trim().toLowerCase();
+        const userEmailNorm = String(user.username || '').trim().toLowerCase();
+
         const rows = [];
+        const seenKeys = new Set();
 
-        // 1. Jika Ketua Tim Kerja -> ambil dari cascadingTimKerja
-        if (isKetuaTim && Array.isArray(DB.cascadingTimKerja)) {
-            DB.cascadingTimKerja
-                .filter(item => String(item.tahun || '2026') === yr && String(item.timKey || '').toLowerCase() === String(user.timKey || '').toLowerCase())
-                .forEach(item => {
-                    rows.push({
-                        kategori: 'UTAMA',
-                        rhkPimpinan: item.targetDirektur || item.sasaranDirektur || '-',
-                        rhk: item.target || item.rhk || '-',
-                        aspek: item.aspek || 'Kuantitas',
-                        iki: item.indikator || item.target || '-',
-                        target: `${item.targetVal ?? 100} (${item.satuan || '%'})`
-                    });
-                });
-        }
-
-        // 2. Jika Ketua Unit/Prodi/Subbag -> ambil dari cascadingUnit
-        if (isKetuaUnit && Array.isArray(DB.cascadingUnit)) {
-            DB.cascadingUnit
-                .filter(item => String(item.tahun || '2026') === yr && String(item.unit || '').trim().toLowerCase() === String(user.unit || '').trim().toLowerCase())
-                .forEach(item => {
-                    rows.push({
-                        kategori: 'UTAMA',
-                        rhkPimpinan: item.targetTim || item.targetDirektur || '-',
-                        rhk: item.target || item.rhk || '-',
-                        aspek: item.aspek || 'Kuantitas',
-                        iki: item.indikator || item.target || '-',
-                        target: `${item.targetVal ?? 100} (${item.satuan || '%'})`
-                    });
-                });
-        }
-
-        // 3. Jika Anggota / Dosen / Tendik / Kalab / Sekretaris / Koordinator -> ambil dari cascadingIndividu / subUnit
-        const individuSources = []
-            .concat(Array.isArray(DB.cascadingIndividu) ? DB.cascadingIndividu : [])
-            .concat(Array.isArray(DB.cascadingPegawai) ? DB.cascadingPegawai : [])
-            .concat(Array.isArray(DB.cascadingAnggota) ? DB.cascadingAnggota : []);
-
-        individuSources
-            .filter(item => {
-                const matchYr = String(item.tahun || '2026') === yr;
-                const matchUser = (item.username && String(item.username).toLowerCase() === String(user.username).toLowerCase()) ||
-                    (item.pegawaiName && String(item.pegawaiName).trim().toLowerCase() === String(user.name).trim().toLowerCase());
-                return matchYr && matchUser;
-            })
-            .forEach(item => {
-                rows.push({
-                    kategori: item.kategori || 'UTAMA',
-                    rhkPimpinan: item.targetUnit || item.targetTim || item.rhkPimpinan || '-',
-                    rhk: item.rhk || item.target || '-',
-                    aspek: item.aspek || 'Kuantitas',
-                    iki: item.iki || item.indikator || item.target || '-',
-                    target: `${item.targetVal ?? 1} (${item.satuan || 'Dokumen'})`
-                });
+        const pushUniqueRow = (row) => {
+            const rName = String(row.rhk || '').trim();
+            const iName = String(row.iki || '').trim();
+            if (!rName && !iName) return;
+            const key = `${rName.toLowerCase()}|${iName.toLowerCase()}`;
+            if (seenKeys.has(key)) return;
+            seenKeys.add(key);
+            rows.push({
+                kategori: row.kategori === 'TAMBAHAN' ? 'TAMBAHAN' : 'UTAMA',
+                rhkPimpinan: row.rhkPimpinan || '-',
+                rhk: rName || iName,
+                aspek: row.aspek || 'Kuantitas',
+                iki: iName || rName,
+                target: row.target || '100 (%)'
             });
+        };
+
+        const dbObj = typeof DB === 'object' && DB ? DB : {};
+        const arrayKeys = Object.keys(dbObj).filter(k =>
+            Array.isArray(dbObj[k]) && k.toLowerCase().includes('cascad')
+        );
+
+        arrayKeys.forEach(arrKey => {
+            const list = dbObj[arrKey];
+            list.forEach(item => {
+                if (!item || typeof item !== 'object') return;
+                const itemYr = String(item.tahun || item.year || '').trim();
+                if (itemYr && itemYr !== yr) return;
+
+                const itemTim = String(item.timKey || item.tim || item.timKerja || item.pelaksanaTim || '').trim().toLowerCase();
+                const itemUnit = String(item.unit || item.unitKerja || item.prodi || item.subbag || item.unitTujuan || '').trim().toLowerCase();
+                const itemUser = String(item.username || item.email || item.pegawaiUsername || '').trim().toLowerCase();
+                const itemPegawai = String(item.pegawaiName || item.namaPegawai || item.pelaksana || item.nama || '').trim().toLowerCase();
+
+                let matched = false;
+                if (isKetuaTim && userTimNorm && itemTim && (itemTim === userTimNorm || itemTim.includes(userTimNorm) || userTimNorm.includes(itemTim))) {
+                    if (!itemPegawai && !itemUser) matched = true;
+                }
+                if (isKetuaUnit && userUnitNorm && itemUnit && (itemUnit === userUnitNorm || itemUnit.includes(userUnitNorm) || userUnitNorm.includes(itemUnit))) {
+                    if (!itemPegawai && !itemUser) matched = true;
+                }
+                if ((itemUser && itemUser === userEmailNorm) || (itemPegawai && itemPegawai === userNameNorm)) {
+                    matched = true;
+                }
+
+                if (!matched && isKetuaUnit && Array.isArray(item.units)) {
+                    const foundU = item.units.find(uObj => {
+                        const uStr = typeof uObj === 'string' ? uObj : (uObj.unit || uObj.nama || '');
+                        return String(uStr).trim().toLowerCase() === userUnitNorm;
+                    });
+                    if (foundU) matched = true;
+                }
+                if (!matched && Array.isArray(item.pelaksanaList)) {
+                    const foundP = item.pelaksanaList.find(pObj => {
+                        const pStr = typeof pObj === 'string' ? pObj : (pObj.username || pObj.name || pObj.nama || '');
+                        const pNorm = String(pStr).trim().toLowerCase();
+                        return pNorm === userEmailNorm || pNorm === userNameNorm;
+                    });
+                    if (foundP) matched = true;
+                }
+
+                if (matched) {
+                    const targetStr = item.targetText
+                        || (item.targetVal !== undefined && item.targetVal !== '' ? `${item.targetVal} (${item.satuan || '%'})` : '')
+                        || item.targetFormatted
+                        || '100 (%)';
+
+                    pushUniqueRow({
+                        kategori: String(item.kategori || item.jenis || 'UTAMA').toUpperCase(),
+                        rhkPimpinan: item.induk || item.targetDirektur || item.sasaranDirektur || item.indikatorRujukan || item.targetTim || item.targetUnit || item.rhkPimpinan || '-',
+                        rhk: item.rhk || item.rencanaHasilKerja || item.target || item.sasaran || item.indikator || '-',
+                        aspek: item.aspek || 'Kuantitas',
+                        iki: item.iki || item.indikatorIndividu || item.indikator || item.target || '-',
+                        target: targetStr
+                    });
+                }
+            });
+        });
 
         return rows;
     }
 
-    // Tentukan jenjang approval berdasarkan peran pengusul
     function determineWorkflowChain(user) {
         const roles = getRoles(user);
         if (roles.includes('direktur')) {
@@ -240,7 +305,6 @@
         }
     };
 
-    // Tambahkan baris RHK/IKI manual jika belum lengkap dari cascading
     window.addPkRhkRow = function (data = {}) {
         const tbody = document.getElementById('pkRhkRowsBody');
         if (!tbody) return;
@@ -271,22 +335,30 @@
         tbody.appendChild(tr);
     };
 
-    window.loadCascadingToPkForm = function () {
-        const yr = document.getElementById('pkFormTahun')?.value || '2026';
+    window.loadCascadingToPkForm = function (silent = false) {
+        const yr = document.getElementById('pkFormTahun')?.value || '2025';
+        const periodeInput = document.getElementById('pkFormPeriode');
+        const tanggalInput = document.getElementById('pkFormTanggal');
+        if (periodeInput) periodeInput.value = `Januari s.d. Desember ${yr}`;
+        if (tanggalInput) tanggalInput.value = `Serang, 02 Januari ${yr}`;
+
         const tbody = document.getElementById('pkRhkRowsBody');
         if (!tbody) return;
         const rows = collectUserRhkIki(currentUser, yr);
         tbody.innerHTML = '';
         if (rows.length === 0) {
             addPkRhkRow({});
-            showToast(`Data cascading Tahun ${yr} belum ditemukan untuk akun Anda. Silakan lengkapi RHK & IKI pada tabel di bawah.`, 'info');
+            if (!silent && typeof showToast === 'function') {
+                showToast(`Data cascading Tahun ${yr} belum ditemukan untuk akun Anda. Silakan lengkapi RHK & IKI pada tabel di bawah.`, 'info');
+            }
         } else {
             rows.forEach(r => addPkRhkRow(r));
-            showToast(`${rows.length} indikator RHK & IKI dari Cascading Tahun ${yr} berhasil dimuat.`, 'success');
+            if (!silent && typeof showToast === 'function') {
+                showToast(`${rows.length} indikator RHK & IKI dari Cascading Tahun ${yr} berhasil disinkronkan.`, 'success');
+            }
         }
     };
 
-    // Simpan & Ajukan Perjanjian Kinerja + Pakta Integritas (1x Pengajuan Gabungan)
     window.submitPerjanjianKinerjaForm = async function (e) {
         if (e) e.preventDefault();
         if (!Array.isArray(DB.perjanjianKinerja)) DB.perjanjianKinerja = [];
@@ -294,10 +366,10 @@
         const tahun = document.getElementById('pkFormTahun').value;
         const periode = document.getElementById('pkFormPeriode').value.trim();
         const tanggalStr = document.getElementById('pkFormTanggal').value.trim();
-        const skPengangkatan = document.getElementById('pkFormSkNomor').value.trim();
+        const skNomorRaw = document.getElementById('pkFormSkNomor').value.trim();
         const pangkat = document.getElementById('pkFormPangkat').value.trim();
         const jabatan = document.getElementById('pkFormJabatan').value.trim();
-        const unitKerja = document.getElementById('pkFormUnit').value.trim();
+        const unitKerja = 'Politeknik Industri Petrokimia Banten';
         const nip = document.getElementById('pkFormNip').value.trim();
 
         const trList = Array.from(document.querySelectorAll('#pkRhkRowsBody tr'));
@@ -337,13 +409,15 @@
             tahun,
             periode,
             tanggalStr,
-            skPengangkatan,
+            skNomorRaw,
+            skPengangkatan: formatSkPengangkatanFull(skNomorRaw),
             pemohonUsername: currentUser.username,
             pemohonName: currentUser.name,
             pemohonNip: nip,
             pemohonPangkat: pangkat,
             pemohonJabatan: jabatan,
             pemohonUnit: unitKerja,
+            pemohonUnitInternal: currentUser.unit || '',
             pemohonTimKey: currentUser.timKey || '',
             pemohonRoles: getRoles(currentUser),
             tierLabel: wf.tierLabel,
@@ -387,10 +461,9 @@
         }
         if (typeof saveToMySQL === 'function') await saveToMySQL();
 
-        // Kirim notifikasi email jika helper tersedia
         if (typeof sendKijaroEmail === 'function' && typeof getEmailsByCriteria === 'function') {
             let targetEmails = [];
-            if (wf.currentStage === 'ketua_unit') targetEmails = getEmailsByCriteria({ role: 'ketua_unit', unit: unitKerja });
+            if (wf.currentStage === 'ketua_unit') targetEmails = getEmailsByCriteria({ role: 'ketua_unit', unit: currentUser.unit });
             else if (wf.currentStage === 'tim_kerja') targetEmails = getEmailsByCriteria({ role: 'tim_kerja', timKey: currentUser.timKey });
             else if (wf.currentStage === 'direktur') targetEmails = getEmailsByCriteria({ role: 'direktur' });
 
@@ -402,7 +475,7 @@
                      <p>Terdapat pengajuan <strong>Dialog Kinerja, Perjanjian Kinerja & Pakta Integritas</strong> yang memerlukan tindakan Anda:</p>
                      <ul>
                        <li><strong>Nama Pegawai:</strong> ${esc(currentUser.name)} (NIP. ${esc(nip)})</li>
-                       <li><strong>Jabatan / Unit:</strong> ${esc(jabatan)} — ${esc(unitKerja)}</li>
+                       <li><strong>Jabatan:</strong> ${esc(jabatan)} — Politeknik Industri Petrokimia Banten</li>
                        <li><strong>Status Tahapan:</strong> ${esc(wf.initialStatus)}</li>
                      </ul>`
                 );
@@ -413,7 +486,6 @@
         openPerjanjianKinerjaView();
     };
 
-    // Edit pengajuan yang ditolak / belum final
     window.editPerjanjianKinerja = function (id) {
         const item = (DB.perjanjianKinerja || []).find(x => x.id === id);
         if (!item) return;
@@ -430,7 +502,85 @@
         openPerjanjianKinerjaView();
     };
 
-    // Modal / Panel Approval Berjenjang (Ketua Unit -> Ketua Tim Kerja -> Direktur)
+    window.applyPkMonitorFilters = function () {
+        const yEl = document.getElementById('pkMonitorYearFilter');
+        const tEl = document.getElementById('pkMonitorTimFilter');
+        const sEl = document.getElementById('pkMonitorStatusFilter');
+        if (yEl) _pkMonitorFilterYear = yEl.value;
+        if (tEl) _pkMonitorFilterTim = tEl.value;
+        if (sEl) _pkMonitorFilterStatus = sEl.value;
+        renderPkMonitoringTableBody();
+    };
+
+    function renderPkMonitoringTableBody() {
+        const tbody = document.getElementById('pkMonitorTableBody');
+        const subtitleEl = document.getElementById('pkMonitorSubtitle');
+        if (!tbody || !currentUser) return;
+
+        const roles = getRoles(currentUser);
+        const isAdmin = roles.includes('admin');
+        const isDir = roles.includes('direktur');
+        const isTim = roles.includes('tim_kerja');
+        const isUnit = roles.includes('ketua_unit');
+
+        const allUsers = (Array.isArray(DB.users) ? DB.users : []).filter(u => !getRoles(u).includes('admin'));
+        let monitoredUsers = [];
+        if (isAdmin || isDir) {
+            monitoredUsers = allUsers;
+        } else if (isTim) {
+            monitoredUsers = allUsers.filter(u => String(u.timKey || '').toLowerCase() === String(currentUser.timKey || '').toLowerCase());
+        } else if (isUnit) {
+            monitoredUsers = allUsers.filter(u => String(u.unit || '').trim().toLowerCase() === String(currentUser.unit || '').trim().toLowerCase());
+        } else {
+            monitoredUsers = [currentUser];
+        }
+
+        const filteredRows = monitoredUsers.map(u => {
+            const found = (DB.perjanjianKinerja || []).slice().reverse().find(x =>
+                String(x.pemohonUsername).toLowerCase() === String(u.username).toLowerCase() &&
+                (_pkMonitorFilterYear === 'ALL' || String(x.tahun) === String(_pkMonitorFilterYear))
+            );
+            return { user: u, submission: found };
+        }).filter(row => {
+            if (_pkMonitorFilterTim !== 'ALL') {
+                if (String(row.user.timKey || '').toLowerCase() !== _pkMonitorFilterTim.toLowerCase()) return false;
+            }
+            if (_pkMonitorFilterStatus === 'SUDAH' && !row.submission) return false;
+            if (_pkMonitorFilterStatus === 'BELUM' && row.submission) return false;
+            return true;
+        });
+
+        const sudahCount = filteredRows.filter(r => !!r.submission).length;
+        const belumCount = filteredRows.length - sudahCount;
+
+        if (subtitleEl) {
+            const yrLabel = _pkMonitorFilterYear === 'ALL' ? 'Semua Tahun' : `Tahun ${_pkMonitorFilterYear}`;
+            subtitleEl.innerHTML = `Menampilkan <strong>${filteredRows.length}</strong> pegawai (${yrLabel}) &bull; <span class="text-emerald-700 font-bold">Sudah: ${sudahCount}</span> &bull; <span class="text-rose-700 font-bold">Belum: ${belumCount}</span>`;
+        }
+
+        if (filteredRows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">Tidak ada data pegawai yang sesuai filter.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = filteredRows.map(({ user: u, submission: found }) => `
+            <tr class="hover:bg-slate-50">
+                <td class="p-2.5 font-semibold text-slate-800">${esc(u.name)}</td>
+                <td class="p-2.5">${esc(u.unit || '-')}</td>
+                <td class="p-2.5">${esc(u.timKey || '-')}</td>
+                <td class="p-2.5 text-center">
+                    ${found
+                        ? `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold text-[10px]">Sudah (${esc(found.tahun)})</span>`
+                        : '<span class="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full font-bold text-[10px]">Belum Mengajukan</span>'}
+                </td>
+                <td class="p-2.5 text-center text-[11px] font-semibold text-slate-700">${found ? esc(found.status) : '-'}</td>
+                <td class="p-2.5 text-center">
+                    ${found ? `<button type="button" onclick="previewMergedPkDocument('${found.id}')" class="px-2.5 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 rounded font-bold text-[10px]"><i class="fa-solid fa-eye mr-1"></i>Lihat</button>` : '-'}
+                </td>
+            </tr>
+        `).join('');
+    }
+
     window.openPkApprovalModal = function (id) {
         const item = (DB.perjanjianKinerja || []).find(x => x.id === id);
         if (!item) return;
@@ -458,7 +608,7 @@
                     <div><span class="text-slate-500 block">Nama Pegawai</span><strong>${esc(item.pemohonName)}</strong></div>
                     <div><span class="text-slate-500 block">NIP / Pangkat</span><strong>${esc(item.pemohonNip)} / ${esc(item.pemohonPangkat)}</strong></div>
                     <div><span class="text-slate-500 block">Jabatan</span><strong>${esc(item.pemohonJabatan)}</strong></div>
-                    <div><span class="text-slate-500 block">Unit Kerja / Tim</span><strong>${esc(item.pemohonUnit)} (${esc(item.pemohonTimKey || '-')})</strong></div>
+                    <div><span class="text-slate-500 block">Unit Kerja</span><strong>Politeknik Industri Petrokimia Banten</strong></div>
                 </div>
 
                 <div class="border rounded-xl overflow-hidden">
@@ -555,7 +705,6 @@
                 );
             }
         } else {
-            // Approve
             if (item.currentStage === 'ketua_unit') {
                 item.currentStage = 'tim_kerja';
                 item.status = 'Menunggu Verifikasi Ketua Tim Kerja';
@@ -637,6 +786,7 @@
 
         const utamaRows = (item.rhkItems || []).filter(r => r.kategori !== 'TAMBAHAN');
         const tambahanRows = (item.rhkItems || []).filter(r => r.kategori === 'TAMBAHAN');
+        const skTextFormatted = formatSkPengangkatanFull(item.skNomorRaw || item.skPengangkatan);
 
         const perilakuBerakhlak = [
             { no: '1.', judul: 'Berorientasi Layanan', poin: ['Memahami dan memenuhi kebutuhan masyarakat', 'Ramah, cekatan, solutif, dan dapat diandalkan', 'Melakukan perbaikan tiada henti'] },
@@ -680,12 +830,16 @@
                 <div id="pkMergedPrintableSheet" class="space-y-8 text-slate-900 font-serif text-xs leading-relaxed">
                     <!-- HALAMAN 1: PAKTA INTEGRITAS -->
                     <div class="p-6 sm:p-8 border border-slate-200 rounded-xl bg-white space-y-5" style="page-break-after: always;">
-                        <div class="text-center border-b-2 border-slate-900 pb-3">
-                            <p class="text-sm font-bold uppercase tracking-wider">Kementerian Perindustrian</p>
-                            <p class="text-xs font-bold uppercase tracking-widest">REPUBLIK INDONESIA</p>
+                        <div class="flex items-center justify-center gap-4 border-b-2 border-slate-900 pb-3">
+                            <img src="${LOGO_KEMENPERIN_URL}" onerror="this.style.display='none'" class="w-14 h-14 object-contain" alt="Logo Kemenperin">
+                            <div class="text-center">
+                                <p class="text-sm font-bold uppercase tracking-wider">Kementerian Perindustrian</p>
+                                <p class="text-xs font-bold uppercase tracking-widest">REPUBLIK INDONESIA</p>
+                                <p class="text-[11px] font-bold uppercase mt-0.5">Politeknik Industri Petrokimia Banten</p>
+                            </div>
                         </div>
 
-                        <h2 class="text-center text-base font-bold uppercase underline tracking-wide pt-2">PAKTA INTEGRITAS</h2>
+                        <h2 class="text-center text-base font-bold uppercase underline tracking-wide pt-1">PAKTA INTEGRITAS</h2>
 
                         <p>Saya yang bertanda tangan di bawah ini:</p>
                         <table class="w-full text-xs">
@@ -694,11 +848,11 @@
                                 <tr><td class="py-1">NIP</td><td class="py-1">:</td><td class="py-1">${esc(item.pemohonNip)}</td></tr>
                                 <tr><td class="py-1">Pangkat/Gol.</td><td class="py-1">:</td><td class="py-1">${esc(item.pemohonPangkat)}</td></tr>
                                 <tr><td class="py-1">Jabatan</td><td class="py-1">:</td><td class="py-1">${esc(item.pemohonJabatan)}</td></tr>
-                                <tr><td class="py-1">Unit Kerja</td><td class="py-1">:</td><td class="py-1">${esc(item.pemohonUnit)} — Politeknik Industri Petrokimia Banten</td></tr>
+                                <tr><td class="py-1">Unit Kerja</td><td class="py-1">:</td><td class="py-1 font-semibold">Politeknik Industri Petrokimia Banten</td></tr>
                             </tbody>
                         </table>
 
-                        <p>yang diangkat berdasarkan <strong>${esc(item.skPengangkatan)}</strong> menyatakan bahwa saya:</p>
+                        <p>yang diangkat berdasarkan <strong>${esc(skTextFormatted)}</strong> menyatakan bahwa saya:</p>
                         <ol class="list-decimal pl-6 space-y-1.5">
                             <li>Bersedia menjalankan tugas dengan sebaik-baiknya sesuai dengan peraturan perundang-undangan;</li>
                             <li>Bersedia mematuhi perintah kedinasan yang ditugaskan oleh pimpinan;</li>
@@ -731,9 +885,12 @@
 
                     <!-- HALAMAN 2 DST: SASARAN KINERJA PEGAWAI / PERJANJIAN KINERJA -->
                     <div class="p-6 sm:p-8 border border-slate-200 rounded-xl bg-white space-y-4">
-                        <div class="text-center space-y-0.5">
-                            <h2 class="text-base font-bold uppercase">SASARAN KINERJA PEGAWAI</h2>
-                            <p class="text-xs font-bold uppercase">PENDEKATAN HASIL KERJA KUANTITATIF</p>
+                        <div class="flex items-center justify-center gap-3 border-b border-slate-800 pb-2.5">
+                            <img src="${LOGO_KEMENPERIN_URL}" onerror="this.style.display='none'" class="w-11 h-11 object-contain" alt="Logo Kemenperin">
+                            <div class="text-center space-y-0.5">
+                                <h2 class="text-base font-bold uppercase">SASARAN KINERJA PEGAWAI</h2>
+                                <p class="text-xs font-bold uppercase">PENDEKATAN HASIL KERJA KUANTITATIF</p>
+                            </div>
                         </div>
 
                         <div class="flex justify-between text-[11px] font-bold border-b pb-1">
@@ -741,7 +898,6 @@
                             <span>Periode Penilaian: ${esc(item.periode)}</span>
                         </div>
 
-                        <!-- TABEL IDENTITAS PEGAWAI YANG DINILAI & PEJABAT PENILAI KINERJA -->
                         <table class="w-full border-collapse border border-slate-800 text-[11px]">
                             <thead>
                                 <tr class="bg-slate-100 font-bold">
@@ -787,7 +943,7 @@
                                 <tr>
                                     <td class="border border-slate-800 p-1.5 text-center">5</td>
                                     <td class="border border-slate-800 p-1.5">Unit Kerja</td>
-                                    <td class="border border-slate-800 p-1.5">${esc(item.pemohonUnit)} — Politeknik Industri Petrokimia Banten</td>
+                                    <td class="border border-slate-800 p-1.5">Politeknik Industri Petrokimia Banten</td>
                                     <td class="border border-slate-800 p-1.5 text-center">5</td>
                                     <td class="border border-slate-800 p-1.5">Unit Kerja</td>
                                     <td class="border border-slate-800 p-1.5">Politeknik Industri Petrokimia Banten</td>
@@ -795,7 +951,6 @@
                             </tbody>
                         </table>
 
-                        <!-- TABEL HASIL KERJA -->
                         <table class="w-full border-collapse border border-slate-800 text-[11px]">
                             <thead>
                                 <tr class="bg-slate-100 font-bold text-center">
@@ -836,7 +991,6 @@
                             </tbody>
                         </table>
 
-                        <!-- TABEL PERILAKU KERJA BERAKHLAK -->
                         <table class="w-full border-collapse border border-slate-800 text-[11px]">
                             <thead>
                                 <tr class="bg-slate-100 font-bold text-center">
@@ -862,7 +1016,6 @@
                             </tbody>
                         </table>
 
-                        <!-- TANDA TANGAN PEGAWAI YANG DINILAI & PEJABAT PENILAI KINERJA -->
                         <div class="pt-4 grid grid-cols-2 gap-8 text-center text-xs">
                             <div class="flex flex-col items-center">
                                 <p>&nbsp;</p>
@@ -925,16 +1078,17 @@
         setTimeout(() => { win.focus(); win.print(); }, 600);
     };
 
-    // Render Halaman Utama Dialog & Perjanjian Kinerja
     window.openPerjanjianKinerjaView = function (editData = null) {
         if (!Array.isArray(DB.perjanjianKinerja)) DB.perjanjianKinerja = [];
         const mainContainer = document.getElementById('mainContent') || document.querySelector('main > div:last-child') || document.querySelector('main');
         if (!mainContainer || !currentUser) return;
 
-        // Tandai tombol sidebar aktif
-        document.querySelectorAll('aside button, nav button').forEach(b => b.classList.remove('bg-white', 'text-blue-700', 'font-bold', 'shadow'));
-        const activeBtn = document.getElementById(MENU_ID);
-        if (activeBtn) activeBtn.classList.add('bg-white', 'text-blue-700', 'font-bold', 'shadow');
+        document.querySelectorAll('aside button, nav button, aside a, nav a').forEach(b => {
+            if (b.id !== MENU_ID) {
+                b.classList.remove('bg-white', 'text-blue-700', 'font-bold', 'shadow');
+            }
+        });
+        setSidebarMenuActive(true);
 
         const pageTitleEl = document.querySelector('header h1, header h2');
         if (pageTitleEl) pageTitleEl.textContent = 'Dialog Kinerja, Perjanjian Kinerja & Pakta Integritas';
@@ -945,35 +1099,42 @@
         const isTim = roles.includes('tim_kerja');
         const isUnit = roles.includes('ketua_unit');
 
-        const selectedYear = editData ? editData.tahun : '2026';
+        const selectedYear = editData ? editData.tahun : '2025';
+        _pkMonitorFilterYear = selectedYear;
         const initialRhkRows = editData ? editData.rhkItems : collectUserRhkIki(currentUser, selectedYear);
 
-        // Daftar pengajuan yang perlu di-approve oleh user saat ini
+        const currentJabatanVal = editData
+            ? editData.pemohonJabatan
+            : (JABATAN_OPTIONS.includes(currentUser.jabatan) ? currentUser.jabatan : (isDir ? 'Direktur' : 'Dosen'));
+
+        const currentSkVal = editData
+            ? (editData.skNomorRaw || String(editData.skPengangkatan || '').replace(/^Keputusan Menteri Perindustrian Nomor\s*/i, ''))
+            : '';
+
         const inboxApprovals = DB.perjanjianKinerja.filter(item => {
             if (isAdmin) return item.currentStage !== 'selesai' && item.currentStage !== 'ditolak';
             if (isDir && item.currentStage === 'direktur') return true;
             if (isTim && item.currentStage === 'tim_kerja' && String(item.pemohonTimKey || '').toLowerCase() === String(currentUser.timKey || '').toLowerCase()) return true;
-            if (isUnit && item.currentStage === 'ketua_unit' && String(item.pemohonUnit || '').trim().toLowerCase() === String(currentUser.unit || '').trim().toLowerCase()) return true;
+            if (isUnit && item.currentStage === 'ketua_unit' && String(item.pemohonUnitInternal || item.pemohonUnit || '').trim().toLowerCase() === String(currentUser.unit || '').trim().toLowerCase()) return true;
             return false;
         });
 
-        // Daftar pegawai yang dipantau sesuai lingkup jabatan
-        const allUsers = (Array.isArray(DB.users) ? DB.users : []).filter(u => !getRoles(u).includes('admin'));
-        let monitoredUsers = [];
         let monitorTitle = 'Monitoring Status Pengajuan Perjanjian Kinerja';
         if (isAdmin || isDir) {
-            monitoredUsers = allUsers;
             monitorTitle = 'Monitoring Seluruh Pegawai Institusi (Direktur & Admin)';
         } else if (isTim) {
-            monitoredUsers = allUsers.filter(u => String(u.timKey || '').toLowerCase() === String(currentUser.timKey || '').toLowerCase());
             monitorTitle = `Monitoring Seluruh Unit & Anggota Tim Kerja (${currentUser.timKey || '-'})`;
         } else if (isUnit) {
-            monitoredUsers = allUsers.filter(u => String(u.unit || '').trim().toLowerCase() === String(currentUser.unit || '').trim().toLowerCase());
             monitorTitle = `Monitoring Anggota Unit / Prodi / Subbag (${currentUser.unit || '-'})`;
         } else {
-            monitoredUsers = [currentUser];
             monitorTitle = 'Status Pengajuan Perjanjian Kinerja & Pakta Integritas Saya';
         }
+
+        const uniqueTimList = Array.from(new Set(
+            (Array.isArray(DB.users) ? DB.users : [])
+                .map(u => String(u.timKey || '').trim())
+                .filter(Boolean)
+        ));
 
         const mySubmissions = DB.perjanjianKinerja.filter(x => String(x.pemohonUsername).toLowerCase() === String(currentUser.username).toLowerCase());
 
@@ -982,7 +1143,7 @@
 
         mainContainer.innerHTML = `
             <div class="space-y-6 animate-fadeIn">
-                <!-- BAGIAN 1: ANTREAN APPROVAL BERJENJANG (JIKA ADA TUGAS VERIFIKASI/PERSETUJUAN) -->
+                <!-- BAGIAN 1: ANTREAN APPROVAL BERJENJANG -->
                 ${inboxApprovals.length > 0 ? `
                 <div class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 space-y-3">
                     <div class="flex items-center justify-between">
@@ -995,7 +1156,7 @@
                             <thead class="bg-amber-100/70 text-amber-950 font-bold border-b">
                                 <tr>
                                     <th class="p-2.5">Pegawai Pengusul</th>
-                                    <th class="p-2.5">Unit / Tim Kerja</th>
+                                    <th class="p-2.5">Jabatan / Tim Kerja</th>
                                     <th class="p-2.5">Tahun & RHK</th>
                                     <th class="p-2.5">Status Tahapan</th>
                                     <th class="p-2.5 text-center">Aksi</th>
@@ -1005,7 +1166,7 @@
                                 ${inboxApprovals.map(it => `
                                     <tr class="hover:bg-amber-50/40">
                                         <td class="p-2.5"><strong>${esc(it.pemohonName)}</strong><br><span class="text-[10px] text-slate-500">NIP. ${esc(it.pemohonNip)}</span></td>
-                                        <td class="p-2.5">${esc(it.pemohonUnit)}<br><span class="text-[10px] text-indigo-700 font-semibold">${esc(it.pemohonTimKey || '-')}</span></td>
+                                        <td class="p-2.5">${esc(it.pemohonJabatan)}<br><span class="text-[10px] text-indigo-700 font-semibold">${esc(it.pemohonTimKey || '-')}</span></td>
                                         <td class="p-2.5">Tahun ${esc(it.tahun)} (${(it.rhkItems || []).length} RHK)</td>
                                         <td class="p-2.5"><span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">${esc(it.status)}</span></td>
                                         <td class="p-2.5 text-center space-x-1">
@@ -1020,7 +1181,7 @@
                 </div>
                 ` : ''}
 
-                <!-- BAGIAN 2: FORM PENGAJUAN DIALOG KINERJA, PERJANJIAN KINERJA & PAKTA INTEGRITAS (1X PENGAJUAN GABUNGAN) -->
+                <!-- BAGIAN 2: FORM PENGAJUAN DIALOG KINERJA, PERJANJIAN KINERJA & PAKTA INTEGRITAS -->
                 <div class="bg-white rounded-2xl shadow-sm border-2 border-indigo-200 p-6 space-y-4">
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b pb-3.5">
                         <div>
@@ -1030,16 +1191,16 @@
                             </h3>
                             <p class="text-xs text-slate-500">Alur Persetujuan Anda: <strong class="text-indigo-700">${esc(determineWorkflowChain(currentUser).initialStatus)}</strong></p>
                         </div>
-                        <button type="button" onclick="loadCascadingToPkForm()" class="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl font-bold text-xs flex items-center gap-1.5">
-                            <i class="fa-solid fa-arrows-rotate"></i><span>Tarik Otomatis RHK & IKI dari Cascading</span>
+                        <button type="button" onclick="loadCascadingToPkForm(false)" class="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl font-bold text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrows-rotate"></i><span>Sinkronkan RHK & IKI dari Cascading</span>
                         </button>
                     </div>
 
                     <form onsubmit="submitPerjanjianKinerjaForm(event)" class="space-y-4 text-xs">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border">
                             <div>
                                 <label class="block font-bold text-slate-700 mb-1">Tahun Kinerja</label>
-                                <select id="pkFormTahun" onchange="loadCascadingToPkForm()" class="w-full p-2 bg-white border rounded-lg font-bold">
+                                <select id="pkFormTahun" onchange="loadCascadingToPkForm(false)" class="w-full p-2 bg-white border rounded-lg font-bold">
                                     ${['2025', '2026', '2027', '2028', '2029'].map(y => `<option value="${y}" ${selectedYear === y ? 'selected' : ''}>${y}</option>`).join('')}
                                 </select>
                             </div>
@@ -1050,10 +1211,6 @@
                             <div>
                                 <label class="block font-bold text-slate-700 mb-1">Tempat & Tanggal Dokumen</label>
                                 <input type="text" id="pkFormTanggal" value="${esc(editData ? editData.tanggalStr : 'Serang, 02 Januari ' + selectedYear)}" required class="w-full p-2 bg-white border rounded-lg">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 mb-1">Nomor SK Pengangkatan (Pakta Integritas)</label>
-                                <input type="text" id="pkFormSkNomor" value="${esc(editData ? editData.skPengangkatan : 'Keputusan Menteri Perindustrian Nomor ... Tahun ...')}" required class="w-full p-2 bg-white border rounded-lg">
                             </div>
 
                             <div>
@@ -1066,20 +1223,25 @@
                             </div>
                             <div>
                                 <label class="block font-bold text-slate-700 mb-1">Jabatan</label>
-                                <input type="text" id="pkFormJabatan" value="${esc(editData ? editData.pemohonJabatan : (currentUser.jabatan || currentUser.role || 'Pegawai'))}" required class="w-full p-2 bg-white border rounded-lg">
+                                <select id="pkFormJabatan" required class="w-full p-2 bg-white border rounded-lg font-semibold">
+                                    ${JABATAN_OPTIONS.map(j => `<option value="${esc(j)}" ${currentJabatanVal === j ? 'selected' : ''}>${esc(j)}</option>`).join('')}
+                                </select>
                             </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 mb-1">Unit Kerja / Prodi / Subbag</label>
-                                <input type="text" id="pkFormUnit" value="${esc(editData ? editData.pemohonUnit : (currentUser.unit || 'Politeknik Industri Petrokimia Banten'))}" required class="w-full p-2 bg-white border rounded-lg">
+
+                            <div class="md:col-span-3">
+                                <label class="block font-bold text-slate-700 mb-1">Nomor SK Pengangkatan CPNS/PPPK (beserta tahunnya)</label>
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                                    <span class="px-3 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold text-[11px] shrink-0">Keputusan Menteri Perindustrian Nomor</span>
+                                    <input type="text" id="pkFormSkNomor" value="${esc(currentSkVal)}" placeholder="Contoh: 2293 Tahun 2019" required class="w-full p-2 bg-white border rounded-lg font-semibold">
+                                </div>
                             </div>
                         </div>
 
-                        <!-- TABEL RENCANA HASIL KERJA (RHK) & INDIKATOR KINERJA INDIVIDU (IKI) -->
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
-                                <label class="font-bold text-slate-800">Daftar Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu (IKI)</label>
+                                <label class="font-bold text-slate-800">Daftar Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu (IKI) — Otomatis dari Cascading</label>
                                 <button type="button" onclick="addPkRhkRow({})" class="px-3 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 rounded-lg font-bold text-[11px]">
-                                    <i class="fa-solid fa-plus mr-1"></i>Tambah Baris RHK/IKI
+                                    <i class="fa-solid fa-plus mr-1"></i>Tambah Baris Tambahan
                                 </button>
                             </div>
                             <div class="overflow-x-auto border rounded-xl">
@@ -1100,7 +1262,6 @@
                             </div>
                         </div>
 
-                        <!-- TANDA TANGAN PENGUSUL (MANUAL / QR CODE) -->
                         <div class="bg-indigo-50/60 border border-indigo-200 rounded-xl p-4 space-y-2.5">
                             <div class="flex flex-wrap items-center justify-between gap-2">
                                 <span class="font-bold text-indigo-950"><i class="fa-solid fa-pen-nib mr-1"></i> Tanda Tangan Pengusul (Wajib Sebelum Mengajukan)</span>
@@ -1131,7 +1292,7 @@
                     </form>
                 </div>
 
-                <!-- BAGIAN 3: RIWAYAT PENGAJUAN SAYA (UNTUK CETAK GABUNGAN / EDIT / HAPUS) -->
+                <!-- BAGIAN 3: RIWAYAT PENGAJUAN SAYA -->
                 <div class="bg-white rounded-2xl shadow-sm border p-6 space-y-3">
                     <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
                         <i class="fa-solid fa-folder-open text-blue-600"></i> Pengajuan Perjanjian Kinerja & Pakta Integritas Saya (${mySubmissions.length})
@@ -1172,14 +1333,31 @@
                     </div>
                 </div>
 
-                <!-- BAGIAN 4: TABEL MONITORING HIRARKI (SUDAH VS BELUM MENGAJUKAN) -->
+                <!-- BAGIAN 4: TABEL MONITORING HIRARKI DENGAN FILTER TAHUN, TIM KERJA & STATUS -->
                 <div class="bg-white rounded-2xl shadow-sm border p-6 space-y-3">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div>
                             <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
                                 <i class="fa-solid fa-users-viewfinder text-emerald-600"></i> ${esc(monitorTitle)}
                             </h3>
-                            <p class="text-[11px] text-slate-500">Rekap pegawai yang sudah maupun belum mengajukan Perjanjian Kinerja & Pakta Integritas pada Tahun ${esc(selectedYear)}</p>
+                            <p id="pkMonitorSubtitle" class="text-[11px] text-slate-500 mt-0.5"></p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <select id="pkMonitorYearFilter" onchange="applyPkMonitorFilters()" class="p-2 bg-slate-50 border rounded-xl font-bold text-slate-700">
+                                <option value="ALL">Semua Tahun</option>
+                                ${['2025', '2026', '2027', '2028', '2029'].map(y => `<option value="${y}" ${_pkMonitorFilterYear === y ? 'selected' : ''}>Tahun ${y}</option>`).join('')}
+                            </select>
+                            ${(isAdmin || isDir) ? `
+                            <select id="pkMonitorTimFilter" onchange="applyPkMonitorFilters()" class="p-2 bg-slate-50 border rounded-xl font-bold text-slate-700">
+                                <option value="ALL">Semua Tim Kerja</option>
+                                ${uniqueTimList.map(t => `<option value="${esc(t)}" ${_pkMonitorFilterTim === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+                            </select>
+                            ` : ''}
+                            <select id="pkMonitorStatusFilter" onchange="applyPkMonitorFilters()" class="p-2 bg-slate-50 border rounded-xl font-bold text-slate-700">
+                                <option value="ALL">Semua Status</option>
+                                <option value="SUDAH">Sudah Mengajukan</option>
+                                <option value="BELUM">Belum Mengajukan</option>
+                            </select>
                         </div>
                     </div>
                     <div class="overflow-x-auto max-h-80 overflow-y-auto border rounded-xl">
@@ -1189,45 +1367,20 @@
                                     <th class="p-2.5">Nama Pegawai</th>
                                     <th class="p-2.5">Unit / Prodi / Subbag</th>
                                     <th class="p-2.5">Tim Kerja</th>
-                                    <th class="p-2.5 text-center">Status Pengajuan (${esc(selectedYear)})</th>
+                                    <th class="p-2.5 text-center">Status Pengajuan</th>
                                     <th class="p-2.5 text-center">Tahapan Saat Ini</th>
                                     <th class="p-2.5 text-center">Dokumen</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y">
-                                ${monitoredUsers.map(u => {
-                                    const found = DB.perjanjianKinerja.slice().reverse().find(x =>
-                                        String(x.pemohonUsername).toLowerCase() === String(u.username).toLowerCase() &&
-                                        String(x.tahun) === String(selectedYear)
-                                    );
-                                    return `
-                                        <tr class="hover:bg-slate-50">
-                                            <td class="p-2.5 font-semibold text-slate-800">${esc(u.name)}</td>
-                                            <td class="p-2.5">${esc(u.unit || '-')}</td>
-                                            <td class="p-2.5">${esc(u.timKey || '-')}</td>
-                                            <td class="p-2.5 text-center">
-                                                ${found
-                                                    ? '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold text-[10px]">Sudah Mengajukan</span>'
-                                                    : '<span class="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full font-bold text-[10px]">Belum Mengajukan</span>'}
-                                            </td>
-                                            <td class="p-2.5 text-center text-[11px] font-semibold text-slate-700">${found ? esc(found.status) : '-'}</td>
-                                            <td class="p-2.5 text-center">
-                                                ${found ? `<button type="button" onclick="previewMergedPkDocument('${found.id}')" class="px-2.5 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 rounded font-bold text-[10px]"><i class="fa-solid fa-eye mr-1"></i>Lihat</button>` : '-'}
-                                            </td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
+                            <tbody id="pkMonitorTableBody" class="divide-y"></tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- AREA PRATINJAU & CETAK GABUNGAN -->
                 <div id="pkMergedPreviewArea" class="hidden"></div>
             </div>
         `;
 
-        // Isi tabel baris RHK/IKI awal & inisialisasi canvas tanda tangan
         const tbody = document.getElementById('pkRhkRowsBody');
         if (tbody) {
             tbody.innerHTML = '';
@@ -1238,9 +1391,9 @@
             }
         }
         initCanvas('pkPengusulCanvas', (val) => { _pkSigHasStrokePengusul = val; });
+        renderPkMonitoringTableBody();
     };
 
-    // Pasang menu otomatis saat halaman selesai dimuat & pantau re-render sidebar setelah login
     document.addEventListener('DOMContentLoaded', injectSidebarMenu);
     setInterval(injectSidebarMenu, 1200);
 })();
