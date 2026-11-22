@@ -11262,10 +11262,9 @@ function renderAdminView(container) {
                 <div class="space-y-8 animate-fadeIn">
                     ${canSeeDirDirectSkp ? `
                     <!-- PANEL CETAK SKP KHUSUS DIREKTUR & ADMIN + MONITORING PELAPORAN PER TRIWULAN -->
-                    <div id="direkturDirectSkpPanel" class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start no-print">
+                    <div id="direkturDirectSkpPanel" class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch no-print">
                         <!-- KOLOM KIRI (7 KOLOM): FORM PENGATURAN & TTD MANUAL DIREKTUR -->
-                        <div class="xl:col-span-7 bg-white rounded-2xl shadow-sm border-2 border-indigo-200 p-6 space-y-4">
-                            <div class="border-b border-indigo-100 pb-3.5">
+                        <div class="xl:col-span-7 bg-white rounded-2xl shadow-sm border-2 border-indigo-200 p-6 space-y-4 flex flex-col justify-between">                            <div class="border-b border-indigo-100 pb-3.5">
                                 <div class="flex items-center gap-2">
                                     <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-extrabold uppercase">Khusus Direktur & Admin</span>
                                     <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold">Tanpa Approval</span>
@@ -11356,8 +11355,8 @@ function renderAdminView(container) {
                         </div>
 
                         <!-- KOLOM KANAN (5 KOLOM): MONITORING PELAPORAN SKP DIREKTUR PER TRIWULAN -->
-                        <div class="xl:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-                            <div class="flex items-center justify-between border-b pb-3.5">
+                        <div class="xl:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between space-y-4">
+                            <div class="flex items-center justify-between border-b pb-3.5 shrink-0">
                                 <div>
                                     <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
                                         <i class="fa-solid fa-clipboard-check text-emerald-600"></i> Monitoring SKP Direktur per Triwulan
@@ -11365,7 +11364,7 @@ function renderAdminView(container) {
                                     <p class="text-xs text-slate-500">Status pelaporan per indikator berdasarkan log cetakan SKP Direktur</p>
                                 </div>
                             </div>
-                            <div id="dirDirectSkpMonitoringContainer" class="space-y-4"></div>
+                            <div id="dirDirectSkpMonitoringContainer" class="flex-1 flex flex-col justify-between space-y-3"></div>
                         </div>
                     </div>
                     ` : ''}
@@ -13405,6 +13404,20 @@ function promptDrawSignature(roleKey) {
             `).join('');
         };
 
+window._dirSkpLogPage = 1;
+        window._dirSkpLogPageSize = 3;
+
+        window.setDirSkpLogPage = function(page) {
+            window._dirSkpLogPage = Math.max(1, Number(page) || 1);
+            renderDirekturSkpMonitoringTable();
+        };
+
+        window.setDirSkpLogPageSize = function(size) {
+            window._dirSkpLogPageSize = Math.max(1, Number(size) || 3);
+            window._dirSkpLogPage = 1;
+            renderDirekturSkpMonitoringTable();
+        };
+
         window.renderDirekturSkpMonitoringTable = function() {
             const cont = document.getElementById('dirDirectSkpMonitoringContainer');
             if (!cont) return;
@@ -13429,49 +13442,70 @@ function promptDrawSignature(roleKey) {
                 return { tw, doneCount, totalInd };
             });
 
+            // Pagination untuk Riwayat Log Cetakan SKP Direktur
+            const sortedLogs = logsYear.slice().reverse();
+            const pageSize = window._dirSkpLogPageSize || 3;
+            const totalLogs = sortedLogs.length;
+            const totalPages = Math.max(1, Math.ceil(totalLogs / pageSize));
+            if (window._dirSkpLogPage > totalPages) window._dirSkpLogPage = totalPages;
+            const currentPage = window._dirSkpLogPage;
+            const startIdx = (currentPage - 1) * pageSize;
+            const pagedLogs = sortedLogs.slice(startIdx, startIdx + pageSize);
+
             cont.innerHTML = `
-                <!-- Ringkasan Progres per Triwulan Tahun ${yr} -->
-                <div class="grid grid-cols-4 gap-2 text-center">
-                    ${twSummary.map(s => `
-                        <div class="p-2 rounded-xl border ${s.totalInd > 0 && s.doneCount === s.totalInd ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}">
-                            <span class="block text-[10px] font-bold text-slate-500">${s.tw}</span>
-                            <strong class="text-xs ${s.doneCount > 0 ? 'text-emerald-700' : 'text-slate-700'}">${s.doneCount}/${s.totalInd}</strong>
-                        </div>
-                    `).join('')}
-                </div>
+                <div class="space-y-3">
+                    <!-- Ringkasan Progres per Triwulan Tahun ${yr} -->
+                    <div class="grid grid-cols-4 gap-2 text-center">
+                        ${twSummary.map(s => `
+                            <div class="p-2 rounded-xl border ${s.totalInd > 0 && s.doneCount === s.totalInd ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}">
+                                <span class="block text-[10px] font-bold text-slate-500">${s.tw}</span>
+                                <strong class="text-xs ${s.doneCount > 0 ? 'text-emerald-700' : 'text-slate-700'}">${s.doneCount}/${s.totalInd}</strong>
+                            </div>
+                        `).join('')}
+                    </div>
 
-                <!-- Matriks Status Indikator Direktur per Triwulan -->
-                <div class="overflow-x-auto max-h-60 overflow-y-auto border rounded-xl">
-                    <table class="w-full text-left border-collapse text-[11px]">
-                        <thead class="bg-slate-50 text-slate-700 font-bold border-b sticky top-0">
-                            <tr>
-                                <th class="p-2.5">Indikator Direktur (${yr})</th>
-                                <th class="p-2 text-center">TW 1</th>
-                                <th class="p-2 text-center">TW 2</th>
-                                <th class="p-2 text-center">TW 3</th>
-                                <th class="p-2 text-center">TW 4</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y">
-                            ${indicators.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada indikator pada tahun ${yr}.</td></tr>` : indicators.map(it => `
-                                <tr class="hover:bg-slate-50">
-                                    <td class="p-2.5 font-semibold text-slate-800">${sanitizeHTML(it.nama)}</td>
-                                    ${['TW 1', 'TW 2', 'TW 3', 'TW 4'].map(tw => {
-                                        const ok = checkReported(it.nama, tw);
-                                        return `<td class="p-2 text-center">${ok
-                                            ? '<span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-bold text-[10px]">Sudah</span>'
-                                            : '<span class="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded font-semibold text-[10px]">Belum</span>'}</td>`;
-                                    }).join('')}
+                    <!-- Matriks Status Indikator Direktur per Triwulan -->
+                    <div class="overflow-x-auto max-h-44 overflow-y-auto border rounded-xl">
+                        <table class="w-full text-left border-collapse text-[11px]">
+                            <thead class="bg-slate-50 text-slate-700 font-bold border-b sticky top-0">
+                                <tr>
+                                    <th class="p-2">Indikator Direktur (${yr})</th>
+                                    <th class="p-2 text-center">TW 1</th>
+                                    <th class="p-2 text-center">TW 2</th>
+                                    <th class="p-2 text-center">TW 3</th>
+                                    <th class="p-2 text-center">TW 4</th>
                                 </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${indicators.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada indikator pada tahun ${yr}.</td></tr>` : indicators.map(it => `
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="p-2 font-semibold text-slate-800">${sanitizeHTML(it.nama)}</td>
+                                        ${['TW 1', 'TW 2', 'TW 3', 'TW 4'].map(tw => {
+                                            const ok = checkReported(it.nama, tw);
+                                            return `<td class="p-2 text-center">${ok
+                                                ? '<span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-bold text-[10px]">Sudah</span>'
+                                                : '<span class="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded font-semibold text-[10px]">Belum</span>'}</td>`;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <!-- Riwayat Log Cetakan SKP Direktur -->
-                <div class="space-y-2 pt-1">
-                    <p class="text-[11px] font-bold text-slate-700 uppercase">Riwayat Log Cetakan SKP Direktur (${logsYear.length})</p>
-                    <div class="overflow-x-auto max-h-48 overflow-y-auto border rounded-xl">
+                <!-- Riwayat Log Cetakan SKP Direktur dengan Page Viewer -->
+                <div class="space-y-2 pt-1 flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-[11px] font-bold text-slate-700 uppercase">Riwayat Log Cetakan SKP Direktur (${totalLogs})</p>
+                        <div class="flex items-center gap-1.5 text-[10px] text-slate-600">
+                            <span>Tampil:</span>
+                            <select onchange="setDirSkpLogPageSize(this.value)" class="px-1.5 py-0.5 bg-slate-50 border border-slate-300 rounded font-bold text-slate-700">
+                                ${[3, 5, 10, 20].map(sz => `<option value="${sz}" ${pageSize === sz ? 'selected' : ''}>${sz}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-40 overflow-y-auto border rounded-xl">
                         <table class="w-full text-left border-collapse text-[11px]">
                             <thead class="bg-slate-50 text-slate-700 font-bold border-b sticky top-0">
                                 <tr>
@@ -13481,13 +13515,13 @@ function promptDrawSignature(roleKey) {
                                 </tr>
                             </thead>
                             <tbody class="divide-y">
-                                ${logsYear.length === 0 ? `<tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Belum ada riwayat cetak SKP Direktur pada tahun ${yr}.</td></tr>` : logsYear.slice().reverse().map(log => `
+                                ${pagedLogs.length === 0 ? `<tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Belum ada riwayat cetak SKP Direktur pada tahun ${yr}.</td></tr>` : pagedLogs.map(log => `
                                     <tr class="hover:bg-slate-50">
                                         <td class="p-2">
-                                            <span class="font-bold text-slate-800 block">${sanitizeHTML(log.indikator)}</span>
+                                            <span class="font-bold text-slate-800 block line-clamp-1" title="${sanitizeHTML(log.indikator)}">${sanitizeHTML(log.indikator)}</span>
                                             <span class="text-[10px] text-indigo-700 font-semibold">${sanitizeHTML(log.triwulan)} ${sanitizeHTML(log.tahun)}</span>
                                         </td>
-                                        <td class="p-2 text-center text-[10px] text-slate-500">${sanitizeHTML(log.printedAtLabel || '-')}</td>
+                                        <td class="p-2 text-center text-[10px] text-slate-500 whitespace-nowrap">${sanitizeHTML(log.printedAtLabel || '-')}</td>
                                         <td class="p-2 text-center space-x-1 whitespace-nowrap">
                                             <button type="button" onclick="reprintDirekturSkpFromLog('${log.id}')" class="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded font-bold text-[10px]" title="Pratinjau & Cetak Ulang"><i class="fa-solid fa-print"></i></button>
                                             ${isAdmin ? `<button type="button" onclick="deleteDirekturSkpLog('${log.id}')" class="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded font-bold text-[10px]" title="Hapus Log"><i class="fa-solid fa-trash"></i></button>` : ''}
@@ -13496,6 +13530,20 @@ function promptDrawSignature(roleKey) {
                                 `).join('')}
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Navigasi Halaman (Page Viewer) -->
+                    <div class="flex items-center justify-between pt-1 text-[10px] text-slate-600">
+                        <span>Menampilkan <strong>${totalLogs === 0 ? 0 : startIdx + 1}–${Math.min(startIdx + pageSize, totalLogs)}</strong> dari <strong>${totalLogs}</strong> log</span>
+                        <div class="flex items-center space-x-1">
+                            <button type="button" onclick="setDirSkpLogPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} class="px-2 py-1 rounded border font-bold ${currentPage <= 1 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white hover:bg-slate-100 text-slate-700'}">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <span class="px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded font-bold">Hal ${currentPage} / ${totalPages}</span>
+                            <button type="button" onclick="setDirSkpLogPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} class="px-2 py-1 rounded border font-bold ${currentPage >= totalPages ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white hover:bg-slate-100 text-slate-700'}">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
