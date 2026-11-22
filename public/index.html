@@ -13432,14 +13432,22 @@ window._dirSkpLogPage = 1;
             const checkReported = (indName, twCode) => {
                 return logsYear.some(l =>
                     String(l.indikator || '').trim().toLowerCase() === String(indName || '').trim().toLowerCase() &&
-                    (String(l.triwulan || '').toUpperCase() === twCode || String(l.triwulan || '').toUpperCase() === 'SEMUA')
+                    String(l.triwulan || '').trim().toUpperCase() === twCode.toUpperCase()
                 );
             };
 
+            const periodColumns = [
+                { code: 'TW 1', label: 'TW 1' },
+                { code: 'TW 2', label: 'TW 2' },
+                { code: 'TW 3', label: 'TW 3' },
+                { code: 'TW 4', label: 'TW 4' },
+                { code: 'SEMUA', label: 'Semua TW' }
+            ];
+
             const totalInd = indicators.length;
-            const twSummary = ['TW 1', 'TW 2', 'TW 3', 'TW 4'].map(tw => {
-                const doneCount = indicators.filter(it => checkReported(it.nama, tw)).length;
-                return { tw, doneCount, totalInd };
+            const twSummary = periodColumns.map(p => {
+                const doneCount = indicators.filter(it => checkReported(it.nama, p.code)).length;
+                return { label: p.label, doneCount, totalInd };
             });
 
             // Pagination untuk Riwayat Log Cetakan SKP Direktur
@@ -13454,35 +13462,36 @@ window._dirSkpLogPage = 1;
 
             cont.innerHTML = `
                 <div class="space-y-3">
-                    <!-- Ringkasan Progres per Triwulan Tahun ${yr} -->
-                    <div class="grid grid-cols-4 gap-2 text-center">
+                    <!-- Ringkasan Progres per Triwulan & Semua Triwulan Tahun ${yr} (5 Kartu) -->
+                    <div class="grid grid-cols-5 gap-1.5 text-center">
                         ${twSummary.map(s => `
                             <div class="p-2 rounded-xl border ${s.totalInd > 0 && s.doneCount === s.totalInd ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}">
-                                <span class="block text-[10px] font-bold text-slate-500">${s.tw}</span>
+                                <span class="block text-[9px] font-bold text-slate-500 truncate">${s.label}</span>
                                 <strong class="text-xs ${s.doneCount > 0 ? 'text-emerald-700' : 'text-slate-700'}">${s.doneCount}/${s.totalInd}</strong>
                             </div>
                         `).join('')}
                     </div>
 
-                    <!-- Matriks Status Indikator Direktur per Triwulan -->
+                    <!-- Matriks Status Indikator Direktur per Triwulan & Semua Triwulan -->
                     <div class="overflow-x-auto max-h-44 overflow-y-auto border rounded-xl">
                         <table class="w-full text-left border-collapse text-[11px]">
                             <thead class="bg-slate-50 text-slate-700 font-bold border-b sticky top-0">
                                 <tr>
                                     <th class="p-2">Indikator Direktur (${yr})</th>
-                                    <th class="p-2 text-center">TW 1</th>
-                                    <th class="p-2 text-center">TW 2</th>
-                                    <th class="p-2 text-center">TW 3</th>
-                                    <th class="p-2 text-center">TW 4</th>
+                                    <th class="p-1.5 text-center">TW 1</th>
+                                    <th class="p-1.5 text-center">TW 2</th>
+                                    <th class="p-1.5 text-center">TW 3</th>
+                                    <th class="p-1.5 text-center">TW 4</th>
+                                    <th class="p-1.5 text-center whitespace-nowrap">Semua TW</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y">
-                                ${indicators.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada indikator pada tahun ${yr}.</td></tr>` : indicators.map(it => `
+                                ${indicators.length === 0 ? `<tr><td colspan="6" class="p-4 text-center text-slate-400">Belum ada indikator pada tahun ${yr}.</td></tr>` : indicators.map(it => `
                                     <tr class="hover:bg-slate-50">
                                         <td class="p-2 font-semibold text-slate-800">${sanitizeHTML(it.nama)}</td>
-                                        ${['TW 1', 'TW 2', 'TW 3', 'TW 4'].map(tw => {
-                                            const ok = checkReported(it.nama, tw);
-                                            return `<td class="p-2 text-center">${ok
+                                        ${periodColumns.map(p => {
+                                            const ok = checkReported(it.nama, p.code);
+                                            return `<td class="p-1.5 text-center">${ok
                                                 ? '<span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-bold text-[10px]">Sudah</span>'
                                                 : '<span class="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded font-semibold text-[10px]">Belum</span>'}</td>`;
                                         }).join('')}
@@ -13492,7 +13501,6 @@ window._dirSkpLogPage = 1;
                         </table>
                     </div>
                 </div>
-
                 <!-- Riwayat Log Cetakan SKP Direktur dengan Page Viewer -->
                 <div class="space-y-2 pt-1 flex flex-col justify-between">
                     <div class="flex items-center justify-between gap-2">
