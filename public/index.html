@@ -12242,16 +12242,37 @@ function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title
 
             DB.approvalSKP.push(newSkp);
 
-            // Kirim Notifikasi ke Approver Tahap Pertama
+            // Kirim Notifikasi Sistem & Email ke Approver Tahap Pertama
+            let targetEmailsSKP = [];
             if (isSubUnit) {
                 pushSkpWorkflowNotification('ketua_unit', currentUser.unit, currentUser.timKey, 'Validasi SKP Bawahan', `${currentUser.name} mengajukan SKP (${tw} ${yr}) menunggu validasi Ketua Unit/Prodi.`);
+                targetEmailsSKP = getEmailsByCriteria({ role: 'ketua_unit', unit: currentUser.unit });
             } else if (!isKetuaTim) {
                 pushSkpWorkflowNotification('tim_kerja', '', currentUser.timKey, 'Validasi SKP Unit', `${currentUser.name} (${currentUser.unit}) mengajukan SKP (${tw} ${yr}) menunggu penilaian Ketua Tim Kerja.`);
+                targetEmailsSKP = getEmailsByCriteria({ role: 'tim_kerja', timKey: currentUser.timKey });
             } else if (pejabatPenilaiJabatan !== 'Direktur') {
                 const targetUnitPenilai = pejabatPenilaiUser ? pejabatPenilaiUser.unit : pejabatPenilaiJabatan;
                 pushSkpWorkflowNotification('ketua_unit', targetUnitPenilai, '', 'Persetujuan Final SKP (Pejabat Penilai)', `${currentUser.name} mengajukan SKP (${tw} ${yr}) menunggu keputusan ${pejabatPenilaiJabatan}.`);
+                targetEmailsSKP = pejabatPenilaiUsername ? [pejabatPenilaiUsername] : getEmailsByCriteria({ role: 'ketua_unit', unit: targetUnitPenilai });
             } else {
                 pushSkpWorkflowNotification('direktur', '', '', 'Persetujuan Final SKP', `Ketua Tim ${currentUser.timKey} mengajukan SKP (${tw} ${yr}) menunggu keputusan Direktur.`);
+                targetEmailsSKP = getEmailsByCriteria({ role: 'direktur' });
+            }
+
+            if (targetEmailsSKP.length > 0 && typeof sendKijaroEmail === 'function') {
+                sendKijaroEmail(
+                    targetEmailsSKP,
+                    `Permohonan Approval SKP (${tw} ${yr}) — ${currentUser.name}`,
+                    `<p>Yth. Bapak/Ibu Pimpinan,</p>
+                     <p>Terdapat pengajuan <strong>Approval Laporan SKP</strong> baru yang memerlukan tinjauan Anda:</p>
+                     <ul>
+                       <li><strong>Pemohon:</strong> ${sanitizeHTML(currentUser.name)} (${sanitizeHTML(currentUser.unit || '-')})</li>
+                       <li><strong>Periode:</strong> ${sanitizeHTML(tw)} Tahun ${sanitizeHTML(yr)}</li>
+                       <li><strong>Indikator:</strong> ${sanitizeHTML(indikatorName)}</li>
+                       <li><strong>Status Saat Ini:</strong> ${sanitizeHTML(initialStatus)}</li>
+                     </ul>
+                     <p>Silakan masuk ke sistem Ki-Jaro pada menu <strong>Ekspor & Download PDF</strong> untuk melakukan penilaian/validasi.</p>`
+                );
             }
 
             window._tempSigData = window._tempSigData || {};
@@ -13898,6 +13919,63 @@ window._dirSkpLogPage = 1;
             obs.observe(document.body, { childList: true, subtree: true });
             setInterval(injectPanel, 800);
         })();
+
+        // =========================================================================
+        // HELPER NOTIFIKASI EMAIL OTOMATIS VIA BACKEND (/api/send-email)
+        // =========================================================================
+        window.sendKijaroEmail = async function(toEmails, subject, bodyHtml) {
+            try {
+                const list = (Array.isArray(toEmails) ? toEmails : [toEmails])
+                    .map(e => String(e || '').trim().toLowerCase())
+                    .filter(e => e.includes('@'));
+                const uniqueEmails = Array.from(new Set(list));
+                if (uniqueEmails.length === 0) return;
+
+                const wrappedHtml = `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+                        <div style="background: #1e3a8a; color: #ffffff; padding: 16px 24px;">
+                            <h2 style="margin: 0; font-size: 16px;">Ki-Jaro — Kinerja Jawara Petro</h2>
+                            <p style="margin: 4px 0 0; font-size: 12px; color: #bfdbfe;">Politeknik Industri Petrokimia Banten</p>
+                        </div>
+                        <div style="padding: 20px 24px; color: #1e293b; font-size: 14px; line-height: 1.6;">
+                            ${bodyHtml}
+                            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                                <a href="https://ki-jaro.poltek-petrokimia.ac.id" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 13px;">Buka Sistem Ki-Jaro</a>
+                            </div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 12px 24px; font-size: 11px; color: #64748b; text-align: center;">
+                            Email otomatis dari sistem Ki-Jaro (notifikasi@poltek-petrokimia.ac.id). Mohon tidak membalas email ini.
+                        </div>
+                    </div>
+                `;
+
+                await fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to: uniqueEmails,
+                        subject: `[Ki-Jaro] ${subject}`,
+                        html: wrappedHtml
+                    })
+                });
+            } catch (err) {
+                console.warn('Notifikasi email gagal terkirim (non-blocking):', err);
+            }
+        };
+
+        window.getEmailsByCriteria = function({ role, unit, timKey, username }) {
+            const users = Array.isArray(DB.users) ? DB.users : [];
+            return users.filter(u => {
+                if (!u.username || !String(u.username).includes('@')) return false;
+                if (username && String(u.username).toLowerCase() === String(username).toLowerCase()) return true;
+                if (username) return false;
+                const uRoles = typeof getUserRoles === 'function' ? getUserRoles(u) : [u.role];
+                if (role && !uRoles.includes(role)) return false;
+                if (unit && String(u.unit || '').trim().toLowerCase() !== String(unit).trim().toLowerCase()) return false;
+                if (timKey && String(u.timKey || '').trim().toLowerCase() !== String(timKey).trim().toLowerCase()) return false;
+                return true;
+            }).map(u => u.username);
+        };
 
         // === SINKRONISASI STABIL & LENGKAP KE MYSQL ===
         async function loadDataFromMySQL() {
