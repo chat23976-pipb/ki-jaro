@@ -3,15 +3,8 @@
 // =========================================================================
 (function () {
     const MENU_ID = 'menu-perjanjian-kinerja';
-    const LOGO_KEMENPERIN_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Logo_Kementerian_Perindustrian_Republik_Indonesia.png/240px-Logo_Kementerian_Perindustrian_Republik_Indonesia.png';
-    const JABATAN_OPTIONS = [
-        'Dosen',
-        'Tenaga Kependidikan',
-        'Direktur',
-        'Kasubbag Administrasi Akademik Kemahasiswaan dan Kerjasama',
-        'Kasubbag Umum dan Keuangan'
-    ];
-
+    const LOGO_KEMENPERIN_URL = './logo-kemenperin.png';
+    
     let _pkSigModePengusul = 'qr';
     let _pkSigHasStrokePengusul = false;
     let _pkSigModeDir = 'qr';
@@ -40,10 +33,10 @@
         const users = Array.isArray(DB.users) ? DB.users : [];
         const dir = users.find(u => getRoles(u).includes('direktur'));
         return {
-            name: dir ? dir.name : 'Dr. Supardi S.Pd., M.Pd',
+            name: dir ? dir.name : 'Supardi',
             nip: dir && dir.nip ? dir.nip : '197504122001121002',
             pangkat: dir && dir.pangkat ? dir.pangkat : 'Pembina Tk. I, IV/b',
-            jabatan: 'Direktur',
+            jabatan: 'Direktur Politeknik Industri Petrokimia Banten',
             unit: 'Politeknik Industri Petrokimia Banten'
         };
     }
@@ -56,7 +49,7 @@
         return `Keputusan Menteri Perindustrian Nomor ${withoutNomorPrefix}`;
     }
 
-function ensureSidebarStyleTag() {
+    function ensureSidebarStyleTag() {
         if (document.getElementById('pkSidebarForceStyle')) return;
         const st = document.createElement('style');
         st.id = 'pkSidebarForceStyle';
@@ -129,7 +122,6 @@ function ensureSidebarStyleTag() {
         clone.id = MENU_ID;
         clone.removeAttribute('onclick');
         clone.removeAttribute('style');
-        // Bersihkan semua class warna latar & teks bawaan hasil kloning
         clone.className = Array.from(clone.classList)
             .filter(c => !c.startsWith('bg-') && !c.startsWith('text-') && c !== 'shadow' && c !== 'shadow-md' && c !== 'shadow-sm')
             .join(' ');
@@ -172,6 +164,50 @@ function ensureSidebarStyleTag() {
         }
     }, true);
 
+    // Cari Kode & Sasaran/Tujuan Program Direktur dari indikator induk yang diintervensi
+    function lookupDirectorProgramInfo(indukLabel, tahun) {
+        const cleanInduk = String(indukLabel || '').trim();
+        if (!cleanInduk || cleanInduk === '-') {
+            return { kode: 'SK', sasaranProgram: '-' };
+        }
+        const dbObj = typeof DB === 'object' && DB ? DB : {};
+        const normInduk = cleanInduk.toLowerCase();
+
+        // Cek apakah ada kode eksplisit di awal teks seperti "[SK 1]" atau "SK 1 -" atau "TJ -"
+        const prefixMatch = cleanInduk.match(/^\[?\s*(TJ|SK\s*\d+|IKU\s*\d+)\s*\]?\s*[:\-–]?\s*(.+)$/i);
+        let parsedKode = prefixMatch ? prefixMatch[1].toUpperCase() : '';
+        let parsedSasaran = prefixMatch ? prefixMatch[2].trim() : cleanInduk;
+
+        // Telusuri array targetDirektur / cascadingDirektur / renstra di DB untuk mendapatkan kode & sasaran/tujuan program induk
+        const candidateKeys = Object.keys(dbObj).filter(k =>
+            Array.isArray(dbObj[k]) && (k.toLowerCase().includes('direktur') || k.toLowerCase().includes('renstra') || k.toLowerCase().includes('sasaran') || k.toLowerCase().includes('cascad'))
+        );
+
+        for (const k of candidateKeys) {
+            for (const d of dbObj[k]) {
+                if (!d || typeof d !== 'object') continue;
+                const dYr = String(d.tahun || d.year || '').trim();
+                if (dYr && tahun && dYr !== String(tahun).trim()) continue;
+
+                const dText = String(d.indikator || d.target || d.sasaran || d.nama || d.title || '').trim();
+                const dSasaran = String(d.sasaranProgram || d.tujuanProgram || d.sasaranStrategis || d.sasaranDirektur || d.program || d.induk || dText).trim();
+                const dKode = String(d.kode || d.kodeSasaran || d.kodeSk || d.code || '').trim();
+
+                if (dText && (dText.toLowerCase() === normInduk || normInduk.includes(dText.toLowerCase()) || dText.toLowerCase().includes(normInduk))) {
+                    return {
+                        kode: dKode || parsedKode || 'SK',
+                        sasaranProgram: dSasaran || parsedSasaran
+                    };
+                }
+            }
+        }
+
+        return {
+            kode: parsedKode || 'SK',
+            sasaranProgram: parsedSasaran
+        };
+    }
+
     // Pemindaian menyeluruh data RHK & IKI dari seluruh struktur Cascading di DB (Level 1, Level 2, Level 3)
     function collectUserRhkIki(user, tahun) {
         const yr = String(tahun || '2025').trim();
@@ -195,11 +231,14 @@ function ensureSidebarStyleTag() {
             seenKeys.add(key);
             rows.push({
                 kategori: row.kategori === 'TAMBAHAN' ? 'TAMBAHAN' : 'UTAMA',
+                kodeProgram: row.kodeProgram || 'SK',
                 rhkPimpinan: row.rhkPimpinan || '-',
                 rhk: rName || iName,
                 aspek: row.aspek || 'Kuantitas',
                 iki: iName || rName,
-                target: row.target || '100 (%)'
+                targetVal: row.targetVal ?? '100',
+                satuan: row.satuan || '%',
+                target: row.target || `${row.targetVal ?? 100} (${row.satuan || '%'})`
             });
         };
 
@@ -248,17 +287,31 @@ function ensureSidebarStyleTag() {
                 }
 
                 if (matched) {
-                    const targetStr = item.targetText
-                        || (item.targetVal !== undefined && item.targetVal !== '' ? `${item.targetVal} (${item.satuan || '%'})` : '')
-                        || item.targetFormatted
-                        || '100 (%)';
+                    // Ambil RHK persis dari berbagai kemungkinan nama properti di objek cascading
+                    const rawRhk = item.rhk || item.rencanaHasilKerja || item.rhkText || item.namaRhk || item.rhkName || item.sasaranKerja || item.sasaran || '';
+                    const cleanRhk = (rawRhk && String(rawRhk).trim() !== '-') ? String(rawRhk).trim() : '';
+
+                    // Ambil IKI persis dari berbagai kemungkinan nama properti di objek cascading
+                    const rawIki = item.iki || item.indikatorIndividu || item.namaIki || item.ikiName || item.indikator || item.target || '';
+                    const cleanIki = (rawIki && String(rawIki).trim() !== '-') ? String(rawIki).trim() : '';
+
+                    // Ambil Indikator Direktur / Pimpinan yang diintervensi
+                    const rawInduk = item.induk || item.targetDirektur || item.sasaranDirektur || item.indikatorRujukan || item.indikatorDirektur || item.targetTim || item.targetUnit || item.rhkPimpinan || '-';
+                    const progInfo = lookupDirectorProgramInfo(rawInduk, yr);
+
+                    const tVal = item.targetVal !== undefined && item.targetVal !== '' ? String(item.targetVal) : '100';
+                    const tSatuan = item.satuan || item.unitSatuan || '%';
+                    const targetStr = item.targetText || item.targetFormatted || `${tVal} (${tSatuan})`;
 
                     pushUniqueRow({
                         kategori: String(item.kategori || item.jenis || 'UTAMA').toUpperCase(),
-                        rhkPimpinan: item.induk || item.targetDirektur || item.sasaranDirektur || item.indikatorRujukan || item.targetTim || item.targetUnit || item.rhkPimpinan || '-',
-                        rhk: item.rhk || item.rencanaHasilKerja || item.target || item.sasaran || item.indikator || '-',
+                        kodeProgram: item.kode || item.kodeSasaran || progInfo.kode,
+                        rhkPimpinan: progInfo.sasaranProgram || rawInduk,
+                        rhk: cleanRhk || cleanIki,
                         aspek: item.aspek || 'Kuantitas',
-                        iki: item.iki || item.indikatorIndividu || item.indikator || item.target || '-',
+                        iki: cleanIki || cleanRhk,
+                        targetVal: tVal,
+                        satuan: tSatuan,
                         target: targetStr
                     });
                 }
@@ -373,22 +426,13 @@ function ensureSidebarStyleTag() {
         tr.className = 'border-b hover:bg-slate-50';
         tr.innerHTML = `
             <td class="p-1.5">
-                <select class="pk-in-kat w-full p-1.5 border rounded bg-white text-[11px] font-bold">
-                    <option value="UTAMA" ${data.kategori !== 'TAMBAHAN' ? 'selected' : ''}>Utama</option>
-                    <option value="TAMBAHAN" ${data.kategori === 'TAMBAHAN' ? 'selected' : ''}>Tambahan</option>
-                </select>
+                <input type="text" class="pk-in-kode w-full p-1.5 border rounded text-[11px] font-bold text-center uppercase" value="${esc(data.kodeProgram || 'SK')}" placeholder="SK 1 / TJ">
             </td>
-            <td class="p-1.5"><input type="text" class="pk-in-pimpinan w-full p-1.5 border rounded text-[11px]" value="${esc(data.rhkPimpinan || '')}" placeholder="RHK Pimpinan yang diintervensi..."></td>
-            <td class="p-1.5"><input type="text" class="pk-in-rhk w-full p-1.5 border rounded text-[11px] font-semibold" value="${esc(data.rhk || '')}" placeholder="Rencana Hasil Kerja..." required></td>
-            <td class="p-1.5">
-                <select class="pk-in-aspek w-full p-1.5 border rounded bg-white text-[11px]">
-                    <option value="Kuantitas" ${(data.aspek || 'Kuantitas') === 'Kuantitas' ? 'selected' : ''}>Kuantitas</option>
-                    <option value="Kualitas" ${data.aspek === 'Kualitas' ? 'selected' : ''}>Kualitas</option>
-                    <option value="Waktu" ${data.aspek === 'Waktu' ? 'selected' : ''}>Waktu</option>
-                </select>
-            </td>
+            <td class="p-1.5"><input type="text" class="pk-in-pimpinan w-full p-1.5 border rounded text-[11px]" value="${esc(data.rhkPimpinan || '')}" placeholder="Tujuan / Sasaran Program Direktur yang diintervensi..."></td>
+            <td class="p-1.5"><input type="text" class="pk-in-rhk w-full p-1.5 border rounded text-[11px] font-semibold" value="${esc(data.rhk || '')}" placeholder="Rencana Hasil Kerja (RHK)..." required></td>
             <td class="p-1.5"><input type="text" class="pk-in-iki w-full p-1.5 border rounded text-[11px]" value="${esc(data.iki || '')}" placeholder="Indikator Kinerja Individu..." required></td>
-            <td class="p-1.5"><input type="text" class="pk-in-target w-full p-1.5 border rounded text-[11px] font-semibold" value="${esc(data.target || '')}" placeholder="Contoh: 1 (Dokumen)" required></td>
+            <td class="p-1.5"><input type="text" class="pk-in-targetval w-full p-1.5 border rounded text-[11px] font-bold text-center" value="${esc(data.targetVal ?? '')}" placeholder="200" required></td>
+            <td class="p-1.5"><input type="text" class="pk-in-satuan w-full p-1.5 border rounded text-[11px] text-center" value="${esc(data.satuan || '')}" placeholder="Persen / %" required></td>
             <td class="p-1.5 text-center">
                 <button type="button" onclick="this.closest('tr').remove()" class="px-2 py-1 bg-rose-100 text-rose-700 rounded text-[10px] font-bold"><i class="fa-solid fa-trash"></i></button>
             </td>
@@ -424,6 +468,13 @@ function ensureSidebarStyleTag() {
         if (e) e.preventDefault();
         if (!Array.isArray(DB.perjanjianKinerja)) DB.perjanjianKinerja = [];
 
+        const agreeCheckbox = document.getElementById('pkPaktaAgreeCheck');
+        if (!agreeCheckbox || !agreeCheckbox.checked) {
+            showToast('Anda wajib mencentang persetujuan Pakta Integritas sebelum mengajukan Perjanjian Kinerja!', 'error');
+            agreeCheckbox?.focus();
+            return;
+        }
+
         const tahun = document.getElementById('pkFormTahun').value;
         const periode = document.getElementById('pkFormPeriode').value.trim();
         const tanggalStr = document.getElementById('pkFormTanggal').value.trim();
@@ -434,14 +485,21 @@ function ensureSidebarStyleTag() {
         const nip = document.getElementById('pkFormNip').value.trim();
 
         const trList = Array.from(document.querySelectorAll('#pkRhkRowsBody tr'));
-        const rhkItems = trList.map(tr => ({
-            kategori: tr.querySelector('.pk-in-kat')?.value || 'UTAMA',
-            rhkPimpinan: tr.querySelector('.pk-in-pimpinan')?.value.trim() || '-',
-            rhk: tr.querySelector('.pk-in-rhk')?.value.trim() || '',
-            aspek: tr.querySelector('.pk-in-aspek')?.value || 'Kuantitas',
-            iki: tr.querySelector('.pk-in-iki')?.value.trim() || '',
-            target: tr.querySelector('.pk-in-target')?.value.trim() || '-'
-        })).filter(x => x.rhk && x.iki);
+        const rhkItems = trList.map(tr => {
+            const tVal = tr.querySelector('.pk-in-targetval')?.value.trim() || '-';
+            const sat = tr.querySelector('.pk-in-satuan')?.value.trim() || '%';
+            return {
+                kategori: 'UTAMA',
+                kodeProgram: tr.querySelector('.pk-in-kode')?.value.trim().toUpperCase() || 'SK',
+                rhkPimpinan: tr.querySelector('.pk-in-pimpinan')?.value.trim() || '-',
+                rhk: tr.querySelector('.pk-in-rhk')?.value.trim() || '',
+                aspek: 'Kuantitas',
+                iki: tr.querySelector('.pk-in-iki')?.value.trim() || '',
+                targetVal: tVal,
+                satuan: sat,
+                target: `${tVal} (${sat})`
+            };
+        }).filter(x => x.rhk && x.iki);
 
         if (rhkItems.length === 0) {
             showToast('Minimal harus ada 1 baris RHK dan Indikator Kinerja Individu (IKI) yang terisi!', 'error');
@@ -472,6 +530,8 @@ function ensureSidebarStyleTag() {
             tanggalStr,
             skNomorRaw,
             skPengangkatan: formatSkPengangkatanFull(skNomorRaw),
+            paktaAgreed: true,
+            paktaAgreedAt: new Date().toLocaleString('id-ID'),
             pemohonUsername: currentUser.username,
             pemohonName: currentUser.name,
             pemohonNip: nip,
@@ -501,7 +561,7 @@ function ensureSidebarStyleTag() {
                 {
                     waktu: new Date().toLocaleString('id-ID'),
                     aktor: currentUser.name,
-                    aksi: _pkEditingId ? 'Mengajukan Ulang (Revisi)' : 'Mengajukan PK & Pakta Integritas',
+                    aksi: _pkEditingId ? 'Mengajukan Ulang (Revisi) & Menyetujui Pakta Integritas' : 'Mengajukan PK & Menyetujui Pakta Integritas',
                     status: wf.initialStatus
                 }
             ],
@@ -676,7 +736,7 @@ function ensureSidebarStyleTag() {
                     <table class="w-full text-left text-[11px] border-collapse">
                         <thead class="bg-slate-100 font-bold text-slate-700 border-b">
                             <tr>
-                                <th class="p-2">RHK Pimpinan Diintervensi</th>
+                                <th class="p-2">Kode & Sasaran Program</th>
                                 <th class="p-2">Rencana Hasil Kerja (RHK)</th>
                                 <th class="p-2">IKI & Target</th>
                             </tr>
@@ -684,9 +744,9 @@ function ensureSidebarStyleTag() {
                         <tbody class="divide-y">
                             ${(item.rhkItems || []).map(r => `
                                 <tr>
-                                    <td class="p-2 text-slate-600">${esc(r.rhkPimpinan)}</td>
+                                    <td class="p-2 text-slate-600"><strong>[${esc(r.kodeProgram || 'SK')}]</strong> ${esc(r.rhkPimpinan)}</td>
                                     <td class="p-2 font-semibold text-slate-800">${esc(r.rhk)}</td>
-                                    <td class="p-2">${esc(r.iki)} — <strong>${esc(r.target)}</strong></td>
+                                    <td class="p-2">${esc(r.iki)} — <strong>${esc(r.targetVal || '')} ${esc(r.satuan || '')}</strong></td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -838,26 +898,33 @@ function ensureSidebarStyleTag() {
         openPerjanjianKinerjaView();
     };
 
-    // Pratinjau & Cetak Dokumen Gabungan (Halaman 1: Pakta Integritas, Halaman 2+: Sasaran Kinerja Pegawai / PK)
+    // Pratinjau & Cetak Dokumen Gabungan:
+    // Halaman 1: Pakta Integritas
+    // Halaman 2: Perjanjian Kinerja Tahun YYYY (Pihak Pertama & Pihak Kedua)
+    // Halaman 3: Lampiran Perjanjian Kinerja Tahun YYYY (Tabel Kode, Tujuan/Sasaran Program, Indikator Kinerja, Target, Satuan)
     window.previewMergedPkDocument = function (id) {
         const item = (DB.perjanjianKinerja || []).find(x => x.id === id);
         if (!item) return;
         const area = document.getElementById('pkMergedPreviewArea');
         if (!area) return;
 
-        const utamaRows = (item.rhkItems || []).filter(r => r.kategori !== 'TAMBAHAN');
-        const tambahanRows = (item.rhkItems || []).filter(r => r.kategori === 'TAMBAHAN');
         const skTextFormatted = formatSkPengangkatanFull(item.skNomorRaw || item.skPengangkatan);
+        const rows = Array.isArray(item.rhkItems) ? item.rhkItems : [];
 
-        const perilakuBerakhlak = [
-            { no: '1.', judul: 'Berorientasi Layanan', poin: ['Memahami dan memenuhi kebutuhan masyarakat', 'Ramah, cekatan, solutif, dan dapat diandalkan', 'Melakukan perbaikan tiada henti'] },
-            { no: '2.', judul: 'Akuntabel', poin: ['Melaksanakan tugas dengan jujur, bertanggung jawab, cermat, disiplin, dan berintegritas tinggi', 'Menggunakan kekayaan dan barang milik negara secara bertanggung jawab, efektif, dan efisien', 'Tidak menyalahgunakan kewenangan jabatan'] },
-            { no: '3.', judul: 'Kompeten', poin: ['Meningkatkan kompetensi diri untuk menjawab tantangan yang selalu berubah', 'Membantu orang lain belajar', 'Melaksanakan tugas dengan kualitas terbaik'] },
-            { no: '4.', judul: 'Harmonis', poin: ['Menghargai setiap orang apapun latar belakangnya', 'Suka menolong orang lain', 'Membangun lingkungan kerja yang kondusif'] },
-            { no: '5.', judul: 'Loyal', poin: ['Memegang teguh ideologi Pancasila, Undang-Undang Dasar Negara Republik Indonesia Tahun 1945, setia pada NKRI, serta pemerintahan yang sah', 'Menjaga nama baik sesama ASN, Pimpinan, Instansi, dan Negara', 'Menjaga rahasia jabatan dan negara'] },
-            { no: '6.', judul: 'Adaptif', poin: ['Cepat menyesuaikan diri menghadapi perubahan', 'Terus berinovasi dan mengembangkan kreativitas', 'Bertindak proaktif'] },
-            { no: '7.', judul: 'Kolaboratif', poin: ['Memberi kesempatan kepada berbagai pihak untuk berkontribusi', 'Terbuka dalam bekerja sama untuk menghasilkan nilai tambah', 'Menggerakkan pemanfaatan berbagai sumberdaya untuk tujuan bersama'] }
-        ];
+        // Kelompokkan baris berdasarkan Kode + Tujuan/Sasaran Program agar tampil rapi (rowspan) sesuai lampiran format usulan perkin.docx
+        const groupedPrograms = [];
+        const groupMap = new Map();
+        rows.forEach(r => {
+            const kode = String(r.kodeProgram || 'SK').trim();
+            const sasaran = String(r.rhkPimpinan || '-').trim();
+            const key = `${kode.toLowerCase()}|${sasaran.toLowerCase()}`;
+            if (!groupMap.has(key)) {
+                const grp = { kode, sasaran, items: [] };
+                groupMap.set(key, grp);
+                groupedPrograms.push(grp);
+            }
+            groupMap.get(key).items.push(r);
+        });
 
         const renderSigPegawai = (qrElemId) => {
             if (item.sigPengusulMode === 'manual' && item.sigPengusulManual) {
@@ -881,7 +948,7 @@ function ensureSidebarStyleTag() {
             <div class="bg-white rounded-2xl shadow-sm border-2 border-emerald-200 p-6 space-y-6">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b pb-3 no-print">
                     <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold">
-                        <i class="fa-solid fa-file-pdf mr-1"></i> Dokumen Gabungan (Halaman 1: Pakta Integritas &bull; Halaman 2: Sasaran Kinerja Pegawai)
+                        <i class="fa-solid fa-file-pdf mr-1"></i> Dokumen Gabungan (Hal. 1: Pakta Integritas &bull; Hal. 2: Perjanjian Kinerja &bull; Hal. 3: Lampiran Target)
                     </span>
                     <button type="button" onclick="printMergedPkOnly()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow flex items-center gap-2">
                         <i class="fa-solid fa-print"></i><span>Cetak / Download PDF Gabungan</span>
@@ -944,153 +1011,130 @@ function ensureSidebarStyleTag() {
                         </div>
                     </div>
 
-                    <!-- HALAMAN 2 DST: SASARAN KINERJA PEGAWAI / PERJANJIAN KINERJA -->
-                    <div class="p-6 sm:p-8 border border-slate-200 rounded-xl bg-white space-y-4">
-                        <div class="flex items-center justify-center gap-3 border-b border-slate-800 pb-2.5">
-                            <img src="${LOGO_KEMENPERIN_URL}" onerror="this.style.display='none'" class="w-11 h-11 object-contain" alt="Logo Kemenperin">
-                            <div class="text-center space-y-0.5">
-                                <h2 class="text-base font-bold uppercase">SASARAN KINERJA PEGAWAI</h2>
-                                <p class="text-xs font-bold uppercase">PENDEKATAN HASIL KERJA KUANTITATIF</p>
+                    <!-- HALAMAN 2: PERJANJIAN KINERJA TAHUN YYYY (SESUAI FORMAT USULAN PERKIN) -->
+                    <div class="p-6 sm:p-8 border border-slate-200 rounded-xl bg-white space-y-5" style="page-break-after: always;">
+                        <div class="flex items-center justify-center gap-4 border-b-2 border-slate-900 pb-3">
+                            <img src="${LOGO_KEMENPERIN_URL}" onerror="this.style.display='none'" class="w-14 h-14 object-contain" alt="Logo Kemenperin">
+                            <div class="text-center">
+                                <p class="text-sm font-bold uppercase tracking-wider">Kementerian Perindustrian</p>
+                                <p class="text-xs font-bold uppercase tracking-widest">REPUBLIK INDONESIA</p>
+                                <p class="text-[11px] font-bold uppercase mt-0.5">Politeknik Industri Petrokimia Banten</p>
                             </div>
                         </div>
 
-                        <div class="flex justify-between text-[11px] font-bold border-b pb-1">
-                            <span>Kementerian Perindustrian</span>
-                            <span>Periode Penilaian: ${esc(item.periode)}</span>
+                        <div class="text-center space-y-1 pt-2">
+                            <h2 class="text-base font-bold uppercase">PERJANJIAN KINERJA TAHUN ${esc(item.tahun)}</h2>
+                            <p class="text-sm font-bold uppercase">${esc(item.pemohonJabatan)}</p>
                         </div>
 
-                        <table class="w-full border-collapse border border-slate-800 text-[11px]">
-                            <thead>
-                                <tr class="bg-slate-100 font-bold">
-                                    <th class="border border-slate-800 p-1.5 w-8 text-center">NO.</th>
-                                    <th class="border border-slate-800 p-1.5" colspan="2">PEGAWAI YANG DINILAI</th>
-                                    <th class="border border-slate-800 p-1.5 w-8 text-center">NO.</th>
-                                    <th class="border border-slate-800 p-1.5" colspan="2">PEJABAT PENILAI KINERJA</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="border border-slate-800 p-1.5 text-center">1</td>
-                                    <td class="border border-slate-800 p-1.5 w-32">Nama</td>
-                                    <td class="border border-slate-800 p-1.5 font-bold">${esc(item.pemohonName)}</td>
-                                    <td class="border border-slate-800 p-1.5 text-center">1</td>
-                                    <td class="border border-slate-800 p-1.5 w-32">Nama</td>
-                                    <td class="border border-slate-800 p-1.5 font-bold">${esc(item.pejabatPenilaiName)}</td>
-                                </tr>
-                                <tr>
-                                    <td class="border border-slate-800 p-1.5 text-center">2</td>
-                                    <td class="border border-slate-800 p-1.5">NIP</td>
-                                    <td class="border border-slate-800 p-1.5">${esc(item.pemohonNip)}</td>
-                                    <td class="border border-slate-800 p-1.5 text-center">2</td>
-                                    <td class="border border-slate-800 p-1.5">NIP</td>
-                                    <td class="border border-slate-800 p-1.5">${esc(item.pejabatPenilaiNip)}</td>
-                                </tr>
-                                <tr>
-                                    <td class="border border-slate-800 p-1.5 text-center">3</td>
-                                    <td class="border border-slate-800 p-1.5">Pangkat/Golongan</td>
-                                    <td class="border border-slate-800 p-1.5">${esc(item.pemohonPangkat)}</td>
-                                    <td class="border border-slate-800 p-1.5 text-center">3</td>
-                                    <td class="border border-slate-800 p-1.5">Pangkat/Golongan</td>
-                                    <td class="border border-slate-800 p-1.5">${esc(item.pejabatPenilaiPangkat)}</td>
-                                </tr>
-                                <tr>
-                                    <td class="border border-slate-800 p-1.5 text-center">4</td>
-                                    <td class="border border-slate-800 p-1.5">Jabatan</td>
-                                    <td class="border border-slate-800 p-1.5">${esc(item.pemohonJabatan)}</td>
-                                    <td class="border border-slate-800 p-1.5 text-center">4</td>
-                                    <td class="border border-slate-800 p-1.5">Jabatan</td>
-                                    <td class="border border-slate-800 p-1.5">${esc(item.pejabatPenilaiJabatan)}</td>
-                                </tr>
-                                <tr>
-                                    <td class="border border-slate-800 p-1.5 text-center">5</td>
-                                    <td class="border border-slate-800 p-1.5">Unit Kerja</td>
-                                    <td class="border border-slate-800 p-1.5">Politeknik Industri Petrokimia Banten</td>
-                                    <td class="border border-slate-800 p-1.5 text-center">5</td>
-                                    <td class="border border-slate-800 p-1.5">Unit Kerja</td>
-                                    <td class="border border-slate-800 p-1.5">Politeknik Industri Petrokimia Banten</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <p class="text-justify pt-2">
+                            Dalam rangka mewujudkan manajemen pemerintahan yang efektif, transparan, dan akuntabel serta berorientasi pada hasil, yang bertanda tangan di bawah ini :
+                        </p>
 
-                        <table class="w-full border-collapse border border-slate-800 text-[11px]">
-                            <thead>
-                                <tr class="bg-slate-100 font-bold text-center">
-                                    <th class="border border-slate-800 p-1.5" colspan="6">HASIL KERJA</th>
-                                </tr>
-                                <tr class="bg-slate-50 font-bold text-center">
-                                    <th class="border border-slate-800 p-1.5 w-8">NO.<br>(1)</th>
-                                    <th class="border border-slate-800 p-1.5">RENCANA HASIL KERJA PIMPINAN YANG DIINTERVENSI<br>(2)</th>
-                                    <th class="border border-slate-800 p-1.5">RENCANA HASIL KERJA<br>(3)</th>
-                                    <th class="border border-slate-800 p-1.5 w-20">ASPEK<br>(4)</th>
-                                    <th class="border border-slate-800 p-1.5">INDIKATOR KINERJA INDIVIDU<br>(5)</th>
-                                    <th class="border border-slate-800 p-1.5 w-28">TARGET<br>(6)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="bg-slate-50 font-bold"><td class="border border-slate-800 p-1.5" colspan="6">A. UTAMA</td></tr>
-                                ${utamaRows.map((r, i) => `
-                                    <tr>
-                                        <td class="border border-slate-800 p-1.5 text-center align-top">${i + 1}.</td>
-                                        <td class="border border-slate-800 p-1.5 align-top">${esc(r.rhkPimpinan)}</td>
-                                        <td class="border border-slate-800 p-1.5 align-top font-semibold">${esc(r.rhk)}</td>
-                                        <td class="border border-slate-800 p-1.5 text-center align-top">${esc(r.aspek)}</td>
-                                        <td class="border border-slate-800 p-1.5 align-top">${esc(r.iki)}</td>
-                                        <td class="border border-slate-800 p-1.5 text-center align-top font-semibold">${esc(r.target)}</td>
-                                    </tr>
-                                `).join('')}
-                                <tr class="bg-slate-50 font-bold"><td class="border border-slate-800 p-1.5" colspan="6">B. TAMBAHAN</td></tr>
-                                ${tambahanRows.length === 0 ? `<tr><td class="border border-slate-800 p-1.5 text-center text-slate-500" colspan="6">-</td></tr>` : tambahanRows.map((r, i) => `
-                                    <tr>
-                                        <td class="border border-slate-800 p-1.5 text-center align-top">${i + 1}.</td>
-                                        <td class="border border-slate-800 p-1.5 align-top">${esc(r.rhkPimpinan)}</td>
-                                        <td class="border border-slate-800 p-1.5 align-top font-semibold">${esc(r.rhk)}</td>
-                                        <td class="border border-slate-800 p-1.5 text-center align-top">${esc(r.aspek)}</td>
-                                        <td class="border border-slate-800 p-1.5 align-top">${esc(r.iki)}</td>
-                                        <td class="border border-slate-800 p-1.5 text-center align-top font-semibold">${esc(r.target)}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
+                        <div class="space-y-3 pl-2">
+                            <div>
+                                <table class="w-full text-xs">
+                                    <tbody>
+                                        <tr><td class="py-0.5 w-28">Nama</td><td class="py-0.5 w-4">:</td><td class="py-0.5 font-bold">${esc(item.pemohonName)}</td></tr>
+                                        <tr><td class="py-0.5">Jabatan</td><td class="py-0.5">:</td><td class="py-0.5">${esc(item.pemohonJabatan)}</td></tr>
+                                    </tbody>
+                                </table>
+                                <p class="mt-1">Selanjutnya disebut <strong>Pihak Pertama</strong></p>
+                            </div>
 
-                        <table class="w-full border-collapse border border-slate-800 text-[11px]">
-                            <thead>
-                                <tr class="bg-slate-100 font-bold text-center">
-                                    <th class="border border-slate-800 p-1.5" colspan="3">PERILAKU KERJA</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${perilakuBerakhlak.map(b => `
-                                    <tr>
-                                        <td class="border border-slate-800 p-1.5 w-8 text-center align-top font-bold">${b.no}</td>
-                                        <td class="border border-slate-800 p-1.5 align-top">
-                                            <strong class="block">${b.judul}</strong>
-                                            <ul class="list-disc pl-4 mt-0.5">
-                                                ${b.poin.map(p => `<li>${p}</li>`).join('')}
-                                            </ul>
-                                        </td>
-                                        <td class="border border-slate-800 p-1.5 w-64 align-top">
-                                            <strong>Ekspektasi Khusus Pimpinan:</strong><br>
-                                            Sesuai arahan dan ekspektasi pimpinan unit kerja.
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
+                            <div class="pt-1">
+                                <table class="w-full text-xs">
+                                    <tbody>
+                                        <tr><td class="py-0.5 w-28">Nama</td><td class="py-0.5 w-4">:</td><td class="py-0.5 font-bold">${esc(item.pejabatPenilaiName)}</td></tr>
+                                        <tr><td class="py-0.5">Jabatan</td><td class="py-0.5">:</td><td class="py-0.5">Direktur Politeknik Industri Petrokimia Banten</td></tr>
+                                    </tbody>
+                                </table>
+                                <p class="mt-1">Selaku atasan Pihak Pertama, selanjutnya disebut <strong>Pihak Kedua</strong></p>
+                            </div>
+                        </div>
 
-                        <div class="pt-4 grid grid-cols-2 gap-8 text-center text-xs">
+                        <p class="text-justify">
+                            Pihak pertama berjanji akan mewujudkan target kinerja yang seharusnya sesuai lampiran perjanjian ini, dalam rangka mencapai target kinerja jangka menengah seperti yang telah ditetapkan dalam dokumen perencanaan. Keberhasilan dan kegagalan pencapaian target kinerja tersebut menjadi tanggung jawab kami.
+                        </p>
+
+                        <p class="text-justify">
+                            Pihak kedua akan memberikan supervisi yang diperlukan serta akan melakukan evaluasi terhadap capaian kinerja dari perjanjian ini dan mengambil tindakan yang diperlukan dalam rangka pemberian penghargaan dan sanksi.
+                        </p>
+
+                        <div class="pt-8 grid grid-cols-2 gap-8 text-center">
                             <div class="flex flex-col items-center">
                                 <p>&nbsp;</p>
-                                <p class="font-bold mb-1">Pegawai yang Dinilai,</p>
-                                ${renderSigPegawai('qrPkSkpUser')}
-                                <p class="font-bold underline">${esc(item.pemohonName)}</p>
-                                <p>NIP. ${esc(item.pemohonNip)}</p>
+                                <p class="font-bold">Menyetujui</p>
+                                <p class="font-bold mb-1">Direktur</p>
+                                ${renderSigDirektur('qrPkMainDir')}
+                                <p class="font-bold underline">${esc(item.pejabatPenilaiName)}</p>
+                                <p>NIP. ${esc(item.pejabatPenilaiNip)}</p>
                             </div>
                             <div class="flex flex-col items-center">
                                 <p>${esc(item.tanggalStr)}</p>
-                                <p class="font-bold mb-1">Pejabat Penilai Kinerja,</p>
-                                ${renderSigDirektur('qrPkSkpDir')}
+                                <p class="font-bold">Pengusul</p>
+                                <p class="font-bold mb-1">${esc(item.pemohonJabatan)}</p>
+                                ${renderSigPegawai('qrPkMainUser')}
+                                <p class="font-bold underline">${esc(item.pemohonName)}</p>
+                                <p>NIP. ${esc(item.pemohonNip)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HALAMAN 3: LAMPIRAN PERJANJIAN KINERJA TAHUN YYYY (TABEL KODE, TUJUAN/SASARAN PROGRAM, INDIKATOR, TARGET, SATUAN) -->
+                    <div class="p-6 sm:p-8 border border-slate-200 rounded-xl bg-white space-y-4">
+                        <div class="text-right text-[11px] font-bold uppercase leading-snug">
+                            <p>LAMPIRAN</p>
+                            <p>PERJANJIAN KINERJA TAHUN ${esc(item.tahun)}</p>
+                            <p>POLITEKNIK INDUSTRI PETROKIMIA BANTEN</p>
+                            <p>KEMENTERIAN PERINDUSTRIAN</p>
+                        </div>
+
+                        <table class="w-full border-collapse border border-slate-900 text-[11px]">
+                            <thead>
+                                <tr class="bg-slate-100 font-bold text-center">
+                                    <th class="border border-slate-900 p-2 w-14">Kode</th>
+                                    <th class="border border-slate-900 p-2 w-56">Tujuan / Sasaran Program</th>
+                                    <th class="border border-slate-900 p-2" colspan="2">Indikator Kinerja Tujuan / Sasaran Program</th>
+                                    <th class="border border-slate-900 p-2 w-20">Target</th>
+                                    <th class="border border-slate-900 p-2 w-24">Satuan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${groupedPrograms.map(grp => {
+                                    const span = grp.items.length;
+                                    return grp.items.map((r, idx) => `
+                                        <tr>
+                                            ${idx === 0 ? `<td class="border border-slate-900 p-2 text-center font-bold align-top" rowspan="${span}">${esc(grp.kode)}</td>` : ''}
+                                            ${idx === 0 ? `<td class="border border-slate-900 p-2 align-top" rowspan="${span}">${esc(grp.sasaran)}</td>` : ''}
+                                            <td class="border border-slate-900 p-2 text-center w-8 align-top">${idx + 1}</td>
+                                            <td class="border border-slate-900 p-2 align-top">${esc(r.iki)}</td>
+                                            <td class="border border-slate-900 p-2 text-center font-semibold align-top">${esc(r.targetVal || '-')}</td>
+                                            <td class="border border-slate-900 p-2 text-center align-top">${esc(r.satuan || '-')}</td>
+                                        </tr>
+                                    `).join('');
+                                }).join('')}
+                            </tbody>
+                        </table>
+
+                        <p class="text-[10px] italic">*) Indikator Kinerja Utama</p>
+
+                        <div class="pt-6 grid grid-cols-2 gap-8 text-center">
+                            <div class="flex flex-col items-center">
+                                <p>&nbsp;</p>
+                                <p class="font-bold">Menyetujui</p>
+                                <p class="font-bold mb-1">Direktur</p>
+                                ${renderSigDirektur('qrPkLampDir')}
                                 <p class="font-bold underline">${esc(item.pejabatPenilaiName)}</p>
                                 <p>NIP. ${esc(item.pejabatPenilaiNip)}</p>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <p>${esc(item.tanggalStr)}</p>
+                                <p class="font-bold">Pengusul</p>
+                                <p class="font-bold mb-1">${esc(item.pemohonJabatan)}</p>
+                                ${renderSigPegawai('qrPkLampUser')}
+                                <p class="font-bold underline">${esc(item.pemohonName)}</p>
+                                <p>NIP. ${esc(item.pemohonNip)}</p>
                             </div>
                         </div>
                     </div>
@@ -1101,15 +1145,15 @@ function ensureSidebarStyleTag() {
         setTimeout(() => {
             if (typeof QRCode !== 'undefined') {
                 if (item.sigPengusulMode === 'qr') {
-                    ['qrPkPiUser', 'qrPkSkpUser'].forEach(elId => {
+                    ['qrPkPiUser', 'qrPkMainUser', 'qrPkLampUser'].forEach(elId => {
                         const el = document.getElementById(elId);
-                        if (el) new QRCode(el, { text: `PEGAWAI: ${item.pemohonName} | NIP: ${item.pemohonNip} | Hash: ${item.sigPengusulHash}`, width: 68, height: 68, correctLevel: QRCode.CorrectLevel.L });
+                        if (el) new QRCode(el, { text: `PEGAWAI: ${item.pemohonName} | NIP: ${item.pemohonNip} | Hash: ${item.sigPengusulHash}`, width: 64, height: 64, correctLevel: QRCode.CorrectLevel.L });
                     });
                 }
                 if (item.currentStage === 'selesai' && item.sigDirMode === 'qr') {
-                    ['qrPkPiDir', 'qrPkSkpDir'].forEach(elId => {
+                    ['qrPkPiDir', 'qrPkMainDir', 'qrPkLampDir'].forEach(elId => {
                         const el = document.getElementById(elId);
-                        if (el) new QRCode(el, { text: `DIREKTUR: ${item.pejabatPenilaiName} | NIP: ${item.pejabatPenilaiNip} | Hash: ${item.sigDirHash}`, width: 68, height: 68, correctLevel: QRCode.CorrectLevel.L });
+                        if (el) new QRCode(el, { text: `DIREKTUR: ${item.pejabatPenilaiName} | NIP: ${item.pejabatPenilaiNip} | Hash: ${item.sigDirHash}`, width: 64, height: 64, correctLevel: QRCode.CorrectLevel.L });
                     });
                 }
             }
@@ -1144,7 +1188,7 @@ function ensureSidebarStyleTag() {
         const mainContainer = document.getElementById('mainContent') || document.querySelector('main > div:last-child') || document.querySelector('main');
         if (!mainContainer || !currentUser) return;
 
-resetOtherSidebarButtons(true);
+        resetOtherSidebarButtons(true);
         setSidebarMenuActive(true);
 
         const pageTitleEl = document.querySelector('header h1, header h2');
@@ -1162,7 +1206,7 @@ resetOtherSidebarButtons(true);
 
         const currentJabatanVal = editData
             ? editData.pemohonJabatan
-            : (JABATAN_OPTIONS.includes(currentUser.jabatan) ? currentUser.jabatan : (isDir ? 'Direktur' : 'Dosen'));
+            : (currentUser.jabatan || currentUser.namaJabatan || (isDir ? 'Direktur' : ''));
 
         const currentSkVal = editData
             ? (editData.skNomorRaw || String(editData.skPengangkatan || '').replace(/^Keputusan Menteri Perindustrian Nomor\s*/i, ''))
@@ -1279,10 +1323,8 @@ resetOtherSidebarButtons(true);
                                 <input type="text" id="pkFormPangkat" value="${esc(editData ? editData.pemohonPangkat : (currentUser.pangkat || 'Penata / III/c'))}" required class="w-full p-2 bg-white border rounded-lg">
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-700 mb-1">Jabatan</label>
-                                <select id="pkFormJabatan" required class="w-full p-2 bg-white border rounded-lg font-semibold">
-                                    ${JABATAN_OPTIONS.map(j => `<option value="${esc(j)}" ${currentJabatanVal === j ? 'selected' : ''}>${esc(j)}</option>`).join('')}
-                                </select>
+                                <label class="block font-bold text-slate-700 mb-1">Jabatan (Sesuai Profil / Admin)</label>
+                                <input type="text" id="pkFormJabatan" value="${esc(currentJabatanVal)}" placeholder="Otomatis dari profil..." required class="w-full p-2 bg-white border rounded-lg font-semibold">
                             </div>
 
                             <div class="md:col-span-3">
@@ -1305,18 +1347,45 @@ resetOtherSidebarButtons(true);
                                 <table class="w-full text-left border-collapse">
                                     <thead class="bg-slate-100 text-slate-700 font-bold text-[11px] border-b">
                                         <tr>
-                                            <th class="p-2 w-24">Kategori</th>
-                                            <th class="p-2">RHK Pimpinan Diintervensi</th>
+                                            <th class="p-2 w-20 text-center">Kode</th>
+                                            <th class="p-2">Tujuan / Sasaran Program (Diintervensi)</th>
                                             <th class="p-2">Rencana Hasil Kerja (RHK)</th>
-                                            <th class="p-2 w-24">Aspek</th>
                                             <th class="p-2">Indikator Kinerja Individu (IKI)</th>
-                                            <th class="p-2 w-32">Target</th>
+                                            <th class="p-2 w-24 text-center">Target</th>
+                                            <th class="p-2 w-28 text-center">Satuan</th>
                                             <th class="p-2 w-10 text-center">Hapus</th>
                                         </tr>
                                     </thead>
                                     <tbody id="pkRhkRowsBody"></tbody>
                                 </table>
                             </div>
+                        </div>
+
+                        <!-- PERNYATAAN PAKTA INTEGRITAS & CHECKLIST PERSETUJUAN WAJIB SEBELUM REQUEST -->
+                        <div class="bg-amber-50/80 border-2 border-amber-300 rounded-xl p-4 space-y-2.5 text-slate-800">
+                            <p class="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-shield-halved text-amber-600"></i> PERNYATAAN PAKTA INTEGRITAS (WAJIB DIBACA & DISETUJUI SEBELUM MENGAJUKAN)
+                            </p>
+                            <div class="bg-white border border-amber-200 rounded-lg p-3.5 text-[11.5px] leading-relaxed space-y-1.5">
+                                <p>Saya yang bertanda tangan di bawah ini menyatakan bahwa saya:</p>
+                                <ol class="list-decimal pl-5 space-y-1">
+                                    <li>Bersedia menjalankan tugas dengan sebaik-baiknya sesuai dengan peraturan perundang-undangan;</li>
+                                    <li>Bersedia mematuhi perintah kedinasan yang ditugaskan oleh pimpinan;</li>
+                                    <li>Bersedia mewujudkan target kinerja yang telah ditetapkan;</li>
+                                    <li>Bersedia berperan aktif dalam upaya pencegahan, pemberantasan, dan tidak melibatkan diri dalam perbuatan Korupsi, Kolusi dan Nepotisme (KKN);</li>
+                                    <li>Bersedia bersikap transparan, jujur, objektif, dan akuntabel dalam melaksanakan tugas; dan</li>
+                                    <li>Bersedia menghindari pertentangan kepentingan (<em>conflict of interest</em>) dalam pelaksanaan tugas.</li>
+                                </ol>
+                                <p class="pt-1 font-semibold text-rose-800">
+                                    Apabila saya melanggar pakta integritas ini, saya bersedia menerima konsekuensinya berupa pembebasan dari jabatan.
+                                </p>
+                            </div>
+                            <label class="flex items-start gap-2.5 pt-1 cursor-pointer select-none">
+                                <input type="checkbox" id="pkPaktaAgreeCheck" ${editData?.paktaAgreed ? 'checked' : ''} required class="mt-0.5 w-4 h-4 rounded text-indigo-600 border-amber-400">
+                                <span class="font-bold text-xs text-slate-900">
+                                    Saya telah membaca dengan saksama, memahami, dan menyetujui seluruh pernyataan Pakta Integritas di atas sebagai bagian yang tidak terpisahkan dari pengajuan Perjanjian Kinerja ini.
+                                </span>
+                            </label>
                         </div>
 
                         <div class="bg-indigo-50/60 border border-indigo-200 rounded-xl p-4 space-y-2.5">
