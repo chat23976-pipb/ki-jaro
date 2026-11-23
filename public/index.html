@@ -12242,6 +12242,7 @@ function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title
             DB.approvalSKP.push(newSkp);
 
             // Kirim Notifikasi Sistem & Email ke Approver Tahap Pertama
+// Kirim Notifikasi Sistem & Email ke Approver Tahap Pertama
             let targetEmailsSKP = [];
             if (isSubUnit) {
                 pushSkpWorkflowNotification('ketua_unit', currentUser.unit, currentUser.timKey, 'Validasi SKP Bawahan', `${currentUser.name} mengajukan SKP (${tw} ${yr}) menunggu validasi Ketua Unit/Prodi.`);
@@ -12273,7 +12274,6 @@ function pushSkpWorkflowNotification(targetRole, targetUnit, targetTimKey, title
                      <p>Silakan masuk ke sistem Ki-Jaro pada menu <strong>Ekspor & Download PDF</strong> untuk melakukan penilaian/validasi.</p>`
                 );
             }
-
             window._tempSigData = window._tempSigData || {};
             window._tempSigData['penyusun'] = null;
 
@@ -13922,13 +13922,28 @@ window._dirSkpLogPage = 1;
         // =========================================================================
         // HELPER NOTIFIKASI EMAIL OTOMATIS VIA BACKEND (/api/send-email)
         // =========================================================================
+       // Ubah ke false jika masa uji coba sudah selesai dan siap dikirim ke masing-masing user
+        window.KIJARO_EMAIL_DEV_MODE = true;
+        window.KIJARO_EMAIL_DEV_TARGET = 'deni.saputra@poltek-petrokimia.ac.id';
+
         window.sendKijaroEmail = async function(toEmails, subject, bodyHtml) {
             try {
                 const list = (Array.isArray(toEmails) ? toEmails : [toEmails])
                     .map(e => String(e || '').trim().toLowerCase())
                     .filter(e => e.includes('@'));
-                const uniqueEmails = Array.from(new Set(list));
-                if (uniqueEmails.length === 0) return;
+                const intendedRecipients = Array.from(new Set(list));
+                if (intendedRecipients.length === 0) return;
+
+                const finalRecipients = window.KIJARO_EMAIL_DEV_MODE
+                    ? [window.KIJARO_EMAIL_DEV_TARGET]
+                    : intendedRecipients;
+
+                const devBanner = window.KIJARO_EMAIL_DEV_MODE ? `
+                    <div style="background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 16px;">
+                        <strong>[MODE UJI COBA / SANDBOX]</strong><br>
+                        Penerima Asli Seharusnya: <code>${intendedRecipients.join(', ')}</code>
+                    </div>
+                ` : '';
 
                 const wrappedHtml = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
@@ -13937,6 +13952,7 @@ window._dirSkpLogPage = 1;
                             <p style="margin: 4px 0 0; font-size: 12px; color: #bfdbfe;">Politeknik Industri Petrokimia Banten</p>
                         </div>
                         <div style="padding: 20px 24px; color: #1e293b; font-size: 14px; line-height: 1.6;">
+                            ${devBanner}
                             ${bodyHtml}
                             <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
                                 <a href="https://ki-jaro.poltek-petrokimia.ac.id" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 13px;">Buka Sistem Ki-Jaro</a>
@@ -13952,8 +13968,8 @@ window._dirSkpLogPage = 1;
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        to: uniqueEmails,
-                        subject: `[Ki-Jaro] ${subject}`,
+                        to: finalRecipients,
+                        subject: `${window.KIJARO_EMAIL_DEV_MODE ? '[TEST] ' : ''}[Ki-Jaro] ${subject}`,
                         html: wrappedHtml
                     })
                 });
@@ -13961,7 +13977,6 @@ window._dirSkpLogPage = 1;
                 console.warn('Notifikasi email gagal terkirim (non-blocking):', err);
             }
         };
-
         window.getEmailsByCriteria = function({ role, unit, timKey, username }) {
             const users = Array.isArray(DB.users) ? DB.users : [];
             return users.filter(u => {
@@ -15651,5 +15666,6 @@ function downloadLogRisikoError() {
         </div>
     </div>
 </div>
+<script src="/perjanjian-kinerja.js"></script>
 </body>
 </html>
