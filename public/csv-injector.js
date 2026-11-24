@@ -1,8 +1,7 @@
 // =========================================================================
-// MODUL INJECT / IMPORT DATA CSV TERVALIDASI + LOG DETAIL PER BARIS (KI-JARO)
-// Mendukung:
-// 1. Tier 1 (Kemenperin), Tier 2 (BPSDMI), Tier 3 (Tujuan/Sasaran), Tier 4 (IK + Target & Pagu 2025-2029)
-// 2. Cascading Level 1 (Direktur -> Ketua Tim), Level 2 (Ketua Tim -> Unit), Level 3 (Unit -> Staf/Dosen/Tendik)
+// MODUL INJECT / IMPORT DATA CSV TERPADU + LOG DETAIL PER BARIS (KI-JARO)
+// 1. Gabungan Perencanaan Strategis (Tier 1, Tier 2, Tier 3, Tier 4 + Target & Pagu 2025-2029)
+// 2. Gabungan Cascading Kinerja (Level 1 Ketua Tim, Level 2 Unit/Prodi, Level 3 Staf/Dosen/Tendik)
 // 3. Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu (IKI) Staf
 // =========================================================================
 (function () {
@@ -11,40 +10,15 @@
     const YEARS = ['2025', '2026', '2027', '2028', '2029'];
 
     const CSV_SCHEMAS = {
-        tier1: {
-            group: '1. Perencanaan Strategis (Tier 1 - Tier 4)',
-            label: '1A. Tujuan / Sasaran Strategis Kementerian Perindustrian (Tier 1)',
-            filename: 'template_1A_tier1_kemenperin.csv',
-            headers: ['kode', 'uraian_tujuan_sasaran', 'tahun_awal', 'tahun_akhir', 'keterangan'],
-            sample: [
-                ['TS-1', 'Meningkatnya Daya Saing Industri Nasional yang Berkelanjutan', '2025', '2029', 'Renstra Kemenperin 2025-2029']
-            ]
-        },
-        tier2: {
-            group: '1. Perencanaan Strategis (Tier 1 - Tier 4)',
-            label: '1B. Sasaran Program dan Indikator BPSDMI (Tier 2)',
-            filename: 'template_1B_tier2_bpsdmi.csv',
-            headers: ['kode_tier1', 'kode', 'sasaran_program', 'indikator_program', 'satuan', 'target_2025', 'target_2026', 'target_2027', 'target_2028', 'target_2029'],
-            sample: [
-                ['TS-1', 'SP-1', 'Meningkatnya Ketersediaan SDM Industri yang Kompeten', 'Persentase SDM Industri yang kompeten', '%', '90', '90.5', '91', '91.5', '92']
-            ]
-        },
-        tier3: {
-            group: '1. Perencanaan Strategis (Tier 1 - Tier 4)',
-            label: '1C. Tujuan / Sasaran Kinerja Institusi (Tier 3)',
-            filename: 'template_1C_tier3_sasaran_kinerja.csv',
-            headers: ['kode_tier2', 'kode', 'jenis', 'sasaran_kinerja', 'keterangan'],
-            sample: [
-                ['SP-1', 'TJ 1', 'Tujuan', 'Meningkatnya Peran SDM Industri dalam Perekonomian Nasional melalui unit pendidikan tinggi vokasi', 'Tier 3 Direktur'],
-                ['SP-1', 'SK 1', 'Sasaran Kinerja', 'Terfasilitasinya peningkatan kompetensi sumber daya manusia industri dalam mendukung penumbuhan sektor industri melalui unit pendidikan tinggi vokasi', 'Tier 3 Direktur']
-            ]
-        },
-        tier4: {
-            group: '1. Perencanaan Strategis (Tier 1 - Tier 4)',
-            label: '1D. Indikator Kinerja (Tier 4), Target 5 Tahun (2025-2029) & Alokasi Anggaran Pagu',
-            filename: 'template_1D_tier4_indikator_target_pagu.csv',
+        perencanaan_terpadu: {
+            label: '1. Perencanaan Strategis Lengkap (Tier 1, Tier 2, Tier 3, Tier 4 + Target & Pagu 2025-2029)',
+            filename: 'template_1_perencanaan_tier1_sd_tier4_lengkap.csv',
+            description: 'Cukup 1 file CSV untuk mengisi Tier 1 (Kemenperin), Tier 2 (BPSDMI), Tier 3 (Tujuan/Sasaran), dan Tier 4 (Indikator + Target & Pagu 2025–2029) sekaligus. Baris dengan kode Tier 1/2/3 yang sama otomatis digabung tanpa duplikat.',
             headers: [
-                'kode_tier3', 'kode', 'nama_indikator', 'satuan',
+                'kode_tier1', 'uraian_tier1_kemenperin',
+                'kode_tier2', 'sasaran_program_tier2_bpsdmi', 'indikator_tier2_bpsdmi',
+                'kode_tier3', 'jenis_tier3', 'sasaran_kinerja_tier3',
+                'kode_tier4', 'nama_indikator_tier4', 'satuan',
                 'target_2025', 'pagu_2025',
                 'target_2026', 'pagu_2026',
                 'target_2027', 'pagu_2027',
@@ -52,50 +26,60 @@
                 'target_2029', 'pagu_2029'
             ],
             sample: [
-                ['TJ 1', 'TJ 1', 'Persentase SDM Industri yang kompeten*', '%', '90', '0', '90.5', '0', '91', '0', '91.5', '0', '92', '0'],
-                ['SK 1', 'IK 1.1', 'Persentase lulusan peserta didik yang bekerja dan mempunyai kompetensi bidang industri*', '%', '0', '795584000', '90', '0', '90.5', '0', '91', '0', '91.5', '0'],
-                ['TJ 1', 'IK 1.2', 'Wirausaha baru hasil inkubator bisnis industri yang tumbuh', 'Tenant', '1', '7200000', '1', '0', '1', '60000', '2', '0', '2', '0']
+                [
+                    'TS-1', 'Meningkatnya Daya Saing Industri Nasional yang Berkelanjutan',
+                    'SP-1', 'Meningkatnya Ketersediaan SDM Industri yang Kompeten', 'Persentase SDM Industri yang kompeten',
+                    'TJ 1', 'Tujuan', 'Meningkatnya Peran SDM Industri dalam Perekonomian Nasional melalui unit pendidikan tinggi vokasi',
+                    'TJ 1', 'Persentase SDM Industri yang kompeten*', '%',
+                    '90', '0', '90.5', '0', '91', '0', '91.5', '0', '92', '0'
+                ],
+                [
+                    'TS-1', 'Meningkatnya Daya Saing Industri Nasional yang Berkelanjutan',
+                    'SP-1', 'Meningkatnya Ketersediaan SDM Industri yang Kompeten', 'Persentase SDM Industri yang kompeten',
+                    'SK 1', 'Sasaran Kinerja', 'Terfasilitasinya peningkatan kompetensi sumber daya manusia industri dalam mendukung penumbuhan sektor industri melalui unit pendidikan tinggi vokasi',
+                    'IK 1.1', 'Persentase lulusan peserta didik yang bekerja dan mempunyai kompetensi bidang industri*', '%',
+                    '0', '795584000', '90', '0', '90.5', '0', '91', '0', '91.5', '0'
+                ],
+                [
+                    'TS-1', 'Meningkatnya Daya Saing Industri Nasional yang Berkelanjutan',
+                    'SP-1', 'Meningkatnya Ketersediaan SDM Industri yang Kompeten', 'Persentase SDM Industri yang kompeten',
+                    'TJ 1', 'Tujuan', 'Meningkatnya Peran SDM Industri dalam Perekonomian Nasional melalui unit pendidikan tinggi vokasi',
+                    'IK 1.2', 'Wirausaha baru hasil inkubator bisnis industri yang tumbuh', 'Tenant',
+                    '1', '7200000', '1', '0', '1', '60000', '2', '0', '2', '0'
+                ]
             ]
         },
-        cascading1: {
-            group: '2. Cascading Kinerja (Level 1 - Level 3)',
-            label: '2.1. Cascading Direktur ke Ketua Tim Kerja (Level 1)',
-            filename: 'template_2_1_cascading_level1_ketua_tim.csv',
-            headers: ['tahun', 'kode_indikator_tier4', 'username_ketua_tim', 'nama_tim_kerja', 'rencana_aksi_tim', 'indikator_tim', 'satuan', 'target_tahunan', 'tw1', 'tw2', 'tw3', 'tw4'],
+        cascading_terpadu: {
+            label: '2. Cascading Kinerja Lengkap (Level 1 Ketua Tim, Level 2 Unit/Prodi, Level 3 Dosen/Tendik/Kalab/Koord)',
+            filename: 'template_2_cascading_level1_sd_level3.csv',
+            description: 'Cukup 1 file CSV untuk seluruh jenjang Cascading. Isi kolom "level_cascading" dengan angka 1 (Ketua Tim Kerja), 2 (Ketua Unit/Prodi/Subbag), atau 3 (Dosen/Tendik/Sekretaris/Kalab/Koordinator).',
+            headers: [
+                'tahun', 'level_cascading', 'kode_indikator_induk', 'nama_unit_atau_tim',
+                'username_pegawai', 'jabatan_peran', 'rencana_aksi_atau_rhk',
+                'indikator_kinerja', 'satuan', 'target_tahunan', 'tw1', 'tw2', 'tw3', 'tw4'
+            ],
             sample: [
-                ['2025', 'IK 1.1', 'ketuatim1', 'Tim Kerja Akademik & Kemahasiswaan', 'Meningkatkan serapan lulusan bersertifikat kompetensi industri', 'Persentase lulusan terserap industri', '%', '90', '0', '0', '45', '90']
-            ]
-        },
-        cascading2: {
-            group: '2. Cascading Kinerja (Level 1 - Level 3)',
-            label: '2.2. Cascading Ketua Tim Kerja ke Unit / Prodi / Subbag (Level 2)',
-            filename: 'template_2_2_cascading_level2_unit_prodi.csv',
-            headers: ['tahun', 'kode_indikator_induk', 'nama_unit', 'username_ka_unit', 'rencana_aksi_unit', 'indikator_unit', 'satuan', 'target_tahunan', 'tw1', 'tw2', 'tw3', 'tw4'],
-            sample: [
-                ['2025', 'IK 1.1', 'Prodi D3 Teknologi Proses Industri Petrokimia', 'kaprodi_tpip', 'Pelaksanaan uji kompetensi LSP & rekrutmen industri mitra', 'Persentase lulusan TPIP terserap industri', '%', '92', '0', '0', '50', '92']
-            ]
-        },
-        cascading3: {
-            group: '2. Cascading Kinerja (Level 1 - Level 3)',
-            label: '2.3. Cascading Ketua Unit / Prodi / Subbag ke Dosen / Tendik / Sekretaris / Kalab / Koordinator (Level 3)',
-            filename: 'template_2_3_cascading_level3_staf.csv',
-            headers: ['tahun', 'kode_indikator_unit', 'nama_unit', 'username_pegawai', 'jabatan_peran', 'rencana_hasil_kerja', 'indikator_individu', 'satuan', 'target_tahunan', 'tw1', 'tw2', 'tw3', 'tw4'],
-            sample: [
-                ['2025', 'IK 1.1', 'Prodi D3 Teknologi Proses Industri Petrokimia', 'deni.saputra', 'Dosen', 'Membimbing tugas akhir mahasiswa berbasis kasus nyata industri petrokimia', 'Jumlah mahasiswa bimbingan lulus tepat waktu dan tersertifikasi', 'Mahasiswa', '12', '3', '6', '9', '12']
+                ['2025', '1', 'IK 1.1', 'Tim Kerja Akademik & Kemahasiswaan', 'ketuatim1', 'Ketua Tim Kerja', 'Meningkatkan serapan lulusan bersertifikat kompetensi industri', 'Persentase lulusan terserap industri', '%', '90', '0', '0', '45', '90'],
+                ['2025', '2', 'IK 1.1', 'Prodi D3 Teknologi Proses Industri Petrokimia', 'kaprodi_tpip', 'Ketua Prodi', 'Pelaksanaan uji kompetensi LSP & rekrutmen industri mitra', 'Persentase lulusan TPIP terserap industri', '%', '92', '0', '0', '50', '92'],
+                ['2025', '3', 'IK 1.1', 'Prodi D3 Teknologi Proses Industri Petrokimia', 'deni.saputra', 'Dosen', 'Membimbing tugas akhir mahasiswa berbasis kasus nyata industri petrokimia', 'Jumlah mahasiswa bimbingan lulus tepat waktu dan tersertifikasi', 'Mahasiswa', '12', '3', '6', '9', '12']
             ]
         },
         rhk_iki: {
-            group: '3. RHK & Indikator Kinerja Individu (Staf)',
-            label: '3.4. Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu Staf',
-            filename: 'template_3_4_rhk_iki_staf.csv',
-            headers: ['tahun', 'username_pegawai', 'kode_ik_atasan', 'jenis_rhk', 'rencana_hasil_kerja', 'aspek', 'indikator_kinerja_individu', 'satuan', 'target_tahunan', 'realisasi_tw1', 'realisasi_tw2', 'realisasi_tw3', 'realisasi_tw4'],
+            label: '3. Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu (IKI) Staf',
+            filename: 'template_3_rhk_iki_staf.csv',
+            description: 'Untuk meng-inject RHK (Utama/Tambahan) beserta Indikator Kinerja Individu (IKI) dan realisasi triwulanan staf.',
+            headers: [
+                'tahun', 'username_pegawai', 'kode_ik_atasan', 'jenis_rhk',
+                'rencana_hasil_kerja', 'aspek', 'indikator_kinerja_individu',
+                'satuan', 'target_tahunan', 'realisasi_tw1', 'realisasi_tw2', 'realisasi_tw3', 'realisasi_tw4'
+            ],
             sample: [
                 ['2025', 'deni.saputra', 'IK 3.3', 'Utama', 'Terpublikasinya artikel penelitian terapan bidang teknik industri / petrokimia pada jurnal bereputasi', 'Kuantitas', 'Jumlah artikel ilmiah terpublikasi pada jurnal Sinta 2 / Internasional', 'Artikel', '2', '0', '1', '1', '2']
             ]
         }
     };
 
-    let _selectedSchemaKey = 'tier4';
+    let _selectedSchemaKey = 'perencanaan_terpadu';
     let _importLogs = [];
     let _importSummary = null;
 
@@ -116,7 +100,7 @@
                 if (raw) u = JSON.parse(raw);
             } catch (_) {}
         }
-        if (!u) return true; // Tetap tampil jika sesi belum terikat ketat
+        if (!u) return true;
         const roles = (Array.isArray(u.roles) ? u.roles : [u.role, u.jabatan, u.unit])
             .filter(Boolean).map(r => String(r).toLowerCase());
         return roles.some(r =>
@@ -126,11 +110,10 @@
     }
 
     function cleanNumber(val) {
-        if (val === undefined || val === null) return null;
+        if (val === undefined || val === null) return 0;
         let s = String(val).trim();
         if (s === '' || s === '-') return 0;
         s = s.replace(/^rp\.?\s*/i, '').trim();
-        // Format ribuan titik Indonesia (contoh: 795.584.000)
         if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) {
             s = s.replace(/\./g, '');
         } else {
@@ -140,7 +123,6 @@
         return parseFloat(s);
     }
 
-    // Parser CSV tangguh: mendukung koma (,) maupun titik koma (;), serta tanda kutip ganda ("...")
     function parseCsvText(rawText) {
         const text = String(rawText || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         const lines = [];
@@ -148,7 +130,6 @@
         let curCell = '';
         let inQuotes = false;
 
-        // Deteksi pemisah kolom otomatis dari baris pertama (, atau ;)
         const firstLine = text.split('\n')[0] || '';
         const commaCount = (firstLine.match(/,/g) || []).length;
         const semiCount = (firstLine.match(/;/g) || []).length;
@@ -216,19 +197,21 @@
         ) || null;
     }
 
-    function upsertByCodeOrKey(arr, matchFn, newRecord) {
+    function upsertRecord(arr, matchFn, newRecord) {
         const existingIdx = arr.findIndex(matchFn);
         if (existingIdx >= 0) {
-            arr[existingIdx] = { ...arr[existingIdx], ...newRecord, id: arr[existingIdx].id };
-            return 'UPDATED';
+            const existingId = arr[existingIdx].id;
+            arr[existingIdx] = { ...arr[existingIdx], ...newRecord, id: existingId };
+            return { status: 'UPDATED', id: existingId };
         } else {
-            arr.push({ id: `imp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, ...newRecord });
-            return 'INSERTED';
+            const newId = `imp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+            arr.push({ id: newId, ...newRecord });
+            return { status: 'INSERTED', id: newId };
         }
     }
 
     // =========================================================================
-    // VALIDATOR & INJECTOR PER JENIS DATA CSV
+    // VALIDATOR & INJECTOR TERPADU
     // =========================================================================
     function validateAndInjectRows(schemaKey, parsed) {
         ensureDbCollections();
@@ -237,11 +220,10 @@
         let successCount = 0;
         let failCount = 0;
 
-        // Cek kelengkapan header wajib
         const missingHeaders = schema.headers.filter(h => !parsed.headers.includes(h));
         if (missingHeaders.length > 0) {
             return {
-                fatalError: `Header kolom CSV tidak sesuai template! Kolom yang hilang: [${missingHeaders.join(', ')}]. Silakan unduh template CSV yang sesuai terlebih dahulu.`,
+                fatalError: `Header kolom CSV tidak sesuai template! Kolom yang hilang: [${missingHeaders.join(', ')}]. Silakan unduh template CSV terbaru.`,
                 logs: [],
                 successCount: 0,
                 failCount: parsed.rows.length
@@ -250,93 +232,16 @@
 
         parsed.rows.forEach(({ rowNumber, data }) => {
             const errors = [];
-            let actionType = '';
+            let detailActions = [];
             let summaryLabel = '';
 
-            if (schemaKey === 'tier1') {
-                if (!data.kode) errors.push('Kolom "kode" wajib diisi (contoh: TS-1)');
-                if (!data.uraian_tujuan_sasaran) errors.push('Kolom "uraian_tujuan_sasaran" wajib diisi');
-                summaryLabel = `${data.kode || '-'} — ${data.uraian_tujuan_sasaran || '(Kosong)'}`;
-
-                if (errors.length === 0) {
-                    actionType = upsertByCodeOrKey(
-                        DB.tier1Kemenperin,
-                        r => String(r.kode || '').toLowerCase() === data.kode.toLowerCase(),
-                        {
-                            tier: 1,
-                            kode: data.kode,
-                            uraian: data.uraian_tujuan_sasaran,
-                            tujuanSasaran: data.uraian_tujuan_sasaran,
-                            tahunAwal: data.tahun_awal || '2025',
-                            tahunAkhir: data.tahun_akhir || '2029',
-                            keterangan: data.keterangan || ''
-                        }
-                    );
-                }
-            } else if (schemaKey === 'tier2') {
-                if (!data.kode) errors.push('Kolom "kode" wajib diisi (contoh: SP-1)');
-                if (!data.sasaran_program) errors.push('Kolom "sasaran_program" wajib diisi');
-                if (!data.indikator_program) errors.push('Kolom "indikator_program" wajib diisi');
-                if (!data.satuan) errors.push('Kolom "satuan" wajib diisi');
-
-                const targetsByYear = {};
-                YEARS.forEach(y => {
-                    const num = cleanNumber(data[`target_${y}`]);
-                    if (Number.isNaN(num)) errors.push(`Kolom "target_${y}" harus berupa angka valid (nilai: "${data[`target_${y}`]}")`);
-                    else targetsByYear[y] = num;
-                });
-
-                summaryLabel = `${data.kode || '-'} — ${data.indikator_program || '(Kosong)'}`;
-                if (errors.length === 0) {
-                    actionType = upsertByCodeOrKey(
-                        DB.tier2Bpsdmi,
-                        r => String(r.kode || '').toLowerCase() === data.kode.toLowerCase() &&
-                             String(r.indikatorProgram || '').toLowerCase() === data.indikator_program.toLowerCase(),
-                        {
-                            tier: 2,
-                            kodeTier1: data.kode_tier1 || '',
-                            kode: data.kode,
-                            sasaranProgram: data.sasaran_program,
-                            indikatorProgram: data.indikator_program,
-                            satuan: data.satuan,
-                            targetsByYear,
-                            target2025: targetsByYear['2025'],
-                            target2026: targetsByYear['2026'],
-                            target2027: targetsByYear['2027'],
-                            target2028: targetsByYear['2028'],
-                            target2029: targetsByYear['2029']
-                        }
-                    );
-                }
-            } else if (schemaKey === 'tier3') {
-                if (!data.kode) errors.push('Kolom "kode" wajib diisi (contoh: TJ 1 atau SK 1)');
-                if (!data.sasaran_kinerja) errors.push('Kolom "sasaran_kinerja" wajib diisi');
-                summaryLabel = `${data.kode || '-'} — ${data.sasaran_kinerja || '(Kosong)'}`;
-
-                if (errors.length === 0) {
-                    actionType = upsertByCodeOrKey(
-                        DB.sasaranKinerja,
-                        r => String(r.kode || '').toLowerCase() === data.kode.toLowerCase(),
-                        {
-                            tier: 3,
-                            kodeTier2: data.kode_tier2 || '',
-                            kode: data.kode,
-                            jenis: data.jenis || 'Sasaran Kinerja',
-                            sasaranKinerja: data.sasaran_kinerja,
-                            sasaran: data.sasaran_kinerja,
-                            keterangan: data.keterangan || ''
-                        }
-                    );
-                }
-            } else if (schemaKey === 'tier4') {
+            if (schemaKey === 'perencanaan_terpadu') {
+                // Validasi kolom utama Tier 3 & Tier 4 (wajib), sementara Tier 1 & Tier 2 opsional jika baris kosong
                 if (!data.kode_tier3) errors.push('Kolom "kode_tier3" wajib diisi (contoh: TJ 1 atau SK 1)');
-                if (!data.kode) errors.push('Kolom "kode" wajib diisi (contoh: IK 1.1)');
-                if (!data.nama_indikator) errors.push('Kolom "nama_indikator" wajib diisi');
+                if (!data.sasaran_kinerja_tier3) errors.push('Kolom "sasaran_kinerja_tier3" wajib diisi');
+                if (!data.kode_tier4) errors.push('Kolom "kode_tier4" wajib diisi (contoh: IK 1.1)');
+                if (!data.nama_indikator_tier4) errors.push('Kolom "nama_indikator_tier4" wajib diisi');
                 if (!data.satuan) errors.push('Kolom "satuan" wajib diisi');
-
-                const parentTier3 = (DB.sasaranKinerja || []).find(
-                    s => String(s.kode || '').toLowerCase() === String(data.kode_tier3 || '').toLowerCase()
-                );
 
                 const targetsByYear = {};
                 const paguByYear = {};
@@ -350,24 +255,80 @@
                     else paguByYear[y] = pVal;
                 });
 
-                summaryLabel = `${data.kode || '-'} — ${data.nama_indikator || '(Kosong)'}`;
-                if (errors.length === 0) {
-                    const sasaranText = parentTier3
-                        ? `${parentTier3.kode} - ${parentTier3.sasaranKinerja}`
-                        : data.kode_tier3;
+                summaryLabel = `${data.kode_tier4 || '-'} — ${data.nama_indikator_tier4 || '(Kosong)'}`;
 
-                    actionType = upsertByCodeOrKey(
+                if (errors.length === 0) {
+                    // 1A. Upsert Tier 1 (jika diisi)
+                    let t1Id = '';
+                    if (data.kode_tier1 || data.uraian_tier1_kemenperin) {
+                        const k1 = data.kode_tier1 || 'TS-1';
+                        const u1 = data.uraian_tier1_kemenperin || k1;
+                        const res1 = upsertRecord(
+                            DB.tier1Kemenperin,
+                            r => String(r.kode || '').toLowerCase() === k1.toLowerCase(),
+                            { tier: 1, kode: k1, uraian: u1, tujuanSasaran: u1, tahunAwal: '2025', tahunAkhir: '2029' }
+                        );
+                        t1Id = res1.id;
+                        detailActions.push(`Tier 1 (${k1}: ${res1.status})`);
+                    }
+
+                    // 1B. Upsert Tier 2 (jika diisi)
+                    let t2Id = '';
+                    if (data.kode_tier2 || data.sasaran_program_tier2_bpsdmi || data.indikator_tier2_bpsdmi) {
+                        const k2 = data.kode_tier2 || 'SP-1';
+                        const sp2 = data.sasaran_program_tier2_bpsdmi || k2;
+                        const ik2 = data.indikator_tier2_bpsdmi || sp2;
+                        const res2 = upsertRecord(
+                            DB.tier2Bpsdmi,
+                            r => String(r.kode || '').toLowerCase() === k2.toLowerCase() &&
+                                 String(r.indikatorProgram || '').toLowerCase() === ik2.toLowerCase(),
+                            {
+                                tier: 2,
+                                tier1Id: t1Id,
+                                kodeTier1: data.kode_tier1 || '',
+                                kode: k2,
+                                sasaranProgram: sp2,
+                                indikatorProgram: ik2,
+                                satuan: data.satuan
+                            }
+                        );
+                        t2Id = res2.id;
+                        detailActions.push(`Tier 2 (${k2}: ${res2.status})`);
+                    }
+
+                    // 1C. Upsert Tier 3 (Tujuan / Sasaran Kinerja)
+                    const k3 = data.kode_tier3;
+                    const s3 = data.sasaran_kinerja_tier3;
+                    const j3 = data.jenis_tier3 || (k3.toUpperCase().startsWith('TJ') ? 'Tujuan' : 'Sasaran Kinerja');
+                    const res3 = upsertRecord(
+                        DB.sasaranKinerja,
+                        r => String(r.kode || '').toLowerCase() === k3.toLowerCase(),
+                        {
+                            tier: 3,
+                            tier2Id: t2Id,
+                            kodeTier2: data.kode_tier2 || '',
+                            kode: k3,
+                            jenis: j3,
+                            sasaranKinerja: s3,
+                            sasaran: s3
+                        }
+                    );
+                    detailActions.push(`Tier 3 (${k3}: ${res3.status})`);
+
+                    // 1D. Upsert Tier 4 (Indikator Kinerja + Target 5 Tahun & Pagu)
+                    const sasaranLabel = `${k3} - ${s3}`;
+                    const res4 = upsertRecord(
                         DB.indikatorKinerja,
-                        r => String(r.kode || '').toLowerCase() === data.kode.toLowerCase() &&
-                             String(r.namaIndikator || r.indikator || '').toLowerCase() === data.nama_indikator.toLowerCase(),
+                        r => String(r.kode || '').toLowerCase() === data.kode_tier4.toLowerCase() &&
+                             String(r.namaIndikator || r.indikator || '').toLowerCase() === data.nama_indikator_tier4.toLowerCase(),
                         {
                             tier: 4,
-                            kodeTier3: data.kode_tier3,
-                            sasaranId: parentTier3 ? parentTier3.id : '',
-                            sasaranKinerja: sasaranText,
-                            kode: data.kode,
-                            namaIndikator: data.nama_indikator,
-                            indikator: data.nama_indikator,
+                            sasaranId: res3.id,
+                            kodeTier3: k3,
+                            sasaranKinerja: sasaranLabel,
+                            kode: data.kode_tier4,
+                            namaIndikator: data.nama_indikator_tier4,
+                            indikator: data.nama_indikator_tier4,
                             satuan: data.satuan,
                             targetsByYear,
                             paguByYear,
@@ -385,25 +346,26 @@
                             pagu: paguByYear['2025']
                         }
                     );
+                    detailActions.push(`Tier 4 (${data.kode_tier4}: ${res4.status})`);
                 }
-            } else if (schemaKey === 'cascading1' || schemaKey === 'cascading2' || schemaKey === 'cascading3') {
-                const levelNum = schemaKey === 'cascading1' ? 1 : (schemaKey === 'cascading2' ? 2 : 3);
+            } else if (schemaKey === 'cascading_terpadu') {
                 const yr = data.tahun || '2025';
                 if (!/^\d{4}$/.test(yr)) errors.push(`Kolom "tahun" harus 4 digit (nilai: "${yr}")`);
 
-                const kodeInduk = data.kode_indikator_tier4 || data.kode_indikator_induk || data.kode_indikator_unit || '';
-                if (!kodeInduk) errors.push('Kode indikator induk wajib diisi');
-
-                const userRef = data.username_ketua_tim || data.username_ka_unit || data.username_pegawai || '';
-                if (!userRef) errors.push('Username penanggung jawab / pegawai wajib diisi');
-
-                const matchedUser = findUserByUsernameOrName(userRef);
-                if (userRef && (DB.users || []).length > 0 && !matchedUser) {
-                    errors.push(`Username/NIP/Nama "${userRef}" tidak ditemukan di master data Pegawai Ki-Jaro`);
+                const lvl = parseInt(data.level_cascading, 10);
+                if (![1, 2, 3].includes(lvl)) {
+                    errors.push(`Kolom "level_cascading" harus diisi angka 1, 2, atau 3 (nilai: "${data.level_cascading}")`);
                 }
 
-                const ikText = data.indikator_tim || data.indikator_unit || data.indikator_individu || '';
-                if (!ikText) errors.push('Nama indikator kinerja cascading wajib diisi');
+                if (!data.kode_indikator_induk) errors.push('Kolom "kode_indikator_induk" wajib diisi');
+                if (!data.username_pegawai) errors.push('Kolom "username_pegawai" wajib diisi');
+
+                const matchedUser = findUserByUsernameOrName(data.username_pegawai);
+                if (data.username_pegawai && (DB.users || []).length > 0 && !matchedUser) {
+                    errors.push(`Username/NIP/Nama "${data.username_pegawai}" tidak terdaftar di master Pegawai Ki-Jaro`);
+                }
+
+                if (!data.indikator_kinerja) errors.push('Kolom "indikator_kinerja" wajib diisi');
 
                 const tTahunan = cleanNumber(data.target_tahunan);
                 const tw1 = cleanNumber(data.tw1);
@@ -413,24 +375,25 @@
                 if (Number.isNaN(tTahunan)) errors.push(`"target_tahunan" harus berupa angka ("${data.target_tahunan}")`);
                 if ([tw1, tw2, tw3, tw4].some(v => Number.isNaN(v))) errors.push('Target TW1 s.d. TW4 harus berupa angka valid');
 
-                summaryLabel = `Level ${levelNum} | ${userRef || '-'} — ${ikText || '(Kosong)'}`;
+                summaryLabel = `Level ${lvl || '?'} | ${data.username_pegawai || '-'} — ${data.indikator_kinerja || '(Kosong)'}`;
                 if (errors.length === 0) {
-                    actionType = upsertByCodeOrKey(
+                    const defaultRole = lvl === 1 ? 'Ketua Tim Kerja' : (lvl === 2 ? 'Ketua Unit / Prodi / Subbag' : 'Dosen / Tendik / Kalab / Koordinator');
+                    const res = upsertRecord(
                         DB.cascading,
-                        r => Number(r.level) === levelNum &&
+                        r => Number(r.level) === lvl &&
                              String(r.tahun) === yr &&
-                             String(r.pegawaiUsername || '').toLowerCase() === (matchedUser ? matchedUser.username : userRef).toLowerCase() &&
-                             String(r.indikator || '').toLowerCase() === ikText.toLowerCase(),
+                             String(r.pegawaiUsername || '').toLowerCase() === (matchedUser ? matchedUser.username : data.username_pegawai).toLowerCase() &&
+                             String(r.indikator || '').toLowerCase() === data.indikator_kinerja.toLowerCase(),
                         {
-                            level: levelNum,
+                            level: lvl,
                             tahun: yr,
-                            kodeIndikatorInduk: kodeInduk,
-                            unit: data.nama_tim_kerja || data.nama_unit || (matchedUser?.unit || ''),
-                            jabatanPeran: data.jabatan_peran || (levelNum === 1 ? 'Ketua Tim Kerja' : (levelNum === 2 ? 'Ketua Unit/Prodi/Subbag' : 'Staf/Dosen/Tendik')),
-                            pegawaiUsername: matchedUser ? matchedUser.username : userRef,
-                            namaPegawai: matchedUser ? matchedUser.name : userRef,
-                            rencanaAksi: data.rencana_aksi_tim || data.rencana_aksi_unit || data.rencana_hasil_kerja || '',
-                            indikator: ikText,
+                            kodeIndikatorInduk: data.kode_indikator_induk,
+                            unit: data.nama_unit_atau_tim || (matchedUser?.unit || ''),
+                            jabatanPeran: data.jabatan_peran || defaultRole,
+                            pegawaiUsername: matchedUser ? matchedUser.username : data.username_pegawai,
+                            namaPegawai: matchedUser ? matchedUser.name : data.username_pegawai,
+                            rencanaAksi: data.rencana_aksi_atau_rhk || '',
+                            indikator: data.indikator_kinerja,
                             satuan: data.satuan || '%',
                             target: tTahunan,
                             targetTw1: tw1,
@@ -439,6 +402,7 @@
                             targetTw4: tw4
                         }
                     );
+                    detailActions.push(`Cascading Level ${lvl}: ${res.status}`);
                 }
             } else if (schemaKey === 'rhk_iki') {
                 const yr = data.tahun || '2025';
@@ -447,7 +411,7 @@
 
                 const matchedUser = findUserByUsernameOrName(data.username_pegawai);
                 if (data.username_pegawai && (DB.users || []).length > 0 && !matchedUser) {
-                    errors.push(`Pegawai "${data.username_pegawai}" tidak terdaftar di master Pegawai Ki-Jaro`);
+                    errors.push(`Pegawai "${data.username_pegawai}" tidak ditemukan di master Pegawai Ki-Jaro`);
                 }
 
                 if (!data.rencana_hasil_kerja) errors.push('Kolom "rencana_hasil_kerja" wajib diisi');
@@ -458,12 +422,12 @@
                 const rTw2 = cleanNumber(data.realisasi_tw2);
                 const rTw3 = cleanNumber(data.realisasi_tw3);
                 const rTw4 = cleanNumber(data.realisasi_tw4);
-                if (Number.isNaN(tTahunan)) errors.push(`"target_tahunan" harus angka ("${data.target_tahunan}")`);
-                if ([rTw1, rTw2, rTw3, rTw4].some(v => Number.isNaN(v))) errors.push('Realisasi TW1 s.d. TW4 harus angka valid');
+                if (Number.isNaN(tTahunan)) errors.push(`"target_tahunan" harus berupa angka ("${data.target_tahunan}")`);
+                if ([rTw1, rTw2, rTw3, rTw4].some(v => Number.isNaN(v))) errors.push('Realisasi TW1 s.d. TW4 harus berupa angka valid');
 
                 summaryLabel = `${data.username_pegawai || '-'} — ${data.indikator_kinerja_individu || '(Kosong)'}`;
                 if (errors.length === 0) {
-                    actionType = upsertByCodeOrKey(
+                    const res = upsertRecord(
                         DB.rhkPegawai,
                         r => String(r.tahun) === yr &&
                              String(r.pegawaiUsername || '').toLowerCase() === (matchedUser ? matchedUser.username : data.username_pegawai).toLowerCase() &&
@@ -486,6 +450,7 @@
                             realisasiTw4: rTw4
                         }
                     );
+                    detailActions.push(`RHK & IKI Staf: ${res.status}`);
                 }
             }
 
@@ -503,9 +468,7 @@
                     rowNumber,
                     status: 'BERHASIL',
                     summary: summaryLabel,
-                    detail: actionType === 'UPDATED'
-                        ? 'Data sudah ada sebelumnya dan berhasil diperbarui (Update).'
-                        : 'Data baru berhasil ditambahkan (Insert).'
+                    detail: `Berhasil diproses: ${detailActions.join(' | ')}`
                 });
             }
         });
@@ -604,14 +567,13 @@
 
             window.renderCsvInjectorModalBody();
 
-            // Notifikasi Toast sesuai hasil eksekusi
             if (typeof showToast === 'function') {
                 if (result.fatalError) {
                     showToast('Import CSV Gagal: Struktur kolom tidak sesuai template.', 'error');
                 } else if (result.failCount === 0) {
                     showToast(`Sukses 100%! ${result.successCount} baris data berhasil di-inject ke Ki-Jaro.`, 'success');
                 } else if (result.successCount > 0) {
-                    showToast(`Selesai sebagian: ${result.successCount} berhasil, ${result.failCount} gagal. Periksa tabel log di bawah!`, 'info');
+                    showToast(`Selesai sebagian: ${result.successCount} berhasil, ${result.failCount} gagal. Cek tabel log di bawah!`, 'info');
                 } else {
                     showToast(`Semua data (${result.failCount} baris) gagal divalidasi. Cek detail kesalahan pada tabel log!`, 'error');
                 }
@@ -643,16 +605,8 @@
         if (!modal) return;
         const schema = CSV_SCHEMAS[_selectedSchemaKey];
 
-        // Kelompokkan opsi dropdown berdasarkan grup
-        const groups = {};
-        Object.entries(CSV_SCHEMAS).forEach(([k, v]) => {
-            if (!groups[v.group]) groups[v.group] = [];
-            groups[v.group].push({ key: k, ...v });
-        });
-
         modal.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden" style="font-family: Arial, Helvetica, sans-serif;">
-                <!-- Header Modal -->
                 <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white px-6 py-4 flex items-center justify-between">
                     <div>
                         <span class="px-2.5 py-0.5 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider">Bulk Data Injector</span>
@@ -663,17 +617,13 @@
                     <button type="button" onclick="closeCsvInjectorModal()" class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center text-white font-bold">&times;</button>
                 </div>
 
-                <!-- Konten Modal -->
                 <div class="p-6 overflow-y-auto space-y-5 text-xs">
-                    <!-- Langkah 1: Pilih Jenis Data & Unduh Template -->
                     <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-                        <label class="block font-bold text-slate-800 text-sm">1. Pilih Jenis Data yang Akan Di-inject (Tier 1–4, Cascading Level 1–3, atau RHK & IKI Staf)</label>
+                        <label class="block font-bold text-slate-800 text-sm">1. Pilih Paket Data CSV yang Akan Di-inject</label>
                         <div class="flex flex-col md:flex-row gap-3">
                             <select onchange="changeCsvInjectorSchema(this.value)" class="flex-1 p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900">
-                                ${Object.entries(groups).map(([grpName, items]) => `
-                                    <optgroup label="${esc(grpName)}">
-                                        ${items.map(it => `<option value="${it.key}" ${_selectedSchemaKey === it.key ? 'selected' : ''}>${esc(it.label)}</option>`).join('')}
-                                    </optgroup>
+                                ${Object.entries(CSV_SCHEMAS).map(([k, v]) => `
+                                    <option value="${k}" ${_selectedSchemaKey === k ? 'selected' : ''}>${esc(v.label)}</option>
                                 `).join('')}
                             </select>
                             <button type="button" onclick="downloadSelectedCsvTemplate()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow shrink-0">
@@ -681,19 +631,22 @@
                             </button>
                         </div>
 
+                        <p class="text-[11px] text-slate-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                            <i class="fa-solid fa-circle-info text-amber-600 mr-1"></i> ${esc(schema.description)}
+                        </p>
+
                         <div class="bg-white border border-blue-100 rounded-lg p-3">
-                            <p class="font-bold text-blue-900 mb-1">Format Kolom Wajib pada CSV ini:</p>
+                            <p class="font-bold text-blue-900 mb-1.5">Susunan Kolom Header CSV (${schema.headers.length} Kolom):</p>
                             <div class="flex flex-wrap gap-1.5">
                                 ${schema.headers.map(h => `<code class="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded font-mono text-[11px]">${esc(h)}</code>`).join('')}
                             </div>
                         </div>
                     </div>
 
-                    <!-- Langkah 2: Upload File CSV -->
                     <div class="bg-blue-50/70 border-2 border-dashed border-blue-300 rounded-xl p-5 text-center space-y-2">
                         <i class="fa-solid fa-cloud-arrow-up text-2xl text-blue-700"></i>
-                        <p class="font-bold text-slate-900 text-sm">2. Pilih File CSV untuk Diproses & Divalidasi</p>
-                        <p class="text-[11px] text-slate-600">Mendukung pemisah koma (<code>,</code>) maupun titik koma (<code>;</code>) dari Microsoft Excel / Google Sheets. Setiap baris akan divalidasi otomatis.</p>
+                        <p class="font-bold text-slate-900 text-sm">2. Unggah File CSV untuk Diproses & Divalidasi</p>
+                        <p class="text-[11px] text-slate-600">Mendukung pemisah koma (<code>,</code>) maupun titik koma (<code>;</code>) dari Excel / Google Sheets. Setiap baris divalidasi otomatis.</p>
                         <div class="pt-1">
                             <label class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-bold cursor-pointer shadow">
                                 <i class="fa-solid fa-upload"></i> Pilih File .CSV & Inject Data
@@ -702,7 +655,6 @@
                         </div>
                     </div>
 
-                    <!-- Langkah 3: Banner Notifikasi Hasil & Tabel Log Berhasil / Gagal per Baris -->
                     ${_importSummary ? `
                     <div class="space-y-3">
                         ${_importSummary.fatalError ? `
@@ -774,13 +726,9 @@
         `;
     };
 
-    // =========================================================================
-    // SUNTIK TOMBOL MENU KE SIDEBAR & HEADER HALAMAN PERENCANAAN / CASCADING
-    // =========================================================================
     function injectCsvMenuButton() {
         if (!canAccessCsvInjector()) return;
 
-        // 1. Tambahkan tombol menu di Sidebar navigasi utama
         const sidebarNav = document.querySelector('aside nav, #sidebarNav, aside ul');
         if (sidebarNav && !document.getElementById(MENU_BTN_ID)) {
             const btn = document.createElement('button');
@@ -792,7 +740,6 @@
             sidebarNav.appendChild(btn);
         }
 
-        // 2. Tambahkan tombol cepat di area header/toolbar halaman Perencanaan, Cascading, atau SKP/RHK
         const headerActions = document.querySelector('header .flex.items-center.gap-2, header > div:last-child');
         if (headerActions && !document.getElementById('kiJaroCsvHeaderQuickBtn')) {
             const quickBtn = document.createElement('button');
