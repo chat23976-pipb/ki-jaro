@@ -1,8 +1,5 @@
 // =========================================================================
-// MODUL IMPORT & EXPORT DATA CSV TERPADU + LOG DETAIL PER BARIS (KI-JARO)
-// 1. Gabungan Perencanaan Strategis (Tier 1, Tier 2, Tier 3, Tier 4 + Target & Pagu 2025-2029)
-// 2. Gabungan Cascading Kinerja (Level 1 Ketua Tim, Level 2 Unit/Prodi, Level 3 Staf/Dosen/Tendik)
-// 3. Rencana Hasil Kerja (RHK) & Indikator Kinerja Individu (IKI) Staf
+// MODUL IMPORT & EXPORT DATA CSV TERPADU + AUTO-DETEKSI DB KI-JARO
 // =========================================================================
 (function () {
     const MENU_BTN_ID = 'kiJaroCsvInjectNavBtn';
@@ -40,13 +37,6 @@
                     'SK 1', 'Sasaran Kinerja', 'Terfasilitasinya peningkatan kompetensi sumber daya manusia industri dalam mendukung penumbuhan sektor industri melalui unit pendidikan tinggi vokasi',
                     'IK 1.1', 'Persentase lulusan peserta didik yang bekerja dan mempunyai kompetensi bidang industri*', '%',
                     '0', '795584000', '90', '0', '90.5', '0', '91', '0', '91.5', '0'
-                ],
-                [
-                    'TS-1', 'Meningkatnya Daya Saing Industri Nasional yang Berkelanjutan',
-                    'SP-1', 'Meningkatnya Ketersediaan SDM Industri yang Kompeten', 'Persentase SDM Industri yang kompeten',
-                    'TJ 1', 'Tujuan', 'Meningkatnya Peran SDM Industri dalam Perekonomian Nasional melalui unit pendidikan tinggi vokasi',
-                    'IK 1.2', 'Wirausaha baru hasil inkubator bisnis industri yang tumbuh', 'Tenant',
-                    '1', '7200000', '1', '0', '1', '60000', '2', '0', '2', '0'
                 ]
             ]
         },
@@ -110,6 +100,119 @@
             r.includes('admin') || r.includes('program') || r.includes('evaluasi') ||
             r.includes('perencanaan') || r.includes('direktur') || r.includes('ketua')
         );
+    }
+
+    // =========================================================================
+    // AUTO-DISCOVERY OBJEK DATABASE ASLI MILIK KI-JARO (DB / localStorage)
+    // =========================================================================
+    function getRootDbObject() {
+        if (typeof DB !== 'undefined' && DB && typeof DB === 'object') return DB;
+        if (window.DB && typeof window.DB === 'object') return window.DB;
+        if (window.db && typeof window.db === 'object') return window.db;
+        if (window.appData && typeof window.appData === 'object') return window.appData;
+
+        // Cari di localStorage jika belum ter-expose di global window
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (!k) continue;
+                const raw = localStorage.getItem(k);
+                if (raw && raw.startsWith('{') && (raw.includes('sasaran') || raw.includes('indikator') || raw.includes('cascading'))) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') {
+                        window.DB = parsed;
+                        return window.DB;
+                    }
+                }
+            }
+        } catch (_) {}
+
+        window.DB = {};
+        return window.DB;
+    }
+
+    // Menemukan array koleksi yang sesuai berdasarkan daftar kandidat nama key atau struktur itemnya
+    function resolveCollection(root, candidateKeys, itemTestFn, fallbackKey) {
+        // 1. Cek berdasarkan nama key kandidat (case-insensitive)
+        const existingKeys = Object.keys(root);
+        for (const cand of candidateKeys) {
+            const foundKey = existingKeys.find(k => k.toLowerCase() === cand.toLowerCase());
+            if (foundKey && Array.isArray(root[foundKey])) {
+                return { key: foundKey, list: root[foundKey] };
+            }
+        }
+
+        // 2. Jika nama key berbeda, pindai seluruh properti array di dalam DB berdasarkan ciri field objeknya
+        for (const k of existingKeys) {
+            const val = root[k];
+            if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object' && val[0] !== null) {
+                if (itemTestFn(val[0], k)) {
+                    return { key: k, list: val };
+                }
+            }
+        }
+
+        // 3. Jika belum ada sama sekali, inisialisasi menggunakan fallbackKey
+        if (!Array.isArray(root[fallbackKey])) root[fallbackKey] = [];
+        return { key: fallbackKey, list: root[fallbackKey] };
+    }
+
+    function getKiJaroCollections() {
+        const root = getRootDbObject();
+
+        const tier1 = resolveCollection(
+            root,
+            ['tier1Kemenperin', 'tier1', 'tujuanKemenperin', 'sasaranStrategis', 'renstraTier1'],
+            (item, k) => k.toLowerCase().includes('tier1') || k.toLowerCase().includes('kemenperin') || ('uraian' in item && !('sasaranProgram' in item) && !('sasaranKinerja' in item)),
+            'tier1Kemenperin'
+        );
+
+        const tier2 = resolveCollection(
+            root,
+            ['tier2Bpsdmi', 'tier2', 'sasaranProgram', 'bpsdmi', 'renstraTier2'],
+            (item, k) => k.toLowerCase().includes('tier2') || k.toLowerCase().includes('bpsdmi') || ('sasaranProgram' in item || 'indikatorProgram' in item),
+            'tier2Bpsdmi'
+        );
+
+        const tier3 = resolveCollection(
+            root,
+            ['sasaranKinerja', 'sasaran', 'tujuanSasaran', 'tier3', 'skList', 'tujuan'],
+            (item, k) => (k.toLowerCase().includes('sasaran') || k.toLowerCase().includes('tier3')) &&
+                         ('sasaranKinerja' in item || 'sasaran' in item || 'intervensi' in item) &&
+                         !('namaIndikator' in item || 'indikator' in item),
+            'sasaranKinerja'
+        );
+
+        const tier4 = resolveCollection(
+            root,
+            ['indikatorKinerja', 'indikator', 'iku', 'ikList', 'tier4', 'indikatorSasaran'],
+            (item, k) => (k.toLowerCase().includes('indikator') || k.toLowerCase().includes('iku') || k.toLowerCase().includes('tier4')) &&
+                         ('namaIndikator' in item || 'indikator' in item || 'target2025' in item || 'targetsByYear' in item || 'pagu2025' in item || 'target' in item),
+            'indikatorKinerja'
+        );
+
+        const cascading = resolveCollection(
+            root,
+            ['cascading', 'cascadingKinerja', 'matriksCascading', 'crosscutting', 'cascadingList'],
+            (item, k) => k.toLowerCase().includes('cascading') || ('level' in item && ('pegawaiUsername' in item || 'username' in item || 'indikator' in item)),
+            'cascading'
+        );
+
+        const rhk = resolveCollection(
+            root,
+            ['rhkPegawai', 'rhk', 'skp', 'kinerjaIndividu', 'iki', 'rencanaHasilKerja'],
+            (item, k) => k.toLowerCase().includes('rhk') || k.toLowerCase().includes('skp') || ('rhk' in item || 'jenisRhk' in item),
+            'rhkPegawai'
+        );
+
+        const users = resolveCollection(
+            root,
+            ['users', 'pegawai', 'employees', 'pejabat', 'staff'],
+            (item, k) => k.toLowerCase().includes('user') || k.toLowerCase().includes('pegawai') || ('username' in item && ('nip' in item || 'role' in item || 'jabatan' in item)),
+            'users'
+        );
+
+        return { root, tier1, tier2, tier3, tier4, cascading, rhk, users };
     }
 
     function cleanNumber(val) {
@@ -197,24 +300,13 @@
         return { headers, rows, delimiter };
     }
 
-    function ensureDbCollections() {
-        if (typeof DB !== 'object' || !DB) window.DB = {};
-        if (!Array.isArray(DB.tier1Kemenperin)) DB.tier1Kemenperin = [];
-        if (!Array.isArray(DB.tier2Bpsdmi)) DB.tier2Bpsdmi = [];
-        if (!Array.isArray(DB.sasaranKinerja)) DB.sasaranKinerja = [];
-        if (!Array.isArray(DB.indikatorKinerja)) DB.indikatorKinerja = [];
-        if (!Array.isArray(DB.cascading)) DB.cascading = [];
-        if (!Array.isArray(DB.rhkPegawai)) DB.rhkPegawai = [];
-        if (!Array.isArray(DB.users)) DB.users = [];
-    }
-
-    function findUserByUsernameOrName(identifier) {
+    function findUserByUsernameOrName(usersList, identifier) {
         const q = String(identifier || '').trim().toLowerCase();
         if (!q) return null;
-        return (DB.users || []).find(u =>
+        return (usersList || []).find(u =>
             String(u.username || '').toLowerCase() === q ||
             String(u.nip || '').toLowerCase() === q ||
-            String(u.name || '').toLowerCase() === q
+            String(u.name || u.nama || '').toLowerCase() === q
         ) || null;
     }
 
@@ -235,14 +327,14 @@
     // EKSPOR DATA DARI DATABASE KI-JARO KE FILE CSV (UNTUK KELOMPOK 1, 2, 3)
     // =========================================================================
     function buildExportRowsForSchema(schemaKey) {
-        ensureDbCollections();
+        const cols = getKiJaroCollections();
 
         if (schemaKey === 'perencanaan_terpadu') {
             const rows = [];
-            const ikList = DB.indikatorKinerja || [];
-            const skList = DB.sasaranKinerja || [];
-            const t2List = DB.tier2Bpsdmi || [];
-            const t1List = DB.tier1Kemenperin || [];
+            const ikList = cols.tier4.list;
+            const skList = cols.tier3.list;
+            const t2List = cols.tier2.list;
+            const t1List = cols.tier1.list;
 
             const findTier3 = (ik) => {
                 if (ik.sasaranId) {
@@ -253,7 +345,7 @@
                     const byKode = skList.find(s => String(s.kode || '').toLowerCase() === String(ik.kodeTier3).toLowerCase());
                     if (byKode) return byKode;
                 }
-                const rawSk = String(ik.sasaranKinerja || '');
+                const rawSk = String(ik.sasaranKinerja || ik.sasaran || '');
                 const prefix = rawSk.split(' - ')[0].trim();
                 if (prefix) {
                     const byPrefix = skList.find(s => String(s.kode || '').toLowerCase() === prefix.toLowerCase());
@@ -288,36 +380,42 @@
                 return t1List[0] || null;
             };
 
-            // Ekspor seluruh Indikator Kinerja Tier 4 beserta hierarki Tier 3, Tier 2, Tier 1
-            const coveredTier3Ids = new Set();
+            const coveredTier3Keys = new Set();
+
             ikList.forEach(ik => {
                 const t3 = findTier3(ik);
-                if (t3 && t3.id) coveredTier3Ids.add(String(t3.id));
+                if (t3) coveredTier3Keys.add(String(t3.id || t3.kode || ''));
                 const t2 = findTier2(t3);
                 const t1 = findTier1(t2);
 
-                const rawSk = String(ik.sasaranKinerja || '');
+                const rawSk = String(ik.sasaranKinerja || ik.sasaran || '');
                 const parsedKode3 = t3 ? (t3.kode || '') : (ik.kodeTier3 || (rawSk.includes(' - ') ? rawSk.split(' - ')[0].trim() : ''));
                 const parsedUraian3 = t3 ? (t3.sasaranKinerja || t3.sasaran || '') : (rawSk.includes(' - ') ? rawSk.split(' - ').slice(1).join(' - ').trim() : rawSk);
                 const parsedJenis3 = t3 ? (t3.jenis || (parsedKode3.toUpperCase().startsWith('TJ') ? 'Tujuan' : 'Sasaran Kinerja')) : (parsedKode3.toUpperCase().startsWith('TJ') ? 'Tujuan' : 'Sasaran Kinerja');
 
-                const tByYear = ik.targetsByYear || {};
-                const pByYear = ik.paguByYear || {};
+                // Baca intervensi BPSDMI dari properti Tier 3 jika tabel Tier 2 terpisah kosong
+                const intervensiRaw = t3 ? String(t3.intervensi || t3.intervensiBpsdmi || '') : '';
+                const kodeT2Val = t2 ? (t2.kode || '') : (t3?.kodeTier2 || (intervensiRaw.includes(' - ') ? intervensiRaw.split(' - ')[0].trim() : ''));
+                const spT2Val = t2 ? (t2.sasaranProgram || '') : intervensiRaw;
+                const ikT2Val = t2 ? (t2.indikatorProgram || '') : '';
 
-                const getTarget = (y) => tByYear[y] ?? ik[`target${y}`] ?? (y === '2025' ? (ik.target ?? 0) : 0);
-                const getPagu = (y) => pByYear[y] ?? ik[`pagu${y}`] ?? (y === '2025' ? (ik.pagu ?? 0) : 0);
+                const tByYear = ik.targetsByYear || ik.targets || {};
+                const pByYear = ik.paguByYear || ik.pagus || {};
+
+                const getTarget = (y) => tByYear[y] ?? ik[`target${y}`] ?? ik[`target_${y}`] ?? (y === '2025' ? (ik.target ?? 0) : 0);
+                const getPagu = (y) => pByYear[y] ?? ik[`pagu${y}`] ?? ik[`pagu_${y}`] ?? (y === '2025' ? (ik.pagu ?? 0) : 0);
 
                 rows.push([
                     t1 ? (t1.kode || '') : (t2?.kodeTier1 || ''),
-                    t1 ? (t1.uraian || t1.tujuanSasaran || '') : '',
-                    t2 ? (t2.kode || '') : (t3?.kodeTier2 || ''),
-                    t2 ? (t2.sasaranProgram || '') : '',
-                    t2 ? (t2.indikatorProgram || '') : '',
+                    t1 ? (t1.uraian || t1.tujuanSasaran || t1.nama || '') : '',
+                    kodeT2Val,
+                    spT2Val,
+                    ikT2Val,
                     parsedKode3,
                     parsedJenis3,
                     parsedUraian3,
                     ik.kode || '',
-                    ik.namaIndikator || ik.indikator || '',
+                    ik.namaIndikator || ik.indikator || ik.nama || '',
                     ik.satuan || '%',
                     getTarget('2025'), getPagu('2025'),
                     getTarget('2026'), getPagu('2026'),
@@ -327,19 +425,22 @@
                 ]);
             });
 
-            // Sertakan Sasaran Kinerja (Tier 3) yang belum punya Indikator Tier 4 agar tidak hilang saat export
+            // Sertakan seluruh Sasaran Kinerja (Tier 3) yang belum terhubung ke Tier 4
             skList.forEach(t3 => {
-                if (coveredTier3Ids.has(String(t3.id))) return;
+                const key = String(t3.id || t3.kode || '');
+                if (coveredTier3Keys.has(key)) return;
                 const t2 = findTier2(t3);
                 const t1 = findTier1(t2);
+                const intervensiRaw = String(t3.intervensi || t3.intervensiBpsdmi || '');
+
                 rows.push([
                     t1 ? (t1.kode || '') : (t2?.kodeTier1 || ''),
-                    t1 ? (t1.uraian || t1.tujuanSasaran || '') : '',
-                    t2 ? (t2.kode || '') : (t3.kodeTier2 || ''),
-                    t2 ? (t2.sasaranProgram || '') : '',
+                    t1 ? (t1.uraian || t1.tujuanSasaran || t1.nama || '') : '',
+                    t2 ? (t2.kode || '') : (t3.kodeTier2 || (intervensiRaw.includes(' - ') ? intervensiRaw.split(' - ')[0].trim() : '')),
+                    t2 ? (t2.sasaranProgram || '') : intervensiRaw,
                     t2 ? (t2.indikatorProgram || '') : '',
                     t3.kode || '',
-                    t3.jenis || 'Sasaran Kinerja',
+                    t3.jenis || (String(t3.kode || '').toUpperCase().startsWith('TJ') ? 'Tujuan' : 'Sasaran Kinerja'),
                     t3.sasaranKinerja || t3.sasaran || '',
                     '', '', '%',
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -350,39 +451,39 @@
         }
 
         if (schemaKey === 'cascading_terpadu') {
-            return (DB.cascading || []).map(c => [
+            return cols.cascading.list.map(c => [
                 c.tahun || '2025',
                 c.level || 1,
-                c.kodeIndikatorInduk || '',
-                c.unit || '',
-                c.pegawaiUsername || '',
-                c.jabatanPeran || '',
-                c.rencanaAksi || '',
-                c.indikator || '',
+                c.kodeIndikatorInduk || c.kodeIk || '',
+                c.unit || c.timKerja || '',
+                c.pegawaiUsername || c.username || '',
+                c.jabatanPeran || c.jabatan || '',
+                c.rencanaAksi || c.rhk || '',
+                c.indikator || c.namaIndikator || '',
                 c.satuan || '%',
                 c.target ?? 0,
-                c.targetTw1 ?? 0,
-                c.targetTw2 ?? 0,
-                c.targetTw3 ?? 0,
-                c.targetTw4 ?? 0
+                c.targetTw1 ?? c.tw1 ?? 0,
+                c.targetTw2 ?? c.tw2 ?? 0,
+                c.targetTw3 ?? c.tw3 ?? 0,
+                c.targetTw4 ?? c.tw4 ?? 0
             ]);
         }
 
         if (schemaKey === 'rhk_iki') {
-            return (DB.rhkPegawai || []).map(r => [
+            return cols.rhk.list.map(r => [
                 r.tahun || '2025',
-                r.pegawaiUsername || '',
+                r.pegawaiUsername || r.username || '',
                 r.kodeIkAtasan || '',
-                r.jenisRhk || 'Utama',
-                r.rhk || '',
+                r.jenisRhk || r.jenis || 'Utama',
+                r.rhk || r.rencanaHasilKerja || '',
                 r.aspek || 'Kuantitas',
-                r.indikator || '',
+                r.indikator || r.iki || '',
                 r.satuan || 'Dokumen',
                 r.target ?? 0,
-                r.realisasiTw1 ?? 0,
-                r.realisasiTw2 ?? 0,
-                r.realisasiTw3 ?? 0,
-                r.realisasiTw4 ?? 0
+                r.realisasiTw1 ?? r.tw1 ?? 0,
+                r.realisasiTw2 ?? r.tw2 ?? 0,
+                r.realisasiTw3 ?? r.tw3 ?? 0,
+                r.realisasiTw4 ?? r.tw4 ?? 0
             ]);
         }
 
@@ -396,7 +497,7 @@
 
         if (rows.length === 0) {
             if (typeof showToast === 'function') {
-                showToast('Belum ada data di database untuk kelompok ini. Anda dapat mengunduh Template CSV terlebih dahulu.', 'info');
+                showToast('Belum ada data di database untuk kelompok ini. Silakan unduh Template Kosong terlebih dahulu.', 'info');
             }
             return;
         }
@@ -414,7 +515,7 @@
     // VALIDATOR & INJECTOR TERPADU
     // =========================================================================
     function validateAndInjectRows(schemaKey, parsed) {
-        ensureDbCollections();
+        const cols = getKiJaroCollections();
         const schema = CSV_SCHEMAS[schemaKey];
         const logs = [];
         let successCount = 0;
@@ -423,7 +524,7 @@
         const missingHeaders = schema.headers.filter(h => !parsed.headers.includes(h));
         if (missingHeaders.length > 0) {
             return {
-                fatalError: `Header kolom CSV tidak sesuai template! Kolom yang hilang: [${missingHeaders.join(', ')}]. Silakan unduh template CSV atau file Export terbaru.`,
+                fatalError: `Header kolom CSV tidak sesuai template! Kolom yang hilang: [${missingHeaders.join(', ')}].`,
                 logs: [],
                 successCount: 0,
                 failCount: parsed.rows.length
@@ -436,11 +537,8 @@
             let summaryLabel = '';
 
             if (schemaKey === 'perencanaan_terpadu') {
-                if (!data.kode_tier3) errors.push('Kolom "kode_tier3" wajib diisi (contoh: TJ 1 atau SK 1)');
+                if (!data.kode_tier3) errors.push('Kolom "kode_tier3" wajib diisi');
                 if (!data.sasaran_kinerja_tier3) errors.push('Kolom "sasaran_kinerja_tier3" wajib diisi');
-                if (!data.kode_tier4) errors.push('Kolom "kode_tier4" wajib diisi (contoh: IK 1.1)');
-                if (!data.nama_indikator_tier4) errors.push('Kolom "nama_indikator_tier4" wajib diisi');
-                if (!data.satuan) errors.push('Kolom "satuan" wajib diisi');
 
                 const targetsByYear = {};
                 const paguByYear = {};
@@ -454,7 +552,7 @@
                     else paguByYear[y] = pVal;
                 });
 
-                summaryLabel = `${data.kode_tier4 || '-'} — ${data.nama_indikator_tier4 || '(Kosong)'}`;
+                summaryLabel = `${data.kode_tier4 || data.kode_tier3 || '-'} — ${data.nama_indikator_tier4 || data.sasaran_kinerja_tier3 || '(Kosong)'}`;
 
                 if (errors.length === 0) {
                     let t1Id = '';
@@ -462,7 +560,7 @@
                         const k1 = data.kode_tier1 || 'TS-1';
                         const u1 = data.uraian_tier1_kemenperin || k1;
                         const res1 = upsertRecord(
-                            DB.tier1Kemenperin,
+                            cols.tier1.list,
                             r => String(r.kode || '').toLowerCase() === k1.toLowerCase(),
                             { tier: 1, kode: k1, uraian: u1, tujuanSasaran: u1, tahunAwal: '2025', tahunAkhir: '2029' }
                         );
@@ -476,7 +574,7 @@
                         const sp2 = data.sasaran_program_tier2_bpsdmi || k2;
                         const ik2 = data.indikator_tier2_bpsdmi || sp2;
                         const res2 = upsertRecord(
-                            DB.tier2Bpsdmi,
+                            cols.tier2.list,
                             r => String(r.kode || '').toLowerCase() === k2.toLowerCase() &&
                                  String(r.indikatorProgram || '').toLowerCase() === ik2.toLowerCase(),
                             {
@@ -486,7 +584,7 @@
                                 kode: k2,
                                 sasaranProgram: sp2,
                                 indikatorProgram: ik2,
-                                satuan: data.satuan
+                                satuan: data.satuan || '%'
                             }
                         );
                         t2Id = res2.id;
@@ -496,13 +594,15 @@
                     const k3 = data.kode_tier3;
                     const s3 = data.sasaran_kinerja_tier3;
                     const j3 = data.jenis_tier3 || (k3.toUpperCase().startsWith('TJ') ? 'Tujuan' : 'Sasaran Kinerja');
+                    const intervensiStr = data.sasaran_program_tier2_bpsdmi || '';
                     const res3 = upsertRecord(
-                        DB.sasaranKinerja,
+                        cols.tier3.list,
                         r => String(r.kode || '').toLowerCase() === k3.toLowerCase(),
                         {
                             tier: 3,
                             tier2Id: t2Id,
                             kodeTier2: data.kode_tier2 || '',
+                            intervensi: intervensiStr,
                             kode: k3,
                             jenis: j3,
                             sasaranKinerja: s3,
@@ -511,37 +611,39 @@
                     );
                     detailActions.push(`Tier 3 (${k3}: ${res3.status})`);
 
-                    const sasaranLabel = `${k3} - ${s3}`;
-                    const res4 = upsertRecord(
-                        DB.indikatorKinerja,
-                        r => String(r.kode || '').toLowerCase() === data.kode_tier4.toLowerCase() &&
-                             String(r.namaIndikator || r.indikator || '').toLowerCase() === data.nama_indikator_tier4.toLowerCase(),
-                        {
-                            tier: 4,
-                            sasaranId: res3.id,
-                            kodeTier3: k3,
-                            sasaranKinerja: sasaranLabel,
-                            kode: data.kode_tier4,
-                            namaIndikator: data.nama_indikator_tier4,
-                            indikator: data.nama_indikator_tier4,
-                            satuan: data.satuan,
-                            targetsByYear,
-                            paguByYear,
-                            target2025: targetsByYear['2025'],
-                            pagu2025: paguByYear['2025'],
-                            target2026: targetsByYear['2026'],
-                            pagu2026: paguByYear['2026'],
-                            target2027: targetsByYear['2027'],
-                            pagu2027: paguByYear['2027'],
-                            target2028: targetsByYear['2028'],
-                            pagu2028: paguByYear['2028'],
-                            target2029: targetsByYear['2029'],
-                            pagu2029: paguByYear['2029'],
-                            target: targetsByYear['2025'],
-                            pagu: paguByYear['2025']
-                        }
-                    );
-                    detailActions.push(`Tier 4 (${data.kode_tier4}: ${res4.status})`);
+                    if (data.kode_tier4 && data.nama_indikator_tier4) {
+                        const sasaranLabel = `${k3} - ${s3}`;
+                        const res4 = upsertRecord(
+                            cols.tier4.list,
+                            r => String(r.kode || '').toLowerCase() === data.kode_tier4.toLowerCase() &&
+                                 String(r.namaIndikator || r.indikator || '').toLowerCase() === data.nama_indikator_tier4.toLowerCase(),
+                            {
+                                tier: 4,
+                                sasaranId: res3.id,
+                                kodeTier3: k3,
+                                sasaranKinerja: sasaranLabel,
+                                kode: data.kode_tier4,
+                                namaIndikator: data.nama_indikator_tier4,
+                                indikator: data.nama_indikator_tier4,
+                                satuan: data.satuan || '%',
+                                targetsByYear,
+                                paguByYear,
+                                target2025: targetsByYear['2025'],
+                                pagu2025: paguByYear['2025'],
+                                target2026: targetsByYear['2026'],
+                                pagu2026: paguByYear['2026'],
+                                target2027: targetsByYear['2027'],
+                                pagu2027: paguByYear['2027'],
+                                target2028: targetsByYear['2028'],
+                                pagu2028: paguByYear['2028'],
+                                target2029: targetsByYear['2029'],
+                                pagu2029: paguByYear['2029'],
+                                target: targetsByYear['2025'],
+                                pagu: paguByYear['2025']
+                            }
+                        );
+                        detailActions.push(`Tier 4 (${data.kode_tier4}: ${res4.status})`);
+                    }
                 }
             } else if (schemaKey === 'cascading_terpadu') {
                 const yr = data.tahun || '2025';
@@ -555,8 +657,8 @@
                 if (!data.kode_indikator_induk) errors.push('Kolom "kode_indikator_induk" wajib diisi');
                 if (!data.username_pegawai) errors.push('Kolom "username_pegawai" wajib diisi');
 
-                const matchedUser = findUserByUsernameOrName(data.username_pegawai);
-                if (data.username_pegawai && (DB.users || []).length > 0 && !matchedUser) {
+                const matchedUser = findUserByUsernameOrName(cols.users.list, data.username_pegawai);
+                if (data.username_pegawai && cols.users.list.length > 0 && !matchedUser) {
                     errors.push(`Username/NIP/Nama "${data.username_pegawai}" tidak terdaftar di master Pegawai Ki-Jaro`);
                 }
 
@@ -574,10 +676,10 @@
                 if (errors.length === 0) {
                     const defaultRole = lvl === 1 ? 'Ketua Tim Kerja' : (lvl === 2 ? 'Ketua Unit / Prodi / Subbag' : 'Dosen / Tendik / Kalab / Koordinator');
                     const res = upsertRecord(
-                        DB.cascading,
+                        cols.cascading.list,
                         r => Number(r.level) === lvl &&
                              String(r.tahun) === yr &&
-                             String(r.pegawaiUsername || '').toLowerCase() === (matchedUser ? matchedUser.username : data.username_pegawai).toLowerCase() &&
+                             String(r.pegawaiUsername || r.username || '').toLowerCase() === (matchedUser ? matchedUser.username : data.username_pegawai).toLowerCase() &&
                              String(r.indikator || '').toLowerCase() === data.indikator_kinerja.toLowerCase(),
                         {
                             level: lvl,
@@ -586,7 +688,7 @@
                             unit: data.nama_unit_atau_tim || (matchedUser?.unit || ''),
                             jabatanPeran: data.jabatan_peran || defaultRole,
                             pegawaiUsername: matchedUser ? matchedUser.username : data.username_pegawai,
-                            namaPegawai: matchedUser ? matchedUser.name : data.username_pegawai,
+                            namaPegawai: matchedUser ? (matchedUser.name || matchedUser.nama) : data.username_pegawai,
                             rencanaAksi: data.rencana_aksi_atau_rhk || '',
                             indikator: data.indikator_kinerja,
                             satuan: data.satuan || '%',
@@ -604,8 +706,8 @@
                 if (!/^\d{4}$/.test(yr)) errors.push(`Kolom "tahun" harus 4 digit (nilai: "${yr}")`);
                 if (!data.username_pegawai) errors.push('Kolom "username_pegawai" wajib diisi');
 
-                const matchedUser = findUserByUsernameOrName(data.username_pegawai);
-                if (data.username_pegawai && (DB.users || []).length > 0 && !matchedUser) {
+                const matchedUser = findUserByUsernameOrName(cols.users.list, data.username_pegawai);
+                if (data.username_pegawai && cols.users.list.length > 0 && !matchedUser) {
                     errors.push(`Pegawai "${data.username_pegawai}" tidak ditemukan di master Pegawai Ki-Jaro`);
                 }
 
@@ -623,14 +725,14 @@
                 summaryLabel = `${data.username_pegawai || '-'} — ${data.indikator_kinerja_individu || '(Kosong)'}`;
                 if (errors.length === 0) {
                     const res = upsertRecord(
-                        DB.rhkPegawai,
+                        cols.rhk.list,
                         r => String(r.tahun) === yr &&
-                             String(r.pegawaiUsername || '').toLowerCase() === (matchedUser ? matchedUser.username : data.username_pegawai).toLowerCase() &&
+                             String(r.pegawaiUsername || r.username || '').toLowerCase() === (matchedUser ? matchedUser.username : data.username_pegawai).toLowerCase() &&
                              String(r.indikator || '').toLowerCase() === data.indikator_kinerja_individu.toLowerCase(),
                         {
                             tahun: yr,
                             pegawaiUsername: matchedUser ? matchedUser.username : data.username_pegawai,
-                            namaPegawai: matchedUser ? matchedUser.name : data.username_pegawai,
+                            namaPegawai: matchedUser ? (matchedUser.name || matchedUser.nama) : data.username_pegawai,
                             unit: matchedUser ? (matchedUser.unit || '') : '',
                             kodeIkAtasan: data.kode_ik_atasan || '',
                             jenisRhk: data.jenis_rhk || 'Utama',
@@ -732,6 +834,7 @@
 
             if (!result.fatalError && result.successCount > 0) {
                 if (typeof saveToMySQL === 'function') await saveToMySQL();
+                if (typeof saveDB === 'function') saveDB();
                 if (typeof renderCurrentView === 'function') renderCurrentView();
             }
 
