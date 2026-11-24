@@ -1,11 +1,12 @@
 // =========================================================================
-// MODUL GENERATOR LAPORAN LAKIP OTOMATIS + ANALISIS KUALITATIF AI + MERGE PDF
-// Terintegrasi pada Menu: Dokumen Pengukuran & Pelaporan (Zero-Dummy)
+// MODUL GENERATOR LAPORAN LAKIP OTOMATIS + WORKFLOW REVIEW SPI, WADIR II & DIREKTUR
+// Hak Akses Penyusun: Tim Program / Evaluasi (Program) & Admin Sistem
 // =========================================================================
 (function () {
     const PANEL_ID = 'kiJaroLakipEntryBanner';
     const WORKSPACE_ID = 'kiJaroLakipWorkspace';
     const LOGO_KEMENPERIN = './logo-kemenperin.png';
+
     const DEFAULT_SATKERS_BPSDMI = [
         'Politeknik ATI Makassar',
         'Politeknik STMI Jakarta',
@@ -20,6 +21,36 @@
         'Politeknik ATK Yogyakarta',
         'Akademi Komunitas Industri Manufaktur Bantaeng',
         'Akademi Komunitas Industri Tekstil dan Produk Tekstil Surakarta'
+    ];
+
+    // 23 Indikator Checklist Reviu SPI sesuai Lembar Review Dokumen LAKIP PIPB
+    const SPI_CHECKLIST_ITEMS = [
+        // Format (6 butir)
+        { id: 'fmt_1', group: 'Format', no: '1)', text: 'Laporan Kinerja (LKj) telah menampilkan data penting' },
+        { id: 'fmt_2', group: 'Format', no: '2)', text: 'LKj telah menyajikan informasi target kinerja' },
+        { id: 'fmt_3', group: 'Format', no: '3)', text: 'LKj telah menyajikan capaian kinerja yang memadai' },
+        { id: 'fmt_4', group: 'Format', no: '4)', text: 'Telah menyajikan dengan lampiran' },
+        { id: 'fmt_5', group: 'Format', no: '5)', text: 'Telah menyajikan upaya perbaikan ke depan' },
+        { id: 'fmt_6', group: 'Format', no: '6)', text: 'Telah menyajikan akuntabilitas keuangan' },
+        // Mekanisme Penyusunan (7 butir)
+        { id: 'mek_1', group: 'Mekanisme Penyusunan', no: '1)', text: 'LKj disusun oleh unit kerja yang memiliki tugas fungsi untuk itu' },
+        { id: 'mek_2', group: 'Mekanisme Penyusunan', no: '2)', text: 'Informasi yang disampaikan dalam LKj telah didukung dengan data yang memadai' },
+        { id: 'mek_3', group: 'Mekanisme Penyusunan', no: '3)', text: 'Telah terdapat mekanisme penyampaian data dan informasi dari unit kerja ke unit penyusun LKj' },
+        { id: 'mek_4', group: 'Mekanisme Penyusunan', no: '4)', text: 'Telah ditetapkan penanggung jawab pengumpulan data/informasi di setiap unit' },
+        { id: 'mek_5', group: 'Mekanisme Penyusunan', no: '5)', text: 'Data/informasi kinerja yang disampaikan dalam LKj telah diyakini keandalannya' },
+        { id: 'mek_6', group: 'Mekanisme Penyusunan', no: '6)', text: 'Analisis/penjelasan dalam LKj telah diketahui oleh unit kerja terkait' },
+        { id: 'mek_7', group: 'Mekanisme Penyusunan', no: '7)', text: 'LKj periode berjalan merupakan gabungan partisipasi dari unit di bawahnya' },
+        // Substansi (10 butir)
+        { id: 'sub_1', group: 'Substansi', no: '1)', text: 'Tujuan/sasaran dalam LKj telah sesuai dengan tujuan/sasaran dalam perjanjian kinerja' },
+        { id: 'sub_2', group: 'Substansi', no: '2)', text: 'Tujuan/sasaran dalam LKj telah selaras dengan rencana strategis' },
+        { id: 'sub_3', group: 'Substansi', no: '3)', text: 'Jika butir 1 dan 2 jawabannya tidak, maka terdapat penjelasan yang memadai' },
+        { id: 'sub_4', group: 'Substansi', no: '4)', text: 'Tujuan/sasaran dalam LKj telah sesuai dengan tujuan/sasaran dalam Indikator Kinerja' },
+        { id: 'sub_5', group: 'Substansi', no: '5)', text: 'Tujuan/sasaran dalam LKj telah sesuai dengan tujuan/sasaran dalam Indikator Kinerja Utama' },
+        { id: 'sub_6', group: 'Substansi', no: '6)', text: 'Jika butir 4 dan 5 jawabannya tidak, maka terdapat penjelasan yang memadai' },
+        { id: 'sub_7', group: 'Substansi', no: '7)', text: 'Telah terdapat perbandingan data kinerja dengan tahun lalu, standar nasional dan sebagainya yang bermanfaat' },
+        { id: 'sub_8', group: 'Substansi', no: '8)', text: 'IKU dan IK telah cukup mengukur tujuan/sasaran' },
+        { id: 'sub_9', group: 'Substansi', no: '9)', text: 'Jika "tidak" telah terdapat penjelasan yang memadai' },
+        { id: 'sub_10', group: 'Substansi', no: '10)', text: 'IKU dan IK telah SMART' }
     ];
 
     let _lakipYear = '2025';
@@ -48,15 +79,6 @@
         return 'Rp ' + n.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     }
 
-    function getDirectorInfo() {
-        const users = Array.isArray(DB?.users) ? DB.users : [];
-        const dir = users.find(u => (Array.isArray(u.roles) ? u.roles : [u.role]).includes('direktur'));
-        return {
-            name: dir ? dir.name : 'Supardi',
-            nip: dir?.nip || '-'
-        };
-    }
-
     function parseNum(v) {
         if (v === '' || v === null || v === undefined) return null;
         const cleaned = String(v).replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
@@ -64,7 +86,82 @@
         return Number.isNaN(n) ? null : n;
     }
 
-    // Pemindaian menyeluruh data asli dari seluruh koleksi di DB Ki-Jaro (Renstra, Target Direktur, Cascading, Capaian TW 1-4)
+    function getCurrentUserObj() {
+        if (typeof currentUser !== 'undefined' && currentUser) return currentUser;
+        try {
+            const raw = localStorage.getItem('kijaro_user') || sessionStorage.getItem('kijaro_user');
+            if (raw) return JSON.parse(raw);
+        } catch (_) {}
+        return null;
+    }
+
+    function getUserRolesNormalized(user) {
+        if (!user) return [];
+        const rawRoles = Array.isArray(user.roles) ? user.roles : [user.role, user.jabatan, user.unit];
+        return rawRoles.filter(Boolean).map(r => String(r).toLowerCase().trim());
+    }
+
+    // Cek hak akses:
+    // - Penyusun (Tim Program / Evaluasi & Admin Sistem) -> dapat membuka Generator LAKIP
+    // - Reviewer SPI, Pembantu Direktur II, Direktur -> dapat membuka Antrean Review & Pengesahan LAKIP
+    function getLakipAccessRights() {
+        const u = getCurrentUserObj();
+        const roles = getUserRolesNormalized(u);
+        const nameLower = String(u?.name || '').toLowerCase();
+        const unitLower = String(u?.unit || u?.jabatan || '').toLowerCase();
+
+        const isAdmin = roles.some(r => r.includes('admin') || r === 'superadmin');
+        const isProgram = roles.some(r => r.includes('program') || r.includes('evaluasi') || r.includes('perencanaan')) ||
+            unitLower.includes('program') || unitLower.includes('evaluasi');
+        const isReviewer = roles.some(r => r.includes('reviewer') || r.includes('spi') || r.includes('pengawas')) ||
+            unitLower.includes('spi') || unitLower.includes('pengawas');
+        const isWadir2 = roles.some(r => r.includes('wadir2') || r.includes('wadir 2') || r.includes('wadir ii') || r.includes('pembantu direktur ii') || r.includes('wakil direktur ii')) ||
+            unitLower.includes('pembantu direktur ii') || unitLower.includes('wakil direktur ii') || unitLower.includes('wadir ii');
+        const isDirektur = roles.some(r => r === 'direktur' || r.includes('direktur')) && !isWadir2 && !roles.some(r => r.includes('wakil') || r.includes('pembantu'));
+
+        return {
+            user: u,
+            isAdmin,
+            isProgram,
+            canDraft: isAdmin || isProgram,
+            isReviewer: isReviewer || isAdmin,
+            isWadir2: isWadir2 || isAdmin,
+            isDirektur: isDirektur || isAdmin,
+            canViewPortal: isAdmin || isProgram || isReviewer || isWadir2 || isDirektur,
+            displayName: u?.name || 'Pengguna Ki-Jaro',
+            nip: u?.nip || '-'
+        };
+    }
+
+    // Daftarkan role baru "Reviewer LAKIP (SPI)" pada dropdown role manajemen user Ki-Jaro jika ada
+    function registerReviewerRoleOption() {
+        if (typeof ROLE_LABELS === 'object' && ROLE_LABELS && !ROLE_LABELS['reviewer_lakip']) {
+            ROLE_LABELS['reviewer_lakip'] = 'Reviewer LAKIP (SPI)';
+        }
+        document.querySelectorAll('select').forEach(sel => {
+            const opts = Array.from(sel.options).map(o => o.value.toLowerCase());
+            if ((opts.includes('direktur') || opts.includes('admin') || opts.includes('pegawai')) && !opts.includes('reviewer_lakip')) {
+                const opt = document.createElement('option');
+                opt.value = 'reviewer_lakip';
+                opt.textContent = 'Reviewer LAKIP (SPI)';
+                sel.appendChild(opt);
+            }
+        });
+    }
+
+    function getDirectorInfo() {
+        const users = Array.isArray(DB?.users) ? DB.users : [];
+        const dir = users.find(u => {
+            const rs = getUserRolesNormalized(u);
+            return rs.includes('direktur') && !rs.some(x => x.includes('wakil') || x.includes('pembantu') || x.includes('wadir'));
+        });
+        return {
+            name: dir ? dir.name : 'Supardi',
+            nip: dir?.nip || '-'
+        };
+    }
+
+    // Pemindaian data asli dari database Ki-Jaro (Zero-Dummy)
     function extractIndicatorsFromDB(tahun) {
         const yr = String(tahun || '2025').trim();
         const prevYr = String(Number(yr) - 1);
@@ -72,7 +169,6 @@
         const items = [];
         const seen = new Set();
 
-        // Kumpulkan semua catatan capaian/realisasi/monitoring triwulanan di DB untuk dicocokkan dengan indikator
         const capaianRecords = [];
         Object.keys(dbObj).forEach(k => {
             if (!Array.isArray(dbObj[k])) return;
@@ -84,21 +180,16 @@
             }
         });
 
-        // Telusuri seluruh array di DB yang memuat sasaran / indikator tingkat Direktur / Institusi
         const excludedKeys = new Set(['users', 'auditlogs', 'logs', 'perjanjiankinerja', 'lakipconfigs', 'notifications', 'emails', 'risiko', 'petarisiko']);
         Object.keys(dbObj).forEach(key => {
-            if (!Array.isArray(dbObj[key])) return;
-            if (excludedKeys.has(key.toLowerCase())) return;
+            if (!Array.isArray(dbObj[key]) || excludedKeys.has(key.toLowerCase())) return;
 
             dbObj[key].forEach((row, idx) => {
                 if (!row || typeof row !== 'object') return;
-
-                // Abaikan baris yang murni level pegawai individu / anggota unit bila berada di tabel cascading
                 const isIndividu = Boolean(row.pegawaiUsername || row.namaPegawai || row.username);
                 const isSubLevel = row.level && Number(row.level) > 1;
                 if ((isIndividu || isSubLevel) && key.toLowerCase().includes('cascad')) return;
 
-                // Cek kecocokan tahun jika properti tahun tersedia pada baris data
                 const rowYr = String(row.tahun || row.year || row.tahunKinerja || '').trim();
                 if (rowYr && rowYr !== yr) return;
 
@@ -115,19 +206,12 @@
                 const sasaran = String(row.sasaranProgram || row.sasaranStrategis || row.sasaranKinerja || row.sasaran || row.induk || '-').trim();
                 const satuan = String(row.satuan || row.unitSatuan || '%').trim();
 
-                // Target tahun berjalan
                 let targetVal = parseNum(row.targetVal ?? row.targetAngka ?? row.target);
-                if (targetVal === null && row.targets && typeof row.targets === 'object') {
-                    targetVal = parseNum(row.targets[yr]);
-                }
+                if (targetVal === null && row.targets && typeof row.targets === 'object') targetVal = parseNum(row.targets[yr]);
 
-                // Target Renstra 2029
                 let target2029 = parseNum(row.target2029 ?? row.targetRenstra2029 ?? row.targetAkhir);
-                if (target2029 === null && row.targets && typeof row.targets === 'object') {
-                    target2029 = parseNum(row.targets['2029']);
-                }
+                if (target2029 === null && row.targets && typeof row.targets === 'object') target2029 = parseNum(row.targets['2029']);
 
-                // Cari realisasi dari baris ini maupun dari koleksi capaian/realisasi TW 1-4
                 const matchedCap = capaianRecords.filter(c => {
                     const cYr = String(c.tahun || c.year || '').trim();
                     if (cYr && cYr !== yr) return false;
@@ -136,7 +220,6 @@
                     return (row.id && cId === String(row.id)) || (cName && cName === normKey);
                 });
 
-                // Ambil realisasi TW 4 (atau triwulan tertinggi yang sudah diinput di Ki-Jaro)
                 const twCandidates = [
                     parseNum(row.realisasiTw4 ?? row.tw4 ?? row.capaianTw4),
                     parseNum(row.realisasiTw3 ?? row.tw3 ?? row.capaianTw3),
@@ -156,11 +239,8 @@
 
                 const validTw = twCandidates.filter(v => v !== null);
                 const realisasiVal = validTw.length > 0 ? validTw[0] : null;
-
-                // Realisasi tahun lalu (YoY)
                 const prevYearVal = parseNum(row.realisasiTahunLalu ?? row.realisasiPrevYear ?? (row.realisasiPerTahun && row.realisasiPerTahun[prevYr]));
 
-                // Kumpulkan kendala & tindak lanjut aktual dari TW 1-4
                 const kendalaArr = [
                     row.kendalaTw1, row.kendalaTw2, row.kendalaTw3, row.kendalaTw4,
                     row.kendala, row.permasalahan, row.hambatan,
@@ -172,9 +252,6 @@
                     row.tindakLanjut, row.solusi, row.rencanaTindakLanjut,
                     ...matchedCap.map(mc => mc.tindakLanjut || mc.solusi)
                 ].map(x => String(x || '').trim()).filter(Boolean);
-
-                const uniqueKendala = Array.from(new Set(kendalaArr));
-                const uniqueTl = Array.from(new Set(tlArr));
 
                 const paguAnggaran = parseNum(row.pagu ?? row.paguAnggaran ?? row.anggaran) ?? 0;
                 const realisasiAnggaran = parseNum(row.realisasiAnggaran ?? row.serapan ?? row.realisasiBiaya) ?? 0;
@@ -191,8 +268,8 @@
                     targetRenstra2029: target2029 ?? (targetVal ?? 0),
                     paguAnggaran,
                     realisasiAnggaran,
-                    kendalaResume: uniqueKendala.join('; '),
-                    tindakLanjutResume: uniqueTl.join('; '),
+                    kendalaResume: Array.from(new Set(kendalaArr)).join('; '),
+                    tindakLanjutResume: Array.from(new Set(tlArr)).join('; '),
                     targetNasionalBpsdmi: parseNum(row.targetBpsdmi) ?? (targetVal ?? 0),
                     satkerBpsdmiData: DEFAULT_SATKERS_BPSDMI.map(s => ({
                         satker: s,
@@ -204,11 +281,9 @@
             });
         });
 
-        // Tidak ada fallback dummy: jika DB masih kosong, kembalikan array kosong []
         return items;
     }
 
-    // Hitung total pagu & realisasi anggaran dari data Ki-Jaro bila tersedia
     function extractBudgetSummaryFromDB(tahun, indicators) {
         const yr = String(tahun || '2025');
         const dbObj = (typeof DB === 'object' && DB) ? DB : {};
@@ -243,8 +318,12 @@
         if (!DB.lakipConfigs[yr]) {
             const extracted = extractIndicatorsFromDB(yr);
             const budget = extractBudgetSummaryFromDB(yr, extracted);
+            const defaultChecklist = {};
+            SPI_CHECKLIST_ITEMS.forEach(it => { defaultChecklist[it.id] = 'V'; });
+
             DB.lakipConfigs[yr] = {
                 tahun: yr,
+                workflowStatus: 'DRAFT', // DRAFT | PENDING_REVIEWER | PENDING_WADIR2 | PENDING_DIREKTUR | APPROVED
                 nomorNotaDinas: '',
                 tanggalPengesahan: `Serang, 30 Januari ${Number(yr) + 1}`,
                 paguDipaTotal: budget.paguTotal,
@@ -255,8 +334,29 @@
                 bab33EvaluasiText: '',
                 bab4PenutupText: '',
                 geminiApiKey: '',
-                indicators: extracted
+                indicators: extracted,
+                reviewData: {
+                    pembuatName: '',
+                    pembuatDate: '',
+                    reviewerName: '',
+                    reviewerDate: '',
+                    reviewerNotes: '',
+                    checklist: defaultChecklist,
+                    wadir2Name: '',
+                    wadir2Date: '',
+                    wadir2Notes: '',
+                    direkturName: '',
+                    direkturDate: '',
+                    direkturNotes: '',
+                    revisionHistory: []
+                }
             };
+        }
+        if (!DB.lakipConfigs[yr].workflowStatus) DB.lakipConfigs[yr].workflowStatus = 'DRAFT';
+        if (!DB.lakipConfigs[yr].reviewData) {
+            const defaultChecklist = {};
+            SPI_CHECKLIST_ITEMS.forEach(it => { defaultChecklist[it.id] = 'V'; });
+            DB.lakipConfigs[yr].reviewData = { checklist: defaultChecklist, revisionHistory: [] };
         }
         return DB.lakipConfigs[yr];
     }
@@ -283,7 +383,7 @@
         const rankIdx = validSatkers.findIndex(s => s.satker === 'Politeknik Industri Petrokimia Banten');
         const rankStr = validSatkers.length > 1 && rankIdx >= 0
             ? `peringkat ke-${rankIdx + 1} dari ${validSatkers.length} satuan kerja Poltek/Akom BPSDMI yang terdata`
-            : 'belum dibandingkan dengan satuan kerja BPSDMI lainnya';
+            : 'belum dibandingkan secara menyeluruh dengan satuan kerja BPSDMI lainnya';
 
         const pagu = parseFloat(ind.paguAnggaran) || 0;
         const serapan = parseFloat(ind.realisasiAnggaran) || 0;
@@ -322,7 +422,7 @@
         const yoyNarasi = ind.realisasiPrevYear > 0
             ? (m.yoyDiff >= 0
                 ? `Apabila dibandingkan dengan realisasi Tahun ${prevYr} sebesar ${fmtNum(ind.realisasiPrevYear)} ${ind.satuan}, terjadi peningkatan kinerja (Year-on-Year) sebesar ${fmtNum(m.yoyDiff)} ${ind.satuan} atau tumbuh ${fmtNum(m.yoyPct)}%.`
-                : `Dibandingkan dengan realisasi Tahun ${prevYr} sebesar ${fmtNum(ind.realisasiPrevYear)} ${ind.satuan}, terdapat penyesuaian/penurunan sebesar ${fmtNum(Math.abs(m.yoyDiff))} ${ind.satuan} (${fmtNum(m.yoyPct)}%).`)
+                : `Dibandingkan dengan realisasi Tahun ${prevYr} sebesar ${fmtNum(ind.realisasiPrevYear)} ${ind.satuan}, terdapat penyesuaian sebesar ${fmtNum(Math.abs(m.yoyDiff))} ${ind.satuan} (${fmtNum(m.yoyPct)}%).`)
             : `Data historis Tahun ${prevYr} belum tercatat sehingga capaian Tahun ${yr} menjadi baseline awal pada periode perencanaan strategis.`;
 
         const luarNarasi = ind.pembandingLuar && ind.pembandingLuar.trim()
@@ -337,7 +437,7 @@
             : 'Melakukan pemantauan rutin dan koordinasi lintas unit kerja sesuai jadwal operasional.';
 
         const efNarasi = ind.paguAnggaran > 0
-            ? `Dari aspek pengelolaan anggaran, pagu sebesar ${fmtRp(ind.paguAnggaran)} terealisasi sebesar ${fmtRp(ind.realisasiAnggaran)} (${fmtNum(m.pctSerapan)}%). Dengan capaian kinerja sebesar ${fmtNum(m.pctCapaian)}% dibandingkan serapan anggaran ${fmtNum(m.pctSerapan)}%, pelaksanaan indikator ini dinilai <strong>${m.isEfektif ? 'EFEKTIF' : 'BELUM EFEKTIF'}</strong> dan <strong>${m.isEfisien ? 'EFISIEN' : 'PERLU OPTIMALISASI EFISIENSI'}</strong> (selisih rasio kinerja terhadap anggaran sebesar ${m.selisihEfisiensi >= 0 ? '+' : ''}${fmtNum(m.selisihEfisiensi)}%).`
+            ? `Dari aspek pengelolaan anggaran, alokasi pagu sebesar ${fmtRp(ind.paguAnggaran)} terealisasi sebesar ${fmtRp(ind.realisasiAnggaran)} (${fmtNum(m.pctSerapan)}%). Dengan capaian kinerja sebesar ${fmtNum(m.pctCapaian)}% dibandingkan serapan anggaran ${fmtNum(m.pctSerapan)}%, pelaksanaan indikator ini dinilai <strong>${m.isEfektif ? 'EFEKTIF' : 'BELUM EFEKTIF'}</strong> dan <strong>${m.isEfisien ? 'EFISIEN' : 'PERLU OPTIMALISASI EFISIENSI'}</strong> (selisih rasio kinerja terhadap anggaran sebesar ${m.selisihEfisiensi >= 0 ? '+' : ''}${fmtNum(m.selisihEfisiensi)}%).`
             : `Dari aspek pelaksanaan kegiatan, capaian kinerja sebesar ${fmtNum(m.pctCapaian)}% menunjukkan bahwa pelaksanaan program dinilai <strong>${m.isEfektif ? 'EFEKTIF' : 'BELUM EFEKTIF'}</strong> terhadap target yang ditetapkan.`;
 
         return [
@@ -370,7 +470,104 @@
         }
     }
 
-    // Ekspos seluruh handler ke window agar dapat diklik dari tombol HTML di mana saja
+    // =========================================================================
+    // WORKFLOW APPROVAL BERJENJANG:
+    // DRAFT (Tim Program/Admin) -> PENDING_REVIEWER (SPI) -> PENDING_WADIR2 -> PENDING_DIREKTUR -> APPROVED
+    // Jika diminta "Lakukan Perbaikan" di level manapun -> kembali ke DRAFT di penyusun
+    // =========================================================================
+    function formatDateIndoNow() {
+        return new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    }
+
+    window.submitLakipToReviewer = async function () {
+        const cfg = getOrInitLakipConfig(_lakipYear);
+        if (!cfg.indicators || cfg.indicators.length === 0) {
+            if (typeof showToast === 'function') showToast('Data indikator masih kosong. Sinkronkan data dari Ki-Jaro terlebih dahulu.', 'error');
+            return;
+        }
+        const rights = getLakipAccessRights();
+        cfg.workflowStatus = 'PENDING_REVIEWER';
+        cfg.reviewData.pembuatName = rights.displayName;
+        cfg.reviewData.pembuatDate = formatDateIndoNow();
+        if (typeof saveToMySQL === 'function') await saveToMySQL();
+        window.renderLakipWorkspace();
+        if (typeof showToast === 'function') showToast('Draf LAKIP berhasil diajukan ke Role Reviewer (SPI) untuk direviu!', 'success');
+    };
+
+    window.processLakipWorkflowDecision = async function (stage, decision) {
+        const cfg = getOrInitLakipConfig(_lakipYear);
+        const rights = getLakipAccessRights();
+        const rev = cfg.reviewData;
+        const todayStr = formatDateIndoNow();
+
+        if (stage === 'REVIEWER') {
+            rev.reviewerName = rights.displayName;
+            rev.reviewerDate = todayStr;
+            if (decision === 'VALID') {
+                cfg.workflowStatus = 'PENDING_WADIR2';
+                if (typeof showToast === 'function') showToast('Hasil reviu dinyatakan VALID. Diteruskan ke Pembantu Direktur II.', 'success');
+            } else {
+                cfg.workflowStatus = 'DRAFT';
+                rev.revisionHistory.unshift({
+                    date: todayStr,
+                    by: `${rights.displayName} (Reviewer / SPI)`,
+                    note: rev.reviewerNotes || 'Diminta melakukan perbaikan sesuai Lembar Review & Checklist Reviu SPI.'
+                });
+                if (typeof showToast === 'function') showToast('Dokumen dikembalikan ke mode DRAF pada Tim Program / Penyusun untuk diperbaiki.', 'info');
+            }
+        } else if (stage === 'WADIR2') {
+            rev.wadir2Name = rights.displayName;
+            rev.wadir2Date = todayStr;
+            if (decision === 'VALID') {
+                cfg.workflowStatus = 'PENDING_DIREKTUR';
+                if (typeof showToast === 'function') showToast('Disetujui Pembantu Direktur II. Diteruskan ke Direktur untuk pengesahan akhir.', 'success');
+            } else {
+                cfg.workflowStatus = 'DRAFT';
+                rev.revisionHistory.unshift({
+                    date: todayStr,
+                    by: `${rights.displayName} (Pembantu Direktur II)`,
+                    note: rev.wadir2Notes || 'Diminta melakukan perbaikan oleh Pembantu Direktur II.'
+                });
+                if (typeof showToast === 'function') showToast('Dokumen dikembalikan ke mode DRAF pada Tim Program / Penyusun untuk diperbaiki.', 'info');
+            }
+        } else if (stage === 'DIREKTUR') {
+            rev.direkturName = rights.displayName;
+            rev.direkturDate = todayStr;
+            if (decision === 'VALID') {
+                cfg.workflowStatus = 'APPROVED';
+                if (typeof showToast === 'function') showToast('LAKIP telah DISAHKAN oleh Direktur! Fitur Cetak/Download PDF kini terbuka.', 'success');
+            } else {
+                cfg.workflowStatus = 'DRAFT';
+                rev.revisionHistory.unshift({
+                    date: todayStr,
+                    by: `${rights.displayName} (Direktur)`,
+                    note: rev.direkturNotes || 'Diminta melakukan perbaikan sesuai arahan Direktur.'
+                });
+                if (typeof showToast === 'function') showToast('Dokumen dikembalikan ke mode DRAF pada Tim Program / Penyusun untuk diperbaiki.', 'info');
+            }
+        }
+
+        if (typeof saveToMySQL === 'function') await saveToMySQL();
+        window.renderLakipWorkspace();
+    };
+
+    window.toggleSpiChecklistValue = async function (itemId, val) {
+        const cfg = getOrInitLakipConfig(_lakipYear);
+        if (!cfg.reviewData.checklist) cfg.reviewData.checklist = {};
+        cfg.reviewData.checklist[itemId] = val;
+        if (typeof saveToMySQL === 'function') await saveToMySQL();
+        window.renderLakipWorkspace();
+    };
+
+    window.saveLakipReviewNote = async function (field, val) {
+        const cfg = getOrInitLakipConfig(_lakipYear);
+        cfg.reviewData[field] = val;
+        if (typeof saveToMySQL === 'function') await saveToMySQL();
+    };
+
+    // =========================================================================
+    // NAVIGASI TAB & HANDLER INPUT
+    // =========================================================================
     window.switchLakipTab = function (tabName) {
         _lakipActiveTab = tabName;
         window.renderLakipWorkspace();
@@ -390,10 +587,7 @@
     window.runAiAnalyzeSingleIndicator = async function (idx) {
         const cfg = getOrInitLakipConfig(_lakipYear);
         const ind = cfg.indicators[idx];
-        if (!ind) {
-            if (typeof showToast === 'function') showToast('Belum ada data indikator untuk dianalisis.', 'error');
-            return;
-        }
+        if (!ind) return;
 
         const btn = document.getElementById('btnLakipAiSingle');
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Menganalisis...'; }
@@ -424,7 +618,7 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
     window.runAiAnalyzeAllSections = async function () {
         const cfg = getOrInitLakipConfig(_lakipYear);
         if (!cfg.indicators || cfg.indicators.length === 0) {
-            if (typeof showToast === 'function') showToast('Data indikator di Ki-Jaro masih kosong. Isi atau sinkronkan data TW 4 terlebih dahulu.', 'error');
+            if (typeof showToast === 'function') showToast('Data indikator di Ki-Jaro masih kosong. Sinkronkan data TW 4 terlebih dahulu.', 'error');
             return;
         }
 
@@ -494,12 +688,16 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
         }
     };
 
+    // =========================================================================
+    // GENERATOR DOKUMEN LENGKAP LAKIP (COVER BAKU + BAB I UTUH + BAB II-IV + LEMBAR REVIEW SPI)
+    // =========================================================================
     function buildFullLakipDocumentHtml(cfg) {
         const dir = getDirectorInfo();
         const yr = cfg.tahun;
         const nextYr = String(Number(yr) + 1);
         const indicators = cfg.indicators || [];
         const metricsList = indicators.map(computeIndicatorMetrics);
+        const rev = cfg.reviewData || {};
 
         const avgCapaian = indicators.length > 0
             ? metricsList.reduce((a, b) => a + b.pctCapaian, 0) / indicators.length
@@ -507,6 +705,7 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
         const efektifCount = metricsList.filter(m => m.isEfektif).length;
         const pctDipa = cfg.paguDipaTotal > 0 ? (cfg.realisasiAnggaranTotal / cfg.paguDipaTotal) * 100 : 0;
 
+        // Kelompokkan indikator per Kode SK untuk Bab 1.4.4 (Sasaran Politeknik Industri Petrokimia Banten)
         const skGroups = {};
         indicators.forEach(ind => {
             if (!skGroups[ind.kodeSk]) skGroups[ind.kodeSk] = { sasaran: ind.sasaran, items: [] };
@@ -515,36 +714,35 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
 
         const ringkasanHtml = (cfg.ringkasanEksekutifText || '')
             .split(/\n+/).filter(Boolean).map(p => `<p class="text-justify indent-8 mb-3">${esc(p)}</p>`).join('');
-
         const bab33Html = (cfg.bab33EvaluasiText || '').split(/\n+/).filter(Boolean)
             .map(p => `<p class="text-justify indent-8 mb-3">${esc(p)}</p>`).join('');
-
         const bab4Html = (cfg.bab4PenutupText || '').split(/\n+/).filter(Boolean)
             .map(p => `<p class="text-justify indent-8 mb-3">${esc(p)}</p>`).join('');
 
         return `
         <div id="lakipPrintableFullSheet" class="text-slate-900 font-serif text-[11pt] leading-relaxed space-y-8">
-            <!-- 1. COVER -->
-            <div class="border-2 border-slate-300 p-10 bg-white flex flex-col justify-between min-h-[265mm] text-center" style="page-break-after: always;">
-                <div class="space-y-4 pt-6">
-                    <img src="${LOGO_KEMENPERIN}" onerror="this.style.display='none'" class="w-28 h-28 mx-auto object-contain" alt="Logo Kemenperin">
-                    <p class="text-sm font-bold uppercase tracking-widest">Kementerian Perindustrian Republik Indonesia</p>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-700">Badan Pengembangan Sumber Daya Manusia Industri</p>
+            <!-- 1. COVER RESMI SESUAI CONTOH LAKIP PIPB -->
+            <div class="border-4 border-double border-blue-950 p-10 bg-gradient-to-b from-slate-50 via-white to-blue-50/40 flex flex-col justify-between min-h-[268mm] text-center" style="page-break-after: always;">
+                <div class="space-y-2 pt-4">
+                    <p class="text-base font-extrabold uppercase tracking-wider text-blue-950">LAPORAN AKUNTABILITAS KINERJA</p>
+                    <p class="text-base font-extrabold uppercase tracking-wider text-blue-950">INSTANSI PEMERINTAH (LAKIP)</p>
+                    <div class="inline-block mt-2 px-6 py-1 bg-blue-950 text-white text-sm font-bold tracking-widest">TAHUN ${esc(yr)}</div>
                 </div>
 
-                <div class="space-y-4 my-auto">
-                    <div class="inline-block px-5 py-1.5 bg-blue-900 text-white text-xs font-bold uppercase tracking-widest rounded">Akuntabilitas Kinerja Instansi Pemerintah</div>
-                    <h1 class="text-3xl font-extrabold uppercase tracking-wide text-blue-950 leading-snug">
-                        LAPORAN KINERJA<br>(LAKIP)<br>TAHUN ${esc(yr)}
-                    </h1>
-                    <div class="w-24 h-1 bg-amber-500 mx-auto my-4"></div>
-                    <h2 class="text-lg font-bold uppercase text-slate-800">POLITEKNIK INDUSTRI PETROKIMIA BANTEN</h2>
+                <div class="my-auto space-y-6">
+                    <img src="${LOGO_KEMENPERIN}" onerror="this.style.display='none'" class="w-36 h-36 mx-auto object-contain" alt="Logo Kementerian Perindustrian">
+                    <div class="w-32 h-1 bg-amber-500 mx-auto"></div>
+                    <div class="space-y-1.5">
+                        <h1 class="text-xl font-extrabold uppercase tracking-wide text-blue-950">POLITEKNIK INDUSTRI PETROKIMIA BANTEN</h1>
+                        <h2 class="text-sm font-bold uppercase tracking-wide text-slate-800">BADAN PENGEMBANGAN SUMBER DAYA MANUSIA INDUSTRI</h2>
+                        <h3 class="text-sm font-bold uppercase tracking-wide text-slate-800">KEMENTERIAN PERINDUSTRIAN REPUBLIK INDONESIA</h3>
+                    </div>
                 </div>
 
-                <div class="space-y-1 text-xs font-semibold text-slate-700 pb-4">
-                    <p>Jalan Raya Karang Bolong, Desa Umbul Tanjung, Kec. Cinangka</p>
-                    <p>Kabupaten Serang, Provinsi Banten — 42167</p>
-                    <p class="font-bold text-blue-950 pt-2">TAHUN ${esc(nextYr)}</p>
+                <div class="space-y-1 text-xs font-bold text-slate-800 border-t-2 border-blue-950 pt-4">
+                    <p>POLITEKNIK INDUSTRI PETROKIMIA BANTEN</p>
+                    <p class="font-normal">Jl. Raya Karang Bolong, Kp. Cibomo, Desa Umbul Tanjung, Kec. Cinangka, Kab. Serang - Banten 42167</p>
+                    <p class="pt-1 text-blue-950">TAHUN ${esc(nextYr)}</p>
                 </div>
             </div>
 
@@ -563,12 +761,12 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                 <table class="w-full text-xs">
                     <tr><td class="w-28 py-1">Yth.</td><td class="w-4">:</td><td>Kepala Badan Pengembangan Sumber Daya Manusia Industri</td></tr>
                     <tr><td class="py-1">Dari</td><td>:</td><td>Direktur Politeknik Industri Petrokimia Banten</td></tr>
-                    <tr><td class="py-1">Hal</td><td>:</td><td class="font-bold">Penyampaian Laporan Kinerja (LAKIP) Politeknik Industri Petrokimia Banten Tahun ${esc(yr)}</td></tr>
+                    <tr><td class="py-1">Hal</td><td>:</td><td class="font-bold">Penyampaian Laporan Akuntabilitas Kinerja Instansi Pemerintah (LAKIP) Politeknik Industri Petrokimia Banten Tahun ${esc(yr)}</td></tr>
                     <tr><td class="py-1">Tanggal</td><td>:</td><td>${esc(cfg.tanggalPengesahan)}</td></tr>
                 </table>
                 <hr class="border-slate-800">
                 <p class="text-justify indent-8">
-                    Sehubungan dengan pelaksanaan Sistem Akuntabilitas Kinerja Instansi Pemerintah (SAKIP) di lingkungan Kementerian Perindustrian serta sebagai bentuk pertanggungjawaban atas pencapaian target Perjanjian Kinerja Tahun ${esc(yr)}, bersama ini kami sampaikan Laporan Kinerja (LAKIP) Politeknik Industri Petrokimia Banten Tahun ${esc(yr)}.
+                    Sehubungan dengan pelaksanaan Sistem Akuntabilitas Kinerja Instansi Pemerintah (SAKIP) di lingkungan Kementerian Perindustrian serta sebagai bentuk pertanggungjawaban atas pencapaian target Perjanjian Kinerja Tahun ${esc(yr)}, bersama ini kami sampaikan Laporan Akuntabilitas Kinerja Instansi Pemerintah (LAKIP) Politeknik Industri Petrokimia Banten Tahun ${esc(yr)}.
                 </p>
                 <p class="text-justify indent-8">
                     Laporan ini memuat capaian Indikator Kinerja Utama, analisis komparasi kinerja tahunan dan kontribusi terhadap target nasional BPSDMI, evaluasi efektivitas serta efisiensi penggunaan anggaran, serta rencana tindak lanjut perbaikan kinerja pada tahun berikutnya. Demikian disampaikan, atas perhatian dan arahan Bapak/Ibu kami ucapkan terima kasih.
@@ -587,7 +785,7 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
             <div class="p-8 bg-white border border-slate-200 space-y-5" style="page-break-after: always;">
                 <h3 class="text-center text-base font-bold uppercase">KATA PENGANTAR</h3>
                 <p class="text-justify indent-8">
-                    Puji syukur ke hadirat Tuhan Yang Maha Esa atas tersusunnya Laporan Kinerja Instansi Pemerintah (LAKIP) Politeknik Industri Petrokimia Banten Tahun ${esc(yr)}. Penyusunan dokumen ini mengacu pada Peraturan Presiden Nomor 29 Tahun 2014 tentang Sistem Akuntabilitas Kinerja Instansi Pemerintah serta Peraturan Menteri Pendayagunaan Aparatur Negara dan Reformasi Birokrasi Nomor 53 Tahun 2014.
+                    Puji syukur ke hadirat Tuhan Yang Maha Esa atas tersusunnya Laporan Akuntabilitas Kinerja Instansi Pemerintah (LAKIP) Politeknik Industri Petrokimia Banten Tahun ${esc(yr)}. Penyusunan dokumen ini mengacu pada Peraturan Presiden Nomor 29 Tahun 2014 tentang Sistem Akuntabilitas Kinerja Instansi Pemerintah serta Peraturan Menteri Pendayagunaan Aparatur Negara dan Reformasi Birokrasi Nomor 53 Tahun 2014.
                 </p>
                 <p class="text-justify indent-8">
                     LAKIP Tahun ${esc(yr)} ini menyajikan gambaran komprehensif mengenai tingkat keberhasilan pencapaian sasaran strategis pendidikan tinggi vokasi industri petrokimia, perbandingan kinerja antar tahun serta kontribusi terhadap sasaran program BPSDMI Kementerian Perindustrian, dan akuntabilitas pengelolaan anggaran.
@@ -622,72 +820,137 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                         <tr><td class="py-1 font-bold">RINGKASAN EKSEKUTIF</td><td class="text-right">iv</td></tr>
                         <tr><td class="py-1 font-bold">DAFTAR ISI</td><td class="text-right">v</td></tr>
                         <tr><td class="py-1 font-bold pt-2">BAB I PENDAHULUAN</td><td class="text-right font-bold pt-2">1</td></tr>
-                        <tr><td class="py-0.5 pl-4">1.1 Latar Belakang</td><td class="text-right">1</td></tr>
-                        <tr><td class="py-0.5 pl-4">1.2 Tugas Pokok dan Fungsi</td><td class="text-right">2</td></tr>
-                        <tr><td class="py-0.5 pl-4">1.3 Struktur Organisasi</td><td class="text-right">3</td></tr>
-                        <tr><td class="py-0.5 pl-4">1.4 Visi, Misi, Tujuan, Sasaran Kinerja (1.4.4) & Isu Strategis (1.4.5)</td><td class="text-right">4</td></tr>
-                        <tr><td class="py-1 font-bold pt-2">BAB II PERENCANAAN KINERJA</td><td class="text-right font-bold pt-2">7</td></tr>
-                        <tr><td class="py-0.5 pl-4">2.1 Perjanjian Kinerja Tahun ${esc(yr)}</td><td class="text-right">7</td></tr>
-                        <tr><td class="py-0.5 pl-4">2.2 Perencanaan Anggaran Tahun ${esc(yr)}</td><td class="text-right">9</td></tr>
-                        <tr><td class="py-1 font-bold pt-2">BAB III AKUNTABILITAS KINERJA</td><td class="text-right font-bold pt-2">11</td></tr>
-                        <tr><td class="py-0.5 pl-4">3.1 Capaian Kinerja Organisasi per Indikator (${indicators.length} IKU)</td><td class="text-right">11</td></tr>
-                        <tr><td class="py-0.5 pl-4">3.2 Realisasi Anggaran Tahun ${esc(yr)}</td><td class="text-right">25</td></tr>
-                        <tr><td class="py-0.5 pl-4">3.3 Evaluasi Efektivitas, Efisiensi dan Pencapaian Kinerja</td><td class="text-right">26</td></tr>
-                        <tr><td class="py-1 font-bold pt-2">BAB IV PENUTUP</td><td class="text-right font-bold pt-2">28</td></tr>
-                        <tr><td class="py-1 font-bold pt-2">LAMPIRAN DATA DUKUNG CAPAIAN KINERJA</td><td class="text-right font-bold pt-2">Terlampir</td></tr>
+                        <tr><td class="py-0.5 pl-4">1.1 Tugas Pokok dan Fungsi</td><td class="text-right">1</td></tr>
+                        <tr><td class="py-0.5 pl-4">1.2 Struktur Organisasi</td><td class="text-right">2</td></tr>
+                        <tr><td class="py-0.5 pl-4">1.3 Peran Strategis</td><td class="text-right">3</td></tr>
+                        <tr><td class="py-0.5 pl-4">1.4 Rencana Strategis (1.4.1 Visi, 1.4.2 Misi, 1.4.3 Tujuan, 1.4.4 Sasaran, 1.4.5 Arah Kebijakan & Strategi)</td><td class="text-right">4</td></tr>
+                        <tr><td class="py-1 font-bold pt-2">BAB II PERENCANAAN KINERJA</td><td class="text-right font-bold pt-2">9</td></tr>
+                        <tr><td class="py-0.5 pl-4">2.1 Perjanjian Kinerja Tahun ${esc(yr)}</td><td class="text-right">9</td></tr>
+                        <tr><td class="py-0.5 pl-4">2.2 Perencanaan Anggaran Tahun ${esc(yr)}</td><td class="text-right">11</td></tr>
+                        <tr><td class="py-1 font-bold pt-2">BAB III AKUNTABILITAS KINERJA</td><td class="text-right font-bold pt-2">13</td></tr>
+                        <tr><td class="py-0.5 pl-4">3.1 Capaian Kinerja Organisasi per Indikator (${indicators.length} IKU)</td><td class="text-right">13</td></tr>
+                        <tr><td class="py-0.5 pl-4">3.2 Realisasi Anggaran Tahun ${esc(yr)}</td><td class="text-right">27</td></tr>
+                        <tr><td class="py-0.5 pl-4">3.3 Evaluasi Efektivitas, Efisiensi dan Pencapaian Kinerja</td><td class="text-right">28</td></tr>
+                        <tr><td class="py-1 font-bold pt-2">BAB IV PENUTUP</td><td class="text-right font-bold pt-2">30</td></tr>
+                        <tr><td class="py-1 font-bold pt-2">LEMBAR REVIEW & CHECKLIST REVIU SPI</td><td class="text-right font-bold pt-2">Terlampir</td></tr>
+                        <tr><td class="py-1 font-bold pt-1">LAMPIRAN DATA DUKUNG CAPAIAN KINERJA</td><td class="text-right font-bold pt-1">Terlampir</td></tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- 5. BAB I PENDAHULUAN -->
+            <!-- 5. BAB I PENDAHULUAN (STANDAR BAKU UTUH SESUAI LAKIP PIPB; HANYA 1.4.4 DINAMIS DARI KI-JARO) -->
             <div class="p-8 bg-white border border-slate-200 space-y-4" style="page-break-after: always;">
                 <h3 class="text-center text-base font-bold uppercase">BAB I<br>PENDAHULUAN</h3>
-                <h4 class="font-bold">1.1 Latar Belakang</h4>
-                <p class="text-justify indent-8">
-                    Politeknik Industri Petrokimia Banten merupakan unit pelaksana teknis pendidikan tinggi vokasi di bawah Badan Pengembangan Sumber Daya Manusia Industri (BPSDMI) Kementerian Perindustrian yang didirikan berdasarkan Peraturan Menteri Perindustrian Nomor 29 Tahun 2022 untuk menyiapkan tenaga kerja industri kompeten di sektor petrokimia dan industri berbasis proses.
-                </p>
-                <h4 class="font-bold">1.2 Tugas Pokok dan Fungsi</h4>
-                <p class="text-justify indent-8">
-                    Politeknik Industri Petrokimia Banten mempunyai tugas menyelenggarakan pendidikan vokasi di bidang industri petrokimia dan dapat menyelenggarakan pendidikan profesi sesuai ketentuan peraturan perundang-undangan, dengan fungsi penyusunan rencana program, pelaksanaan tridharma perguruan tinggi, pembinaan sivitas akademika, serta pengelolaan tata usaha dan rumah tangga.
-                </p>
-                <h4 class="font-bold">1.3 Struktur Organisasi</h4>
-                <p class="text-justify indent-8">
-                    Organisasi Politeknik Industri Petrokimia Banten dipimpin oleh Direktur yang membawahi Wakil Direktur, Subbagian Administrasi Akademik Kemahasiswaan dan Kerja Sama, Subbagian Umum dan Keuangan, Program Studi (Teknologi Proses Industri Petrokimia, Teknologi Mesin Industri Petrokimia, Teknologi Instrumentasi Industri Petrokimia), serta Unit Penunjang (UPPM, SPM, Perpustakaan, dan Laboratorium).
-                </p>
-                <h4 class="font-bold">1.4 Visi, Misi, Tujuan, Sasaran Kinerja (1.4.4) dan Permasalahan Strategis (1.4.5)</h4>
-                <p class="text-justify indent-8">
-                    <strong>Visi 2030:</strong> Menjadi Politeknik Unggul dan Berdaya Saing Global dalam Pengembangan Sumber Daya Manusia Industri Petrokimia.
-                </p>
-                <h4 class="font-bold pt-1">1.4.4 Sasaran Kinerja Tahun ${esc(yr)} (Sumber Data: Ki-Jaro)</h4>
-                <table class="w-full border-collapse border border-slate-800 text-[10pt]">
-                    <thead>
-                        <tr class="bg-slate-100 font-bold text-center">
-                            <th class="border border-slate-800 p-1.5 w-16">Kode</th>
-                            <th class="border border-slate-800 p-1.5">Sasaran Kinerja</th>
-                            <th class="border border-slate-800 p-1.5">Indikator Kinerja</th>
-                            <th class="border border-slate-800 p-1.5 w-24">Target ${esc(yr)}</th>
-                            <th class="border border-slate-800 p-1.5 w-24">Satuan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${indicators.length === 0
-                            ? `<tr><td colspan="5" class="border border-slate-800 p-3 text-center italic text-slate-500">Data Sasaran Kinerja Tahun ${esc(yr)} belum tersedia di Ki-Jaro.</td></tr>`
-                            : Object.entries(skGroups).map(([kode, grp]) => grp.items.map((it, idx) => `
-                            <tr>
-                                ${idx === 0 ? `<td class="border border-slate-800 p-1.5 text-center font-bold align-top" rowspan="${grp.items.length}">${esc(kode)}</td>` : ''}
-                                ${idx === 0 ? `<td class="border border-slate-800 p-1.5 align-top" rowspan="${grp.items.length}">${esc(grp.sasaran)}</td>` : ''}
-                                <td class="border border-slate-800 p-1.5">${esc(it.indikator)}</td>
-                                <td class="border border-slate-800 p-1.5 text-center font-semibold">${fmtNum(it.target)}</td>
-                                <td class="border border-slate-800 p-1.5 text-center">${esc(it.satuan)}</td>
-                            </tr>
-                        `).join('')).join('')}
-                    </tbody>
-                </table>
 
-                <h4 class="font-bold pt-2">1.4.5 Permasalahan Utama dan Kebijakan Strategis</h4>
+                <h4 class="font-bold">1.1 Tugas Pokok dan Fungsi</h4>
                 <p class="text-justify indent-8">
-                    Permasalahan strategis yang dihadapi meliputi pemenuhan rasio dosen berkualifikasi industri, penguatan fasilitas laboratorium proses petrokimia berstandar industri 4.0, serta akselerasi hilirisasi riset terapan dan inkubasi wirausaha industri. Enam kebijakan strategis ditempuh melalui penguatan link and match kurikulum dual system, sertifikasi kompetensi LSP P1, digitalisasi layanan SAKIP Ki-Jaro, dan perluasan kemitraan industri nasional maupun multinasional.
+                    Politeknik Industri Petrokimia Banten merupakan unit pelaksana teknis pendidikan tinggi vokasi di bawah dan bertanggung jawab kepada Kepala Badan Pengembangan Sumber Daya Manusia Industri (BPSDMI) Kementerian Perindustrian Republik Indonesia yang didirikan berdasarkan Peraturan Menteri Perindustrian Nomor 29 Tahun 2022 tentang Organisasi dan Tata Kerja Politeknik Industri Petrokimia Banten. Berdasarkan peraturan tersebut, Politeknik Industri Petrokimia Banten mempunyai tugas menyelenggarakan pendidikan vokasi di bidang industri petrokimia dan dapat menyelenggarakan pendidikan profesi sesuai dengan ketentuan peraturan perundang-undangan.
                 </p>
+                <p class="text-justify indent-8">
+                    Dalam melaksanakan tugas pokok tersebut, Politeknik Industri Petrokimia Banten menyelenggarakan 15 (lima belas) fungsi utama sebagai berikut:
+                </p>
+                <ol class="list-decimal pl-8 space-y-1 text-justify">
+                    <li>Penyusunan rencana dan program kerja pendidikan vokasi di bidang industri petrokimia;</li>
+                    <li>Pelaksanaan pendidikan dan pengajaran vokasi berbasis kompetensi industri petrokimia;</li>
+                    <li>Pelaksanaan penelitian terapan dan pengembangan teknologi di bidang industri petrokimia;</li>
+                    <li>Pelaksanaan pengabdian kepada masyarakat di bidang industri petrokimia;</li>
+                    <li>Pelaksanaan pembinaan sivitas akademika dan hubungan dengan lingkungan;</li>
+                    <li>Pelaksanaan kerja sama pendidikan, penelitian, dan pemagangan dengan industri dan pemangku kepentingan;</li>
+                    <li>Pelaksanaan penjaminan mutu pendidikan tinggi vokasi;</li>
+                    <li>Pelaksanaan pengelolaan perpustakaan dan sarana sumber belajar;</li>
+                    <li>Pelaksanaan pengelolaan laboratorium, bengkel kerja (workshop), dan unit produksi/teaching factory;</li>
+                    <li>Pelaksanaan pembinaan kegiatan kemahasiswaan, kealumnian, dan layanan bimbingan karier;</li>
+                    <li>Pelaksanaan sertifikasi kompetensi mahasiswa dan sumber daya manusia industri;</li>
+                    <li>Pelaksanaan inkubasi bisnis dan kewirausahaan industri;</li>
+                    <li>Pelaksanaan sistem informasi manajemen, kehumasan, dan transformasi digital kampus;</li>
+                    <li>Pelaksanaan urusan perencanaan, keuangan, kepegawaian, ketatausahaan, kerumahtanggaan, dan pengelolaan barang milik negara; dan</li>
+                    <li>Pelaksanaan pemantauan, evaluasi, dan pelaporan kinerja Politeknik Industri Petrokimia Banten.</li>
+                </ol>
+
+                <h4 class="font-bold pt-2">1.2 Struktur Organisasi</h4>
+                <p class="text-justify indent-8">
+                    Susunan organisasi Politeknik Industri Petrokimia Banten berdasarkan Peraturan Menteri Perindustrian Nomor 29 Tahun 2022 terdiri atas unsur pimpinan, unsur pelaksana akademik, unsur pelaksana administrasi, unsur penjaminan mutu, serta unsur penunjang akademik yang mencakup 15 (lima belas) satuan organisasi/unit kerja, yaitu: (1) Direktur; (2) Wakil Direktur I Bidang Akademik; (3) Wakil Direktur II Bidang Administrasi Umum dan Keuangan; (4) Wakil Direktur III Bidang Kemahasiswaan dan Kerja Sama; (5) Senat Politeknik; (6) Dewan Penyantun; (7) Satuan Pengawas Internal (SPI); (8) Subbagian Administrasi Akademik, Kemahasiswaan, dan Kerja Sama; (9) Subbagian Umum dan Keuangan; (10) Program Studi Diploma III Teknologi Proses Industri Petrokimia; (11) Program Studi Diploma III Teknologi Mesin Industri Petrokimia; (12) Program Studi Diploma III Teknologi Instrumentasi Industri Petrokimia; (13) Unit Penelitian dan Pengabdian kepada Masyarakat (UPPM); (14) Satuan Penjaminan Mutu (SPM); serta (15) Unit Penunjang (Perpustakaan, Laboratorium dan Workshop, Pengembangan Karakter & Kewirausahaan, Sertifikasi Kompetensi/LSP, dan Transformasi Digital/IT).
+                </p>
+
+                <h4 class="font-bold pt-2">1.3 Peran Strategis</h4>
+                <p class="text-justify indent-8">
+                    Politeknik Industri Petrokimia Banten berlokasi di Kawasan Industri Kimia dan Petrokimia Cilegon–Serang, Provinsi Banten, yang merupakan klaster industri petrokimia hulu hingga hilir terbesar di Indonesia. Keberadaan institusi ini memiliki peran strategis dalam menjembatani kesenjangan kompetensi (<em>skill gap</em>) tenaga kerja teknis industri melalui penyelenggaraan pendidikan vokasi sistem ganda (<em>dual system</em>), penyediaan tenaga kerja tersertifikasi kompetensi yang siap kerja langsung di pabrik petrokimia, serta akselerasi riset terapan dan adopsi teknologi Industri 4.0 untuk mendukung kemandirian industri kimia nasional.
+                </p>
+
+                <h4 class="font-bold pt-2">1.4 Rencana Strategis</h4>
+                <h5 class="font-bold">1.4.1 Visi</h5>
+                <p class="text-justify indent-8">
+                    Visi Politeknik Industri Petrokimia Banten Tahun 2025–2030 adalah: <strong>"Menjadi Politeknik Unggul dan Berdaya Saing Global dalam Pengembangan Sumber Daya Manusia Industri Petrokimia"</strong>.
+                </p>
+
+                <h5 class="font-bold pt-1">1.4.2 Misi</h5>
+                <p class="text-justify indent-8">
+                    Untuk mewujudkan visi tersebut, ditetapkan 7 (tujuh) misi Politeknik Industri Petrokimia Banten sebagai berikut:
+                </p>
+                <ol class="list-decimal pl-8 space-y-1 text-justify">
+                    <li>Menyelenggarakan pendidikan tinggi vokasi di bidang industri petrokimia yang bermutu, adaptif, dan berstandar internasional berbasis kebutuhan industri (<em>link and match</em>);</li>
+                    <li>Mengembangkan kurikulum dan metode pembelajaran sistem ganda (<em>dual system</em>) serta pemanfaatan teknologi informasi menuju pendidikan vokasi Industri 4.0;</li>
+                    <li>Melaksanakan penelitian terapan yang inovatif dan solutif untuk meningkatkan produktivitas serta daya saing sektor industri petrokimia nasional;</li>
+                    <li>Melaksanakan pengabdian kepada masyarakat melalui diseminasi teknologi tepat guna, pendampingan industri kecil dan menengah (IKM), serta pemberdayaan masyarakat sekitar kawasan industri;</li>
+                    <li>Memperkuat kemitraan strategis dengan industri petrokimia nasional dan multinasional, asosiasi profesi, serta lembaga pendidikan dan sertifikasi dalam dan luar negeri;</li>
+                    <li>Mengembangkan ekosistem kewirausahaan industri dan inkubasi bisnis berbasis teknologi proses, mesin, dan instrumentasi industri; dan</li>
+                    <li>Mewujudkan tata kelola perguruan tinggi vokasi yang profesional, transparan, akuntabel, efektif, dan efisien berorientasi pada pelayanan prima.</li>
+                </ol>
+
+                <h5 class="font-bold pt-1">1.4.3 Tujuan</h5>
+                <p class="text-justify indent-8">
+                    Tujuan strategis yang ingin dicapai Politeknik Industri Petrokimia Banten meliputi:
+                </p>
+                <ol class="list-decimal pl-8 space-y-1 text-justify">
+                    <li>Menghasilkan lulusan pendidikan tinggi vokasi industri petrokimia yang kompeten, berkarakter industri, tersertifikasi kompetensi, dan terserap secara optimal di sektor industri nasional maupun global;</li>
+                    <li>Menghasilkan karya penelitian terapan dan pengabdian kepada masyarakat yang berkualitas, terpublikasi, dan memberikan dampak nyata bagi pengembangan teknologi serta efisiensi proses industri petrokimia; dan</li>
+                    <li>Mewujudkan tata kelola kelembagaan yang akuntabel, modern, berbasis digital, serta didukung sumber daya manusia dan infrastruktur laboratorium berstandar industri.</li>
+                </ol>
+
+                <h5 class="font-bold pt-2">1.4.4 Sasaran Politeknik Industri Petrokimia Banten (Sumber Data: Ki-Jaro Tahun ${esc(yr)})</h5>
+                <p class="text-justify indent-8">
+                    Sasaran strategis dan indikator kinerja Politeknik Industri Petrokimia Banten Tahun ${esc(yr)} yang ditetapkan untuk mengukur keberhasilan pencapaian tujuan institusi tercantum pada tabel berikut:
+                </p>
+                ${indicators.length === 0
+                    ? `<p class="text-xs italic text-slate-500 border p-3">Data Sasaran Politeknik Industri Petrokimia Banten Tahun ${esc(yr)} belum tersedia di database Ki-Jaro.</p>`
+                    : Object.entries(skGroups).map(([kode, grp], gIdx) => `
+                        <div class="space-y-1.5 pt-2">
+                            <p class="font-bold text-xs">Tabel 1.${gIdx + 1} Sasaran Kinerja ${esc(kode)}: ${esc(grp.sasaran)}</p>
+                            <table class="w-full border-collapse border border-slate-800 text-[10pt]">
+                                <thead>
+                                    <tr class="bg-slate-100 font-bold text-center">
+                                        <th class="border border-slate-800 p-1.5 w-12">No</th>
+                                        <th class="border border-slate-800 p-1.5">Indikator Kinerja</th>
+                                        <th class="border border-slate-800 p-1.5 w-24">Satuan</th>
+                                        <th class="border border-slate-800 p-1.5 w-24">Target ${esc(yr)}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${grp.items.map((it, idx) => `
+                                        <tr>
+                                            <td class="border border-slate-800 p-1.5 text-center">${idx + 1}</td>
+                                            <td class="border border-slate-800 p-1.5">${esc(it.indikator)}</td>
+                                            <td class="border border-slate-800 p-1.5 text-center">${esc(it.satuan)}</td>
+                                            <td class="border border-slate-800 p-1.5 text-center font-semibold">${fmtNum(it.target)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `).join('')}
+
+                <h5 class="font-bold pt-2">1.4.5 Arah Kebijakan dan Strategi</h5>
+                <p class="text-justify indent-8">
+                    Dalam rangka menjawab tantangan pengembangan pendidikan tinggi vokasi di sektor industri petrokimia serta mengatasi permasalahan pemenuhan rasio dosen praktisi/industri, penguatan sarana laboratorium proses berstandar Industri 4.0, dan hilirisasi riset terapan, Politeknik Industri Petrokimia Banten menetapkan 6 (enam) arah kebijakan dan strategi utama sebagai berikut:
+                </p>
+                <ol class="list-decimal pl-8 space-y-1 text-justify">
+                    <li><strong>Penguatan Kurikulum Link and Match dan Sistem Ganda (Dual System):</strong> Penyelarasan berkelanjutan kurikulum berbasis Standar Kompetensi Kerja Nasional Indonesia (SKKNI) dan kebutuhan spesifik industri petrokimia bersama mitra industri melalui skema pembelajaran di kampus dan praktik kerja industri terstruktur;</li>
+                    <li><strong>Peningkatan Kapabilitas SDM Dosen dan Tenaga Kependidikan:</strong> Akselerasi sertifikasi kompetensi teknis dan metodologi bagi dosen/instruktur, pemagangan dosen di industri petrokimia, serta pelibatan praktisi industri sebagai dosen tamu dan pembimbing proyek akhir mahasiswa;</li>
+                    <li><strong>Modernisasi Infrastruktur Laboratorium dan Transformasi TVET 4.0:</strong> Pengembangan dan pemeliharaan fasilitas laboratorium proses, mesin, dan instrumentasi industri petrokimia yang terintegrasi dengan otomasi, simulasi proses, dan sistem pemantauan berbasis digital/IoT;</li>
+                    <li><strong>Akselerasi Penelitian Terapan, Publikasi Ilmiah, dan Pengabdian Masyarakat:</strong> Peningkatan kualitas dan kuantitas riset terapan sektor industri prioritas yang terpublikasi pada jurnal nasional terakreditasi maupun internasional bereputasi serta penguatan peran Unit Penelitian dan Pengabdian kepada Masyarakat (UPPM);</li>
+                    <li><strong>Perluasan Kemitraan Strategis, Penempatan Lulusan, dan Inkubasi Wirausaha:</strong> Optimalisasi kerja sama rekrutmen lulusan sebelum kelulusan, pelaksanaan uji kompetensi melalui Lembaga Sertifikasi Profesi (LSP), serta pembinaan inkubator bisnis untuk menumbuhkan wirausaha baru berbasis industri; dan</li>
+                    <li><strong>Penguatan Tata Kelola Reformasi Birokrasi dan Digitalisasi SAKIP:</strong> Peningkatan kualitas perencanaan, penganggaran berbasis kinerja, pengendalian intern oleh Satuan Pengawas Internal (SPI), serta penerapan sistem manajemen kinerja digital terintegrasi (Ki-Jaro) untuk mewujudkan layanan pendidikan vokasi yang prima, efektif, efisien, dan akuntabel.</li>
+                </ol>
             </div>
 
             <!-- 6. BAB II PERENCANAAN KINERJA -->
@@ -695,7 +958,7 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                 <h3 class="text-center text-base font-bold uppercase">BAB II<br>PERENCANAAN KINERJA</h3>
                 <h4 class="font-bold">2.1 Perjanjian Kinerja Tahun ${esc(yr)}</h4>
                 <p class="text-justify indent-8">
-                    Perjanjian Kinerja Politeknik Industri Petrokimia Banten Tahun ${esc(yr)} merupakan komitmen kinerja Direktur kepada Kepala Badan Pengembangan Sumber Daya Manusia Industri (BPSDMI) Kementerian Perindustrian dengan rincian sasaran dan indikator kinerja sebagai berikut:
+                    Perjanjian Kinerja Politeknik Industri Petrokimia Banten Tahun ${esc(yr)} merupakan komitmen kinerja Direktur kepada Kepala Badan Pengembangan Sumber Daya Manusia Industri (BPSDMI) Kementerian Perindustrian dengan rincian sasaran, indikator kinerja, dan alokasi anggaran sebagai berikut:
                 </p>
                 <table class="w-full border-collapse border border-slate-800 text-[10pt]">
                     <thead>
@@ -703,13 +966,14 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                             <th class="border border-slate-800 p-1.5 w-14">Kode</th>
                             <th class="border border-slate-800 p-1.5">Sasaran Program / Kegiatan</th>
                             <th class="border border-slate-800 p-1.5">Indikator Kinerja</th>
-                            <th class="border border-slate-800 p-1.5 w-24">Target</th>
-                            <th class="border border-slate-800 p-1.5 w-24">Satuan</th>
+                            <th class="border border-slate-800 p-1.5 w-20">Target</th>
+                            <th class="border border-slate-800 p-1.5 w-20">Satuan</th>
+                            <th class="border border-slate-800 p-1.5 w-32">Alokasi Anggaran</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${indicators.length === 0
-                            ? `<tr><td colspan="5" class="border border-slate-800 p-3 text-center italic text-slate-500">Belum ada data Perjanjian Kinerja pada database.</td></tr>`
+                            ? `<tr><td colspan="6" class="border border-slate-800 p-3 text-center italic text-slate-500">Belum ada data Perjanjian Kinerja pada database.</td></tr>`
                             : indicators.map(it => `
                             <tr>
                                 <td class="border border-slate-800 p-1.5 text-center font-bold">${esc(it.kodeSk)}</td>
@@ -717,6 +981,7 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                                 <td class="border border-slate-800 p-1.5">${esc(it.indikator)}</td>
                                 <td class="border border-slate-800 p-1.5 text-center font-semibold">${fmtNum(it.target)}</td>
                                 <td class="border border-slate-800 p-1.5 text-center">${esc(it.satuan)}</td>
+                                <td class="border border-slate-800 p-1.5 text-right">${fmtRp(it.paguAnggaran)}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -793,24 +1058,35 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                         `;
                     }).join('')}
 
-                <h4 class="font-bold pt-4">3.2 Realisasi Anggaran Tahun ${esc(yr)}</h4>
-                <table class="w-full border-collapse border border-slate-800 text-[10pt]">
+                <h4 class="font-bold pt-4">3.2 Realisasi Anggaran Tahun ${esc(yr)} (Per IKU dan Total DIPA)</h4>
+                <table class="w-full border-collapse border border-slate-800 text-[9.5pt]">
                     <thead>
                         <tr class="bg-slate-100 font-bold text-center">
-                            <th class="border border-slate-800 p-1.5">Uraian Anggaran</th>
-                            <th class="border border-slate-800 p-1.5">Pagu DIPA</th>
-                            <th class="border border-slate-800 p-1.5">Realisasi</th>
-                            <th class="border border-slate-800 p-1.5">Sisa Anggaran</th>
-                            <th class="border border-slate-800 p-1.5">% Serapan</th>
+                            <th class="border border-slate-800 p-1.5 w-10">No</th>
+                            <th class="border border-slate-800 p-1.5">Indikator Kinerja Utama / Uraian Anggaran</th>
+                            <th class="border border-slate-800 p-1.5 w-32">Alokasi Pagu</th>
+                            <th class="border border-slate-800 p-1.5 w-32">Realisasi Anggaran</th>
+                            <th class="border border-slate-800 p-1.5 w-20">% Serapan</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td class="border border-slate-800 p-1.5 font-semibold">Total Anggaran Politeknik Industri Petrokimia Banten</td>
+                        ${indicators.map((ind, idx) => {
+                            const m = computeIndicatorMetrics(ind);
+                            return `
+                            <tr>
+                                <td class="border border-slate-800 p-1.5 text-center">${idx + 1}</td>
+                                <td class="border border-slate-800 p-1.5">${esc(ind.kodeSk)} — ${esc(ind.indikator)}</td>
+                                <td class="border border-slate-800 p-1.5 text-right">${fmtRp(ind.paguAnggaran)}</td>
+                                <td class="border border-slate-800 p-1.5 text-right">${fmtRp(ind.realisasiAnggaran)}</td>
+                                <td class="border border-slate-800 p-1.5 text-center font-semibold">${fmtNum(m.pctSerapan)}%</td>
+                            </tr>
+                            `;
+                        }).join('')}
+                        <tr class="bg-slate-100 font-bold">
+                            <td colspan="2" class="border border-slate-800 p-1.5 text-right">TOTAL DIPA & REALISASI ANGGARAN TAHUN ${esc(yr)}</td>
                             <td class="border border-slate-800 p-1.5 text-right">${fmtRp(cfg.paguDipaTotal)}</td>
-                            <td class="border border-slate-800 p-1.5 text-right font-bold">${fmtRp(cfg.realisasiAnggaranTotal)}</td>
-                            <td class="border border-slate-800 p-1.5 text-right">${fmtRp(Math.max(0, cfg.paguDipaTotal - cfg.realisasiAnggaranTotal))}</td>
-                            <td class="border border-slate-800 p-1.5 text-center font-bold">${fmtNum(pctDipa)}%</td>
+                            <td class="border border-slate-800 p-1.5 text-right">${fmtRp(cfg.realisasiAnggaranTotal)}</td>
+                            <td class="border border-slate-800 p-1.5 text-center">${fmtNum(pctDipa)}%</td>
                         </tr>
                     </tbody>
                 </table>
@@ -849,7 +1125,7 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
             </div>
 
             <!-- 8. BAB IV PENUTUP -->
-            <div class="p-8 bg-white border border-slate-200 space-y-4">
+            <div class="p-8 bg-white border border-slate-200 space-y-4" style="page-break-after: always;">
                 <h3 class="text-center text-base font-bold uppercase">BAB IV<br>PENUTUP</h3>
                 ${bab4Html}
                 <div class="pt-8 flex justify-end">
@@ -862,12 +1138,86 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                     </div>
                 </div>
             </div>
+
+            <!-- 9. LEMBAR REVIEW & CHECKLIST REVIU SATUAN PENGAWAS INTERNAL (SPI) -->
+            <div class="p-8 bg-white border border-slate-200 space-y-4">
+                <div class="text-center border-b-2 border-slate-900 pb-2">
+                    <p class="font-bold text-sm uppercase">LEMBAR REVIEW</p>
+                    <p class="font-bold text-xs uppercase">LAPORAN AKUNTABILITAS KINERJA INSTANSI PEMERINTAH TAHUN ${esc(yr)}</p>
+                    <p class="font-bold text-xs uppercase">SATUAN PENGAWAS INTERNAL — POLITEKNIK INDUSTRI PETROKIMIA BANTEN</p>
+                </div>
+
+                <table class="w-full border-collapse border border-slate-800 text-[9.5pt]">
+                    <thead>
+                        <tr class="bg-slate-100 font-bold text-center">
+                            <th class="border border-slate-800 p-1.5 w-28">Proses</th>
+                            <th class="border border-slate-800 p-1.5 w-44">Penanggung Jawab</th>
+                            <th class="border border-slate-800 p-1.5">Keterangan / Catatan</th>
+                            <th class="border border-slate-800 p-1.5 w-32">Status & Tanggal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="border border-slate-800 p-1.5 font-bold">Pembuat (Tim Program)</td>
+                            <td class="border border-slate-800 p-1.5">${esc(rev.pembuatName || '-')}</td>
+                            <td class="border border-slate-800 p-1.5">Penyusunan Draf LAKIP Tahun ${esc(yr)}</td>
+                            <td class="border border-slate-800 p-1.5 text-center">${esc(rev.pembuatDate || '-')}</td>
+                        </tr>
+                        <tr>
+                            <td class="border border-slate-800 p-1.5 font-bold">Reviewer (SPI)</td>
+                            <td class="border border-slate-800 p-1.5">${esc(rev.reviewerName || '-')}</td>
+                            <td class="border border-slate-800 p-1.5">${esc(rev.reviewerNotes || '-')}</td>
+                            <td class="border border-slate-800 p-1.5 text-center">${esc(rev.reviewerDate || '-')}</td>
+                        </tr>
+                        <tr>
+                            <td class="border border-slate-800 p-1.5 font-bold">Pembantu Direktur II</td>
+                            <td class="border border-slate-800 p-1.5">${esc(rev.wadir2Name || '-')}</td>
+                            <td class="border border-slate-800 p-1.5">${esc(rev.wadir2Notes || '-')}</td>
+                            <td class="border border-slate-800 p-1.5 text-center">${esc(rev.wadir2Date || '-')}</td>
+                        </tr>
+                        <tr>
+                            <td class="border border-slate-800 p-1.5 font-bold">Mengetahui / Pengesahan (Direktur)</td>
+                            <td class="border border-slate-800 p-1.5">${esc(rev.direkturName || dir.name)}</td>
+                            <td class="border border-slate-800 p-1.5">${esc(rev.direkturNotes || '-')}</td>
+                            <td class="border border-slate-800 p-1.5 text-center">${esc(rev.direkturDate || '-')}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4 class="font-bold text-xs uppercase pt-2">CHECKLIST REVIU LAPORAN KINERJA (SPI)</h4>
+                <table class="w-full border-collapse border border-slate-800 text-[9pt]">
+                    <thead>
+                        <tr class="bg-slate-100 font-bold text-center">
+                            <th class="border border-slate-800 p-1 w-36">Aspek</th>
+                            <th class="border border-slate-800 p-1">Pernyataan Indikator Penilaian</th>
+                            <th class="border border-slate-800 p-1 w-20">Checklist</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${SPI_CHECKLIST_ITEMS.map(item => `
+                            <tr>
+                                <td class="border border-slate-800 p-1 font-semibold">${esc(item.group)}</td>
+                                <td class="border border-slate-800 p-1">${esc(item.no)} ${esc(item.text)}</td>
+                                <td class="border border-slate-800 p-1 text-center font-bold">${esc((rev.checklist && rev.checklist[item.id]) || 'V')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
         </div>
         `;
     }
 
+    // Ekspor/Cetak PDF hanya dapat dilakukan setelah dokumen DISAHKAN oleh Direktur (workflowStatus === 'APPROVED')
     window.generateAndPrintCompleteLakip = async function () {
         const cfg = getOrInitLakipConfig(_lakipYear);
+        if (cfg.workflowStatus !== 'APPROVED') {
+            if (typeof showToast === 'function') {
+                showToast('Cetak/Download PDF LAKIP dikunci! Dokumen harus melalui Review SPI, Persetujuan Pembantu Direktur II, dan Pengesahan Direktur terlebih dahulu.', 'error');
+            }
+            return;
+        }
+
         const sheetHtml = buildFullLakipDocumentHtml(cfg);
         const attachmentEntries = Object.entries(_lakipAttachments).filter(([, list]) => Array.isArray(list) && list.length > 0);
 
@@ -949,71 +1299,130 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
     };
 
     window.openLakipGeneratorWorkspace = function () {
+        const rights = getLakipAccessRights();
+        if (!rights.canViewPortal) return;
         const ws = document.getElementById(WORKSPACE_ID);
         if (!ws) return;
         ws.classList.remove('hidden');
+        // Jika pengguna membuka sebagai Reviewer/Wadir2/Direktur dan bukan penyusun, langsung arahkan ke tab Review & Pengesahan
+        if (!rights.canDraft) {
+            _lakipActiveTab = 'review';
+        }
         window.renderLakipWorkspace();
         ws.scrollIntoView({ behavior: 'smooth' });
     };
 
+    function getWorkflowBadgeHtml(status) {
+        const map = {
+            DRAFT: { bg: 'bg-amber-100 text-amber-900 border-amber-300', label: '1. MODE DRAF (Penyusun: Tim Program / Admin)' },
+            PENDING_REVIEWER: { bg: 'bg-purple-100 text-purple-900 border-purple-300', label: '2. MENUNGGU REVIEW SPI (Role Reviewer)' },
+            PENDING_WADIR2: { bg: 'bg-sky-100 text-sky-900 border-sky-300', label: '3. MENUNGGU PERSETUJUAN PEMBANTU DIREKTUR II' },
+            PENDING_DIREKTUR: { bg: 'bg-indigo-100 text-indigo-900 border-indigo-300', label: '4. MENUNGGU PENGESAHAN DIREKTUR' },
+            APPROVED: { bg: 'bg-emerald-100 text-emerald-900 border-emerald-300', label: '5. SAH / DISETUJUI DIREKTUR (Siap Cetak PDF)' }
+        };
+        const st = map[status] || map.DRAFT;
+        return `<span class="px-3 py-1 rounded-full text-[11px] font-extrabold border ${st.bg}">${st.label}</span>`;
+    }
+
     window.renderLakipWorkspace = function () {
         const ws = document.getElementById(WORKSPACE_ID);
         if (!ws) return;
+        const rights = getLakipAccessRights();
+        if (!rights.canViewPortal) {
+            ws.classList.add('hidden');
+            return;
+        }
+
         const cfg = getOrInitLakipConfig(_lakipYear);
         const indicators = cfg.indicators || [];
         const selInd = indicators[_lakipSelectedIndIdx] || indicators[0] || null;
+        const status = cfg.workflowStatus || 'DRAFT';
+        const isEditableDraft = rights.canDraft && status === 'DRAFT';
+        const rev = cfg.reviewData || {};
 
         ws.innerHTML = `
             <div class="bg-white rounded-2xl shadow-sm border-2 border-blue-200 p-6 space-y-5 mt-4">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-4">
-                    <div>
-                        <span class="px-2.5 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-extrabold uppercase">Generator Laporan Kinerja Instansi Pemerintah (LAKIP)</span>
-                        <h3 class="text-base font-bold text-slate-900 mt-1 flex items-center gap-2">
-                            <i class="fa-solid fa-book-open text-blue-700"></i> Penyusunan LAKIP Otomatis + Analisis Kualitatif AI
+                <!-- Header & Status Alur Persetujuan -->
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b pb-4">
+                    <div class="space-y-1.5">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="px-2.5 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-extrabold uppercase">LAKIP PIPB</span>
+                            ${getWorkflowBadgeHtml(status)}
+                        </div>
+                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-book-open text-blue-700"></i> Penyusunan, Reviu SPI & Pengesahan Laporan LAKIP
                         </h3>
                     </div>
+
                     <div class="flex flex-wrap items-center gap-2 text-xs">
                         <select onchange="changeLakipYear(this.value)" class="p-2 bg-slate-50 border rounded-xl font-bold">
                             ${['2025', '2026', '2027', '2028', '2029'].map(y => `<option value="${y}" ${_lakipYear === y ? 'selected' : ''}>Tahun ${y}</option>`).join('')}
                         </select>
-                        <button type="button" onclick="resyncLakipFromKiJaro()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold">
-                            <i class="fa-solid fa-arrows-rotate mr-1"></i>Tarik Ulang Data Ki-Jaro
-                        </button>
-                        <button type="button" id="btnLakipAiAll" onclick="runAiAnalyzeAllSections()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow">
-                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Generate Analisis AI Semua Bab
-                        </button>
-                        <button type="button" onclick="generateAndPrintCompleteLakip()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow">
-                            <i class="fa-solid fa-file-pdf mr-1"></i>Cetak / Download PDF LAKIP Utuh
-                        </button>
+
+                        ${isEditableDraft ? `
+                            <button type="button" onclick="resyncLakipFromKiJaro()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold">
+                                <i class="fa-solid fa-arrows-rotate mr-1"></i>Tarik Ulang Data Ki-Jaro
+                            </button>
+                            <button type="button" id="btnLakipAiAll" onclick="runAiAnalyzeAllSections()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow">
+                                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Generate AI Semua Bab
+                            </button>
+                            <button type="button" onclick="submitLakipToReviewer()" class="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-bold shadow">
+                                <i class="fa-solid fa-paper-plane mr-1"></i>Ajukan Review ke SPI
+                            </button>
+                        ` : ''}
+
+                        ${status === 'APPROVED' ? `
+                            <button type="button" onclick="generateAndPrintCompleteLakip()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow">
+                                <i class="fa-solid fa-file-pdf mr-1"></i>Cetak / Download PDF LAKIP Sah
+                            </button>
+                        ` : `
+                            <button type="button" disabled title="Terkunci sampai disahkan Direktur" class="px-3.5 py-2 bg-slate-200 text-slate-500 rounded-xl font-bold cursor-not-allowed">
+                                <i class="fa-solid fa-lock mr-1"></i>Cetak PDF (Menunggu Pengesahan)
+                            </button>
+                        `}
                     </div>
                 </div>
 
-                <!-- Navigasi 4 Tahap Penyusunan LAKIP -->
+                <!-- Notifikasi Riwayat Permintaan Perbaikan Jika Dikembalikan ke Draf -->
+                ${Array.isArray(rev.revisionHistory) && rev.revisionHistory.length > 0 && status === 'DRAFT' ? `
+                <div class="bg-rose-50 border border-rose-300 rounded-xl p-4 text-xs space-y-1.5">
+                    <p class="font-bold text-rose-900 flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate-left"></i> Dokumen Dikembalikan ke Mode Draf untuk Perbaikan:
+                    </p>
+                    <ul class="list-disc pl-5 text-rose-800 space-y-1">
+                        ${rev.revisionHistory.slice(0, 3).map(h => `<li><strong>[${esc(h.date)}] ${esc(h.by)}:</strong> ${esc(h.note)}</li>`).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+
+                <!-- Navigasi 5 Tab -->
                 <div class="flex flex-wrap gap-2 border-b pb-3 text-xs font-bold">
                     <button type="button" onclick="switchLakipTab('sync')" class="px-3.5 py-2 rounded-xl cursor-pointer ${_lakipActiveTab === 'sync' ? 'bg-blue-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">1. Data Umum, Anggaran & IKU Ki-Jaro</button>
                     <button type="button" onclick="switchLakipTab('bench')" class="px-3.5 py-2 rounded-xl cursor-pointer ${_lakipActiveTab === 'bench' ? 'bg-blue-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">2. Input Pembanding BPSDMI & Satker</button>
                     <button type="button" onclick="switchLakipTab('ai')" class="px-3.5 py-2 rounded-xl cursor-pointer ${_lakipActiveTab === 'ai' ? 'bg-blue-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">3. Editor Narasi Kualitatif & AI</button>
-                    <button type="button" onclick="switchLakipTab('lampiran')" class="px-3.5 py-2 rounded-xl cursor-pointer ${_lakipActiveTab === 'lampiran' ? 'bg-blue-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">4. Lampiran Bukti Dukung & Pratinjau</button>
+                    <button type="button" onclick="switchLakipTab('lampiran')" class="px-3.5 py-2 rounded-xl cursor-pointer ${_lakipActiveTab === 'lampiran' ? 'bg-blue-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">4. Lampiran & Pratinjau Lengkap</button>
+                    <button type="button" onclick="switchLakipTab('review')" class="px-3.5 py-2 rounded-xl cursor-pointer ${_lakipActiveTab === 'review' ? 'bg-purple-700 text-white' : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200'}">5. Lembar Reviu SPI & Pengesahan Berjenjang</button>
                 </div>
 
+                <!-- TAB 1: DATA UMUM, ANGGARAN & IKU KI-JARO -->
                 ${_lakipActiveTab === 'sync' ? `
                 <div class="space-y-4 text-xs">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border">
                         <div>
                             <label class="block font-bold text-slate-700 mb-1">Nomor Nota Dinas</label>
-                            <input type="text" value="${esc(cfg.nomorNotaDinas)}" placeholder="Contoh: B/12/BPSDMI/PIPB/..." onchange="saveLakipField('nomorNotaDinas', this.value)" class="w-full p-2 bg-white border rounded-lg">
+                            <input type="text" ${!isEditableDraft ? 'disabled' : ''} value="${esc(cfg.nomorNotaDinas)}" placeholder="Contoh: B/12/BPSDMI/PIPB/..." onchange="saveLakipField('nomorNotaDinas', this.value)" class="w-full p-2 bg-white border rounded-lg">
                         </div>
                         <div>
                             <label class="block font-bold text-slate-700 mb-1">Tanggal Pengesahan</label>
-                            <input type="text" value="${esc(cfg.tanggalPengesahan)}" onchange="saveLakipField('tanggalPengesahan', this.value)" class="w-full p-2 bg-white border rounded-lg">
+                            <input type="text" ${!isEditableDraft ? 'disabled' : ''} value="${esc(cfg.tanggalPengesahan)}" onchange="saveLakipField('tanggalPengesahan', this.value)" class="w-full p-2 bg-white border rounded-lg">
                         </div>
                         <div>
                             <label class="block font-bold text-slate-700 mb-1">Total Pagu DIPA (Rp)</label>
-                            <input type="number" value="${cfg.paguDipaTotal || 0}" onchange="saveLakipField('paguDipaTotal', Number(this.value))" class="w-full p-2 bg-white border rounded-lg font-mono">
+                            <input type="number" ${!isEditableDraft ? 'disabled' : ''} value="${cfg.paguDipaTotal || 0}" onchange="saveLakipField('paguDipaTotal', Number(this.value))" class="w-full p-2 bg-white border rounded-lg font-mono">
                         </div>
                         <div>
                             <label class="block font-bold text-slate-700 mb-1">Total Realisasi Anggaran (Rp)</label>
-                            <input type="number" value="${cfg.realisasiAnggaranTotal || 0}" onchange="saveLakipField('realisasiAnggaranTotal', Number(this.value))" class="w-full p-2 bg-white border rounded-lg font-mono">
+                            <input type="number" ${!isEditableDraft ? 'disabled' : ''} value="${cfg.realisasiAnggaranTotal || 0}" onchange="saveLakipField('realisasiAnggaranTotal', Number(this.value))" class="w-full p-2 bg-white border rounded-lg font-mono">
                         </div>
                     </div>
 
@@ -1034,17 +1443,17 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                                     <tr>
                                         <td colspan="6" class="p-6 text-center text-slate-500">
                                             <p class="font-bold text-slate-700 mb-1">Belum ada data indikator / capaian Triwulan 4 Tahun ${esc(_lakipYear)} di database Ki-Jaro saat ini.</p>
-                                            <p class="text-[11px]">Setelah data Perencanaan dan Capaian Triwulan 4 diinput pada database utama (atau setelah merge ke <code>main</code>), klik tombol <strong>Tarik Ulang Data Ki-Jaro</strong> di atas untuk memuat seluruh data secara otomatis.</p>
+                                            <p class="text-[11px]">Setelah data Perencanaan dan Capaian Triwulan 4 tersedia pada database, klik tombol <strong>Tarik Ulang Data Ki-Jaro</strong> di atas.</p>
                                         </td>
                                     </tr>
                                 ` : indicators.map((it, idx) => `
                                     <tr>
                                         <td class="p-2 font-bold">${esc(it.kodeSk)}</td>
                                         <td class="p-2 font-semibold text-slate-800">${esc(it.indikator)} <span class="text-[10px] text-slate-500">(${esc(it.satuan)})</span></td>
-                                        <td class="p-2"><input type="number" step="any" value="${it.target}" onchange="saveLakipIndicatorField(${idx}, 'target', parseFloat(this.value))" class="w-full p-1 border rounded text-center"></td>
-                                        <td class="p-2"><input type="number" step="any" value="${it.realisasi}" onchange="saveLakipIndicatorField(${idx}, 'realisasi', parseFloat(this.value))" class="w-full p-1 border rounded text-center font-bold"></td>
-                                        <td class="p-2"><input type="number" step="any" value="${it.realisasiPrevYear}" onchange="saveLakipIndicatorField(${idx}, 'realisasiPrevYear', parseFloat(this.value))" class="w-full p-1 border rounded text-center"></td>
-                                        <td class="p-2"><input type="number" step="any" value="${it.targetRenstra2029}" onchange="saveLakipIndicatorField(${idx}, 'targetRenstra2029', parseFloat(this.value))" class="w-full p-1 border rounded text-center"></td>
+                                        <td class="p-2"><input type="number" step="any" ${!isEditableDraft ? 'disabled' : ''} value="${it.target}" onchange="saveLakipIndicatorField(${idx}, 'target', parseFloat(this.value))" class="w-full p-1 border rounded text-center"></td>
+                                        <td class="p-2"><input type="number" step="any" ${!isEditableDraft ? 'disabled' : ''} value="${it.realisasi}" onchange="saveLakipIndicatorField(${idx}, 'realisasi', parseFloat(this.value))" class="w-full p-1 border rounded text-center font-bold"></td>
+                                        <td class="p-2"><input type="number" step="any" ${!isEditableDraft ? 'disabled' : ''} value="${it.realisasiPrevYear}" onchange="saveLakipIndicatorField(${idx}, 'realisasiPrevYear', parseFloat(this.value))" class="w-full p-1 border rounded text-center"></td>
+                                        <td class="p-2"><input type="number" step="any" ${!isEditableDraft ? 'disabled' : ''} value="${it.targetRenstra2029}" onchange="saveLakipIndicatorField(${idx}, 'targetRenstra2029', parseFloat(this.value))" class="w-full p-1 border rounded text-center"></td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -1053,6 +1462,7 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                 </div>
                 ` : ''}
 
+                <!-- TAB 2: INPUT PEMBANDING BPSDMI & ANGGARAN PER IKU -->
                 ${_lakipActiveTab === 'bench' ? `
                 <div class="space-y-4 text-xs">
                     ${!selInd ? `
@@ -1070,19 +1480,19 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border">
                         <div>
                             <label class="block font-bold text-slate-700 mb-1">Target Nasional BPSDMI (${esc(selInd.satuan)})</label>
-                            <input type="number" step="any" value="${selInd.targetNasionalBpsdmi}" onchange="saveLakipIndicatorField(${_lakipSelectedIndIdx}, 'targetNasionalBpsdmi', parseFloat(this.value))" class="w-full p-2 bg-white border rounded-lg font-bold">
+                            <input type="number" step="any" ${!isEditableDraft ? 'disabled' : ''} value="${selInd.targetNasionalBpsdmi}" onchange="saveLakipIndicatorField(${_lakipSelectedIndIdx}, 'targetNasionalBpsdmi', parseFloat(this.value))" class="w-full p-2 bg-white border rounded-lg font-bold">
                         </div>
                         <div>
                             <label class="block font-bold text-slate-700 mb-1">Pembanding Poltek Luar Kemenperin (Opsional)</label>
-                            <input type="text" value="${esc(selInd.pembandingLuar || '')}" placeholder="Contoh: Politeknik KP Jembrana (88,5%)" onchange="saveLakipIndicatorField(${_lakipSelectedIndIdx}, 'pembandingLuar', this.value)" class="w-full p-2 bg-white border rounded-lg">
+                            <input type="text" ${!isEditableDraft ? 'disabled' : ''} value="${esc(selInd.pembandingLuar || '')}" placeholder="Contoh: Politeknik KP Jembrana (88,5%)" onchange="saveLakipIndicatorField(${_lakipSelectedIndIdx}, 'pembandingLuar', this.value)" class="w-full p-2 bg-white border rounded-lg">
                         </div>
                         <div>
-                            <label class="block font-bold text-slate-700 mb-1">Pagu Anggaran Indikator (Rp)</label>
-                            <input type="number" value="${selInd.paguAnggaran}" onchange="saveLakipIndicatorField(${_lakipSelectedIndIdx}, 'paguAnggaran', parseFloat(this.value))" class="w-full p-2 bg-white border rounded-lg font-mono">
+                            <label class="block font-bold text-slate-700 mb-1">Alokasi Pagu Anggaran IKU Ini (Rp)</label>
+                            <input type="number" ${!isEditableDraft ? 'disabled' : ''} value="${selInd.paguAnggaran}" onchange="saveLakipIndicatorField(${_lakipSelectedIndIdx}, 'paguAnggaran', parseFloat(this.value))" class="w-full p-2 bg-white border rounded-lg font-mono">
                         </div>
                         <div>
-                            <label class="block font-bold text-slate-700 mb-1">Realisasi Anggaran Indikator (Rp)</label>
-                            <input type="number" value="${selInd.realisasiAnggaran}" onchange="saveLakipIndicatorField(${_lakipSelectedIndIdx}, 'realisasiAnggaran', parseFloat(this.value))" class="w-full p-2 bg-white border rounded-lg font-mono">
+                            <label class="block font-bold text-slate-700 mb-1">Realisasi Anggaran IKU Ini (Rp)</label>
+                            <input type="number" ${!isEditableDraft ? 'disabled' : ''} value="${selInd.realisasiAnggaran}" onchange="saveLakipIndicatorField(${_lakipSelectedIndIdx}, 'realisasiAnggaran', parseFloat(this.value))" class="w-full p-2 bg-white border rounded-lg font-mono">
                         </div>
                     </div>
 
@@ -1092,7 +1502,7 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                             ${(selInd.satkerBpsdmiData || []).map((s, sIdx) => `
                                 <div class="flex items-center justify-between gap-2 p-2 border rounded-lg ${s.satker === 'Politeknik Industri Petrokimia Banten' ? 'bg-blue-50 border-blue-300 font-bold' : 'bg-white'}">
                                     <span class="truncate">${esc(s.satker)}</span>
-                                    <input type="number" step="any" value="${esc(s.nilai)}" placeholder="-" onchange="saveLakipSatkerValue(${_lakipSelectedIndIdx}, ${sIdx}, this.value)" class="w-24 p-1 border rounded text-center">
+                                    <input type="number" step="any" ${!isEditableDraft ? 'disabled' : ''} value="${esc(s.nilai)}" placeholder="-" onchange="saveLakipSatkerValue(${_lakipSelectedIndIdx}, ${sIdx}, this.value)" class="w-24 p-1 border rounded text-center">
                                 </div>
                             `).join('')}
                         </div>
@@ -1101,6 +1511,7 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                 </div>
                 ` : ''}
 
+                <!-- TAB 3: EDITOR NARASI KUALITATIF & AI -->
                 ${_lakipActiveTab === 'ai' ? `
                 <div class="space-y-4 text-xs">
                     <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-2">
@@ -1108,7 +1519,7 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                             <p class="font-bold text-indigo-950">Mode AI Gratis (Google Gemini Free Tier + Smart Qualitative Fallback)</p>
                             <p class="text-[11px] text-indigo-800">Kosongkan API Key untuk menggunakan mesin analisis kualitatif bawaan (100% gratis tanpa batas), atau masukkan API Key gratis Google AI Studio.</p>
                         </div>
-                        <input type="password" value="${esc(cfg.geminiApiKey || '')}" placeholder="Opsional: Gemini API Key Gratis..." onchange="saveLakipField('geminiApiKey', this.value)" class="p-2 bg-white border rounded-lg w-full md:w-64">
+                        <input type="password" ${!isEditableDraft ? 'disabled' : ''} value="${esc(cfg.geminiApiKey || '')}" placeholder="Opsional: Gemini API Key Gratis..." onchange="saveLakipField('geminiApiKey', this.value)" class="p-2 bg-white border rounded-lg w-full md:w-64">
                     </div>
 
                     ${!selInd ? `
@@ -1120,34 +1531,38 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                         <select onchange="selectLakipIndicator(this.value)" class="p-2 bg-white border rounded-lg font-bold flex-1">
                             ${indicators.map((it, i) => `<option value="${i}" ${_lakipSelectedIndIdx === i ? 'selected' : ''}>Bab 3.1.${i + 1}: ${esc(it.indikator)}</option>`).join('')}
                         </select>
+                        ${isEditableDraft ? `
                         <button type="button" id="btnLakipAiSingle" onclick="runAiAnalyzeSingleIndicator(${_lakipSelectedIndIdx})" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold">
                             <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Generate Narasi Indikator Ini
                         </button>
+                        ` : ''}
                     </div>
 
                     <div>
-                        <label class="block font-bold text-slate-800 mb-1">Narasi Kualitatif Bab 3.1.${_lakipSelectedIndIdx + 1} (Dapat Diedit Manual Sebelum Cetak)</label>
-                        <textarea rows="9" onchange="saveLakipIndicatorField(${_lakipSelectedIndIdx}, 'aiNarrative', this.value)" class="w-full p-3 border rounded-xl leading-relaxed">${esc(selInd.aiNarrative || buildDeterministicQualitativeAnalysis(selInd, _lakipYear))}</textarea>
+                        <label class="block font-bold text-slate-800 mb-1">Narasi Kualitatif Bab 3.1.${_lakipSelectedIndIdx + 1}</label>
+                        <textarea rows="9" ${!isEditableDraft ? 'disabled' : ''} onchange="saveLakipIndicatorField(${_lakipSelectedIndIdx}, 'aiNarrative', this.value)" class="w-full p-3 border rounded-xl leading-relaxed">${esc(selInd.aiNarrative || buildDeterministicQualitativeAnalysis(selInd, _lakipYear))}</textarea>
                     </div>
                     `}
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <label class="block font-bold text-slate-800 mb-1">Narasi Ringkasan Eksekutif</label>
-                            <textarea rows="5" onchange="saveLakipField('ringkasanEksekutifText', this.value)" class="w-full p-2.5 border rounded-xl">${esc(cfg.ringkasanEksekutifText || '')}</textarea>
+                            <textarea rows="5" ${!isEditableDraft ? 'disabled' : ''} onchange="saveLakipField('ringkasanEksekutifText', this.value)" class="w-full p-2.5 border rounded-xl">${esc(cfg.ringkasanEksekutifText || '')}</textarea>
                         </div>
                         <div>
                             <label class="block font-bold text-slate-800 mb-1">Narasi Bab IV Penutup (Kesimpulan & Saran)</label>
-                            <textarea rows="5" onchange="saveLakipField('bab4PenutupText', this.value)" class="w-full p-2.5 border rounded-xl">${esc(cfg.bab4PenutupText || '')}</textarea>
+                            <textarea rows="5" ${!isEditableDraft ? 'disabled' : ''} onchange="saveLakipField('bab4PenutupText', this.value)" class="w-full p-2.5 border rounded-xl">${esc(cfg.bab4PenutupText || '')}</textarea>
                         </div>
                     </div>
                 </div>
                 ` : ''}
 
+                <!-- TAB 4: LAMPIRAN & PRATINJAU LENGKAP -->
                 ${_lakipActiveTab === 'lampiran' ? `
                 <div class="space-y-4 text-xs">
+                    ${isEditableDraft ? `
                     <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-3">
-                        <p class="font-bold text-emerald-950">Lampiran Bukti Dukung per Indikator (Akan Digabung Otomatis di Akhir Laporan LAKIP)</p>
+                        <p class="font-bold text-emerald-950">Lampiran Bukti Dukung per Indikator (Digabung Otomatis di Akhir Laporan LAKIP)</p>
                         ${indicators.length === 0 ? `<p class="text-[11px] text-slate-500 italic">Belum ada indikator dari Ki-Jaro Tahun ${esc(_lakipYear)}.</p>` : indicators.map(ind => {
                             const files = _lakipAttachments[ind.id] || [];
                             return `
@@ -1173,9 +1588,133 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
                             `;
                         }).join('')}
                     </div>
+                    ` : ''}
 
-                    <div class="border rounded-2xl p-4 bg-slate-50 max-h-[520px] overflow-y-auto">
+                    <div class="border rounded-2xl p-4 bg-slate-50 max-h-[600px] overflow-y-auto">
                         ${buildFullLakipDocumentHtml(cfg)}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- TAB 5: LEMBAR REVIU SPI & PERSETUJUAN BERJENJANG (REVIEWER -> PEMBANTU DIREKTUR II -> DIREKTUR) -->
+                ${_lakipActiveTab === 'review' ? `
+                <div class="space-y-5 text-xs">
+                    <!-- Stepper Alur Persetujuan -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div class="p-3 rounded-xl border ${status === 'DRAFT' ? 'bg-amber-50 border-amber-400' : 'bg-slate-50 border-slate-200'}">
+                            <p class="font-extrabold text-[11px] uppercase text-slate-700">Tahap 1: Penyusun (Tim Program)</p>
+                            <p class="font-bold text-slate-900 mt-1">${esc(rev.pembuatName || 'Belum diajukan')}</p>
+                            <p class="text-[11px] text-slate-500">Tanggal: ${esc(rev.pembuatDate || '-')}</p>
+                        </div>
+                        <div class="p-3 rounded-xl border ${status === 'PENDING_REVIEWER' ? 'bg-purple-50 border-purple-400' : 'bg-slate-50 border-slate-200'}">
+                            <p class="font-extrabold text-[11px] uppercase text-purple-900">Tahap 2: Reviewer (SPI)</p>
+                            <p class="font-bold text-slate-900 mt-1">${esc(rev.reviewerName || 'Menunggu Reviu')}</p>
+                            <p class="text-[11px] text-slate-500">Tanggal: ${esc(rev.reviewerDate || '-')}</p>
+                        </div>
+                        <div class="p-3 rounded-xl border ${status === 'PENDING_WADIR2' ? 'bg-sky-50 border-sky-400' : 'bg-slate-50 border-slate-200'}">
+                            <p class="font-extrabold text-[11px] uppercase text-sky-900">Tahap 3: Pembantu Direktur II</p>
+                            <p class="font-bold text-slate-900 mt-1">${esc(rev.wadir2Name || 'Menunggu Persetujuan')}</p>
+                            <p class="text-[11px] text-slate-500">Tanggal: ${esc(rev.wadir2Date || '-')}</p>
+                        </div>
+                        <div class="p-3 rounded-xl border ${status === 'PENDING_DIREKTUR' || status === 'APPROVED' ? 'bg-emerald-50 border-emerald-400' : 'bg-slate-50 border-slate-200'}">
+                            <p class="font-extrabold text-[11px] uppercase text-emerald-900">Tahap 4: Pengesahan Direktur</p>
+                            <p class="font-bold text-slate-900 mt-1">${esc(rev.direkturName || 'Menunggu Pengesahan')}</p>
+                            <p class="text-[11px] text-slate-500">Tanggal: ${esc(rev.direkturDate || '-')}</p>
+                        </div>
+                    </div>
+
+                    <!-- Panel Keputusan Aktif Sesuai Role -->
+                    ${status === 'PENDING_REVIEWER' && rights.isReviewer ? `
+                    <div class="bg-purple-50 border-2 border-purple-300 rounded-xl p-4 space-y-3">
+                        <h4 class="font-bold text-purple-950 text-sm">Panel Keputusan Reviewer (Satuan Pengawas Internal)</h4>
+                        <div>
+                            <label class="block font-bold text-slate-800 mb-1">Catatan Hasil Pemeriksaan / Reviu SPI</label>
+                            <textarea rows="3" onchange="saveLakipReviewNote('reviewerNotes', this.value)" placeholder="Tuliskan catatan pemeriksaan kesesuaian tabel realisasi, efektivitas/efisiensi anggaran, dan kelengkapan lampiran..." class="w-full p-2.5 bg-white border rounded-lg">${esc(rev.reviewerNotes || '')}</textarea>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="processLakipWorkflowDecision('REVIEWER', 'VALID')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold">
+                                <i class="fa-solid fa-circle-check mr-1"></i>Valid (Teruskan ke Pembantu Direktur II)
+                            </button>
+                            <button type="button" onclick="processLakipWorkflowDecision('REVIEWER', 'REVISE')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold">
+                                <i class="fa-solid fa-rotate-left mr-1"></i>Lakukan Perbaikan (Kembalikan ke Draf Penyusun)
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${status === 'PENDING_WADIR2' && rights.isWadir2 ? `
+                    <div class="bg-sky-50 border-2 border-sky-300 rounded-xl p-4 space-y-3">
+                        <h4 class="font-bold text-sky-950 text-sm">Panel Persetujuan Pembantu Direktur II</h4>
+                        <div>
+                            <label class="block font-bold text-slate-800 mb-1">Catatan / Arahan Pembantu Direktur II</label>
+                            <textarea rows="3" onchange="saveLakipReviewNote('wadir2Notes', this.value)" placeholder="Tuliskan catatan verifikasi anggaran dan akuntabilitas kinerja..." class="w-full p-2.5 bg-white border rounded-lg">${esc(rev.wadir2Notes || '')}</textarea>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="processLakipWorkflowDecision('WADIR2', 'VALID')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold">
+                                <i class="fa-solid fa-circle-check mr-1"></i>Valid (Teruskan ke Direktur)
+                            </button>
+                            <button type="button" onclick="processLakipWorkflowDecision('WADIR2', 'REVISE')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold">
+                                <i class="fa-solid fa-rotate-left mr-1"></i>Lakukan Perbaikan (Kembalikan ke Draf Penyusun)
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${status === 'PENDING_DIREKTUR' && rights.isDirektur ? `
+                    <div class="bg-indigo-50 border-2 border-indigo-300 rounded-xl p-4 space-y-3">
+                        <h4 class="font-bold text-indigo-950 text-sm">Panel Pengesahan Akhir Direktur</h4>
+                        <div>
+                            <label class="block font-bold text-slate-800 mb-1">Catatan / Disposisi Direktur</label>
+                            <textarea rows="3" onchange="saveLakipReviewNote('direkturNotes', this.value)" placeholder="Tuliskan arahan pengesahan akhir laporan LAKIP..." class="w-full p-2.5 bg-white border rounded-lg">${esc(rev.direkturNotes || '')}</textarea>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="processLakipWorkflowDecision('DIREKTUR', 'VALID')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold">
+                                <i class="fa-solid fa-stamp mr-1"></i>Valid & Sahkan LAKIP (Buka Cetak PDF)
+                            </button>
+                            <button type="button" onclick="processLakipWorkflowDecision('DIREKTUR', 'REVISE')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold">
+                                <i class="fa-solid fa-rotate-left mr-1"></i>Lakukan Perbaikan (Kembalikan ke Draf Penyusun)
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Tabel 23 Indikator Checklist Reviu SPI -->
+                    <div class="border rounded-xl overflow-hidden">
+                        <div class="bg-slate-100 p-3 font-bold text-slate-900 border-b flex items-center justify-between">
+                            <span>Checklist Reviu Laporan Kinerja (23 Indikator Penilaian SPI)</span>
+                            <span class="text-[11px] text-slate-600">V = Memenuhi / Sesuai &nbsp;|&nbsp; X = Belum Memenuhi / Perlu Perbaikan</span>
+                        </div>
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-50 font-bold border-b">
+                                <tr>
+                                    <th class="p-2 w-40">Aspek</th>
+                                    <th class="p-2">Pernyataan Penilaian</th>
+                                    <th class="p-2 w-32 text-center">Checklist</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${SPI_CHECKLIST_ITEMS.map(item => {
+                                    const val = (rev.checklist && rev.checklist[item.id]) || 'V';
+                                    const canEditCheck = status === 'PENDING_REVIEWER' && rights.isReviewer;
+                                    return `
+                                    <tr>
+                                        <td class="p-2 font-semibold text-slate-700">${esc(item.group)}</td>
+                                        <td class="p-2">${esc(item.no)} ${esc(item.text)}</td>
+                                        <td class="p-2 text-center">
+                                            ${canEditCheck ? `
+                                                <div class="inline-flex rounded-lg border overflow-hidden">
+                                                    <button type="button" onclick="toggleSpiChecklistValue('${item.id}', 'V')" class="px-3 py-1 font-bold ${val === 'V' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600'}">V</button>
+                                                    <button type="button" onclick="toggleSpiChecklistValue('${item.id}', 'X')" class="px-3 py-1 font-bold ${val === 'X' ? 'bg-rose-600 text-white' : 'bg-white text-slate-600'}">X</button>
+                                                </div>
+                                            ` : `
+                                                <span class="px-2.5 py-0.5 rounded font-bold ${val === 'V' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${esc(val)}</span>
+                                            `}
+                                        </td>
+                                    </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 ` : ''}
@@ -1183,7 +1722,10 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
         `;
     };
 
+    // Sisipkan banner Generator / Review LAKIP hanya untuk Role yang berhak
     function injectLakipEntryPoint() {
+        registerReviewerRoleOption();
+
         const headerTitle = document.querySelector('header h1, header h2');
         const mainEl = document.getElementById('mainContent') || document.querySelector('main > div:last-child') || document.querySelector('main');
         if (!headerTitle || !mainEl) return;
@@ -1192,20 +1734,41 @@ Akhiri paragraf terakhir dengan kalimat yang menyatakan bahwa rincian data lebih
         const isPengukuranPage = titleText.includes('dokumen pengukuran') || titleText.includes('pelaporan');
         if (!isPengukuranPage) return;
 
-        if (!document.getElementById(PANEL_ID)) {
+        const rights = getLakipAccessRights();
+        const existingBanner = document.getElementById(PANEL_ID);
+
+        // Jika bukan Tim Program / Admin Sistem / Reviewer / Wadir II / Direktur, sembunyikan menu LAKIP
+        if (!rights.canViewPortal) {
+            if (existingBanner) existingBanner.remove();
+            return;
+        }
+
+        if (!existingBanner) {
+            const cfg = getOrInitLakipConfig(_lakipYear);
             const banner = document.createElement('div');
             banner.id = PANEL_ID;
-            banner.className = 'bg-gradient-to-r from-blue-800 to-indigo-800 text-white rounded-2xl p-5 mb-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4';
+            banner.className = 'bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl p-5 mb-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4';
+
+            const badgeLabel = rights.canDraft
+                ? 'Menu Penyusun LAKIP (Tim Program / Evaluasi & Admin Sistem)'
+                : 'Portal Reviu & Pengesahan Berjenjang LAKIP';
+            const btnLabel = rights.canDraft
+                ? 'Buka Generator LAKIP'
+                : 'Buka Lembar Reviu & Pengesahan LAKIP';
+
             banner.innerHTML = `
                 <div class="space-y-1">
-                    <span class="px-2.5 py-0.5 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider">Fitur Otomatis Terintegrasi Ki-Jaro</span>
+                    <span class="px-2.5 py-0.5 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider">${badgeLabel}</span>
                     <h3 class="text-base font-bold flex items-center gap-2">
-                        <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Generator Laporan LAKIP (Cover s.d. Bab IV + Analisis AI + Merge Lampiran)
+                        <i class="fa-solid fa-file-shield text-amber-300"></i> Laporan Akuntabilitas Kinerja Instansi Pemerintah (LAKIP)
                     </h3>
-                    <p class="text-xs text-blue-100">Susun dokumen LAKIP Politeknik Industri Petrokimia Banten langsung dari data capaian triwulanan Ki-Jaro, lengkap dengan analisis kualitatif AI, komparasi target BPSDMI, dan penggabungan lampiran.</p>
+                    <p class="text-xs text-blue-100">
+                        Alur Terkendali: Penyusun (Tim Program) &rarr; Reviu SPI (23 Checklist) &rarr; Pembantu Direktur II &rarr; Pengesahan Direktur.
+                        Status saat ini: <strong>${esc(cfg.workflowStatus || 'DRAFT')}</strong>.
+                    </p>
                 </div>
-                <button type="button" onclick="openLakipGeneratorWorkspace()" class="px-5 py-2.5 bg-white text-blue-900 hover:bg-blue-50 rounded-xl font-bold text-xs shadow shrink-0">
-                    <i class="fa-solid fa-file-export mr-1.5"></i>Buka Generator LAKIP
+                <button type="button" onclick="openLakipGeneratorWorkspace()" class="px-5 py-2.5 bg-white text-blue-950 hover:bg-blue-50 rounded-xl font-bold text-xs shadow shrink-0">
+                    <i class="fa-solid fa-folder-open mr-1.5"></i>${btnLabel}
                 </button>
             `;
             mainEl.prepend(banner);
